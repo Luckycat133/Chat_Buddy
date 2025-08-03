@@ -1,0 +1,45 @@
+<svg width="800" height="600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="100%" height="100%" fill="#f0f4f8" />
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="800" height="60" fill="url(#headerGradient)" />
+  <text x="400" y="35" font-family="Arial, sans-serif" font-size="20" fill="white" text-anchor="middle" font-weight="bold">Vibe Coding AI Chat</text>
+  
+  <!-- Gradient for header -->
+  <defs>
+    <linearGradient id="headerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Chat messages -->
+  <!-- AI Message -->
+  <rect x="20" y="80" width="400" height="60" rx="18" fill="#f0f4f8" stroke="#e1e5e9" stroke-width="1" />
+  <text x="30" y="105" font-family="Arial, sans-serif" font-size="16" fill="#333">Hello! I'm your AI assistant. How can I help you today?</text>
+  <text x="390" y="130" font-family="Arial, sans-serif" font-size="12" fill="#999" text-anchor="end">10:30 AM</text>
+  
+  <!-- User Message -->
+  <rect x="380" y="160" width="400" height="60" rx="18" fill="#667eea" />
+  <text x="390" y="185" font-family="Arial, sans-serif" font-size="16" fill="white">Can you help me with my coding project?</text>
+  <text x="770" y="210" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.8)" text-anchor="end">10:32 AM</text>
+  
+  <!-- AI Message -->
+  <rect x="20" y="240" width="500" height="80" rx="18" fill="#f0f4f8" stroke="#e1e5e9" stroke-width="1" />
+  <text x="30" y="265" font-family="Arial, sans-serif" font-size="16" fill="#333">Of course! I'd be happy to help you with your coding project.</text>
+  <text x="30" y="285" font-family="Arial, sans-serif" font-size="16" fill="#333">What programming language are you using?</text>
+  <text x="510" y="310" font-family="Arial, sans-serif" font-size="12" fill="#999" text-anchor="end">10:32 AM</text>
+  
+  <!-- Input area -->
+  <rect x="0" y="540" width="800" height="60" fill="#f8f9fa" stroke="#e9ecef" stroke-width="1" />
+  <rect x="20" y="550" width="650" height="40" rx="20" fill="white" stroke="#e1e5e9" stroke-width="2" />
+  <text x="40" y="575" font-family="Arial, sans-serif" font-size="16" fill="#999">Type your message...</text>
+  <rect x="690" y="550" width="90" height="40" rx="20" fill="url(#headerGradient)" />
+  <text x="735" y="575" font-family="Arial, sans-serif" font-size="16" fill="white" text-anchor="middle" font-weight="bold">Send</text>
+  
+  <!-- Decorative elements -->
+  <circle cx="770" cy="30" r="8" fill="rgba(255,255,255,0.3)" />
+  <circle cx="750" cy="30" r="8" fill="rgba(255,255,255,0.3)" />
+  <circle cx="730" cy="30" r="8" fill="rgba(255,255,255,0.3)" />
+</svg>
