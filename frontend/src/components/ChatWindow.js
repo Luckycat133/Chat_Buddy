@@ -10,7 +10,7 @@ const ChatContainer = styled.div`
 
 const Header = styled.div`
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -22,26 +22,6 @@ const Title = styled.h1`
   margin: 0;
   font-size: 24px;
   font-weight: 600;
-`;
-
-const HeaderButtons = styled.div`
-  display: flex;
-  gap: 10px;
-`;
-
-const HeaderButton = styled.button`
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: background 0.3s;
-  
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-  }
 `;
 
 const MessagesContainer = styled.div`
@@ -148,12 +128,12 @@ const Dot = styled.div`
   }
 `;
 
-const ChatWindow = ({ onOpenSettings, userId }) => {
+const ChatWindow = ({ userId }) => {
   // State
   const [messages, setMessages] = useState([
     {
       id: 1,
-      text: "Hello! I'm your Vibe Coding Assistant. How can I help you with your coding today?",
+      text: "Hello! I'm your Chat Buddy Assistant. How can I help you with your coding today?",
       isUser: false,
       timestamp: new Date()
     }
@@ -176,10 +156,10 @@ const ChatWindow = ({ onOpenSettings, userId }) => {
     // Fetch user settings
     const fetchSettings = async () => {
       try {
-        const response = await fetch(`http://localhost:5001/api/settings/${userId}`);
+        const response = await fetch(`http://localhost:5001/api/export/${userId}`);
         if (response.ok) {
-          const userSettings = await response.json();
-          setSettings(userSettings);
+          const userData = await response.json();
+          setSettings(userData.settings);
         }
       } catch (error) {
         console.error('Failed to fetch settings:', error);
@@ -264,12 +244,7 @@ const ChatWindow = ({ onOpenSettings, userId }) => {
   return (
     <ChatContainer>
       <Header>
-        <Title>Vibe Coding Assistant</Title>
-        <HeaderButtons>
-          <HeaderButton onClick={onOpenSettings}>
-            Settings
-          </HeaderButton>
-        </HeaderButtons>
+        <Title>Chat Buddy Assistant</Title>
       </Header>
       
       <MessagesContainer>

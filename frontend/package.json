@@ -1,7 +1,7 @@
 {
-  "name": "vibe-coding-frontend",
+  "name": "chat-buddy-frontend",
   "version": "1.0.0",
-  "description": "Frontend for Vibe Coding AI Chat Application",
+  "description": "Frontend for Chat Buddy AI Chat Application",
   "main": "index.js",
   "scripts": {
     "start": "react-scripts start",

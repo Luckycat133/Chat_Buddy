@@ -1,7 +1,7 @@
 {
-  "name": "vibe-coding-backend",
+  "name": "chat-buddy-backend",
   "version": "1.0.0",
-  "description": "Backend for Vibe Coding AI Chat Application",
+  "description": "Backend for Chat Buddy AI Chat Application",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

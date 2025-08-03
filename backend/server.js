@@ -40,76 +40,25 @@ const getAccurateTimestamp = () => {
 
 // API Routes
 
-// Configure API key
-app.post('/api/configure', (req, res) => {
-  const { apiKey, userId } = req.body;
-  
-  if (!apiKey || !userId) {
-    return res.status(400).json({ error: 'API key and user ID are required' });
-  }
-  
-  // Store the API key (in production, this should be more secure)
-  // Using Map for efficient key-value storage
-  apiKeys.set(userId, apiKey);
-  
-  // Initialize conversation history for this user
-  // This ensures persistent memory that never gets cleared
-  if (!conversations.has(userId)) {
-    conversations.set(userId, []);
-  }
-  
-  res.json({ message: 'API key configured successfully' });
-});
-
-// Save settings endpoint
-app.put('/api/settings/:userId', (req, res) => {
-  const { userId } = req.params;
-  const settings = req.body;
-  
-  if (!userId) {
-    return res.status(400).json({ error: 'User ID is required' });
-  }
-  
-  userSettings.set(userId, settings);
-  
-  // Also save the API key to the apiKeys map if it exists in settings
-  if (settings.apiKey) {
-    apiKeys.set(userId, settings.apiKey);
-  }
-  
-  res.json({ message: 'Settings saved successfully' });
-});
-
-// Get settings endpoint
-app.get('/api/settings/:userId', (req, res) => {
-  const { userId } = req.params;
-  
-  if (!userId) {
-    return res.status(400).json({ error: 'User ID is required' });
-  }
-  
-  const settings = userSettings.get(userId) || {};
-  res.json(settings);
-});
-
 // Chat endpoint
 app.post('/api/chat', async (req, res) => {
-  const { userId, message, settings } = req.body;
+  const { userId, message } = req.body;
   
   if (!userId || !message) {
     return res.status(400).json({ error: 'User ID and message are required' });
   }
   
-  // Check if API key exists for this user
-  // This ensures only authorized users can access the AI model
-  if (!apiKeys.has(userId)) {
-    return res.status(401).json({ error: 'API key not configured for this user' });
+  // Set the API key from environment variables
+  const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+  
+  // Check if API key is available
+  if (!apiKey) {
+    return res.status(500).json({ error: 'API key not configured on server' });
   }
   
+  apiKeys.set(userId, apiKey);
+  
   try {
-    // Get the stored API key for this user
-    const apiKey = apiKeys.get(userId);
-    
     // Get or create conversation history for this user
     if (!conversations.has(userId)) {
       conversations.set(userId, []);
@@ -128,22 +77,19 @@ app.post('/api/chat', async (req, res) => {
     
     history.push(newMessage);
     
-    // Use provided settings or default settings if none provided
-    const userSettings = settings || {
-      provider: 'openai',
-      providerUrl: '',
-      providerName: '',
-      modelName: 'gpt-3.5-turbo',
-      temperature: 0.7,
-      apiKey: apiKey
+    // Use default settings
+    const userSettings = {
+      provider: 'gemini',
+      modelName: 'gemini-2.5-flash',
+      temperature: 0.7
     };
     
     let reply;
     
-    // Handle different service providers
+    // Handle different providers
     if (userSettings.provider === 'openai') {
       // Call OpenAI API
-      const openai = new OpenAI({ apiKey: userSettings.apiKey || apiKey });
+      const openai = new OpenAI({ apiKey: apiKey });
       
       const completion = await openai.chat.completions.create({
         model: userSettings.modelName || "gpt-3.5-turbo",
@@ -159,56 +105,83 @@ app.post('/api/chat', async (req, res) => {
       });
       
       reply = completion.choices[0].message.content;
-    } else if (userSettings.provider === 'anthropic') {
-      // Call Anthropic API
-      const anthropic = new Anthropic({ apiKey: userSettings.apiKey || apiKey });
-      
-      const response = await anthropic.messages.create({
-        model: userSettings.modelName || "claude-2",
-        messages: [
-          { role: "user", content: "You are a helpful coding assistant. Help the user with their programming questions and provide clear, accurate code examples when needed. Always be friendly and encouraging." },
-          ...history.map(msg => ({
-            role: msg.sender === 'user' ? 'user' : 'assistant',
-            content: msg.text
-          }))
-        ],
-        max_tokens: 500,
-        temperature: userSettings.temperature || 0.7
-      });
-      
-      reply = response.content[0].text;
-    } else if (userSettings.provider === 'custom') {
-      // Call custom endpoint
-      if (!userSettings.providerUrl) {
-        throw new Error('Provider URL is required for custom service provider');
+    } else if (userSettings.provider === 'groq') {
+      // Call Groq API
+      try {
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: userSettings.modelName,
+            messages: [
+              { role: "system", content: "You are a helpful coding assistant. Help the user with their programming questions and provide clear, accurate code examples when needed. Always be friendly and encouraging." },
+              ...history.map(msg => ({
+                role: msg.sender === 'user' ? 'user' : 'assistant',
+                content: msg.text
+              }))
+            ],
+            max_tokens: 500,
+            temperature: userSettings.temperature || 0.7
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Groq API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        reply = data.choices[0].message.content;
+      } catch (error) {
+        console.error('Groq API error:', error);
+        throw new Error(`Failed to call Groq API: ${error.message}`);
       }
-      
-      const response = await fetch(userSettings.providerUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userSettings.apiKey || apiKey}`
-        },
-        body: JSON.stringify({
-          model: userSettings.modelName || "gpt-3.5-turbo",
-          messages: [
-            { role: "system", content: "You are a helpful coding assistant. Help the user with their programming questions and provide clear, accurate code examples when needed. Always be friendly and encouraging." },
-            ...history.map(msg => ({
-              role: msg.sender === 'user' ? 'user' : 'assistant',
-              content: msg.text
-            }))
-          ],
-          max_tokens: 500,
-          temperature: userSettings.temperature || 0.7
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Custom API error: ${response.status}`);
+    } else if (userSettings.provider === 'gemini') {
+      // Call Google Gemini API
+      try {
+        // Get Gemini API key from environment variables
+        const geminiApiKey = process.env.GEMINI_API_KEY;
+        
+        if (!geminiApiKey) {
+          throw new Error('GEMINI_API_KEY is not configured in environment variables');
+        }
+        
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${userSettings.modelName}:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: "You are a helpful coding assistant. Help the user with their programming questions and provide clear, accurate code examples when needed. Always be friendly and encouraging." },
+                  ...history.map(msg => ({
+                    text: msg.text
+                  }))
+                ]
+              }
+            ],
+            generationConfig: {
+              temperature: userSettings.temperature || 0.7,
+              maxOutputTokens: 500
+            }
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        reply = data.candidates[0].content.parts[0].text;
+      } catch (error) {
+        console.error('Gemini API error:', error);
+        throw new Error(`Failed to call Gemini API: ${error.message}`);
       }
-      
-      const data = await response.json();
-      reply = data.choices[0].message.content;
     } else {
       throw new Error('Unsupported service provider');
     }
@@ -264,6 +237,20 @@ app.delete('/api/reset/:userId', (req, res) => {
   res.json({ message: 'API key and conversation history reset successfully' });
 });
 
+// Configure API key endpoint
+app.post('/api/configure', (req, res) => {
+  const { userId, apiKey } = req.body;
+  
+  if (!userId || !apiKey) {
+    return res.status(400).json({ error: 'User ID and API key are required' });
+  }
+  
+  // Store the API key
+  apiKeys.set(userId, apiKey);
+  
+  res.json({ message: 'API key configured successfully' });
+});
+
 // Export data endpoint
 app.get('/api/export/:userId', (req, res) => {
   const { userId } = req.params;
@@ -308,7 +295,7 @@ app.post('/api/import/:userId', (req, res) => {
 // API Documentation
 app.get('/api/docs', (req, res) => {
   res.json({
-    message: 'Vibe Coding Backend API Documentation',
+    message: 'Chat Buddy Backend API Documentation',
     endpoints: [
       {
         method: 'POST',

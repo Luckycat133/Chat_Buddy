@@ -4,7 +4,7 @@
   
   <!-- Header -->
   <rect x="0" y="0" width="800" height="60" fill="url(#headerGradient)" />
-  <text x="400" y="35" font-family="Arial, sans-serif" font-size="20" fill="white" text-anchor="middle" font-weight="bold">Vibe Coding AI Chat</text>
+  <text x="400" y="35" font-family="Arial, sans-serif" font-size="20" fill="white" text-anchor="middle" font-weight="bold">Chat Buddy AI Chat</text>
   
   <!-- Gradient for header -->
   <defs>

@@ -1,194 +1,397 @@
-# Vibe Coding - AI Chat Application Documentation
+# Chat Buddy - AI Chat Application
 
-## Overview
-## 概述
+[English](#english) | [中文](#中文)
 
-Vibe Coding is a sleek and modern chat interface for interacting with AI models. The application features:
-Vibe Coding 是一个简洁现代的聊天界面，用于与 AI 模型交互。应用程序的特点：
-
-- Clean, social-media style chat interface
-- 简洁、类似社交媒体风格的聊天界面
-- Secure API key configuration
-- 安全的 API 密钥配置
-- Persistent memory that never clears
-- 永不丢失的持久化内存
-- Accurate conversation timestamping
-- 精确的对话时间戳
+<div id="english">
 
 ## Project Structure
-## 项目结构
 
 ```
 .
 ├── frontend/          # React-based chat interface
-├── frontend/          # 基于 React 的聊天界面
 ├── backend/           # Node.js/Express backend with API key management
-├── backend/           # 带有 API 密钥管理的 Node.js/Express 后端
 ├── docs/              # Documentation and setup guides
-├── docs/              # 文档和设置指南
 └── README.md          # Main project documentation
-└── README.md          # 主项目文档
 ```
 
+## Important Notice
+
+The ability for users to configure their own API keys through the application interface has been removed. API keys are now configured by the developer in the backend environment variables.
+
+This change was made to simplify the user experience and ensure consistent API access.
+
+## Supported AI Providers
+
+The application now supports multiple AI providers:
+- OpenAI (default model: gpt-3.5-turbo)
+- Groq API (default model: mixtral-8x7b-32768)
+- Google Gemini API (default model: gemini-2.5-flash)
+
+The default provider is set to Google Gemini, but you can use any provider for which you have an API key.
+
 ## Getting Started
-## 开始使用
 
 ### Prerequisites
-### 先决条件
 
 - Node.js (v14 or higher)
-- Node.js (v14 或更高版本)
 - npm (v6 or higher)
-- npm (v6 或更高版本)
 
 ### Installation
-### 安装
 
 1. Clone the repository
-1. 克隆仓库
 2. Install frontend dependencies:
-2. 安装前端依赖：
    ```
    cd frontend
    npm install
    ```
 3. Install backend dependencies:
-3. 安装后端依赖：
    ```
    cd ../backend
    npm install
    ```
 
 ### Running the Application
-### 运行应用程序
 
-1. Start the backend server:
-1. 启动后端服务器：
+1. Configure the API key in the backend:
+   - Create a `.env` file in the `backend` directory
+   - For OpenAI API, add your API key: `OPENAI_API_KEY=your_openai_api_key_here`
+   - For Groq API, add your API key: `GROQ_API_KEY=your_groq_api_key_here`
+   - For Google Gemini API, add your API key: `GEMINI_API_KEY=your_gemini_api_key_here`
+   
+   You can configure one or more API keys depending on which providers you want to use.
+   
+2. Start the backend server:
    ```
    cd backend
    npm run dev
    ```
-   The server will start on `http://localhost:5000`
-   服务器将在 `http://localhost:5000` 上启动
+   The server will start on `http://localhost:5001`
 
-2. Start the frontend development server:
-2. 启动前端开发服务器：
+3. Start the frontend development server:
    ```
    cd frontend
    npm start
    ```
    The frontend will start on `http://localhost:3000`
-   前端将在 `http://localhost:3000` 上启动
 
-3. Open your browser and navigate to `http://localhost:3000`
-3. 打开浏览器并导航到 `http://localhost:3000`
+4. Open your browser and navigate to `http://localhost:3000`
 
-### API Key Configuration
-### API 密钥配置
+## API Key Configuration
 
-1. When you first open the application, you'll be prompted to enter your API key
-1. 首次打开应用程序时，系统会提示您输入 API 密钥
-2. The API key is securely stored in your browser's local storage
-2. API 密钥安全地存储在浏览器的本地存储中
-3. You can reset your API key at any time using the "Reset API Key" button
-3. 您可以随时使用"重置 API 密钥"按钮重置 API 密钥
+API keys are now configured by the developer in the backend environment variables. Users can no longer configure their own API keys through the application interface.
 
-### Backend API Endpoints
-### 后端 API 端点
+To use any of these providers, set the corresponding environment variable with your API key. You can configure one or more API keys depending on which providers you want to use.
 
-For detailed information about the backend API endpoints, please refer to the [Backend README](../backend/README.md).
-有关后端 API 端点的详细信息，请参阅 [后端 README](../backend/README.md)。
+If you have multiple API keys configured, the application will use them in this order of preference:
+1. Google Gemini API (if GEMINI_API_KEY is set)
+2. Groq API (if GROQ_API_KEY is set)
+3. OpenAI API (if OPENAI_API_KEY is set)
+
+You can change this preference by modifying the code in `backend/server.js`.
 
 ## Features
-## 功能
 
 ### Chat Interface
-### 聊天界面
 
 The chat interface features a clean, modern design inspired by popular social media platforms:
-聊天界面具有受流行社交媒体平台启发的简洁现代设计：
 
 - Message bubbles with distinct styling for user and AI messages
-- 用户和 AI 消息具有不同样式的气泡
 - Accurate timestamps for all messages
-- 所有消息的精确时间戳
 - Smooth scrolling to the latest message
-- 平滑滚动到最新消息
 - Responsive design that works on all device sizes
-- 适用于所有设备尺寸的响应式设计
 
 ### API Key Management
-### API 密钥管理
 
-- Secure storage of API keys in browser local storage
-- 在浏览器本地存储中安全存储 API 密钥
-- Easy reset functionality
-- 简单的重置功能
-- Automatic configuration when the application starts
-- 应用程序启动时自动配置
+- Secure storage of API keys in environment variables
+- Support for multiple AI providers
+- Easy configuration through `.env` file
 
 ### Persistent Memory
-### 持久化内存
 
 - All conversations are stored with accurate timestamps
-- 所有对话都以精确的时间戳存储
 - Memory is never cleared unless explicitly reset by the user
-- 除非用户明确重置，否则内存永远不会被清除
 - Conversation history is maintained across sessions
-- 跨会话维护对话历史记录
+
+## Backend API Endpoints
+
+### Send Chat Message
+- **URL**: `/api/chat`
+- **Method**: `POST`
+- **Body**: 
+  ```json
+  {
+    "message": "Hello, AI!",
+    "userId": "unique-user-identifier"
+  }
+  ```
+- **Response**: 
+  ```json
+  {
+    "message": {
+      "id": 2,
+      "text": "Response from AI",
+      "sender": "ai",
+      "timestamp": "2023-01-01T00:00:00.000Z"
+    },
+    "conversation": [
+      // Array of all messages in the conversation
+    ]
+  }
+  ```
+
+### Get Conversation History
+- **URL**: `/api/conversation/:userId`
+- **Method**: `GET`
+- **Response**: 
+  ```json
+  {
+    "conversation": [
+      // Array of all messages in the conversation
+    ]
+  }
+  ```
+
+### Reset API Key and Conversation
+- **URL**: `/api/reset/:userId`
+- **Method**: `DELETE`
+- **Response**: 
+  ```json
+  {
+    "message": "API key and conversation history reset successfully"
+  }
+  ```
 
 ## Development
-## 开发
 
 ### Frontend
-### 前端
 
 The frontend is built with React and styled-components:
-前端使用 React 和 styled-components 构建：
 
 - `src/App.js` - Main application component
-- `src/App.js` - 主应用程序组件
 - `src/components/ChatWindow.js` - Chat interface component
-- `src/components/ChatWindow.js` - 聊天界面组件
-- `src/components/ApiKeySetup.js` - API key configuration component
-- `src/components/ApiKeySetup.js` - API 密钥配置组件
 
 ### Backend
-### 后端
 
 The backend is built with Node.js and Express:
-后端使用 Node.js 和 Express 构建：
 
 - `server.js` - Main server file with all API endpoints
-- `server.js` - 包含所有 API 端点的主服务器文件
 - In-memory storage for API keys and conversations (would be replaced with a database in production)
-- API 密钥和对话的内存存储（在生产环境中将替换为数据库）
 
 ## Deployment
-## 部署
 
 For production deployment:
-对于生产部署：
 
 1. Build the frontend:
-1. 构建前端：
    ```
    cd frontend
    npm run build
    ```
 2. Update the backend server to serve the frontend build files
-2. 更新后端服务器以提供前端构建文件
 3. Deploy both the backend and frontend build files to your hosting platform
-3. 将后端和前端构建文件部署到您的托管平台
 
 ## Contributing
-## 贡献
 
 Contributions are welcome! Please feel free to submit a Pull Request.
-欢迎贡献！请随时提交 Pull Request。
 
 ## License
-## 许可证
 
 This project is licensed under the MIT License.
-该项目采用 MIT 许可证。
+
+</div>
+
+<div id="中文">
+
+## 项目结构
+
+```
+.
+├── frontend/          # 基于React的聊天界面
+├── backend/           # 基于Node.js/Express的后端，包含API密钥管理
+├── docs/              # 文档和设置指南
+└── README.md          # 主项目文档
+```
+
+## 重要通知
+
+用户通过应用程序界面配置自己的API密钥的功能已被移除。现在API密钥由开发人员在后端环境变量中配置。
+
+此更改是为了简化用户体验并确保一致的API访问。
+
+## 支持的AI提供商
+
+该应用程序现在支持多个AI提供商：
+- OpenAI（默认模型：gpt-3.5-turbo）
+- Groq API（默认模型：mixtral-8x7b-32768）
+- Google Gemini API（默认模型：gemini-2.5-flash）
+
+默认提供商设置为Google Gemini，但您可以使用任何您拥有API密钥的提供商。
+
+## 开始使用
+
+### 先决条件
+
+- Node.js（v14或更高版本）
+- npm（v6或更高版本）
+
+### 安装
+
+1. 克隆仓库
+2. 安装前端依赖：
+   ```
+   cd frontend
+   npm install
+   ```
+3. 安装后端依赖：
+   ```
+   cd ../backend
+   npm install
+   ```
+
+### 运行应用程序
+
+1. 在后端配置API密钥：
+   - 在`backend`目录中创建一个`.env`文件
+   - 对于OpenAI API，添加您的API密钥：`OPENAI_API_KEY=your_openai_api_key_here`
+   - 对于Groq API，添加您的API密钥：`GROQ_API_KEY=your_groq_api_key_here`
+   - 对于Google Gemini API，添加您的API密钥：`GEMINI_API_KEY=your_gemini_api_key_here`
+   
+   您可以根据要使用的提供商配置一个或多个API密钥。
+   
+2. 启动后端服务器：
+   ```
+   cd backend
+   npm run dev
+   ```
+   服务器将在`http://localhost:5001`启动
+
+3. 启动前端开发服务器：
+   ```
+   cd frontend
+   npm start
+   ```
+   前端将在`http://localhost:3000`启动
+
+4. 打开浏览器并导航到`http://localhost:3000`
+
+## API密钥配置
+
+现在API密钥由开发人员在后端环境变量中配置。用户无法再通过应用程序界面配置自己的API密钥。
+
+要使用这些提供商中的任何一个，请使用您的API密钥设置相应的环境变量。您可以根据要使用的提供商配置一个或多个API密钥。
+
+如果您配置了多个API密钥，应用程序将按以下优先顺序使用它们：
+1. Google Gemini API（如果设置了GEMINI_API_KEY）
+2. Groq API（如果设置了GROQ_API_KEY）
+3. OpenAI API（如果设置了OPENAI_API_KEY）
+
+您可以通过修改`backend/server.js`中的代码来更改此优先级。
+
+## 功能特性
+
+### 聊天界面
+
+聊天界面具有受流行社交媒体平台启发的简洁现代设计：
+
+- 具有独特样式的用户和AI消息气泡
+- 所有消息的准确时间戳
+- 平滑滚动到最新消息
+- 适用于所有设备尺寸的响应式设计
+
+### API密钥管理
+
+- 在环境变量中安全存储API密钥
+- 支持多个AI提供商
+- 通过`.env`文件轻松配置
+
+### 持久化内存
+
+- 所有对话都存储有准确的时间戳
+- 除非用户明确重置，否则内存永远不会被清除
+- 对话历史在会话之间保持
+
+## 后端API端点
+
+### 发送聊天消息
+- **URL**: `/api/chat`
+- **方法**: `POST`
+- **请求体**: 
+  ```json
+  {
+    "message": "Hello, AI!",
+    "userId": "unique-user-identifier"
+  }
+  ```
+- **响应**: 
+  ```json
+  {
+    "message": {
+      "id": 2,
+      "text": "Response from AI",
+      "sender": "ai",
+      "timestamp": "2023-01-01T00:00:00.000Z"
+    },
+    "conversation": [
+      // 对话中所有消息的数组
+    ]
+  }
+  ```
+
+### 获取对话历史
+- **URL**: `/api/conversation/:userId`
+- **方法**: `GET`
+- **响应**: 
+  ```json
+  {
+    "conversation": [
+      // 对话中所有消息的数组
+    ]
+  }
+  ```
+
+### 重置API密钥和对话
+- **URL**: `/api/reset/:userId`
+- **方法**: `DELETE`
+- **响应**: 
+  ```json
+  {
+    "message": "API密钥和对话历史重置成功"
+  }
+  ```
+
+## 开发
+
+### 前端
+
+前端使用React和styled-components构建：
+
+- `src/App.js` - 主应用程序组件
+- `src/components/ChatWindow.js` - 聊天界面组件
+
+### 后端
+
+后端使用Node.js和Express构建：
+
+- `server.js` - 包含所有API端点的主服务器文件
+- 用于API密钥和对话的内存存储（在生产环境中应替换为数据库）
+
+## 部署
+
+生产环境部署：
+
+1. 构建前端：
+   ```
+   cd frontend
+   npm run build
+   ```
+2. 更新后端服务器以提供前端构建文件
+3. 将后端和前端构建文件部署到您的托管平台
+
+## 贡献
+
+欢迎贡献！请随时提交Pull Request。
+
+## 许可证
+
+该项目采用MIT许可证。
+
+</div>

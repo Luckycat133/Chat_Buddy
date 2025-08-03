@@ -1,6 +1,19 @@
 # Changelog
 
-## v0.0.1 (2025-08-03)
+[English](#english) | [中文](#中文)
+
+<div id="english">
+
+## v0.0.2 (2025-08-03)
+
+### New Features
+
+- Renamed the project to "Chat Buddy"
+- Integrated Google Gemini API as a built-in AI service provider
+- Improved API key security by moving hardcoded keys to environment variables
+- Consolidated documentation into a single comprehensive README.md file
+
+## v0.0.1 (2025-08-02)
 
 ### New Features
 
@@ -37,7 +50,20 @@
 - `POST /api/import/:userId` - Import user data
 - `GET /api/docs` - Get API documentation
 
----
+</div>
+
+<div id="中文">
+
+## v0.0.2 (2025-08-03)
+
+### 新增功能
+
+- 将项目更名为"Chat Buddy"
+- 集成Google Gemini API作为内置AI服务提供商
+- 通过将硬编码的密钥移至环境变量来提高API密钥安全性
+- 将文档整合到一个全面的README.md文件中
+
+## v0.0.1 (2025-08-02)
 
 ### 新增功能
 
@@ -73,3 +99,5 @@
 - `GET /api/export/:userId` - 导出用户数据
 - `POST /api/import/:userId` - 导入用户数据
 - `GET /api/docs` - 获取API文档
+
+</div>
