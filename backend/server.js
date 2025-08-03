@@ -48,8 +48,22 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: 'User ID and message are required' });
   }
   
-  // Set the API key from environment variables
-  const apiKey = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
+  // Set the API key from environment variables based on the selected provider
+  // Default to Gemini if available, otherwise Groq, then OpenAI
+  let apiKey;
+  let selectedProvider = 'gemini'; // Default provider
+  
+  // Check for available API keys and select the appropriate one
+  if (process.env.GEMINI_API_KEY) {
+    apiKey = process.env.GEMINI_API_KEY;
+    selectedProvider = 'gemini';
+  } else if (process.env.GROQ_API_KEY) {
+    apiKey = process.env.GROQ_API_KEY;
+    selectedProvider = 'groq';
+  } else if (process.env.OPENAI_API_KEY) {
+    apiKey = process.env.OPENAI_API_KEY;
+    selectedProvider = 'openai';
+  }
   
   // Check if API key is available
   if (!apiKey) {
@@ -84,87 +98,36 @@ app.post('/api/chat', async (req, res) => {
       temperature: 0.7
     };
     
+    // Handle different API providers
+    // The application is designed to be flexible and can work with any AI provider
+    // that supports the OpenAI API format. You can easily extend it to support
+    // additional providers by adding more conditions here.
+    
     let reply;
     
-    // Handle different providers
-    if (userSettings.provider === 'openai') {
-      // Call OpenAI API
-      const openai = new OpenAI({ apiKey: apiKey });
-      
-      const completion = await openai.chat.completions.create({
-        model: userSettings.modelName || "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: "You are a helpful coding assistant. Help the user with their programming questions and provide clear, accurate code examples when needed. Always be friendly and encouraging." },
-          ...history.map(msg => ({
-            role: msg.sender === 'user' ? 'user' : 'assistant',
-            content: msg.text
-          }))
-        ],
-        max_tokens: 500,
-        temperature: userSettings.temperature || 0.7
-      });
-      
-      reply = completion.choices[0].message.content;
-    } else if (userSettings.provider === 'groq') {
-      // Call Groq API
+    if (userSettings.provider === 'gemini') {
+      // For Google Gemini
       try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            model: userSettings.modelName,
-            messages: [
-              { role: "system", content: "You are a helpful coding assistant. Help the user with their programming questions and provide clear, accurate code examples when needed. Always be friendly and encouraging." },
-              ...history.map(msg => ({
-                role: msg.sender === 'user' ? 'user' : 'assistant',
-                content: msg.text
-              }))
-            ],
-            max_tokens: 500,
-            temperature: userSettings.temperature || 0.7
-          })
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Groq API error: ${response.status} ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        reply = data.choices[0].message.content;
-      } catch (error) {
-        console.error('Groq API error:', error);
-        throw new Error(`Failed to call Groq API: ${error.message}`);
-      }
-    } else if (userSettings.provider === 'gemini') {
-      // Call Google Gemini API
-      try {
-        // Get Gemini API key from environment variables
-        const geminiApiKey = process.env.GEMINI_API_KEY;
+        const geminiApiKey = process.env.GEMINI_API_KEY || apiKey;
         
         if (!geminiApiKey) {
-          throw new Error('GEMINI_API_KEY is not configured in environment variables');
+          throw new Error('GEMINI_API_KEY is not configured');
         }
         
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${userSettings.modelName}:generateContent?key=${geminiApiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${userSettings.modelName || 'gemini-pro'}:generateContent?key=${geminiApiKey}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  { text: "You are a helpful coding assistant. Help the user with their programming questions and provide clear, accurate code examples when needed. Always be friendly and encouraging." },
-                  ...history.map(msg => ({
-                    text: msg.text
-                  }))
-                ]
-              }
-            ],
+            contents: [{
+              parts: [{
+                text: [
+                  "You are a helpful coding assistant. Help the user with their programming questions and provide clear, accurate code examples when needed. Always be friendly and encouraging.",
+                  ...history.map(m => m.text)
+                ].join('\n\n')
+              }]
+            }],
             generationConfig: {
               temperature: userSettings.temperature || 0.7,
               maxOutputTokens: 500
@@ -182,8 +145,58 @@ app.post('/api/chat', async (req, res) => {
         console.error('Gemini API error:', error);
         throw new Error(`Failed to call Gemini API: ${error.message}`);
       }
+    } else if (userSettings.provider === 'openai' || userSettings.provider === 'groq' || !userSettings.provider) {
+      // For OpenAI, Groq, and any other providers that use the OpenAI API format
+      // Default to OpenAI if no provider is specified
+      let apiUrl, modelName;
+      
+      if (userSettings.provider === 'openai') {
+        apiUrl = 'https://api.openai.com/v1/chat/completions';
+        modelName = userSettings.modelName || 'gpt-3.5-turbo';
+      } else if (userSettings.provider === 'groq') {
+        apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+        modelName = userSettings.modelName || 'llama3-70b-8192';
+      } else {
+        // Default to OpenAI
+        apiUrl = 'https://api.openai.com/v1/chat/completions';
+        modelName = userSettings.modelName || 'gpt-3.5-turbo';
+      }
+      
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: [
+              { role: "system", content: "You are a helpful coding assistant. Help the user with their programming questions and provide clear, accurate code examples when needed. Always be friendly and encouraging." },
+              ...history.map(msg => ({
+                role: msg.sender === 'user' ? 'user' : 'assistant',
+                content: msg.text
+              }))
+            ],
+            temperature: userSettings.temperature || 0.7,
+            max_tokens: 500
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        reply = data.choices[0].message.content;
+      } catch (error) {
+        console.error(`${userSettings.provider || 'OpenAI'} API error:`, error);
+        throw new Error(`Failed to call ${userSettings.provider || 'OpenAI'} API: ${error.message}`);
+      }
     } else {
-      throw new Error('Unsupported service provider');
+      // For any other providers, you can add more conditions here
+      // This is where you would add support for other APIs
+      throw new Error(`Unsupported provider: ${userSettings.provider}. Please check your configuration.`);
     }
     
     // Add AI response to history with accurate timestamp

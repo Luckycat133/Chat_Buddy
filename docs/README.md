@@ -80,14 +80,16 @@ The default provider is set to Google Gemini, but you can use any provider for w
 
 API keys are now configured by the developer in the backend environment variables. Users can no longer configure their own API keys through the application interface.
 
-To use any of these providers, set the corresponding environment variable with your API key. You can configure one or more API keys depending on which providers you want to use.
+To use any AI provider, set the corresponding environment variable with your API key. You can configure one or more API keys depending on which providers you want to use.
 
-If you have multiple API keys configured, the application will use them in this order of preference:
-1. Google Gemini API (if GEMINI_API_KEY is set)
-2. Groq API (if GROQ_API_KEY is set)
-3. OpenAI API (if OPENAI_API_KEY is set)
+The application is designed to be flexible and can work with any AI provider that supports the OpenAI API format. You can easily extend it to support additional providers by modifying the code in `backend/server.js`.
 
-You can change this preference by modifying the code in `backend/server.js`.
+For the currently supported providers, set these environment variables:
+- `OPENAI_API_KEY` for OpenAI
+- `GROQ_API_KEY` for Groq API
+- `GEMINI_API_KEY` for Google Gemini API
+
+You can add support for other providers by extending the provider handling code in `backend/server.js`.
 
 ## Features
 
@@ -277,14 +279,16 @@ This project is licensed under the MIT License.
 
 现在API密钥由开发人员在后端环境变量中配置。用户无法再通过应用程序界面配置自己的API密钥。
 
-要使用这些提供商中的任何一个，请使用您的API密钥设置相应的环境变量。您可以根据要使用的提供商配置一个或多个API密钥。
+要使用任何AI提供商，请使用您的API密钥设置相应的环境变量。您可以根据要使用的提供商配置一个或多个API密钥。
 
-如果您配置了多个API密钥，应用程序将按以下优先顺序使用它们：
-1. Google Gemini API（如果设置了GEMINI_API_KEY）
-2. Groq API（如果设置了GROQ_API_KEY）
-3. OpenAI API（如果设置了OPENAI_API_KEY）
+该应用程序设计灵活，可以与任何支持OpenAI API格式的AI提供商一起使用。您可以通过修改`backend/server.js`中的代码轻松扩展以支持其他提供商。
 
-您可以通过修改`backend/server.js`中的代码来更改此优先级。
+对于当前支持的提供商，请设置这些环境变量：
+- `OPENAI_API_KEY` 用于OpenAI
+- `GROQ_API_KEY` 用于Groq API
+- `GEMINI_API_KEY` 用于Google Gemini API
+
+您可以通过扩展`backend/server.js`中的提供商处理代码来添加对其他提供商的支持。
 
 ## 功能特性
 
