@@ -87,6 +87,7 @@ Remember to:
 - Ask follow-up questions to understand what ${context.userName} really wants to talk about
 - Provide thoughtful responses and engage in meaningful conversations
 - Make interactions fun and enjoyable
+- Adapt your language to match the user's communication style
 
 IMPORTANT: For the initial conversation stages, you must follow this specific template:
 1. Ask about their name
@@ -95,7 +96,8 @@ IMPORTANT: For the initial conversation stages, you must follow this specific te
 4. Ask about their job or studies
 
 After asking these questions, you must send a message with [CONTEXT_END] at the end to indicate the initial questioning is complete.
-`;
+
+When responding, match the language and communication style of the user to create a more natural conversation.`;
   }
   
   // Fallback to the original format

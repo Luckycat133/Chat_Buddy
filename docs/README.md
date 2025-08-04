@@ -121,6 +121,8 @@ The chat interface features a clean, modern design inspired by popular social me
 - Engaging opening questions following a specific sequence (name → age → hobbies → job/studies) to get to know the user at the start of conversations
 - Context-aware responses based on user information collected during initial interaction
 - Clear context transition marker (`[CONTEXT_END]`) to indicate the end of initial information gathering
+- AI-generated final greeting message after completing initial information collection
+- Language adaptation to match the user's communication style for more natural conversations
 
 ## Backend API Endpoints
 
@@ -208,6 +210,7 @@ The application includes built-in diagnostic tools for development and troublesh
 - **Health Check Endpoint**: Access `/api/health` to verify server status
 - **Debug Logging**: Set `DEBUG=true` environment variable for detailed logs
 - **Network Diagnostics**: Built-in tools to test network connectivity and API endpoints
+- **Port Conflict Resolution**: Fixed issues with frontend development server port conflicts
 
 ### Environment Variables
 
@@ -349,9 +352,12 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
 
 ### AI个性化
 
-- 具有随机生成名称的AI助手，提供更个性化的体验
-- 在对话开始时通过吸引人的问题了解用户
+- 随机生成名称的AI助手，提供更个性化的体验
+- 按特定顺序（姓名→年龄→爱好→工作/学习）提问，以在对话开始时了解用户
 - 基于初始交互期间收集的用户信息提供上下文感知的响应
+- 清晰的上下文转换标记（`[CONTEXT_END]`），指示初始信息收集的结束
+- 在完成初始信息收集后由AI生成的最终问候消息
+- 语言适配以匹配用户的交流风格，实现更自然的对话
 
 ## 后端API端点
 
@@ -439,6 +445,7 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
 - **健康检查端点**：访问 `/api/health` 验证服务器状态
 - **调试日志**：设置 `DEBUG=true` 环境变量获取详细日志
 - **网络诊断**：内置工具测试网络连接和API端点
+- **端口冲突解决**：解决了前端开发服务器端口冲突问题
 
 ### 环境变量
 

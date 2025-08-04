@@ -11,12 +11,21 @@
 - **Structured Initial Questions**: AI now follows a specific sequence of questions (name → age → hobbies → job/studies) during initial conversation
 - **Context Marking**: Added special `[CONTEXT_END]` marker to clearly indicate the end of initial information gathering
 - **Enhanced Prompt Template**: Backend now provides a clear prompt template for AI to generate initial questions
+- **AI-Generated Final Greeting**: AI now generates the final greeting message after completing initial information collection instead of using a predefined template
+- **Language Adaptation**: AI now adapts its language to match the user's communication style for more natural conversations
 
 ### Technical Improvements
 
 - **Frontend Logic Update**: Modified `/frontend/src/components/ChatWindow.js` to request next question based on conversation stage
 - **Backend Prompt Engineering**: Enhanced `/backend/server.js` to provide structured prompt templates for initial conversation
 - **Process Automation**: Streamlined the initial conversation flow to automatically transition to open chat after context collection
+- **Final Greeting Generation**: Updated `/frontend/src/components/ChatWindow.js` to request AI-generated personalized greeting after context collection
+- **Language Matching**: Enhanced `/backend/server.js` to include language adaptation instructions in the prompt template
+
+### Bug Fixes
+
+- **Port Conflict Resolution**: Fixed issue where the frontend development server failed to start due to port 3000 being occupied by a previous process
+- **Process Management**: Improved server restart procedures to ensure clean shutdown of existing processes before starting new instances
 
 ## v0.2.1 (2025-08-04)
 
@@ -117,12 +126,21 @@
 - **结构化初始问题**：AI现在在初始对话中遵循特定的问题顺序（姓名→年龄→爱好→工作/学习）
 - **上下文标记**：添加了特殊的`[CONTEXT_END]`标记，以明确指示初始信息收集的结束
 - **增强的提示模板**：后端现在为AI生成初始问题提供清晰的提示模板
+- **AI生成的最终问候**：AI现在在完成初始信息收集后生成最终问候消息，而不是使用预定义模板
+- **语言适配**：AI现在会适配用户的语言风格，实现更自然的对话
 
 ### 技术改进
 
 - **前端逻辑更新**：修改了`/frontend/src/components/ChatWindow.js`，根据对话阶段请求下一个问题
 - **后端提示工程**：增强了`/backend/server.js`，为初始对话提供结构化提示模板
 - **流程自动化**：简化了初始对话流程，在收集上下文后自动过渡到开放聊天
+- **最终问候生成**：更新了`/frontend/src/components/ChatWindow.js`，在收集上下文后请求AI生成个性化问候
+- **语言匹配**：增强了`/backend/server.js`，在提示模板中包含语言适配指令
+
+### 错误修复
+
+- **端口冲突解决**：修复了前端开发服务器因3000端口被先前进程占用而无法启动的问题
+- **进程管理**：改进了服务器重启程序，确保在启动新实例之前干净地关闭现有进程
 
 ## v0.2.1 (2025-08-04)
 

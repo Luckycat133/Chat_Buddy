@@ -300,16 +300,60 @@ const ChatWindow = ({ userId }) => {
     
     setConversationStage(nextStage);
     
-    // If we've completed the questionnaire, add a friendly greeting message
+    // If we've completed the questionnaire, ask AI to generate the final greeting message
     if (nextStage === 'completed') {
-      const greetingMessage = {
-        id: Date.now() + Math.random(),
-        text: `Thanks for sharing all that with me, ${userInfo.name}! I feel like I'm getting to know you better already. What's on your mind today? Is there anything particular you'd like to chat about?`,
-        isUser: false,
-        timestamp: new Date()
-      };
+      setIsLoading(true);
       
-      setMessages(prev => [...prev, greetingMessage]);
+      try {
+        // Prepare request body with conversation history and current context
+        const requestBody = {
+          userId: userId,
+          message: `Generate a personalized greeting message for ${userInfo.name} after completing the initial information collection. The collected information is: Name: ${userInfo.name}, Age: ${userInfo.age}, Hobbies: ${userInfo.hobbies}, Job/Study: ${userInfo.job || extractedJob}. Ask what they would like to talk about today.`,
+          context: {
+            currentStage: conversationStage,
+            nextStage: nextStage,
+            userInfo: userInfo
+          }
+        };
+        
+        const response = await fetch('http://localhost:5001/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        const aiMessage = {
+          id: Date.now() + Math.random(),
+          text: data.message.content,
+          isUser: false,
+          timestamp: new Date()
+        };
+        
+        setMessages(prev => [...prev, aiMessage]);
+      } catch (error) {
+        console.error('Error getting final greeting from AI:', error);
+        
+        // Fallback to predefined greeting if AI fails
+        const greetingMessage = {
+          id: Date.now() + Math.random(),
+          text: `Thanks for sharing all that with me, ${userInfo.name}! I feel like I'm getting to know you better already. What's on your mind today? Is there anything particular you'd like to chat about?`,
+          isUser: false,
+          timestamp: new Date()
+        };
+        
+        setMessages(prev => [...prev, greetingMessage]);
+      } finally {
+        setIsLoading(false);
+      }
+      
       return;
     }
     
