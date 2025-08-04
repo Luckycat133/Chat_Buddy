@@ -48,21 +48,23 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: 'User ID and message are required' });
   }
   
-  // Set the API key from environment variables based on the selected provider
-  // Default to Gemini if available, otherwise Groq, then OpenAI
-  let apiKey;
-  let selectedProvider = 'gemini'; // Default provider
+  // Get user settings
+  const userSetting = userSettings.get(userId) || {};
   
-  // Check for available API keys and select the appropriate one
-  if (process.env.GEMINI_API_KEY) {
-    apiKey = process.env.GEMINI_API_KEY;
-    selectedProvider = 'gemini';
-  } else if (process.env.GROQ_API_KEY) {
-    apiKey = process.env.GROQ_API_KEY;
-    selectedProvider = 'groq';
-  } else if (process.env.OPENAI_API_KEY) {
-    apiKey = process.env.OPENAI_API_KEY;
-    selectedProvider = 'openai';
+  // Use environment variable based configuration
+  // Check for custom API configuration first
+  let apiKey, apiUrl, modelName, provider;
+  if (process.env.CUSTOM_API_URL && process.env.CUSTOM_API_KEY) {
+    apiKey = process.env.CUSTOM_API_KEY;
+    apiUrl = process.env.CUSTOM_API_URL;
+    modelName = process.env.CUSTOM_API_MODEL || 'default-model';
+    provider = process.env.CUSTOM_API_PROVIDER || 'custom';
+  } else {
+    // If no custom API is configured, use default OpenAI configuration
+    apiKey = process.env.OPENAI_API_KEY || process.env.CUSTOM_API_KEY;
+    apiUrl = process.env.CUSTOM_API_URL || 'https://api.openai.com/v1/chat/completions';
+    modelName = process.env.CUSTOM_API_MODEL || 'gpt-3.5-turbo';
+    provider = 'openai';
   }
   
   // Check if API key is available
@@ -74,47 +76,53 @@ app.post('/api/chat', async (req, res) => {
   
   try {
     // Get or create conversation history for this user
-    if (!conversations.has(userId)) {
-      conversations.set(userId, []);
-    }
+  if (!conversations.has(userId)) {
+    conversations.set(userId, []);
+  }
+  
+  const history = conversations.get(userId);
+  
+  // Add the new user message to history with accurate timestamp
+  const timestamp = getAccurateTimestamp();
+  const newMessage = {
+    id: history.length + 1,
+    text: message,
+    sender: 'user',
+    timestamp: timestamp
+  };
+  
+  history.push(newMessage);
+  
+
+  
+  // Use user settings or defaults
+  const settings = userSettings.get(userId) || {};
+  
+  const userSettingsObj = {
+    provider: settings.provider || provider || 'gemini',
+    modelName: settings.modelName || modelName || 'gemini-2.5-flash',
+    temperature: settings.temperature || 0.7
+  };
     
-    const history = conversations.get(userId);
-    
-    // Add the new user message to history with accurate timestamp
-    const timestamp = getAccurateTimestamp();
-    const newMessage = {
-      id: history.length + 1,
-      text: message,
-      sender: 'user',
-      timestamp: timestamp
-    };
-    
-    history.push(newMessage);
-    
-    // Use default settings
-    const userSettings = {
-      provider: 'gemini',
-      modelName: 'gemini-2.5-flash',
-      temperature: 0.7
-    };
-    
-    // Handle different API providers
-    // The application is designed to be flexible and can work with any AI provider
-    // that supports the OpenAI API format. You can easily extend it to support
-    // additional providers by adding more conditions here.
+    // Handle API requests for OpenAI-compatible APIs
+    // The application is designed to work with any AI provider that supports the OpenAI API format
     
     let reply;
     
-    if (userSettings.provider === 'gemini') {
-      // For Google Gemini
+    // Handle different API providers
+    if (userSettingsObj.provider === 'custom' && process.env.CUSTOM_API_PROVIDER === 'gemini') {
+      // Special handling for Gemini API when using custom provider
       try {
-        const geminiApiKey = process.env.GEMINI_API_KEY || apiKey;
+        // Use custom API configuration from environment variables
+        const customApiUrl = process.env.CUSTOM_API_URL;
+        const customApiKey = process.env.CUSTOM_API_KEY;
         
-        if (!geminiApiKey) {
-          throw new Error('GEMINI_API_KEY is not configured');
+        if (!customApiUrl || !customApiKey) {
+          throw new Error('Custom API configuration is incomplete. Please check your environment variables.');
         }
         
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${userSettings.modelName || 'gemini-pro'}:generateContent?key=${geminiApiKey}`, {
+        // For custom providers with CUSTOM_API_PROVIDER=gemini, we'll use the Gemini-specific handling
+        const response = await fetch(`${customApiUrl}?key=${customApiKey}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -129,39 +137,68 @@ app.post('/api/chat', async (req, res) => {
               }]
             }],
             generationConfig: {
-              temperature: userSettings.temperature || 0.7,
+              temperature: userSettingsObj.temperature || 0.7,
               maxOutputTokens: 500
             }
           })
         });
         
         if (!response.ok) {
-          throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+          throw new Error(`Custom Gemini API error: ${response.status} ${response.statusText}`);
         }
         
         const data = await response.json();
         reply = data.candidates[0].content.parts[0].text;
       } catch (error) {
-        console.error('Gemini API error:', error);
-        throw new Error(`Failed to call Gemini API: ${error.message}`);
+        console.error('Custom Gemini API error:', error);
+        throw new Error(`Failed to call Custom Gemini API: ${error.message}`);
       }
-    } else if (userSettings.provider === 'openai' || userSettings.provider === 'groq' || !userSettings.provider) {
-      // For OpenAI, Groq, and any other providers that use the OpenAI API format
-      // Default to OpenAI if no provider is specified
-      let apiUrl, modelName;
-      
-      if (userSettings.provider === 'openai') {
-        apiUrl = 'https://api.openai.com/v1/chat/completions';
-        modelName = userSettings.modelName || 'gpt-3.5-turbo';
-      } else if (userSettings.provider === 'groq') {
-        apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
-        modelName = userSettings.modelName || 'llama3-70b-8192';
-      } else {
-        // Default to OpenAI
-        apiUrl = 'https://api.openai.com/v1/chat/completions';
-        modelName = userSettings.modelName || 'gpt-3.5-turbo';
+    } else if (userSettingsObj.provider === 'custom') {
+      // For other custom providers, use the OpenAI API format as a default
+      try {
+        // Use custom API configuration from environment variables
+        const customApiUrl = process.env.CUSTOM_API_URL;
+        const customApiKey = process.env.CUSTOM_API_KEY;
+        const customApiModel = process.env.CUSTOM_API_MODEL;
+        
+        if (!customApiUrl || !customApiKey || !customApiModel) {
+          throw new Error('Custom API configuration is incomplete. Please check your environment variables.');
+        }
+        
+        // For custom providers, we'll use the OpenAI API format as a default
+        // This can be customized further based on the specific API requirements
+        const response = await fetch(customApiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${customApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: customApiModel,
+            messages: [
+              { role: "system", content: "You are a helpful coding assistant. Help the user with their programming questions and provide clear, accurate code examples when needed. Always be friendly and encouraging." },
+              ...history.map(msg => ({
+                role: msg.sender === 'user' ? 'user' : 'assistant',
+                content: msg.text
+              }))
+            ],
+            temperature: userSettingsObj.temperature || 0.7,
+            max_tokens: 500
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Custom API error: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        reply = data.choices[0].message.content;
+      } catch (error) {
+        console.error('Custom API error:', error);
+        throw new Error(`Failed to call Custom API: ${error.message}`);
       }
-      
+    } else {
+      // For all other providers, use the standard OpenAI API format
       try {
         const response = await fetch(apiUrl, {
           method: 'POST',
@@ -170,7 +207,7 @@ app.post('/api/chat', async (req, res) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: modelName,
+            model: userSettingsObj.modelName || modelName,
             messages: [
               { role: "system", content: "You are a helpful coding assistant. Help the user with their programming questions and provide clear, accurate code examples when needed. Always be friendly and encouraging." },
               ...history.map(msg => ({
@@ -178,7 +215,7 @@ app.post('/api/chat', async (req, res) => {
                 content: msg.text
               }))
             ],
-            temperature: userSettings.temperature || 0.7,
+            temperature: userSettingsObj.temperature || 0.7,
             max_tokens: 500
           })
         });
@@ -190,13 +227,9 @@ app.post('/api/chat', async (req, res) => {
         const data = await response.json();
         reply = data.choices[0].message.content;
       } catch (error) {
-        console.error(`${userSettings.provider || 'OpenAI'} API error:`, error);
-        throw new Error(`Failed to call ${userSettings.provider || 'OpenAI'} API: ${error.message}`);
+        console.error(`${userSettingsObj.provider || 'OpenAI'} API error:`, error);
+        throw new Error(`Failed to call ${userSettingsObj.provider || 'OpenAI'} API: ${error.message}`);
       }
-    } else {
-      // For any other providers, you can add more conditions here
-      // This is where you would add support for other APIs
-      throw new Error(`Unsupported provider: ${userSettings.provider}. Please check your configuration.`);
     }
     
     // Add AI response to history with accurate timestamp

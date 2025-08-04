@@ -15,7 +15,7 @@ function App() {
   if (!localStorage.getItem('userId')) {
     localStorage.setItem('userId', userIdRef.current);
   }
-  
+
   return (
     <AppContainer>
       <ChatWindow 

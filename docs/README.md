@@ -16,9 +16,9 @@
 
 ## Important Notice
 
-The ability for users to configure their own API keys through the application interface has been removed. API keys are now configured by the developer in the backend environment variables.
+API keys are configured by the developer in the backend environment variables. Users cannot configure their own API keys through the application interface.
 
-This change was made to simplify the user experience and ensure consistent API access.
+This ensures a simplified user experience and consistent API access.
 
 ## Supported AI Providers
 
@@ -54,11 +54,10 @@ The default provider is set to Google Gemini, but you can use any provider for w
 
 1. Configure the API key in the backend:
    - Create a `.env` file in the `backend` directory
-   - For OpenAI API, add your API key: `OPENAI_API_KEY=your_openai_api_key_here`
-   - For Groq API, add your API key: `GROQ_API_KEY=your_groq_api_key_here`
-   - For Google Gemini API, add your API key: `GEMINI_API_KEY=your_gemini_api_key_here`
-   
-   You can configure one or more API keys depending on which providers you want to use.
+   - For custom API providers, add your API configuration:
+     - `CUSTOM_API_URL` - The URL of your custom API endpoint
+     - `CUSTOM_API_KEY` - The API key for your custom endpoint
+     - `CUSTOM_API_MODEL` - The model name to use with your custom API (optional)
    
 2. Start the backend server:
    ```
@@ -76,20 +75,22 @@ The default provider is set to Google Gemini, but you can use any provider for w
 
 4. Open your browser and navigate to `http://localhost:3000`
 
-## API Key Configuration
+## API Configuration
 
-API keys are now configured by the developer in the backend environment variables. Users can no longer configure their own API keys through the application interface.
+API keys are configured by the developer in the backend environment variables. Users cannot configure their own API keys through the application interface.
 
-To use any AI provider, set the corresponding environment variable with your API key. You can configure one or more API keys depending on which providers you want to use.
+To use any AI provider that supports the OpenAI API format, set these environment variables:
+- `CUSTOM_API_URL` - The URL of your custom API endpoint
+- `CUSTOM_API_KEY` - The API key for your custom endpoint
+- `CUSTOM_API_MODEL` - The model name to use with your custom API (optional)
 
-The application is designed to be flexible and can work with any AI provider that supports the OpenAI API format. You can easily extend it to support additional providers by modifying the code in `backend/server.js`.
+### Custom API Configuration
 
-For the currently supported providers, set these environment variables:
-- `OPENAI_API_KEY` for OpenAI
-- `GROQ_API_KEY` for Groq API
-- `GEMINI_API_KEY` for Google Gemini API
-
-You can add support for other providers by extending the provider handling code in `backend/server.js`.
+You can also configure a custom API endpoint by setting these environment variables:
+- `CUSTOM_API_URL` - The URL of your custom API endpoint
+- `CUSTOM_API_KEY` - The API key for your custom endpoint
+- `CUSTOM_API_MODEL` - The model name to use with your custom API (optional)
+- `CUSTOM_API_PROVIDER` - The provider name for your custom API (optional)
 
 ## Features
 
@@ -221,12 +222,9 @@ This project is licensed under the MIT License.
 
 ## 支持的AI提供商
 
-该应用程序现在支持多个AI提供商：
-- OpenAI（默认模型：gpt-3.5-turbo）
-- Groq API（默认模型：mixtral-8x7b-32768）
-- Google Gemini API（默认模型：gemini-2.5-flash）
+该应用程序现在支持所有兼容OpenAI API格式的AI提供商。
 
-默认提供商设置为Google Gemini，但您可以使用任何您拥有API密钥的提供商。
+默认使用自定义API配置，您需要设置相应的环境变量。
 
 ## 开始使用
 
@@ -253,11 +251,10 @@ This project is licensed under the MIT License.
 
 1. 在后端配置API密钥：
    - 在`backend`目录中创建一个`.env`文件
-   - 对于OpenAI API，添加您的API密钥：`OPENAI_API_KEY=your_openai_api_key_here`
-   - 对于Groq API，添加您的API密钥：`GROQ_API_KEY=your_groq_api_key_here`
-   - 对于Google Gemini API，添加您的API密钥：`GEMINI_API_KEY=your_gemini_api_key_here`
-   
-   您可以根据要使用的提供商配置一个或多个API密钥。
+   - 对于自定义API提供商，添加您的API配置：
+     - `CUSTOM_API_URL` - 您的自定义API端点URL
+     - `CUSTOM_API_KEY` - 您的自定义端点API密钥
+     - `CUSTOM_API_MODEL` - 要与自定义API一起使用的模型名称（可选）
    
 2. 启动后端服务器：
    ```
@@ -275,20 +272,19 @@ This project is licensed under the MIT License.
 
 4. 打开浏览器并导航到`http://localhost:3000`
 
-## API密钥配置
+## API配置
 
-现在API密钥由开发人员在后端环境变量中配置。用户无法再通过应用程序界面配置自己的API密钥。
+该应用程序支持通过环境变量配置API访问：
 
-要使用任何AI提供商，请使用您的API密钥设置相应的环境变量。您可以根据要使用的提供商配置一个或多个API密钥。
-
-该应用程序设计灵活，可以与任何支持OpenAI API格式的AI提供商一起使用。您可以通过修改`backend/server.js`中的代码轻松扩展以支持其他提供商。
-
-对于当前支持的提供商，请设置这些环境变量：
-- `OPENAI_API_KEY` 用于OpenAI
-- `GROQ_API_KEY` 用于Groq API
-- `GEMINI_API_KEY` 用于Google Gemini API
-
-您可以通过扩展`backend/server.js`中的提供商处理代码来添加对其他提供商的支持。
+API密钥可以由开发人员在后端环境变量中配置。要使用任何支持OpenAI API格式的AI提供商，请设置以下环境变量：
+- `CUSTOM_API_URL` - 您的自定义API端点URL
+- `CUSTOM_API_KEY` - 您的自定义端点API密钥
+- `CUSTOM_API_MODEL` - 要与自定义API一起使用的模型名称（可选）
+   - 自定义API URL
+   - 自定义API密钥
+   - 自定义模型名称
+   
+   此配置在本地存储，可以随时更改。
 
 ## 功能特性
 

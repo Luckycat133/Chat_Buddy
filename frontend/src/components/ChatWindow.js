@@ -140,7 +140,6 @@ const ChatWindow = ({ userId }) => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [settings, setSettings] = useState(null);
   const messagesEndRef = useRef(null);
   
   const scrollToBottom = () => {
@@ -151,23 +150,7 @@ const ChatWindow = ({ userId }) => {
     scrollToBottom();
   }, [messages]);
   
-  // Fetch user settings
-  useEffect(() => {
-    // Fetch user settings
-    const fetchSettings = async () => {
-      try {
-        const response = await fetch(`http://localhost:5001/api/export/${userId}`);
-        if (response.ok) {
-          const userData = await response.json();
-          setSettings(userData.settings);
-        }
-      } catch (error) {
-        console.error('Failed to fetch settings:', error);
-      }
-    };
-    
-    fetchSettings();
-  }, [userId]);
+
   
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -184,16 +167,11 @@ const ChatWindow = ({ userId }) => {
     setIsLoading(true);
     
     try {
-      // Prepare request body with user settings
+      // Prepare request body
       const requestBody = {
         userId: userId,
         message: inputValue
       };
-      
-      // Add settings to request if available
-      if (settings) {
-        requestBody.settings = settings;
-      }
       
       const response = await fetch('http://localhost:5001/api/chat', {
         method: 'POST',

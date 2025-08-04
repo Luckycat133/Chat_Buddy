@@ -4,7 +4,15 @@
 
 <div id="english">
 
-## v0.0.2 (2025-08-03)
+## v0.1.2 (2025-08-04)
+
+### Enhancements
+
+- Simplified API configuration by removing provider-specific environment variables
+- Unified API configuration to use custom API endpoint with OpenAI-compatible format
+- Updated documentation to reflect the new API configuration approach
+
+## v0.1.1 (2025-08-03)
 
 ### New Features
 
@@ -13,7 +21,7 @@
 - Improved API key security by moving hardcoded keys to environment variables
 - Consolidated documentation into a single comprehensive README.md file
 
-## v0.0.1 (2025-08-02)
+## v0.1.0 (2025-08-02)
 
 ### New Features
 
@@ -54,7 +62,15 @@
 
 <div id="中文">
 
-## v0.0.2 (2025-08-03)
+## v0.1.2 (2025-08-04)
+
+### 功能优化
+
+- 通过移除特定提供商的环境变量简化了API配置
+- 统一API配置为使用OpenAI兼容格式的自定义API端点
+- 更新文档以反映新的API配置方式
+
+## v0.1.1 (2025-08-03)
 
 ### 新增功能
 
@@ -63,7 +79,7 @@
 - 通过将硬编码的密钥移至环境变量来提高API密钥安全性
 - 将文档整合到一个全面的README.md文件中
 
-## v0.0.1 (2025-08-02)
+## v0.1.0 (2025-08-02)
 
 ### 新增功能
 
