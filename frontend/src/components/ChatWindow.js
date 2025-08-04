@@ -3,12 +3,19 @@ import styled from 'styled-components';
 import MarkdownIt from 'markdown-it';
 import mdKatex from 'markdown-it-katex';
 import 'katex/dist/katex.min.css';
+import '@fontsource/inter/300.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
 
 const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #f0f4f8;
+  background-color: #F8F7F4;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 `;
 
 const Header = styled.div`
@@ -16,15 +23,17 @@ const Header = styled.div`
   justify-content: center;
   align-items: center;
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #FFD8BE 0%, #FFB48A 100%);
+  color: #8B4513;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 `;
 
 const Title = styled.h1`
   margin: 0;
   font-size: 24px;
-  font-weight: 600;
+  font-weight: 700;
+  color: #8B4513;
+  letter-spacing: -0.025em;
 `;
 
 const MessagesContainer = styled.div`
@@ -41,44 +50,66 @@ const Message = styled.div`
 
 const MessageContent = styled.div`
   max-width: 70%;
-  padding: 15px;
-  border-radius: 18px;
-  background-color: ${props => props.isUser ? '#667eea' : '#ffffff'};
-  color: ${props => props.isUser ? '#ffffff' : '#333333'};
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  padding: 18px 20px;
+  border-radius: 20px;
+  background-color: ${props => props.isUser ? '#FFB48A' : '#FFFFFF'};
+  color: ${props => props.isUser ? '#FFFFFF' : '#333333'};
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: ${props => props.isUser ? 'none' : '1px solid #E0E0E0'};
   position: relative;
+  font-size: 15px;
+  line-height: 1.5;
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.1), 0 3px 6px -1px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+  }
 `;
 
 const MessageTime = styled.div`
-  font-size: 12px;
+  font-size: 11px;
   color: #999;
-  margin-top: 5px;
+  margin-top: 8px;
   text-align: ${props => props.isUser ? 'right' : 'left'};
+  font-weight: 300;
+  letter-spacing: 0.025em;
 `;
 
 const InputContainer = styled.div`
   display: flex;
   padding: 20px;
-  background-color: #ffffff;
-  border-top: 1px solid #e1e5e9;
+  background-color: #FFFFFF;
+  border-top: 1px solid #E0E0E0;
+  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.08), 0 -2px 4px -1px rgba(0, 0, 0, 0.06);
 `;
 
 const Input = styled.input`
   flex: 1;
-  padding: 15px;
-  border: 2px solid #e1e5e9;
-  border-radius: 25px;
+  padding: 15px 20px;
+  border: none;
+  border-bottom: 2px solid #E0E0E0;
+  border-radius: 0;
   font-size: 16px;
   outline: none;
-  transition: border-color 0.3s;
+  transition: all 0.2s ease-in-out;
+  background-color: transparent;
+  color: #333333;
+  font-family: 'Inter', sans-serif;
   
   &:focus {
-    border-color: #667eea;
+    border-bottom-color: #FFB48A;
+    box-shadow: 0 2px 0 0 rgba(255, 180, 138, 0.2);
+  }
+  
+  &::placeholder {
+    color: #999999;
+    font-weight: 300;
   }
 `;
 
 const SendButton = styled.button`
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #555555;
   color: white;
   border: none;
   border-radius: 50%;
@@ -90,16 +121,25 @@ const SendButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   
-  &:hover {
-    transform: scale(1.05);
+  &:hover:not(:disabled) {
+    transform: scale(1.08) translateY(-2px);
+    background: linear-gradient(135deg, #FFB48A, #FF8C42);
+    box-shadow: 0 8px 16px -4px rgba(255, 180, 138, 0.4), 0 4px 8px -2px rgba(255, 180, 138, 0.3);
+  }
+  
+  &:active:not(:disabled) {
+    transform: scale(0.95) translateY(0);
+    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
   }
   
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
+    background: #555555;
   }
 `;
 
@@ -109,13 +149,50 @@ const LoadingIndicator = styled.div`
   padding: 10px;
 `;
 
+const EmptyStateContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 40px;
+  color: #666;
+`;
+
+const RobotIcon = styled.div`
+  font-size: 48px;
+  margin-bottom: 20px;
+  animation: wave 2s ease-in-out infinite;
+  
+  @keyframes wave {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-10deg); }
+    75% { transform: rotate(10deg); }
+  }
+`;
+
+const WelcomeText = styled.div`
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+`;
+
+const SubWelcomeText = styled.div`
+  font-size: 14px;
+  color: #999;
+  font-weight: 300;
+`;
+
 const Dot = styled.div`
   width: 8px;
   height: 8px;
-  background-color: #667eea;
+  background-color: #555555;
   border-radius: 50%;
   margin: 0 2px;
   animation: bounce 1.5s infinite;
+  transition: all 0.2s ease-in-out;
   
   &:nth-child(2) {
     animation-delay: 0.2s;
@@ -341,15 +418,15 @@ const ChatWindow = ({ userId }) => {
       } catch (error) {
         console.error('Error getting final greeting from AI:', error);
         
-        // Fallback to predefined greeting if AI fails
-        const greetingMessage = {
+        // Let AI handle the error gracefully by asking again
+        const errorMessage = {
           id: Date.now() + Math.random(),
-          text: `Thanks for sharing all that with me, ${userInfo.name}! I feel like I'm getting to know you better already. What's on your mind today? Is there anything particular you'd like to chat about?`,
+          text: `Sorry, I'm having trouble generating a response. Let me try again - what's on your mind today?`,
           isUser: false,
           timestamp: new Date()
         };
         
-        setMessages(prev => [...prev, greetingMessage]);
+        setMessages(prev => [...prev, errorMessage]);
       } finally {
         setIsLoading(false);
       }
@@ -399,30 +476,15 @@ const ChatWindow = ({ userId }) => {
     } catch (error) {
       console.error('Error getting next question from AI:', error);
       
-      // Fallback to predefined questions if AI fails
-      let questionText = '';
-      switch (nextStage) {
-        case 'askingAge':
-          questionText = `Nice to meet you, ${extractedInfo}! So, how old are you? I'm curious to know!`;
-          break;
-        case 'askingHobbies':
-          questionText = `Awesome! So you're ${extractedInfo}. What do you like to do in your free time? I'm curious about your hobbies!`;
-          break;
-        case 'askingJob':
-          questionText = `That sounds really interesting! I'd love to hear more about ${extractedInfo} sometime. What are you studying at school or what do you want to do in the future?`;
-          break;
-        default:
-          questionText = `What would you like to talk about?`;
-      }
-      
-      const questionMessage = {
+      // Let AI handle the error gracefully by asking again
+      const errorMessage = {
         id: Date.now() + Math.random(),
-        text: questionText,
+        text: `Sorry, I'm having trouble generating the next question. Could you tell me more about yourself?`,
         isUser: false,
         timestamp: new Date()
       };
       
-      setMessages(prev => [...prev, questionMessage]);
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -445,20 +507,8 @@ const ChatWindow = ({ userId }) => {
       const userResponse = inputValue;
       setInputValue('');
       
-      // Check if user is asking "who are you" during the questionnaire
-      if (conversationStage !== 'initial' && /谁是|你是|你是谁|what.*you|who.*you/i.test(userResponse)) {
-        // Create a special response for identity questions
-        const identityMessage = {
-          id: Date.now() + Math.random(),
-          text: `Hey there! I'm ${aiName}, your friendly AI companion. I'm here to have a great conversation with you and get to know you better! I noticed you're asking about me, but I'd love to learn more about you first. What should I call you?`,
-          isUser: false,
-          timestamp: new Date()
-        };
-        
-        // Stay in the current stage and add the identity message
-        setMessages(prev => [...prev, identityMessage]);
-        return;
-      }
+      // Let AI handle identity questions naturally through the API
+      // No preset responses for identity questions
       
       handleNextQuestion(userResponse);
       return;
@@ -527,26 +577,36 @@ const ChatWindow = ({ userId }) => {
       </Header>
       
       <MessagesContainer>
-        {messages.map((message) => (
-          <Message key={message.id} isUser={message.isUser}>
-            <MessageContent isUser={message.isUser}>
-              {message.isUser ? (
-                message.text
-              ) : (
-                <div dangerouslySetInnerHTML={{ __html: md.render(message.text) }} />
-              )}
-              <MessageTime isUser={message.isUser}>
-                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </MessageTime>
-            </MessageContent>
-          </Message>
-        ))}
-        {isLoading && (
-          <LoadingIndicator>
-            <Dot />
-            <Dot />
-            <Dot />
-          </LoadingIndicator>
+        {messages.length === 0 ? (
+          <EmptyStateContainer>
+            <RobotIcon>🤖</RobotIcon>
+            <WelcomeText>Welcome to Chat Buddy!</WelcomeText>
+            <SubWelcomeText>Start a conversation with your AI assistant</SubWelcomeText>
+          </EmptyStateContainer>
+        ) : (
+          <>
+            {messages.map((message) => (
+              <Message key={message.id} isUser={message.isUser}>
+                <MessageContent isUser={message.isUser}>
+                  {message.isUser ? (
+                    message.text
+                  ) : (
+                    <div dangerouslySetInnerHTML={{ __html: md.render(message.text) }} />
+                  )}
+                  <MessageTime isUser={message.isUser}>
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </MessageTime>
+                </MessageContent>
+              </Message>
+            ))}
+            {isLoading && (
+              <LoadingIndicator>
+                <Dot />
+                <Dot />
+                <Dot />
+              </LoadingIndicator>
+            )}
+          </>
         )}
         <div ref={messagesEndRef} />
       </MessagesContainer>

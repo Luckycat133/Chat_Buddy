@@ -96,12 +96,19 @@ You can also configure a custom API endpoint by setting these environment variab
 
 ### Chat Interface
 
-The chat interface features a clean, modern design inspired by popular social media platforms:
+The chat interface features a beautifully designed macaron orange theme with professional typography and smooth animations:
 
-- Message bubbles with distinct styling for user and AI messages
-- Accurate timestamps for all messages
-- Smooth scrolling to the latest message
-- Responsive design that works on all device sizes
+- **Macaron Orange Theme**: Warm and inviting color scheme using the 60-30-10 rule (60% warm background, 30% orange accents, 10% gray-blue highlights)
+- **Modern Typography**: Integrated Inter font family from Google Fonts with optimized weights for different text elements
+- **Enhanced Message Design**: 
+  - User messages appear on the right with vibrant macaron orange background and white text
+  - AI messages use clean white backgrounds with subtle borders for clear visual distinction
+- **Empty State Design**: Welcoming empty state with animated robot icon and friendly greeting messages
+- **Smooth Interactions**: 0.3s cubic-bezier transitions for all hover effects and button interactions
+- **Enhanced Shadows**: Multi-layer box-shadow system for improved depth perception
+- **Accurate timestamps**: Precise time display with optimized font weights
+- **Responsive design**: Perfectly adapted for all device sizes
+- **Smooth scrolling**: Automatic scrolling to the latest message
 
 ### API Key Management
 
@@ -331,12 +338,19 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
 
 ### 聊天界面
 
-聊天界面具有受流行社交媒体平台启发的简洁现代设计：
+聊天界面采用精美的马卡龙橙色主题设计，具有专业排版和平滑动画：
 
-- 具有独特样式的用户和AI消息气泡
-- 所有消息的准确时间戳
-- 平滑滚动到最新消息
-- 适用于所有设备尺寸的响应式设计
+- **马卡龙橙色主题**：使用60-30-10配色法则的温暖邀请配色方案（60%温暖背景、30%橙色点缀、10%灰蓝色高光）
+- **现代排版**：集成Google Fonts的Inter字体家族，为不同文本元素优化字重
+- **增强消息设计**：
+  - 用户消息显示在右侧，采用充满活力的马卡龙橙色背景和白色文字
+  - AI消息使用干净的白色背景和微妙边框，视觉区分清晰
+- **空状态设计**：带有动画机器人图标和友好问候消息的欢迎空状态
+- **平滑交互**：所有悬停效果和按钮交互的0.3秒cubic-bezier过渡
+- **增强阴影**：多层box-shadow系统，提升深度感知
+- **准确时间戳**：精确时间显示，优化字重
+- **响应式设计**：完美适配所有设备尺寸
+- **平滑滚动**：自动滚动到最新消息
 
 ### API密钥管理
 

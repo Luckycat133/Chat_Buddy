@@ -4,6 +4,32 @@
 
 <div id="english">
 
+## v0.2.3 (2025-08-04)
+
+### New Features
+
+- **Macaron Orange Theme**: Complete UI redesign with warm macaron orange color scheme using 60-30-10 rule
+- **Google Fonts Integration**: Added Inter font family for modern, clean typography with optimized weights (300/400/600/700)
+- **Empty State Design**: Added welcoming empty state with animated robot icon and friendly greeting messages
+- **Enhanced Hover Effects**: Smooth transition animations for all interactive elements including message bubbles and buttons
+- **Improved Visual Hierarchy**: Enhanced shadows, spacing, and color contrast for better readability
+- **User Message Styling**: User messages now appear on the right with vibrant macaron orange background
+- **Bot Message Styling**: AI messages use clean white background with subtle borders for clear distinction
+
+### Technical Improvements
+
+- **Font Optimization**: Integrated @fontsource/inter package and Google Fonts CDN for consistent typography
+- **Shadow System**: Implemented multi-layer box-shadow system with enhanced depth perception
+- **Transition Animations**: Added 0.3s cubic-bezier transitions for smooth hover and click feedback
+- **Color Palette**: Applied professional color scheme with 60% warm background, 30% orange accents, 10% gray-blue highlights
+- **Responsive Typography**: Optimized font weights for different text elements (titles 700, content 400, timestamps 300)
+
+### Bug Fixes
+
+- **Font Loading**: Fixed font loading issues by properly importing Google Fonts CDN
+- **Color Contrast**: Improved text readability with better color contrast ratios
+- **Button States**: Enhanced button hover/active states for better user feedback
+
 ## v0.2.2 (2025-08-04)
 
 ### New Features
@@ -118,6 +144,32 @@
 </div>
 
 <div id="中文">
+
+## v0.2.3 (2025-08-04)
+
+### 新增功能
+
+- **马卡龙橙色主题**：使用60-30-10配色法则的完整UI重新设计，采用温暖的马卡龙橙色配色方案
+- **Google字体集成**：添加Inter字体家族，实现现代简洁的排版，优化字重(300/400/600/700)
+- **空状态设计**：添加欢迎空状态，包含动画机器人图标和友好的问候消息
+- **增强悬停效果**：为所有交互元素（包括消息气泡和按钮）添加平滑过渡动画
+- **改进视觉层次**：增强阴影、间距和颜色对比度，提升可读性
+- **用户消息样式**：用户消息现在显示在右侧，采用鲜明的马卡龙橙色背景
+- **机器人消息样式**：AI消息使用干净的白色背景和微妙边框，清晰区分
+
+### 技术改进
+
+- **字体优化**：集成@fontsource/inter包和Google Fonts CDN，确保一致的排版
+- **阴影系统**：实现多层box-shadow系统，增强深度感知
+- **过渡动画**：添加0.3秒cubic-bezier过渡，实现平滑悬停和点击反馈
+- **配色方案**：应用专业配色方案，60%温暖背景、30%橙色点缀、10%灰蓝色高光
+- **响应式排版**：针对不同文本元素优化字重（标题700、正文400、时间戳300）
+
+### 错误修复
+
+- **字体加载**：通过正确导入Google Fonts CDN修复字体加载问题
+- **颜色对比**：通过更好的颜色对比度比例提升文本可读性
+- **按钮状态**：增强按钮悬停/激活状态，提供更好的用户反馈
 
 ## v0.2.2 (2025-08-04)
 
