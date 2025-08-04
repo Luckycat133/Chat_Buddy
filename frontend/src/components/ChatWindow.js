@@ -234,7 +234,7 @@ const ChatWindow = ({ userId }) => {
         message: contextMessage
       };
       
-      const response = await fetch('http://localhost:5001/api/chat', {
+      const response = await fetch('http://localhost:5002/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -394,7 +394,7 @@ const ChatWindow = ({ userId }) => {
           }
         };
         
-        const response = await fetch('http://localhost:5001/api/chat', {
+        const response = await fetch('http://localhost:5002/api/chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -452,7 +452,7 @@ const ChatWindow = ({ userId }) => {
         }
       };
       
-      const response = await fetch('http://localhost:5001/api/chat', {
+      const response = await fetch('http://localhost:5002/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -525,7 +525,7 @@ const ChatWindow = ({ userId }) => {
         message: inputValue
       };
       
-      const response = await fetch('http://localhost:5001/api/chat', {
+      const response = await fetch('http://localhost:5002/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -639,7 +639,7 @@ export default ChatWindow;
         message: contextMessage
       };
       
-      const response = await fetch('http://localhost:5001/api/chat', {
+      const response = await fetch('http://localhost:5002/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
