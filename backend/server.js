@@ -1,10 +1,21 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+
+// General rate limiting middleware
+const generalRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // limit each IP to 1000 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+
+// Apply general rate limiting to all requests
+app.use(generalRateLimit);
 
 // In-memory storage for API keys, settings, and conversation history
 const userSettings = {};
@@ -51,7 +62,11 @@ const updateUserContext = (userId, contextData) => {
             } else if (key === 'User Name') {
               userContexts[userId]['userName'] = value;
             } else {
-              userContexts[userId][key.toLowerCase()] = value;
+              // Prevent prototype pollution by filtering out dangerous keys
+              const safeKey = key.toLowerCase();
+              if (safeKey !== '__proto__' && safeKey !== 'constructor' && safeKey !== 'prototype') {
+                userContexts[userId][safeKey] = value;
+              }
             }
           }
         }
@@ -194,11 +209,53 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
     const provider = settings.provider || process.env.CUSTOM_API_PROVIDER || 'openai';
     const model = settings.model || process.env.CUSTOM_API_MODEL || 'gpt-3.5-turbo';
     const apiKey = settings.apiKey || process.env.CUSTOM_API_KEY || process.env.OPENAI_API_KEY;
-    const apiUrl = settings.customUrl || process.env.CUSTOM_API_URL || 'https://api.openai.com/v1/chat/completions';
+    let apiUrl = settings.customUrl || process.env.CUSTOM_API_URL || 'https://api.openai.com/v1/chat/completions';
     
     // Validate API key
     if (!apiKey) {
       throw new Error('API key is required');
+    }
+    
+    // SSRF Protection: Validate and restrict API URLs
+    const allowedDomains = [
+      'api.openai.com',
+      'generativelanguage.googleapis.com',
+      'api.anthropic.com',
+      'localhost',
+      '127.0.0.1'
+    ];
+    
+    // Function to validate API URLs against allowed domains
+    const validateApiUrl = (url) => {
+      const hostname = url.hostname;
+      
+      // Check if the hostname is in our allowed list
+      const isAllowed = allowedDomains.some(domain => 
+        hostname === domain || hostname.endsWith('.' + domain)
+      );
+      
+      if (!isAllowed) {
+        throw new Error('Invalid API URL: Domain not allowed');
+      }
+      
+      // Prevent use of IP addresses except for localhost
+      if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        const ipPattern = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+        if (ipPattern.test(hostname)) {
+          throw new Error('Invalid API URL: Direct IP addresses not allowed');
+        }
+      }
+    };
+    
+    // If using a custom URL, validate the domain
+    if (settings.customUrl) {
+      try {
+        const url = new URL(settings.customUrl);
+        validateApiUrl(url);
+      } catch (error) {
+        console.error('API URL validation error:', error.message);
+        throw new Error('Invalid API configuration: ' + error.message);
+      }
     }
     
     // Prepare request for OpenAI-compatible APIs
@@ -237,6 +294,9 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
       const fullUrl = `${apiUrl}?key=${apiKey}`;
       console.log('Full URL:', fullUrl);
       
+      // Validate the full URL to prevent SSRF
+      validateApiUrl(new URL(fullUrl));
+      
       // Add more detailed logging
       console.log('Making request to Gemini API...');
       const response = await fetch(fullUrl, {
@@ -253,7 +313,7 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
       const data = await response.json();
       
       if (!response.ok) {
-        console.error('Gemini API error:', data.error?.message || `HTTP error! status: ${response.status}`);
+        console.error('%s API error: %s', provider, data.error?.message || `HTTP error! status: ${response.status}`);
         throw new Error(data.error?.message || `HTTP error! status: ${response.status}`);
       }
       
@@ -291,7 +351,7 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
       const data = await response.json();
       
       if (!response.ok) {
-        console.error(`${provider} API error:`, data.error?.message || `HTTP error! status: ${response.status}`);
+        console.error('%s API error: %s', provider, data.error?.message || `HTTP error! status: ${response.status}`);
         throw new Error(data.error?.message || `HTTP error! status: ${response.status}`);
       }
       
@@ -365,8 +425,15 @@ app.post('/api/import/:userId', (req, res) => {
   res.json({ message: 'Data imported successfully' });
 });
 
+// Rate limiting middleware for API documentation
+const docsRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again after 15 minutes'
+});
+
 // API documentation
-app.get('/api/docs', (req, res) => {
+app.get('/api/docs', docsRateLimit, (req, res) => {
   res.sendFile(path.join(__dirname, 'api-docs.html'));
 });
 

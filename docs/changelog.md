@@ -4,7 +4,19 @@
 
 <div id="english">
 
-## v0.2.3 (2025-08-04)
+## v0.2.1 (2025-08-04)
+
+### Security Fixes
+
+- **XSS Vulnerability Fix**: Fixed XSS vulnerability in message rendering by sanitizing Markdown output with DOMPurify before rendering
+- **Input Sanitization**: Added DOMPurify sanitization for all AI-generated content to prevent malicious code execution
+- **Server-side Request Forgery**: Fixed critical SSRF vulnerabilities in backend/server.js at lines 242 and 282
+- **Missing Rate Limiting**: Added rate limiting protection to prevent abuse in backend/server.js at line 369
+- **Externally-controlled Format String**: Fixed use of externally-controlled format string vulnerability in backend/server.js at line 294
+- **DOM Text Reinterpreted as HTML**: Fixed medium severity DOM text reinterpreted as HTML vulnerability in frontend/components/ChatWindow.js at line 594
+- **Prototype Pollution**: Fixed multiple prototype-polluting assignment vulnerabilities in backend/server.js at lines 50, 52, and 54
+
+## v0.2.0 (2025-08-04)
 
 ### New Features
 
@@ -30,7 +42,7 @@
 - **Color Contrast**: Improved text readability with better color contrast ratios
 - **Button States**: Enhanced button hover/active states for better user feedback
 
-## v0.2.2 (2025-08-04)
+## v0.1.4 (2025-08-04)
 
 ### New Features
 
@@ -53,7 +65,7 @@
 - **Port Conflict Resolution**: Fixed issue where the frontend development server failed to start due to port 3000 being occupied by a previous process
 - **Process Management**: Improved server restart procedures to ensure clean shutdown of existing processes before starting new instances
 
-## v0.2.1 (2025-08-04)
+## v0.1.3 (2025-08-04)
 
 ### New Features
 
@@ -145,7 +157,19 @@
 
 <div id="中文">
 
-## v0.2.3 (2025-08-04)
+## v0.2.1 (2025-08-04)
+
+### 安全修复
+
+- **XSS漏洞修复**：通过在渲染前使用DOMPurify净化Markdown输出，修复了消息渲染中的XSS漏洞
+- **输入净化**：为所有AI生成的内容添加DOMPurify净化，防止恶意代码执行
+- **服务器端请求伪造**：修复了backend/server.js第242和282行的严重SSRF漏洞
+- **缺少速率限制**：在backend/server.js第369行添加了速率限制保护以防止滥用
+- **外部控制的格式字符串**：修复了backend/server.js第294行的外部控制格式字符串漏洞
+- **DOM文本重新解释为HTML**：修复了frontend/components/ChatWindow.js第594行的中等严重性DOM文本重新解释为HTML漏洞
+- **原型污染**：修复了backend/server.js第50、52和54行的多个原型污染分配漏洞
+
+## v0.2.0 (2025-08-04)
 
 ### 新增功能
 
@@ -171,7 +195,7 @@
 - **颜色对比**：通过更好的颜色对比度比例提升文本可读性
 - **按钮状态**：增强按钮悬停/激活状态，提供更好的用户反馈
 
-## v0.2.2 (2025-08-04)
+## v0.1.4 (2025-08-04)
 
 ### 新增功能
 
@@ -194,7 +218,7 @@
 - **端口冲突解决**：修复了前端开发服务器因3000端口被先前进程占用而无法启动的问题
 - **进程管理**：改进了服务器重启程序，确保在启动新实例之前干净地关闭现有进程
 
-## v0.2.1 (2025-08-04)
+## v0.1.3 (2025-08-04)
 
 ### 新增功能
 

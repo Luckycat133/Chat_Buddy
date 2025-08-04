@@ -7,6 +7,7 @@ import '@fontsource/inter/300.css';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
+import DOMPurify from 'dompurify';
 
 const ChatContainer = styled.div`
   display: flex;
@@ -591,7 +592,7 @@ const ChatWindow = ({ userId }) => {
                   {message.isUser ? (
                     message.text
                   ) : (
-                    <div dangerouslySetInnerHTML={{ __html: md.render(message.text) }} />
+                    <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(md.render(message.text)) }} />
                   )}
                   <MessageTime isUser={message.isUser}>
                     {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
