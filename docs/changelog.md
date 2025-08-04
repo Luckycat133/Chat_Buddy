@@ -4,20 +4,21 @@
 
 <div id="english">
 
+## v0.2.2 (2025-08-04)
+
+### New Features
+
+- **Structured Initial Questions**: AI now follows a specific sequence of questions (name → age → hobbies → job/studies) during initial conversation
+- **Context Marking**: Added special `[CONTEXT_END]` marker to clearly indicate the end of initial information gathering
+- **Enhanced Prompt Template**: Backend now provides a clear prompt template for AI to generate initial questions
+
+### Technical Improvements
+
+- **Frontend Logic Update**: Modified `/frontend/src/components/ChatWindow.js` to request next question based on conversation stage
+- **Backend Prompt Engineering**: Enhanced `/backend/server.js` to provide structured prompt templates for initial conversation
+- **Process Automation**: Streamlined the initial conversation flow to automatically transition to open chat after context collection
+
 ## v0.2.1 (2025-08-04)
-
-### Bug Fixes
-
-- **Fixed Empty Response Display**: Resolved critical issue where AI responses appeared empty in the chat interface due to incorrect field mapping in frontend API response parsing
-- **API Response Compatibility**: Fixed frontend parsing to correctly handle the API response structure (`message.content` instead of `message.text`)
-
-### Technical Details
-
-- **Frontend Fix**: Updated `/frontend/src/components/ChatWindow.js` line 327 to use correct response field name
-- **Impact**: All AI responses now display correctly in the chat interface
-- **Root Cause**: Frontend was expecting `data.message.text` but backend returns `data.message.content`
-
-## v0.2.0 (2025-08-04)
 
 ### New Features
 
@@ -109,20 +110,21 @@
 
 <div id="中文">
 
+## v0.2.2 (2025-08-04)
+
+### 新增功能
+
+- **结构化初始问题**：AI现在在初始对话中遵循特定的问题顺序（姓名→年龄→爱好→工作/学习）
+- **上下文标记**：添加了特殊的`[CONTEXT_END]`标记，以明确指示初始信息收集的结束
+- **增强的提示模板**：后端现在为AI生成初始问题提供清晰的提示模板
+
+### 技术改进
+
+- **前端逻辑更新**：修改了`/frontend/src/components/ChatWindow.js`，根据对话阶段请求下一个问题
+- **后端提示工程**：增强了`/backend/server.js`，为初始对话提供结构化提示模板
+- **流程自动化**：简化了初始对话流程，在收集上下文后自动过渡到开放聊天
+
 ## v0.2.1 (2025-08-04)
-
-### 错误修复
-
-- **修复空回复显示问题**：解决了由于前端API响应解析错误导致的AI回复在聊天界面中显示为空的严重问题
-- **API响应兼容性**：修复了前端解析以正确处理API响应结构（使用`message.content`而非`message.text`）
-
-### 技术细节
-
-- **前端修复**：更新 `/frontend/src/components/ChatWindow.js` 第327行，使用正确的响应字段名
-- **影响**：所有AI回复现在都能在聊天界面中正确显示
-- **根本原因**：前端期望 `data.message.text` 但后端返回 `data.message.content`
-
-## v0.2.0 (2025-08-04)
 
 ### 新增功能
 

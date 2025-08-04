@@ -38,14 +38,21 @@ const updateUserContext = (userId, contextData) => {
   }
   
   // Parse the context data if it's a string
-  if (typeof contextData === 'string' && contextData.includes('User Information:')) {
+  if (typeof contextData === 'string') {
     try {
       const lines = contextData.split('\n');
       lines.forEach(line => {
         if (line.includes(':')) {
           const [key, value] = line.split(':').map(str => str.trim());
           if (key && value && key !== 'User Information') {
-            userContexts[userId][key.toLowerCase()] = value;
+            // Special handling for AI Name and User Name
+            if (key === 'AI Name') {
+              userContexts[userId]['aiName'] = value;
+            } else if (key === 'User Name') {
+              userContexts[userId]['userName'] = value;
+            } else {
+              userContexts[userId][key.toLowerCase()] = value;
+            }
           }
         }
       });
@@ -63,6 +70,35 @@ const formatContextForPrompt = (userId) => {
   const context = getUserContext(userId);
   if (Object.keys(context).length === 0) return '';
   
+  // If we have the special context with AI and user names, create a friendlier prompt
+  if (context.aiName && context.userName) {
+    return `You are ${context.aiName}, a friendly AI companion having a conversation with ${context.userName}. 
+You should act like a real friend who is genuinely interested in getting to know ${context.userName} better.
+Use the following information about ${context.userName} to personalize your conversation:
+
+Name: ${context.name || context.userName}
+Age: ${context.age}
+Hobbies: ${context.hobbies}
+Job/Study: ${context.job}
+
+Remember to:
+- Be warm, approachable, and genuinely interested in ${context.userName}
+- Act like a friendly peer rather than a formal assistant
+- Ask follow-up questions to understand what ${context.userName} really wants to talk about
+- Provide thoughtful responses and engage in meaningful conversations
+- Make interactions fun and enjoyable
+
+IMPORTANT: For the initial conversation stages, you must follow this specific template:
+1. Ask about their name
+2. Ask about their age
+3. Ask about their hobbies
+4. Ask about their job or studies
+
+After asking these questions, you must send a message with [CONTEXT_END] at the end to indicate the initial questioning is complete.
+`;
+  }
+  
+  // Fallback to the original format
   let contextStr = 'Here is some context about the user:\n';
   Object.entries(context).forEach(([key, value]) => {
     contextStr += `- ${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}\n`;
@@ -83,7 +119,24 @@ app.post('/api/chat', async (req, res) => {
     // Get or initialize user conversation history
     const conversationHistory = getUserConversation(userId);
     
-    // Check if this is context information
+    // Check if this is context information with special markers
+    if (message.startsWith('[CONTEXT_START]') && message.endsWith('[CONTEXT_END]')) {
+      // Extract context information between markers
+      const contextContent = message.substring('[CONTEXT_START]'.length, message.length - '[CONTEXT_END]'.length);
+      
+      // Update user context
+      updateUserContext(userId, contextContent);
+      
+      // Send a confirmation response
+      return res.json({ 
+        message: { 
+          text: 'Thanks for sharing! I\'ll keep this in mind for our conversation.',
+          role: 'assistant'
+        }
+      });
+    }
+    
+    // Also check for the old format
     if (message.startsWith('User Information:')) {
       // Update user context
       updateUserContext(userId, message);
@@ -105,20 +158,21 @@ app.post('/api/chat', async (req, res) => {
 
     // Prepare messages for API call with context
     const contextInfo = formatContextForPrompt(userId);
-    const systemPrompt = `You are a friendly and engaging coding assistant, specially designed to help young learners explore programming and technology. 
+    const systemPrompt = `You are a friendly and engaging AI companion, designed to be a helpful friend and conversation partner for young people. 
 
 Your personality:
-- Be encouraging and patient with young learners
+- Be warm, approachable, and genuinely interested in getting to know the user
+- Act like a friendly peer rather than a formal assistant
 - Use simple, clear language appropriate for the user's age
-- Ask follow-up questions to understand what they really want to learn
-- Provide concrete examples and step-by-step guidance
-- Make learning fun with relatable analogies
+- Ask follow-up questions to understand what they really want to talk about
+- Provide thoughtful responses and engage in meaningful conversations
+- Make interactions fun and enjoyable
 
-When users give short or unclear responses like "1", "ok", or "yes":
+When users give short or unclear responses:
 - Don't just give generic responses - ask specific follow-up questions
-- Try to understand what topic they're interested in
-- Suggest specific programming concepts they might want to explore
-- Offer to start with beginner-friendly examples
+- Try to understand what they're really thinking or feeling
+- Guide the conversation naturally without pushing any specific agenda
+- Be patient and give them space to express themselves
 
 ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
     

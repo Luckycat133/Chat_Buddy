@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
+import MarkdownIt from 'markdown-it';
+import mdKatex from 'markdown-it-katex';
+import 'katex/dist/katex.min.css';
 
 const ChatContainer = styled.div`
   display: flex;
@@ -138,6 +141,13 @@ const ChatWindow = ({ userId }) => {
   const [userInfo, setUserInfo] = useState({});
   const messagesEndRef = useRef(null);
   
+  // Initialize MarkdownIt
+  const md = new MarkdownIt({
+    html: true,
+    linkify: true,
+    typographer: true
+  }).use(mdKatex);
+  
   // Send user context information to backend
   const sendContextToBackend = async (contextMessage) => {
     try {
@@ -184,7 +194,7 @@ const ChatWindow = ({ userId }) => {
     // Add the first AI message asking for the user's name
     const firstMessage = {
       id: Date.now(),
-      text: `Hi there! I'm ${name}. What's your name?`,
+      text: `Hey there! I'm ${name}. I'm really excited to chat with you today! What should I call you?`,
       isUser: false,
       timestamp: new Date()
     };
@@ -201,9 +211,9 @@ const ChatWindow = ({ userId }) => {
     scrollToBottom();
   }, [messages]);
   
-  const handleNextQuestion = (userResponse) => {
-    let nextStage = '';
-    let questionText = '';
+  const handleNextQuestion = async (userResponse) => {
+    // Extract information from user response based on current stage
+    let extractedInfo = userResponse;
     
     switch (conversationStage) {
       case 'askingName':
@@ -219,43 +229,148 @@ const ChatWindow = ({ userId }) => {
         const finalName = extractedName.split(/\s+/).pop() || extractedName;
         
         setUserInfo(prev => ({ ...prev, name: finalName }));
-        nextStage = 'askingAge';
-        questionText = `Nice to meet you, ${finalName}! How old are you?`;
+        extractedInfo = finalName;
         break;
         
       case 'askingAge':
-        setUserInfo(prev => ({ ...prev, age: userResponse }));
-        nextStage = 'askingHobbies';
-        questionText = 'What are your hobbies or interests?';
+        // Extract age from various language inputs
+        // Handle patterns like "我15岁", "I'm 15", "15 years old", etc.
+        const ageMatch = userResponse.match(/(?:[我Ii].*|\b)(\d{1,2})\s*(?:年|years?\s*old|\b)/i) || 
+                         userResponse.match(/\d{1,2}/);
+        extractedInfo = ageMatch ? ageMatch[1] : userResponse;
+        setUserInfo(prev => ({ ...prev, age: extractedInfo }));
         break;
         
       case 'askingHobbies':
-        setUserInfo(prev => ({ ...prev, hobbies: userResponse }));
-        nextStage = 'askingJob';
-        questionText = 'What do you do for work or what would you like to do?';
+        // Extract hobbies from various language inputs
+        // Handle different ways people might describe their hobbies
+        let extractedHobbies = userResponse;
+        
+        // Remove common prefixes
+        extractedHobbies = extractedHobbies
+          .replace(/^(我喜欢|I\s*like\s*to|I\s*love\s*to|My\s*hobbies\s*are|我喜欢的活动是)\s*/i, '')
+          .trim();
+        
+        setUserInfo(prev => ({ ...prev, hobbies: extractedHobbies }));
+        extractedInfo = extractedHobbies;
         break;
         
       case 'askingJob':
-        setUserInfo(prev => ({ ...prev, job: userResponse }));
-        nextStage = 'completed';
+        // Extract job/study information from various language inputs
+        // Handle different ways people might describe their job or study interests
+        let extractedJob = userResponse;
         
-        // Send all collected info to backend for context
-        const contextMessage = `User Information:\nName: ${userInfo.name}\nAge: ${userInfo.age}\nHobbies: ${userInfo.hobbies}\nJob: ${userResponse}\n\nPlease use this information to personalize our conversation.`;
+        // Remove common prefixes
+        extractedJob = extractedJob
+          .replace(/^(我是|I\s*am\s*|I'm\s*|我在|我正在|我的目标是|我想成为|我想做|我想要当|我将来想做)\s*/i, '')
+          .trim();
+        
+        setUserInfo(prev => ({ ...prev, job: extractedJob }));
+        extractedInfo = extractedJob;
+        
+        // Send all collected info to backend for context with a special termination marker
+        const contextMessage = `[CONTEXT_START]\nUser Information:\nName: ${userInfo.name}\nAge: ${userInfo.age}\nHobbies: ${userInfo.hobbies}\nJob: ${extractedJob}\nAI Name: ${aiName}\nUser Name: ${userInfo.name}\n\nPlease use this information to personalize our conversation. You are ${aiName}, and you are having a friendly chat with ${userInfo.name}.\n[CONTEXT_END]`;
         
         // Send context to backend
         sendContextToBackend(contextMessage);
-        
-        // Add a friendly greeting message
-        questionText = `Thanks for sharing that with me, ${userInfo.name}! I'm looking forward to our conversation. What would you like to chat about today?`;
         break;
         
       default:
         return;
     }
     
+    // Determine next stage
+    let nextStage = '';
+    switch (conversationStage) {
+      case 'askingName':
+        nextStage = 'askingAge';
+        break;
+      case 'askingAge':
+        nextStage = 'askingHobbies';
+        break;
+      case 'askingHobbies':
+        nextStage = 'askingJob';
+        break;
+      case 'askingJob':
+        nextStage = 'completed';
+        break;
+      default:
+        nextStage = 'completed';
+    }
+    
     setConversationStage(nextStage);
     
-    if (nextStage !== 'completed') {
+    // If we've completed the questionnaire, add a friendly greeting message
+    if (nextStage === 'completed') {
+      const greetingMessage = {
+        id: Date.now() + Math.random(),
+        text: `Thanks for sharing all that with me, ${userInfo.name}! I feel like I'm getting to know you better already. What's on your mind today? Is there anything particular you'd like to chat about?`,
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, greetingMessage]);
+      return;
+    }
+    
+    // For all other stages, ask AI to generate the next question
+    setIsLoading(true);
+    
+    try {
+      // Prepare request body with conversation history and current context
+      const requestBody = {
+        userId: userId,
+        message: `Please ask the next question in the initial conversation template. Current stage: ${conversationStage}, Next stage: ${nextStage}. User's previous response: ${userResponse}`,
+        // Add context about what information we're trying to gather
+        context: {
+          currentStage: conversationStage,
+          nextStage: nextStage,
+          extractedInfo: extractedInfo,
+          userInfo: userInfo
+        }
+      };
+      
+      const response = await fetch('http://localhost:5001/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      const aiMessage = {
+        id: Date.now() + Math.random(),
+        text: data.message.content,
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error getting next question from AI:', error);
+      
+      // Fallback to predefined questions if AI fails
+      let questionText = '';
+      switch (nextStage) {
+        case 'askingAge':
+          questionText = `Nice to meet you, ${extractedInfo}! So, how old are you? I'm curious to know!`;
+          break;
+        case 'askingHobbies':
+          questionText = `Awesome! So you're ${extractedInfo}. What do you like to do in your free time? I'm curious about your hobbies!`;
+          break;
+        case 'askingJob':
+          questionText = `That sounds really interesting! I'd love to hear more about ${extractedInfo} sometime. What are you studying at school or what do you want to do in the future?`;
+          break;
+        default:
+          questionText = `What would you like to talk about?`;
+      }
+      
       const questionMessage = {
         id: Date.now() + Math.random(),
         text: questionText,
@@ -264,16 +379,8 @@ const ChatWindow = ({ userId }) => {
       };
       
       setMessages(prev => [...prev, questionMessage]);
-    } else {
-      // Add the final greeting message
-      const greetingMessage = {
-        id: Date.now() + Math.random(),
-        text: questionText,
-        isUser: false,
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, greetingMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -293,6 +400,22 @@ const ChatWindow = ({ userId }) => {
     if (conversationStage !== 'completed') {
       const userResponse = inputValue;
       setInputValue('');
+      
+      // Check if user is asking "who are you" during the questionnaire
+      if (conversationStage !== 'initial' && /谁是|你是|你是谁|what.*you|who.*you/i.test(userResponse)) {
+        // Create a special response for identity questions
+        const identityMessage = {
+          id: Date.now() + Math.random(),
+          text: `Hey there! I'm ${aiName}, your friendly AI companion. I'm here to have a great conversation with you and get to know you better! I noticed you're asking about me, but I'd love to learn more about you first. What should I call you?`,
+          isUser: false,
+          timestamp: new Date()
+        };
+        
+        // Stay in the current stage and add the identity message
+        setMessages(prev => [...prev, identityMessage]);
+        return;
+      }
+      
       handleNextQuestion(userResponse);
       return;
     }
@@ -363,7 +486,11 @@ const ChatWindow = ({ userId }) => {
         {messages.map((message) => (
           <Message key={message.id} isUser={message.isUser}>
             <MessageContent isUser={message.isUser}>
-              {message.text}
+              {message.isUser ? (
+                message.text
+              ) : (
+                <div dangerouslySetInnerHTML={{ __html: md.render(message.text) }} />
+              )}
               <MessageTime isUser={message.isUser}>
                 {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </MessageTime>

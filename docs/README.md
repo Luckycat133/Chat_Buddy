@@ -118,8 +118,9 @@ The chat interface features a clean, modern design inspired by popular social me
 ### AI Personalization
 
 - AI assistant with randomly generated name for a more personalized experience
-- Engaging opening questions to get to know the user at the start of conversations
+- Engaging opening questions following a specific sequence (name → age → hobbies → job/studies) to get to know the user at the start of conversations
 - Context-aware responses based on user information collected during initial interaction
+- Clear context transition marker (`[CONTEXT_END]`) to indicate the end of initial information gathering
 
 ## Backend API Endpoints
 
