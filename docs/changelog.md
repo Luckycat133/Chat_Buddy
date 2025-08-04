@@ -4,6 +4,40 @@
 
 <div id="english">
 
+## v0.2.0 (2025-08-04)
+
+### New Features
+
+- **AI Personalization**: Added AI assistant with randomly generated name that engages users with personalized questions at the start of conversations
+- **Enhanced API Error Handling**: Implemented comprehensive error handling for network connectivity issues, API rate limits, and invalid responses
+- **Server Health Monitoring**: Added automatic server health checks and status reporting
+- **Connection Diagnostics**: Built-in diagnostics tools to troubleshoot API connectivity issues
+- **Improved Logging System**: Enhanced logging with detailed error messages and debugging information
+- **Network Configuration Validation**: Added validation for custom API endpoints and network configurations
+
+### Technical Improvements
+
+- **Robust Error Recovery**: Implemented retry mechanisms for failed API calls with exponential backoff
+- **Timeout Management**: Added configurable timeouts for API requests to prevent hanging connections
+- **Connection Pooling**: Optimized HTTP connection handling for better performance
+- **Environment Validation**: Added startup validation for required environment variables and configurations
+- **Security Enhancements**: Improved API key handling and secure storage mechanisms
+
+### Bug Fixes
+
+- Fixed network connectivity issues that prevented server startup
+- Resolved API endpoint connection failures
+- Fixed environment variable validation issues
+- Corrected error handling for malformed API responses
+- Fixed server port binding conflicts
+
+### Development Tools
+
+- **Diagnostic Scripts**: Added command-line tools for testing API connectivity
+- **Health Check Endpoint**: New `/api/health` endpoint for monitoring server status
+- **Debug Mode**: Added detailed debug logging for development environments
+- **Configuration Testing**: Built-in configuration validation tools
+
 ## v0.1.2 (2025-08-04)
 
 ### Enhancements
@@ -61,6 +95,40 @@
 </div>
 
 <div id="中文">
+
+## v0.2.0 (2025-08-04)
+
+### 新增功能
+
+- **AI个性化**：添加了具有随机生成名称的AI助手，在对话开始时通过个性化问题与用户互动
+- **增强的API错误处理**：实现了针对网络连接问题、API速率限制和无效响应的全面错误处理
+- **服务器健康监控**：添加了自动服务器健康检查和状态报告功能
+- **连接诊断**：内置诊断工具，用于排查API连接问题
+- **改进的日志系统**：增强的日志记录，包含详细的错误消息和调试信息
+- **网络配置验证**：添加了自定义API端点和网络配置的验证功能
+
+### 技术改进
+
+- **健壮的错误恢复**：实现了失败API调用的重试机制，支持指数退避
+- **超时管理**：为API请求添加了可配置的超时设置，防止连接挂起
+- **连接池优化**：优化了HTTP连接处理，提升性能
+- **环境验证**：添加了启动时对必需环境变量和配置的验证
+- **安全增强**：改进了API密钥处理和安全存储机制
+
+### 错误修复
+
+- 修复了阻止服务器启动的网络连接问题
+- 解决了API端点连接失败的问题
+- 修复了环境变量验证问题
+- 修正了畸形API响应的错误处理
+- 修复了服务器端口绑定冲突
+
+### 开发工具
+
+- **诊断脚本**：添加了用于测试API连接的命令行工具
+- **健康检查端点**：新增 `/api/health` 端点用于监控服务器状态
+- **调试模式**：为开发环境添加了详细的调试日志
+- **配置测试**：内置配置验证工具
 
 ## v0.1.2 (2025-08-04)
 

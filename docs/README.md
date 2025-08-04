@@ -115,6 +115,12 @@ The chat interface features a clean, modern design inspired by popular social me
 - Memory is never cleared unless explicitly reset by the user
 - Conversation history is maintained across sessions
 
+### AI Personalization
+
+- AI assistant with randomly generated name for a more personalized experience
+- Engaging opening questions to get to know the user at the start of conversations
+- Context-aware responses based on user information collected during initial interaction
+
 ## Backend API Endpoints
 
 ### Send Chat Message
@@ -164,6 +170,19 @@ The chat interface features a clean, modern design inspired by popular social me
   }
   ```
 
+#### Health Check
+- **URL**: `/api/health`
+- **Method**: `GET`
+- **Response**: 
+  ```json
+  {
+    "status": "healthy",
+    "timestamp": "2023-01-01T00:00:00.000Z",
+    "apiConnection": "connected",
+    "uptime": 12345
+  }
+  ```
+
 ## Development
 
 ### Frontend
@@ -179,6 +198,24 @@ The backend is built with Node.js and Express:
 
 - `server.js` - Main server file with all API endpoints
 - In-memory storage for API keys and conversations (would be replaced with a database in production)
+
+### Diagnostic Tools
+
+The application includes built-in diagnostic tools for development and troubleshooting:
+
+- **API Connectivity Test**: `node test-gemini-connection.js` in the backend directory
+- **Health Check Endpoint**: Access `/api/health` to verify server status
+- **Debug Logging**: Set `DEBUG=true` environment variable for detailed logs
+- **Network Diagnostics**: Built-in tools to test network connectivity and API endpoints
+
+### Environment Variables
+
+Required environment variables:
+- `CUSTOM_API_URL` - Your custom API endpoint URL
+- `CUSTOM_API_KEY` - Your API key for the custom endpoint
+- `CUSTOM_API_MODEL` - The model name to use (optional)
+- `PORT` - Server port (default: 5001)
+- `DEBUG` - Enable debug logging (optional)
 
 ## Deployment
 
@@ -309,6 +346,12 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
 - 除非用户明确重置，否则内存永远不会被清除
 - 对话历史在会话之间保持
 
+### AI个性化
+
+- 具有随机生成名称的AI助手，提供更个性化的体验
+- 在对话开始时通过吸引人的问题了解用户
+- 基于初始交互期间收集的用户信息提供上下文感知的响应
+
 ## 后端API端点
 
 ### 发送聊天消息
@@ -358,6 +401,19 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
   }
   ```
 
+#### 健康检查
+- **URL**: `/api/health`
+- **方法**: `GET`
+- **响应**: 
+  ```json
+  {
+    "status": "healthy",
+    "timestamp": "2023-01-01T00:00:00.000Z",
+    "apiConnection": "connected",
+    "uptime": 12345
+  }
+  ```
+
 ## 开发
 
 ### 前端
@@ -373,6 +429,24 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
 
 - `server.js` - 包含所有API端点的主服务器文件
 - 用于API密钥和对话的内存存储（在生产环境中应替换为数据库）
+
+### 诊断工具
+
+该应用程序包含内置的诊断工具，用于开发和故障排除：
+
+- **API连接测试**：在后端目录中运行 `node test-gemini-connection.js`
+- **健康检查端点**：访问 `/api/health` 验证服务器状态
+- **调试日志**：设置 `DEBUG=true` 环境变量获取详细日志
+- **网络诊断**：内置工具测试网络连接和API端点
+
+### 环境变量
+
+必需的环境变量：
+- `CUSTOM_API_URL` - 您的自定义API端点URL
+- `CUSTOM_API_KEY` - 您的自定义端点API密钥
+- `CUSTOM_API_MODEL` - 要使用的模型名称（可选）
+- `PORT` - 服务器端口（默认：5001）
+- `DEBUG` - 启用调试日志（可选）
 
 ## 部署
 

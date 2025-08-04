@@ -130,17 +130,68 @@ const Dot = styled.div`
 
 const ChatWindow = ({ userId }) => {
   // State
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: "Hello! I'm your Chat Buddy Assistant. How can I help you with your coding today?",
-      isUser: false,
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [aiName, setAiName] = useState('');
+  const [conversationStage, setConversationStage] = useState('initial'); // initial, askingName, askingAge, askingHobbies, askingJob, completed
+  const [userInfo, setUserInfo] = useState({});
   const messagesEndRef = useRef(null);
+  
+  // Send user context information to backend
+  const sendContextToBackend = async (contextMessage) => {
+    try {
+      const requestBody = {
+        userId: userId,
+        message: contextMessage
+      };
+      
+      const response = await fetch('http://localhost:5001/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Context sent successfully:', data);
+    } catch (error) {
+      console.error('Error sending context to backend:', error);
+    }
+  };
+  
+  // Generate a random English name for the AI
+  const generateRandomName = () => {
+    const firstNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Avery', 'Quinn', 'Skyler', 'Cameron', 'Dakota', 'Reese', 'Rowan', 'Emerson', 'Finley', 'Harper', 'Hayden', 'Jamie', 'Kendall', 'Peyton'];
+    const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin'];
+    
+    const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+    const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+    
+    return `${randomFirstName} ${randomLastName}`;
+  };
+  
+  // Initialize the AI name and first message
+  useEffect(() => {
+    const name = generateRandomName();
+    setAiName(name);
+    
+    // Add the first AI message asking for the user's name
+    const firstMessage = {
+      id: Date.now(),
+      text: `Hi there! I'm ${name}. What's your name?`,
+      isUser: false,
+      timestamp: new Date()
+    };
+    
+    setMessages([firstMessage]);
+    setConversationStage('askingName');
+  }, []);
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -150,19 +201,102 @@ const ChatWindow = ({ userId }) => {
     scrollToBottom();
   }, [messages]);
   
-
+  const handleNextQuestion = (userResponse) => {
+    let nextStage = '';
+    let questionText = '';
+    
+    switch (conversationStage) {
+      case 'askingName':
+        // Extract name from various language inputs
+        // Handle patterns like "我是Jack", "I'm Jack", "Je suis Jack", "Ich bin Jack", etc.
+        const extractedName = userResponse
+          .replace(/^\s*[我Ii]|^\s*[是sS]\s*/i, '')  // Remove leading "我" or "I" or "s" (for "is")
+          .replace(/^\s*[是sS]\s*/i, '')  // Remove any remaining "是" or "s"
+          .replace(/^[\s\W]+/, '')  // Remove leading spaces and non-word characters
+          .trim() || userResponse;
+        
+        // If the extracted name is still in a phrase format, try to get the last word
+        const finalName = extractedName.split(/\s+/).pop() || extractedName;
+        
+        setUserInfo(prev => ({ ...prev, name: finalName }));
+        nextStage = 'askingAge';
+        questionText = `Nice to meet you, ${finalName}! How old are you?`;
+        break;
+        
+      case 'askingAge':
+        setUserInfo(prev => ({ ...prev, age: userResponse }));
+        nextStage = 'askingHobbies';
+        questionText = 'What are your hobbies or interests?';
+        break;
+        
+      case 'askingHobbies':
+        setUserInfo(prev => ({ ...prev, hobbies: userResponse }));
+        nextStage = 'askingJob';
+        questionText = 'What do you do for work or what would you like to do?';
+        break;
+        
+      case 'askingJob':
+        setUserInfo(prev => ({ ...prev, job: userResponse }));
+        nextStage = 'completed';
+        
+        // Send all collected info to backend for context
+        const contextMessage = `User Information:\nName: ${userInfo.name}\nAge: ${userInfo.age}\nHobbies: ${userInfo.hobbies}\nJob: ${userResponse}\n\nPlease use this information to personalize our conversation.`;
+        
+        // Send context to backend
+        sendContextToBackend(contextMessage);
+        
+        // Add a friendly greeting message
+        questionText = `Thanks for sharing that with me, ${userInfo.name}! I'm looking forward to our conversation. What would you like to chat about today?`;
+        break;
+        
+      default:
+        return;
+    }
+    
+    setConversationStage(nextStage);
+    
+    if (nextStage !== 'completed') {
+      const questionMessage = {
+        id: Date.now() + Math.random(),
+        text: questionText,
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, questionMessage]);
+    } else {
+      // Add the final greeting message
+      const greetingMessage = {
+        id: Date.now() + Math.random(),
+        text: questionText,
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, greetingMessage]);
+    }
+  };
   
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
     
     const userMessage = {
-      id: Date.now(),
+      id: Date.now() + Math.random(),
       text: inputValue,
       isUser: true,
       timestamp: new Date()
     };
     
     setMessages(prev => [...prev, userMessage]);
+    
+    // If we're in the initial conversation phase, handle the next question
+    if (conversationStage !== 'completed') {
+      const userResponse = inputValue;
+      setInputValue('');
+      handleNextQuestion(userResponse);
+      return;
+    }
+    
     setInputValue('');
     setIsLoading(true);
     
@@ -188,7 +322,7 @@ const ChatWindow = ({ userId }) => {
       const data = await response.json();
       
       const aiMessage = {
-        id: Date.now() + 1,
+        id: Date.now() + Math.random(),
         text: data.message.text,
         isUser: false,
         timestamp: new Date()
@@ -199,7 +333,7 @@ const ChatWindow = ({ userId }) => {
       console.error('Error sending message:', error);
       
       const errorMessage = {
-        id: Date.now() + 1,
+        id: Date.now() + Math.random(),
         text: `Sorry, I encountered an error: ${error.message}`,
         isUser: false,
         timestamp: new Date(),
@@ -222,7 +356,7 @@ const ChatWindow = ({ userId }) => {
   return (
     <ChatContainer>
       <Header>
-        <Title>Chat Buddy Assistant</Title>
+        <Title>{aiName || 'Chat Buddy'}</Title>
       </Header>
       
       <MessagesContainer>
@@ -264,3 +398,30 @@ const ChatWindow = ({ userId }) => {
 };
 
 export default ChatWindow;
+
+  // Send user context information to backend
+  const sendContextToBackend = async (contextMessage) => {
+    try {
+      const requestBody = {
+        userId: userId,
+        message: contextMessage
+      };
+      
+      const response = await fetch('http://localhost:5001/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Context sent successfully:', data);
+    } catch (error) {
+      console.error('Error sending context to backend:', error);
+    }
+  };
