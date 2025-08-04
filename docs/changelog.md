@@ -4,6 +4,19 @@
 
 <div id="english">
 
+## v0.2.1 (2025-08-04)
+
+### Bug Fixes
+
+- **Fixed Empty Response Display**: Resolved critical issue where AI responses appeared empty in the chat interface due to incorrect field mapping in frontend API response parsing
+- **API Response Compatibility**: Fixed frontend parsing to correctly handle the API response structure (`message.content` instead of `message.text`)
+
+### Technical Details
+
+- **Frontend Fix**: Updated `/frontend/src/components/ChatWindow.js` line 327 to use correct response field name
+- **Impact**: All AI responses now display correctly in the chat interface
+- **Root Cause**: Frontend was expecting `data.message.text` but backend returns `data.message.content`
+
 ## v0.2.0 (2025-08-04)
 
 ### New Features
@@ -95,6 +108,19 @@
 </div>
 
 <div id="中文">
+
+## v0.2.1 (2025-08-04)
+
+### 错误修复
+
+- **修复空回复显示问题**：解决了由于前端API响应解析错误导致的AI回复在聊天界面中显示为空的严重问题
+- **API响应兼容性**：修复了前端解析以正确处理API响应结构（使用`message.content`而非`message.text`）
+
+### 技术细节
+
+- **前端修复**：更新 `/frontend/src/components/ChatWindow.js` 第327行，使用正确的响应字段名
+- **影响**：所有AI回复现在都能在聊天界面中正确显示
+- **根本原因**：前端期望 `data.message.text` 但后端返回 `data.message.content`
 
 ## v0.2.0 (2025-08-04)
 

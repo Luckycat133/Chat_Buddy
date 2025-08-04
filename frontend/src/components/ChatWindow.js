@@ -323,7 +323,7 @@ const ChatWindow = ({ userId }) => {
       
       const aiMessage = {
         id: Date.now() + Math.random(),
-        text: data.message.text,
+        text: data.message.content,
         isUser: false,
         timestamp: new Date()
       };
