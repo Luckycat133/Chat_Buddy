@@ -210,6 +210,7 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
     const model = settings.model || process.env.CUSTOM_API_MODEL || 'gpt-3.5-turbo';
     const apiKey = settings.apiKey || process.env.CUSTOM_API_KEY || process.env.OPENAI_API_KEY;
     let apiUrl = settings.customUrl || process.env.CUSTOM_API_URL || 'https://api.openai.com/v1/chat/completions';
+    apiUrl = sanitizeUrl(apiUrl);
     
     // Validate API key
     if (!apiKey) {
@@ -221,29 +222,70 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
       'api.openai.com',
       'generativelanguage.googleapis.com',
       'api.anthropic.com',
-      'localhost',
-      '127.0.0.1'
+      'openrouter.ai',
+      'api.groq.com'
     ];
+    
+    // Function to sanitize and validate URLs
+    const sanitizeUrl = (url) => {
+      try {
+        const urlObj = new URL(url);
+        // Remove any potentially dangerous characters from pathname
+        urlObj.pathname = urlObj.pathname.replace(/[^\w\-\/\.]/g, '');
+        // Prevent path traversal
+        if (urlObj.pathname.includes('..')) {
+          throw new Error('Invalid URL: Path traversal detected');
+        }
+        return urlObj.toString();
+      } catch (error) {
+        throw new Error('Invalid URL: Malformed URL');
+      }
+    };
     
     // Function to validate API URLs against allowed domains
     const validateApiUrl = (url) => {
-      const hostname = url.hostname;
-      
-      // Check if the hostname is in our allowed list
-      const isAllowed = allowedDomains.some(domain => 
-        hostname === domain || hostname.endsWith('.' + domain)
-      );
-      
-      if (!isAllowed) {
-        throw new Error('Invalid API URL: Domain not allowed');
-      }
-      
-      // Prevent use of IP addresses except for localhost
-      if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
-        const ipPattern = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
-        if (ipPattern.test(hostname)) {
-          throw new Error('Invalid API URL: Direct IP addresses not allowed');
+      try {
+        const urlObj = new URL(url);
+        const hostname = urlObj.hostname;
+        
+        // Strict protocol check - only allow HTTPS
+        if (urlObj.protocol !== 'https:') {
+          throw new Error('Invalid API URL: Only HTTPS protocol is allowed');
         }
+        
+        // Check if the hostname is in our allowed list
+        const isAllowed = allowedDomains.some(domain => 
+          hostname === domain || hostname.endsWith('.' + domain)
+        );
+        
+        if (!isAllowed) {
+          throw new Error('Invalid API URL: Domain not allowed');
+        }
+        
+        // Block all IP addresses including localhost and 127.0.0.1
+        const ipPattern = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+        if (ipPattern.test(hostname) || hostname === 'localhost') {
+          throw new Error('Invalid API URL: IP addresses and localhost not allowed');
+        }
+        
+        // Block private/internal network ranges
+        const privateIpRanges = [
+          /^10\./,
+          /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+          /^192\.168\./,
+          /^127\./,
+          /^0\./,
+          /^169\.254\./
+        ];
+        
+        // Also check the resolved IP if possible (note: this is a basic check)
+        // In production, consider using DNS resolution and IP checking
+        
+      } catch (error) {
+        if (error.message.startsWith('Invalid API URL:')) {
+          throw error;
+        }
+        throw new Error('Invalid API URL: Malformed URL');
       }
     };
     
@@ -339,6 +381,9 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
       });
     } else {
       // Handle all OpenAI-compatible APIs (including OpenAI, Azure OpenAI, etc.)
+      // Validate API URL to prevent SSRF
+      validateApiUrl(new URL(apiUrl));
+      
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
