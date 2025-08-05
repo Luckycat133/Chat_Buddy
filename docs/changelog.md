@@ -15,6 +15,9 @@
 - **Externally-controlled Format String**: Fixed use of externally-controlled format string vulnerability in backend/server.js at line 294
 - **DOM Text Reinterpreted as HTML**: Fixed medium severity DOM text reinterpreted as HTML vulnerability in frontend/components/ChatWindow.js at line 594
 - **Prototype Pollution**: Fixed multiple prototype-polluting assignment vulnerabilities in backend/server.js at lines 50, 52, and 54
+- **Port Conflict Resolution**: Resolved the issue where the backend server failed to start due to port being occupied.
+- **API Model Name Correction**: Corrected the Gemini API model name to ensure API requests function correctly.
+- **CORS Configuration Fix**: Fixed the CORS configuration to allow the frontend to access the backend API properly.
 
 ## v0.2.0 (2025-08-04)
 
@@ -168,6 +171,9 @@
 - **外部控制的格式字符串**：修复了backend/server.js第294行的外部控制格式字符串漏洞
 - **DOM文本重新解释为HTML**：修复了frontend/components/ChatWindow.js第594行的中等严重性DOM文本重新解释为HTML漏洞
 - **原型污染**：修复了backend/server.js第50、52和54行的多个原型污染分配漏洞
+- **端口冲突解决**：解决了后端服务器启动时端口被占用的问题。
+- **API模型名称修正**：修正了Gemini API模型名称，确保API请求正常工作。
+- **CORS配置修复**：修复了CORS配置，允许前端正常访问后端API。
 
 ## v0.2.0 (2025-08-04)
 

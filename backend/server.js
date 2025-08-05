@@ -5,7 +5,7 @@ const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 5001;
+const PORT = 5001;
 
 // General rate limiting middleware
 const generalRateLimit = rateLimit({
@@ -23,8 +23,78 @@ const userConversations = {};
 const userContexts = {}; // New storage for user context information
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: 'http://localhost:3001' }));
 app.use(express.json());
+
+// Function to sanitize and validate URLs
+const sanitizeUrl = (url) => {
+  try {
+    const urlObj = new URL(url);
+    // Remove any potentially dangerous characters from pathname
+    urlObj.pathname = urlObj.pathname.replace(/[^\w\-\/\.]/g, '');
+    // Prevent path traversal
+    if (urlObj.pathname.includes('..')) {
+      throw new Error('Invalid URL: Path traversal detected');
+    }
+    return urlObj.toString();
+  } catch (error) {
+    throw new Error('Invalid URL: Malformed URL');
+  }
+};
+
+// Function to validate API URLs against allowed domains
+const validateApiUrl = (url) => {
+  const allowedDomains = [
+    'api.openai.com',
+    'generativelanguage.googleapis.com',
+    'api.anthropic.com',
+    'openrouter.ai',
+    'api.groq.com'
+  ];
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname;
+    
+    // Strict protocol check - only allow HTTPS
+    if (urlObj.protocol !== 'https:') {
+      throw new Error('Invalid API URL: Only HTTPS protocol is allowed');
+    }
+    
+    // Check if the hostname is in our allowed list
+    const isAllowed = allowedDomains.some(domain => 
+      hostname === domain || hostname.endsWith('.' + domain)
+    );
+    
+    if (!isAllowed) {
+      throw new Error('Invalid API URL: Domain not allowed');
+    }
+    
+    // Block all IP addresses including localhost and 127.0.0.1
+    const ipPattern = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+    if (ipPattern.test(hostname) || hostname === 'localhost') {
+      throw new Error('Invalid API URL: IP addresses and localhost not allowed');
+    }
+    
+    // Block private/internal network ranges
+    const privateIpRanges = [
+      /^10\./,
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+      /^192\.168\./,
+      /^127\./,
+      /^0\./,
+      /^169\.254\./
+    ];
+    
+    // Also check the resolved IP if possible (note: this is a basic check)
+    // In production, consider using DNS resolution and IP checking
+    
+  } catch (error) {
+    if (error.message.startsWith('Invalid API URL:')) {
+      throw error;
+    }
+    throw new Error('Invalid API URL: Malformed URL');
+  }
+};
 
 // Helper function to get or initialize user conversation history
 const getUserConversation = (userId) => {
@@ -150,7 +220,7 @@ app.post('/api/chat', async (req, res) => {
       // Send a confirmation response
       return res.json({ 
         message: { 
-          text: 'Thanks for sharing! I\'ll keep this in mind for our conversation.',
+          content: 'Thanks for sharing! I\'ll keep this in mind for our conversation.',
           role: 'assistant'
         }
       });
@@ -164,7 +234,7 @@ app.post('/api/chat', async (req, res) => {
       // Send a confirmation response
       return res.json({ 
         message: { 
-          text: 'Thanks for sharing! I\'ll keep this in mind for our conversation.',
+          content: 'Thanks for sharing! I\'ll keep this in mind for our conversation.',
           role: 'assistant'
         }
       });
@@ -218,76 +288,7 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
     }
     
     // SSRF Protection: Validate and restrict API URLs
-    const allowedDomains = [
-      'api.openai.com',
-      'generativelanguage.googleapis.com',
-      'api.anthropic.com',
-      'openrouter.ai',
-      'api.groq.com'
-    ];
-    
-    // Function to sanitize and validate URLs
-    const sanitizeUrl = (url) => {
-      try {
-        const urlObj = new URL(url);
-        // Remove any potentially dangerous characters from pathname
-        urlObj.pathname = urlObj.pathname.replace(/[^\w\-\/\.]/g, '');
-        // Prevent path traversal
-        if (urlObj.pathname.includes('..')) {
-          throw new Error('Invalid URL: Path traversal detected');
-        }
-        return urlObj.toString();
-      } catch (error) {
-        throw new Error('Invalid URL: Malformed URL');
-      }
-    };
-    
-    // Function to validate API URLs against allowed domains
-    const validateApiUrl = (url) => {
-      try {
-        const urlObj = new URL(url);
-        const hostname = urlObj.hostname;
-        
-        // Strict protocol check - only allow HTTPS
-        if (urlObj.protocol !== 'https:') {
-          throw new Error('Invalid API URL: Only HTTPS protocol is allowed');
-        }
-        
-        // Check if the hostname is in our allowed list
-        const isAllowed = allowedDomains.some(domain => 
-          hostname === domain || hostname.endsWith('.' + domain)
-        );
-        
-        if (!isAllowed) {
-          throw new Error('Invalid API URL: Domain not allowed');
-        }
-        
-        // Block all IP addresses including localhost and 127.0.0.1
-        const ipPattern = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
-        if (ipPattern.test(hostname) || hostname === 'localhost') {
-          throw new Error('Invalid API URL: IP addresses and localhost not allowed');
-        }
-        
-        // Block private/internal network ranges
-        const privateIpRanges = [
-          /^10\./,
-          /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
-          /^192\.168\./,
-          /^127\./,
-          /^0\./,
-          /^169\.254\./
-        ];
-        
-        // Also check the resolved IP if possible (note: this is a basic check)
-        // In production, consider using DNS resolution and IP checking
-        
-      } catch (error) {
-        if (error.message.startsWith('Invalid API URL:')) {
-          throw error;
-        }
-        throw new Error('Invalid API URL: Malformed URL');
-      }
-    };
+
     
     // If using a custom URL, validate the domain
     if (settings.customUrl) {
@@ -333,7 +334,7 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
       
       console.log('Gemini request body:', JSON.stringify(geminiRequestBody, null, 2));
       
-      const fullUrl = `${apiUrl}?key=${apiKey}`;
+      const fullUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       console.log('Full URL:', fullUrl);
       
       // Validate the full URL to prevent SSRF
