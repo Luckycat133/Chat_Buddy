@@ -9,10 +9,7 @@ import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 import DOMPurify from 'dompurify';
 
-const roleNames = {
-  evelyn: "Dr. Evelyn Lin"
-};
-
+// Styled components
 const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -91,46 +88,10 @@ const PulseDot = styled.div`
   }
 `;
 
-
-
 const MessagesContainer = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 20px;
-`;
-
-const Message = styled.div`
-  display: flex;
-  margin-bottom: 20px;
-  flex-direction: ${props => props.isUser ? 'row-reverse' : 'row'};
-`;
-
-const MessageContent = styled.div`
-  max-width: 70%;
-  padding: 18px 20px;
-  border-radius: 20px;
-  background-color: ${props => props.isUser ? '#FFB48A' : '#FFFFFF'};
-  color: ${props => props.isUser ? '#FFFFFF' : '#333333'};
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: ${props => props.isUser ? 'none' : '1px solid #E0E0E0'};
-  position: relative;
-  font-size: 15px;
-  line-height: 1.5;
-  transition: all 0.2s ease-in-out;
-  
-  &:hover {
-    box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.1), 0 3px 6px -1px rgba(0, 0, 0, 0.08);
-    transform: translateY(-1px);
-  }
-`;
-
-const MessageTime = styled.div`
-  font-size: 11px;
-  color: #999;
-  margin-top: 8px;
-  text-align: ${props => props.isUser ? 'right' : 'left'};
-  font-weight: 300;
-  letter-spacing: 0.025em;
 `;
 
 const InputContainer = styled.div`
@@ -200,12 +161,42 @@ const SendButton = styled.button`
   }
 `;
 
-const LoadingIndicator = styled.div`
+// Message components
+const Message = styled.div`
   display: flex;
-  justify-content: center;
-  padding: 10px;
+  margin-bottom: 20px;
+  flex-direction: ${props => props.isUser ? 'row-reverse' : 'row'};
 `;
 
+const MessageContent = styled.div`
+  max-width: 70%;
+  padding: 18px 20px;
+  border-radius: 20px;
+  background-color: ${props => props.isUser ? '#FFB48A' : '#FFFFFF'};
+  color: ${props => props.isUser ? '#FFFFFF' : '#333333'};
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: ${props => props.isUser ? 'none' : '1px solid #E0E0E0'};
+  position: relative;
+  font-size: 15px;
+  line-height: 1.5;
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.1), 0 3px 6px -1px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+  }
+`;
+
+const MessageTime = styled.div`
+  font-size: 11px;
+  color: #999;
+  margin-top: 8px;
+  text-align: ${props => props.isUser ? 'right' : 'left'};
+  font-weight: 300;
+  letter-spacing: 0.025em;
+`;
+
+// Typing indicator components
 const TypingIndicator = styled.div`
   display: flex;
   justify-content: flex-start;
@@ -260,6 +251,7 @@ const TypingText = styled.span`
   margin-right: 4px;
 `;
 
+// Empty state components
 const EmptyStateContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -296,6 +288,14 @@ const SubWelcomeText = styled.div`
   font-weight: 300;
 `;
 
+// Loading indicator
+const LoadingIndicator = styled.div`
+  display: flex;
+  justify-content: center;
+  padding: 10px;
+`;
+
+// Dot component
 const Dot = styled.div`
   width: 8px;
   height: 8px;
@@ -319,6 +319,57 @@ const Dot = styled.div`
   }
 `;
 
+// Role names
+const roleNames = {
+  evelyn: "Dr. Evelyn Lin"
+};
+
+// MessageItem component
+const MessageItem = ({ message, md }) => {
+  return (
+    <Message isUser={message.isUser}>
+      <MessageContent isUser={message.isUser}>
+        {message.isUser ? (
+          message.text
+        ) : (
+          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(md.render(message.text)) }} />
+        )}
+        <MessageTime isUser={message.isUser}>
+          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </MessageTime>
+      </MessageContent>
+    </Message>
+  );
+};
+
+// TypingIndicator component
+const TypingIndicatorComponent = ({ show }) => {
+  return (
+    <TypingIndicator show={show}>
+      <TypingContent>
+        <TypingText>对方正在输入中</TypingText>
+        <TypingDots>
+          <TypingDot />
+          <TypingDot />
+          <TypingDot />
+        </TypingDots>
+      </TypingContent>
+    </TypingIndicator>
+  );
+};
+
+// EmptyState component
+const EmptyState = () => {
+  return (
+    <EmptyStateContainer>
+      <RobotIcon>🤖</RobotIcon>
+      <WelcomeText>Welcome to Chat Buddy!</WelcomeText>
+      <SubWelcomeText>Start a conversation with your AI assistant</SubWelcomeText>
+    </EmptyStateContainer>
+  );
+};
+
+// ChatWindow component
 const ChatWindow = ({ userId }) => {
   // State
   const [messages, setMessages] = useState([]);
@@ -454,28 +505,13 @@ const ChatWindow = ({ userId }) => {
       
       <MessagesContainer>
         {messages.length === 0 ? (
-          <EmptyStateContainer>
-            <RobotIcon>🤖</RobotIcon>
-            <WelcomeText>Welcome to Chat Buddy!</WelcomeText>
-            <SubWelcomeText>Start a conversation with your AI assistant</SubWelcomeText>
-          </EmptyStateContainer>
+          <EmptyState />
         ) : (
           <>
             {messages.map((message) => (
-              <Message key={message.id} isUser={message.isUser}>
-                <MessageContent isUser={message.isUser}>
-                  {message.isUser ? (
-                    message.text
-                  ) : (
-                    <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(md.render(message.text)) }} />
-                  )}
-                  <MessageTime isUser={message.isUser}>
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </MessageTime>
-                </MessageContent>
-              </Message>
+              <MessageItem key={message.id} message={message} md={md} />
             ))}
-
+            <TypingIndicatorComponent show={isTyping} />
           </>
         )}
         <div ref={messagesEndRef} />
