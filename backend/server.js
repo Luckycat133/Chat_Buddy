@@ -23,7 +23,7 @@ const userConversations = {};
 const userContexts = new Map();
 
 // Middleware
-app.use(cors({ origin: 'http://localhost:3001' }));
+app.use(cors({ origin: ['http://localhost:3001', 'http://192.168.0.98:3001'] }));
 app.use(express.json());
 
 // Function to sanitize and validate URLs
@@ -566,17 +566,7 @@ app.post('/api/import/:userId', (req, res) => {
   res.json({ message: 'Data imported successfully' });
 });
 
-// Rate limiting middleware for API documentation
-const docsRateLimit = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again after 15 minutes'
-});
 
-// API documentation
-app.get('/api/docs', docsRateLimit, (req, res) => {
-  res.sendFile(path.join(__dirname, 'api-docs.html'));
-});
 
 // Start server
 app.listen(PORT, () => {

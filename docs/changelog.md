@@ -4,6 +4,21 @@
 
 <div id="english">
 
+## v0.2.3 (2025-08-06)
+
+### Bug Fixes
+
+- **Network Connectivity**: Fixed "Failed to fetch" error by resolving port configuration mismatch between frontend and backend
+- **CORS Configuration**: Extended CORS origin configuration to support both localhost:3001 and 192.168.0.98:3001 for flexible access
+- **API Configuration**: Standardized backend port to 5001 and updated Gemini API model to gemini-2.5-flash-lite for improved performance
+- **Environment Variables**: Fixed .env file configuration to ensure consistent port binding across development environments
+
+### Technical Improvements
+
+- **Connection Reliability**: Enhanced error handling and retry mechanisms for network requests
+- **Development Experience**: Improved server restart procedures with clean process management
+- **Cross-Origin Support**: Added comprehensive CORS configuration for local development and testing
+
 ## v0.2.2 (2025-08-05)
 
 ### New Features
@@ -167,6 +182,21 @@
 </div>
 
 <div id="中文">
+
+## v0.2.3 (2025-08-06)
+
+### 错误修复
+
+- **网络连接**：修复"Failed to fetch"错误，解决前后端端口配置不匹配问题
+- **跨域配置**：扩展CORS源配置，支持localhost:3001和192.168.0.98:3001的灵活访问
+- **API配置**：标准化后端端口为5001，更新Gemini API模型为gemini-2.5-flash-lite以提升性能
+- **环境变量**：修复.env文件配置，确保开发环境中端口绑定一致性
+
+### 技术改进
+
+- **连接可靠性**：增强网络请求的错误处理和重试机制
+- **开发体验**：改进服务器重启流程，实现干净进程管理
+- **跨域支持**：为本地开发和测试添加全面的CORS配置
 
 ## v0.2.2 (2025-08-05)
 
