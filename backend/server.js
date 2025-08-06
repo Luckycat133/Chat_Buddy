@@ -225,7 +225,7 @@ app.post('/api/chat', async (req, res) => {
     const requestBody = {
       model: model,
       messages: messages,
-      temperature: 1.5
+      temperature: 0.7
     };
     
     // Special handling for Gemini API

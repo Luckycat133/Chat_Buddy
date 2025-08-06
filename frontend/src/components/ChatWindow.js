@@ -9,6 +9,11 @@ import '@fontsource/inter/600.css';
 import '@fontsource/inter/700.css';
 import DOMPurify from 'dompurify';
 
+const roleNames = {
+  suchen: "苏辰",
+  chenxi: "晨曦"
+};
+
 const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -31,12 +36,60 @@ const Header = styled.div`
   overflow: hidden;
 `;
 
+const TitleContainer = styled.div`
+  height: 30px;
+  display: flex;
+  align-items: center;
+`;
+
 const Title = styled.h1`
-  margin: 0;
   font-size: 24px;
-  font-weight: 700;
-  color: #8B4513;
-  letter-spacing: -0.025em;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+  transition: all 0.3s ease-in-out;
+  transform: translateX(${props => props.show ? '0' : '-30px'});
+  opacity: ${props => props.show ? '1' : '0'};
+`;
+
+const TypingTitle = styled.div`
+  font-size: 18px;
+  font-weight: 500;
+  color: #ffffff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s ease-in-out;
+  transform: translateX(${props => props.show ? '0' : '-30px'});
+  opacity: ${props => props.show ? '1' : '0'};
+`;
+
+const PulseDot = styled.div`
+  width: 6px;
+  height: 6px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite ease-in-out;
+  
+  &:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  &:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { 
+      opacity: 0.4;
+      transform: scale(0.8);
+    }
+    50% { 
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
 `;
 
 const PromptSelector = styled.select`
@@ -175,6 +228,60 @@ const LoadingIndicator = styled.div`
   padding: 10px;
 `;
 
+const TypingIndicator = styled.div`
+  display: flex;
+  justify-content: flex-start;
+  margin: 10px 0;
+  opacity: ${props => props.show ? 1 : 0};
+  transform: translateX(${props => props.show ? '0' : '-30px'});
+  transition: all 0.5s ease;
+  height: ${props => props.show ? 'auto' : '0'};
+  overflow: hidden;
+`;
+
+const TypingContent = styled.div`
+  background-color: #f1f1f1;
+  padding: 12px 16px;
+  border-radius: 18px;
+  max-width: 70%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const TypingDots = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+`;
+
+const TypingDot = styled.div`
+  width: 8px;
+  height: 8px;
+  background-color: #666;
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out;
+  
+  &:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  
+  &:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+  
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+`;
+
+const TypingText = styled.span`
+  color: #666;
+  font-size: 14px;
+  margin-right: 4px;
+`;
+
 const EmptyStateContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -239,7 +346,9 @@ const ChatWindow = ({ userId }) => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [promptType, setPromptType] = useState('default');
+  const [isTyping, setIsTyping] = useState(false);
+  const [promptType, setPromptType] = useState('chenxi');
+  const [titleKey, setTitleKey] = useState('chenxi');
   const messagesEndRef = useRef(null);
   
   // Initialize MarkdownIt
@@ -254,6 +363,14 @@ const ChatWindow = ({ userId }) => {
   useEffect(() => {
     setMessages([]);
   }, [userId]);
+
+  useEffect(() => {
+    setTitleKey('');
+    const timer = setTimeout(() => {
+      setTitleKey(promptType);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [promptType]);
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -262,6 +379,8 @@ const ChatWindow = ({ userId }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -276,9 +395,10 @@ const ChatWindow = ({ userId }) => {
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     
-    setIsLoading(true);
+    setIsTyping(true);
     
     try {
+      await delay(1000);
       
       const requestBody = {
         userId: userId,
@@ -300,6 +420,10 @@ const ChatWindow = ({ userId }) => {
       
       const data = await response.json();
       
+      await delay(800);
+      
+      setIsTyping(false);
+      
       const aiMessage = {
         id: Date.now() + Math.random(),
         text: data.message.content,
@@ -311,6 +435,8 @@ const ChatWindow = ({ userId }) => {
     } catch (error) {
       console.error('Error sending message:', error);
       
+      setIsTyping(false);
+      
       const errorMessage = {
         id: Date.now() + Math.random(),
         text: 'Sorry, I encountered an error. Please try again.',
@@ -320,8 +446,6 @@ const ChatWindow = ({ userId }) => {
       };
       
       setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
     }
   };
   
@@ -335,13 +459,21 @@ const ChatWindow = ({ userId }) => {
   return (
     <ChatContainer>
       <Header>
-        <Title>Chat Buddy</Title>
+        <TitleContainer>
+           {isTyping ? (
+             <TypingTitle show={true}>
+               对方正在输入中
+               <PulseDot />
+               <PulseDot />
+               <PulseDot />
+             </TypingTitle>
+           ) : (
+             <Title show={true}>{roleNames[titleKey] || "Chat Buddy"}</Title>
+           )}
+         </TitleContainer>
         <PromptSelector value={promptType} onChange={(e) => setPromptType(e.target.value)}>
-              <option value="default">默认</option>
-              <option value="professional">专业</option>
-              <option value="creative">创意</option>
-              <option value="educational">教育</option>
               <option value="suchen">苏辰</option>
+              <option value="chenxi">晨曦</option>
             </PromptSelector>
       </Header>
       
@@ -368,13 +500,7 @@ const ChatWindow = ({ userId }) => {
                 </MessageContent>
               </Message>
             ))}
-            {isLoading && (
-              <LoadingIndicator>
-                <Dot />
-                <Dot />
-                <Dot />
-              </LoadingIndicator>
-            )}
+
           </>
         )}
         <div ref={messagesEndRef} />
@@ -387,9 +513,9 @@ const ChatWindow = ({ userId }) => {
           onChange={(e) => setInputValue(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="Type your message..."
-          disabled={isLoading}
+          disabled={isTyping}
         />
-        <SendButton onClick={sendMessage} disabled={isLoading || !inputValue.trim()}>
+        <SendButton onClick={sendMessage} disabled={isTyping || !inputValue.trim()}>
           ➤
         </SendButton>
       </InputContainer>
