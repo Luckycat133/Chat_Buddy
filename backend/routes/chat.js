@@ -15,8 +15,11 @@ const {
 // Import API functions
 const { callOpenAICompatibleAPI, callGeminiAPI } = require('../services/api');
 
+// Import middleware
+const { securityMiddleware } = require('../middleware/security');
+
 // Chat endpoint
-  router.post('/', async (req, res) => {
+  router.post('/', securityMiddleware, async (req, res) => {
     // Get userSettings from app locals
     const userSettings = req.app.get('userSettings');
     

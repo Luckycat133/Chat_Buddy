@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const rateLimit = require('express-rate-limit');
+const validator = require('validator');
 require('dotenv').config();
 
 const app = express();
@@ -16,6 +17,49 @@ const generalRateLimit = rateLimit({
 
 // Apply general rate limiting to all requests
 app.use(generalRateLimit);
+
+// Security middleware for input validation and sanitization
+const securityMiddleware = (req, res, next) => {
+  // Sanitize and validate userId
+  if (req.body.userId) {
+    // Remove any potentially dangerous characters
+    req.body.userId = req.body.userId.replace(/[^a-zA-Z0-9-_]/g, '');
+    
+    // Check if userId is empty after sanitization
+    if (req.body.userId.length === 0) {
+      return res.status(400).json({ error: 'Invalid userId format' });
+    }
+    
+    // Limit userId length
+    if (req.body.userId.length > 100) {
+      return res.status(400).json({ error: 'userId too long' });
+    }
+  }
+  
+  // Sanitize and validate message content
+  if (req.body.message) {
+    // Trim whitespace
+    req.body.message = req.body.message.trim();
+    
+    // Check if message is empty
+    if (req.body.message.length === 0) {
+      return res.status(400).json({ error: 'Message cannot be empty' });
+    }
+    
+    // Limit message length
+    if (req.body.message.length > 10000) {
+      return res.status(400).json({ error: 'Message too long (max 10000 characters)' });
+    }
+    
+    // Basic XSS prevention - remove script tags
+    req.body.message = req.body.message.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    
+    // Sanitize HTML
+    req.body.message = req.body.message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  
+  next();
+};
 
 // In-memory storage for API keys, settings, and conversation history
 const userSettings = {};

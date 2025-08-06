@@ -8,12 +8,14 @@
 
 ### Bug Fixes
 
-- **Network Connectivity**: Fixed "Failed to fetch" error by resolving port configuration mismatch between frontend and backend
 - **CORS Configuration**: Extended CORS origin configuration to support both localhost:3001 and 192.168.0.98:3001 for flexible access
-- **API Configuration**: Standardized backend port to 5001 and updated Gemini API model to gemini-2.5-flash-lite for improved performance
-- **Environment Variables**: Fixed .env file configuration to ensure consistent port binding across development environments
-- **HTTP 500 Error**: Fixed "Error sending message: HTTP error! status: 500" by resolving API provider selection logic in backend routing system. The issue occurred when frontend didn't send user settings, causing incorrect API provider selection between OpenAI-compatible and Gemini APIs
-- **API Authentication**: Resolved 401 authentication errors by implementing proper environment variable fallback mechanism for API provider selection
+
+### Security Enhancements
+
+- **API Key Management**: Implemented robust API key caching mechanism with automatic fallback to environment variables, ensuring secure and efficient key handling
+- **Security Middleware Integration**: Enhanced backend security with improved middleware implementation, preventing unauthorized access to API endpoints
+- **Input Sanitization**: Strengthened input validation and sanitization processes to prevent injection attacks and ensure data integrity
+- **Error Handling**: Improved error responses to avoid exposing sensitive system information to clients
 
 ### Technical Improvements
 
@@ -196,10 +198,14 @@
 
 ### 错误修复
 
-- **网络连接**：修复"Failed to fetch"错误，解决前后端端口配置不匹配问题
 - **跨域配置**：扩展CORS源配置，支持localhost:3001和192.168.0.98:3001的灵活访问
-- **API配置**：标准化后端端口为5001，更新Gemini API模型为gemini-2.5-flash-lite以提升性能
-- **环境变量**：修复.env文件配置，确保开发环境中端口绑定一致性
+
+### 安全性增强
+
+- **API密钥管理**：实现强大的API密钥缓存机制，并自动回退到环境变量，确保安全高效的密钥处理
+- **安全中间件集成**：通过改进中间件实现，增强后端安全性，防止对API端点的未授权访问
+- **输入净化**：加强输入验证和净化过程，防止注入攻击并确保数据完整性
+- **错误处理**：改进错误响应，避免向客户端暴露敏感的系统信息
 
 ### 技术改进
 

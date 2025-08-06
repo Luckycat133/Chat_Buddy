@@ -3,15 +3,58 @@
 // Load environment variables
 require('dotenv').config();
 
+// Simple in-memory cache for API keys (in production, use Redis or similar)
+const apiKeyCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Function to get API key from cache or environment
+const getApiKey = (provider) => {
+  const cacheKey = `api_key_${provider}`;
+  const cached = apiKeyCache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.value;
+  }
+  
+  // Get from environment variables
+  let apiKey;
+  switch (provider) {
+    case 'openai':
+      apiKey = process.env.OPENAI_API_KEY || process.env.CUSTOM_API_KEY;
+      break;
+    case 'gemini':
+      apiKey = process.env.GEMINI_API_KEY || process.env.CUSTOM_API_KEY;
+      break;
+    default:
+      apiKey = process.env.CUSTOM_API_KEY;
+  }
+  
+  // Cache the key
+  if (apiKey) {
+    apiKeyCache.set(cacheKey, {
+      value: apiKey,
+      timestamp: Date.now()
+    });
+  }
+  
+  return apiKey;
+};
+
+// Function to clear API key cache
+const clearApiKeyCache = (provider) => {
+  const cacheKey = `api_key_${provider}`;
+  apiKeyCache.delete(cacheKey);
+};
+
 const callOpenAICompatibleAPI = async (messages, settings) => {
-  // Get API configuration from environment variables
-  const apiUrl = process.env.CUSTOM_API_URL;
-  const apiKey = process.env.CUSTOM_API_KEY;
-  const apiModel = process.env.CUSTOM_API_MODEL || 'gpt-3.5-turbo';
+  // Get API configuration from environment variables or settings
+  const apiUrl = settings.customApiUrl || process.env.CUSTOM_API_URL;
+  const apiKey = settings.customApiKey || getApiKey('openai');
+  const apiModel = settings.customApiModel || process.env.CUSTOM_API_MODEL || 'gpt-3.5-turbo';
   
   // Check if API configuration is available
   if (!apiUrl || !apiKey) {
-    throw new Error('API configuration is missing. Please check your .env file.');
+    throw new Error('API configuration is missing. Please check your .env file or user settings.');
   }
   
   try {
@@ -33,6 +76,10 @@ const callOpenAICompatibleAPI = async (messages, settings) => {
     });
     
     if (!response.ok) {
+      // Clear cache if we get an auth error
+      if (response.status === 401 || response.status === 403) {
+        clearApiKeyCache('openai');
+      }
       throw new Error(`API request failed with status ${response.status}`);
     }
     
@@ -49,14 +96,13 @@ const callOpenAICompatibleAPI = async (messages, settings) => {
 };
 
 const callGeminiAPI = async (messages, settings) => {
-  // Get API configuration from environment variables
-  const apiUrl = process.env.CUSTOM_API_URL;
-  const apiKey = process.env.CUSTOM_API_KEY;
-  const apiModel = process.env.CUSTOM_API_MODEL || 'gemini-1.5-flash';
+  // Get API configuration from environment variables or settings
+  const apiKey = settings.customApiKey || getApiKey('gemini');
+  const apiModel = settings.customApiModel || process.env.CUSTOM_API_MODEL || 'gemini-1.5-flash';
   
   // Check if API configuration is available
   if (!apiKey) {
-    throw new Error('API configuration is missing. Please check your .env file.');
+    throw new Error('API configuration is missing. Please check your .env file or user settings.');
   }
   
   // Construct the full API URL with the model and API key
@@ -87,6 +133,10 @@ const callGeminiAPI = async (messages, settings) => {
     });
     
     if (!response.ok) {
+      // Clear cache if we get an auth error
+      if (response.status === 401 || response.status === 403) {
+        clearApiKeyCache('gemini');
+      }
       throw new Error(`API request failed with status ${response.status}`);
     }
     
