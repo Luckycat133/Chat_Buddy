@@ -16,8 +16,11 @@ const {
 const { callOpenAICompatibleAPI, callGeminiAPI } = require('../services/api');
 
 // Chat endpoint
-router.post('/chat', async (req, res) => {
-  const { userId, message, promptType } = req.body;
+  router.post('/', async (req, res) => {
+    // Get userSettings from app locals
+    const userSettings = req.app.get('userSettings');
+    
+    const { userId, message, promptType } = req.body;
 
   if (!userId || !message) {
     return res.status(400).json({ error: 'Missing userId or message' });
@@ -49,9 +52,12 @@ router.post('/chat', async (req, res) => {
     // Get user settings
     const settings = userSettings[userId] || {};
     
+    // Use environment default if no user setting is provided
+    const provider = settings.customApiProvider || process.env.CUSTOM_API_PROVIDER || 'openai';
+    
     // Call appropriate API based on settings
     let response;
-    if (settings.customApiProvider === 'gemini') {
+    if (provider === 'gemini') {
       response = await callGeminiAPI(messages, settings);
     } else {
       response = await callOpenAICompatibleAPI(messages, settings);
@@ -62,7 +68,17 @@ router.post('/chat', async (req, res) => {
     
     res.json({ message: response });
   } catch (error) {
-    console.error('Error in /api/chat:', error);
+    // Enhanced error logging
+    console.error('Error in /api/chat:');
+    console.error('Error message:', error.message);
+    console.error('Stack trace:', error.stack);
+    
+    // Log request details for debugging
+    console.error('Request details:', {
+      userId: req.body.userId,
+      message: req.body.message,
+      promptType: req.body.promptType
+    });
     
     // Send user-friendly error message
     res.status(500).json({ 

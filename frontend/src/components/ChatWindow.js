@@ -172,10 +172,10 @@ const MessageContent = styled.div`
   max-width: 70%;
   padding: 18px 20px;
   border-radius: 20px;
-  background-color: ${props => props.isUser ? '#FFB48A' : '#FFFFFF'};
+  background-color: ${props => props.isUser ? '#FFB48A' : props.isError ? '#FFECEB' : '#FFFFFF'};
   color: ${props => props.isUser ? '#FFFFFF' : '#333333'};
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: ${props => props.isUser ? 'none' : '1px solid #E0E0E0'};
+  border: ${props => props.isUser ? 'none' : props.isError ? '1px solid #FFCCC9' : '1px solid #E0E0E0'};
   position: relative;
   font-size: 15px;
   line-height: 1.5;
@@ -328,11 +328,19 @@ const roleNames = {
 const MessageItem = ({ message, md }) => {
   return (
     <Message isUser={message.isUser}>
-      <MessageContent isUser={message.isUser}>
+      <MessageContent isUser={message.isUser} isError={message.isError}>
         {message.isUser ? (
           message.text
         ) : (
-          <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(md.render(message.text)) }} />
+          <>
+            {message.isError && (
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '18px', marginRight: '8px' }}>⚠️</span>
+                <span style={{ fontWeight: '600', color: '#E53E3E' }}>Error</span>
+              </div>
+            )}
+            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(md.render(message.text)) }} />
+          </>
         )}
         <MessageTime isUser={message.isUser}>
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

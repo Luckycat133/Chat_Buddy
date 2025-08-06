@@ -12,12 +12,21 @@
 - **CORS Configuration**: Extended CORS origin configuration to support both localhost:3001 and 192.168.0.98:3001 for flexible access
 - **API Configuration**: Standardized backend port to 5001 and updated Gemini API model to gemini-2.5-flash-lite for improved performance
 - **Environment Variables**: Fixed .env file configuration to ensure consistent port binding across development environments
+- **HTTP 500 Error**: Fixed "Error sending message: HTTP error! status: 500" by resolving API provider selection logic in backend routing system. The issue occurred when frontend didn't send user settings, causing incorrect API provider selection between OpenAI-compatible and Gemini APIs
+- **API Authentication**: Resolved 401 authentication errors by implementing proper environment variable fallback mechanism for API provider selection
 
 ### Technical Improvements
 
 - **Connection Reliability**: Enhanced error handling and retry mechanisms for network requests
 - **Development Experience**: Improved server restart procedures with clean process management
 - **Cross-Origin Support**: Added comprehensive CORS configuration for local development and testing
+- **Code Structure**: Refactored backend routing system for modular management, improving code maintainability
+- **Error Handling**: Enhanced error logging in backend routes with detailed error information and request context
+- **UI/UX**: Improved error display in the frontend with visual indicators and clearer error messages
+- **API Documentation**: Added health check endpoint (/api/health) and API documentation endpoint (/api/docs) for easier development and debugging
+- **API Provider Selection**: Implemented intelligent API provider selection with environment variable fallback mechanism, ensuring seamless integration when user settings are not provided
+- **Configuration Management**: Enhanced default configuration handling for API providers, improving system robustness and user experience
+- **Authentication Flow**: Optimized API authentication flow with proper error handling and fallback strategies
 
 ## v0.2.2 (2025-08-05)
 
@@ -197,6 +206,13 @@
 - **连接可靠性**：增强网络请求的错误处理和重试机制
 - **开发体验**：改进服务器重启流程，实现干净进程管理
 - **跨域支持**：为本地开发和测试添加全面的CORS配置
+- **代码结构**：重构后端路由系统，实现模块化管理，提升代码可维护性
+- **错误处理**：增强后端路由中的错误日志记录，包含详细的错误信息和请求上下文
+- **界面优化**：改进前端错误显示，添加视觉指示器和更清晰的错误消息
+- **API文档**：新增健康检查端点(/api/health)和API文档端点(/api/docs)，便于开发调试
+- **API提供商选择**：实现智能API提供商选择，包含环境变量回退机制，确保用户未提供设置时的无缝集成
+- **配置管理**：增强API提供商的默认配置处理，提高系统健壮性和用户体验
+- **认证流程**：优化API认证流程，添加适当的错误处理和回退策略
 
 ## v0.2.2 (2025-08-05)
 
