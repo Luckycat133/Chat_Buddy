@@ -341,7 +341,7 @@ const ChatWindow = ({ userId }) => {
               <option value="professional">专业</option>
               <option value="creative">创意</option>
               <option value="educational">教育</option>
-              <option value="suxiao">苏晓</option>
+              <option value="suchen">苏辰</option>
             </PromptSelector>
       </Header>
       
