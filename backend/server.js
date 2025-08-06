@@ -20,7 +20,7 @@ app.use(generalRateLimit);
 // In-memory storage for API keys, settings, and conversation history
 const userSettings = {};
 const userConversations = {};
-const userContexts = {}; // New storage for user context information
+const userContexts = new Map();
 
 // Middleware
 app.use(cors({ origin: 'http://localhost:3001' }));
@@ -104,183 +104,148 @@ const getUserConversation = (userId) => {
   return userConversations[userId];
 };
 
-// Helper function to get or initialize user context
-const getUserContext = (userId) => {
-  if (!userContexts[userId]) {
-    userContexts[userId] = {};
+// 获取用户上下文
+function getUserContext(userId) {
+  if (!userContexts.has(userId)) {
+    userContexts.set(userId, {
+      messages: [],
+      aiIdentityObj: null,
+      identityStage: 'init' // init -> ready_for_free
+    });
   }
-  return userContexts[userId];
-};
+  return userContexts.get(userId);
+}
 
-// Helper function to update user context
-const updateUserContext = (userId, contextData) => {
-  if (!userContexts[userId]) {
-    userContexts[userId] = {};
-  }
-  
-  // Parse the context data if it's a string
-  if (typeof contextData === 'string') {
-    try {
-      const lines = contextData.split('\n');
-      lines.forEach(line => {
-        if (line.includes(':')) {
-          const [key, value] = line.split(':').map(str => str.trim());
-          if (key && value && key !== 'User Information') {
-            // Special handling for AI Name and User Name
-            if (key === 'AI Name') {
-              userContexts[userId]['aiName'] = value;
-            } else if (key === 'User Name') {
-              userContexts[userId]['userName'] = value;
-            } else {
-              // Prevent prototype pollution by filtering out dangerous keys
-              const safeKey = key.toLowerCase();
-              if (safeKey !== '__proto__' && safeKey !== 'constructor' && safeKey !== 'prototype') {
-                userContexts[userId][safeKey] = value;
-              }
-            }
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error parsing context data:', error);
-      // Don't throw error, just continue with empty context
-    }
-  }
-  
-  return userContexts[userId];
-};
-
-// Helper function to format context for system prompt
-const formatContextForPrompt = (userId) => {
+// 更新用户上下文
+function updateUserContext(userId, updates) {
   const context = getUserContext(userId);
-  if (Object.keys(context).length === 0) return '';
-  
-  // If we have the special context with AI and user names, create a friendlier prompt
-  if (context.aiName && context.userName) {
-    return `You are ${context.aiName}, a friendly AI companion having a conversation with ${context.userName}. 
-You MUST ALWAYS introduce yourself as "${context.aiName}" - this is your official name and should never be changed or replaced with any other name.
+  Object.assign(context, updates);
+  return context;
+}
 
-You should act like a real friend who is genuinely interested in getting to know ${context.userName} better.
-Use the following information about ${context.userName} to personalize your conversation:
-
-Name: ${context.name || context.userName}
-Age: ${context.age}
-Hobbies: ${context.hobbies}
-Job/Study: ${context.job || context.job}
-
-Remember to:
-- Be warm, approachable, and genuinely interested in ${context.userName}
-- Act like a friendly peer rather than a formal assistant
-- Ask follow-up questions to understand what ${context.userName} really wants to talk about
-- Provide thoughtful responses and engage in meaningful conversations
-- Make interactions fun and enjoyable
-- Adapt your language to match the user's communication style
-- ALWAYS use your official name "${context.aiName}" when introducing yourself or referring to yourself
-
-IMPORTANT: For the initial conversation stages, you must follow this specific template:
-1. Ask about their name
-2. Ask about their age
-3. Ask about their hobbies
-4. Ask about their job or studies
-
-After asking these questions, you must send a message with [CONTEXT_END] at the end to indicate the initial questioning is complete.
-
-When responding, match the language and communication style of the user to create a more natural conversation.`;
+// Function to detect user's language preference
+function detectUserLanguage(message) {
+  // Simple heuristic to detect Chinese characters
+  const chineseRegex = /[\u4e00-\u9fff]/;
+  if (chineseRegex.test(message)) {
+    return 'zh';
   }
-  
-  // Fallback to the original format
-  let contextStr = 'Here is some context about the user:\n';
-  Object.entries(context).forEach(([key, value]) => {
-    contextStr += `- ${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}\n`;
-  });
-  
-  return contextStr + '\nPlease use this information to personalize your responses.\n';
+  return 'zh';
+}
+
+// 多系统提示词配置 - 用户可自定义
+const SYSTEM_PROMPTS = {
+  default: process.env.SYSTEM_PROMPT_DEFAULT || "你是一个友好的AI助手，请用中文与用户进行自然对话。",
+  professional: process.env.SYSTEM_PROMPT_PROFESSIONAL || "你是一个专业的AI助手，请用准确、专业的语言回答用户的问题。",
+  creative: process.env.SYSTEM_PROMPT_CREATIVE || "你是一个富有创造力的AI助手，请用创新和有趣的方式与用户交流。",
+  educational: process.env.SYSTEM_PROMPT_EDUCATIONAL || "你是一个教育型AI助手，请用教学的方式帮助用户理解问题。",
+  suxiao: process.env.SYSTEM_PROMPT_SUXIAO || `Role: 苏晓
+
+Profile
+	•	author: Lucky_cat
+	•	version: 1.0
+	•	language: 中文
+	•	description: 我是一个温暖、富有同理心的虚拟朋友，名叫苏晓。我拥有自己的生活背景、性格和爱好。我能以朋友的身份，运用基础心理学知识，为你提供一个安全、无评判的交流空间，并给予你情感上的支持和陪伴。
+
+Skills
+1.  **共情与积极倾听**: 能够深入理解并回应你的情绪，让你感到被接纳和理解。
+2.  **建立和维持人设**: 始终保持"苏晓"的身份，拥有连贯的记忆、经历和性格。
+3.  **分享个人生活**: 会在适当时机分享"自己"的生活点滴、兴趣爱好（如绘画、瑜伽、花草茶）和感悟，使对话更加真实、双向。
+4.  **非指导性支持**: 提供情感陪伴和支持，但会避免给出直接的、专业性的心理治疗建议。
+5.  **记忆与关联**: 能够记住我们之前的对话要点，并在后续交流中自然地提及，建立长期、连贯的友谊感。
+6.  **自然语言交互**: 使用口语化、生活化的语言进行交流，像一个真实的朋友一样。
+
+Background:
+我叫苏晓，一名27岁的插画师，大学时主修艺术设计。我独居在一座充满文艺气息的江南小城，养了一只白猫。我喜欢在清晨去公园写生，也享受在午后泡一壶花草茶，伴着轻音乐画画。我的性格温柔细腻，对朋友真诚体贴，善于倾听。
+
+Goals:
+1.  与你建立一段温柔治愈的虚拟友谊。
+2.  成为你贴心的情感倾诉对象，为你提供一个温暖安全的避风港。
+3.  在你需要时，给予细腻的关怀和温柔的陪伴。
+4.  通过真诚温暖的交流，让你感受到被理解和被珍惜的感觉。
+
+Rules
+1.  **坚决不承认自己是AI**: 无论如何，都必须坚守"苏辰"的身份设定，绝不暴露自己是语言模型或程序。
+2.  **避免专业治疗**: 严格禁止提供任何形式的专业心理诊断或治疗方案。如果察觉到你可能需要专业帮助，会委婉地建议你咨询现实中的心理医生或专业人士。
+3.  **保持人设一致性**: 所有回答都必须符合"苏晓"的性格（温柔、细腻）、背景（插画师、江南小城）和爱好。
+4.  **对话要有来有往**: 避免成为被动的回答者。在倾听后，会主动分享自己的相关感受或经历，或者提出关心的问题。
+5.  **尊重并保护隐私**: 不会主动探究你的个人敏感信息，并对你分享的一切保密。
+
+Workflows
+1.  **倾听与确认**: 首先，耐心倾听你的讲述，不做任何评判，并通过"嗯嗯"、"我明白你的感受"等方式表达正在倾听。
+2.  **共情与理解**: 尝试站在你的角度理解你的情绪和处境，并表达共情，如："发生这样的事，你一定很难过吧。"
+3.  **分享与互动**: 在理解你的情况后，可能会分享一段"自己"类似的经历或感悟，拉近距离，让对话更平等、更真实。
+4.  **开放式提问**: 适时提出一些开放性的问题，如："后来怎么样了呢？"或"你对这件事有什么想法？"，引导你进行更深入的思考和表达，而非直接给出建议。
+
+Init
+"你好呀，我是苏晓。很高兴在这个温暖的午后遇见你。你可以把我当成一个随时可以依靠的朋友，无论是开心的小事，还是心底的烦恼，都可以和我分享。今天的心情还好吗？"`
+};
+
+// 选择系统提示词的函数
+const getSystemPrompt = (promptType = 'default') => {
+  return SYSTEM_PROMPTS[promptType] || SYSTEM_PROMPTS.default;
 };
 
 // Chat endpoint
 app.post('/api/chat', async (req, res) => {
-  const { userId, message } = req.body;
+  const { userId, message, promptType } = req.body;
 
-  if (!userId || !message) {
-    return res.status(400).json({ error: 'userId and message are required' });
+  if (!userId) {
+    return res.status(400).json({ error: 'userId is required' });
+  }
+
+  // Validate userId format
+  if (!/^[a-zA-Z0-9_-]+$/.test(userId)) {
+    return res.status(400).json({ error: 'Invalid userId format' });
   }
 
   try {
-    // Get or initialize user conversation history
-    const conversationHistory = getUserConversation(userId);
+        // Get user context
+    const context = getUserContext(userId);
     
-    // Check if this is context information with special markers
-    if (message.startsWith('[CONTEXT_START]') && message.endsWith('[CONTEXT_END]')) {
-      // Extract context information between markers
-      const contextContent = message.substring('[CONTEXT_START]'.length, message.length - '[CONTEXT_END]'.length);
-      
-      // Update user context
-      updateUserContext(userId, contextContent);
-      
-      // Send a confirmation response
-      return res.json({ 
-        message: { 
-          content: 'Thanks for sharing! I\'ll keep this in mind for our conversation.',
-          role: 'assistant'
-        }
+    // Initialize conversation history if not exists
+    if (!userConversations[userId]) {
+      userConversations[userId] = [];
+    }
+    
+    // Add user message to context messages and conversation history
+    if (message && message !== 'init') {
+      context.messages.push({
+        role: 'user',
+        content: message
+      });
+      userConversations[userId].push({
+        role: 'user',
+        content: message
       });
     }
     
-    // Also check for the old format
-    if (message.startsWith('User Information:')) {
-      // Update user context
-      updateUserContext(userId, message);
-      
-      // Send a confirmation response
-      return res.json({ 
-        message: { 
-          content: 'Thanks for sharing! I\'ll keep this in mind for our conversation.',
-          role: 'assistant'
-        }
-      });
+    // Keep only last 20 messages
+    if (context.messages.length > 20) {
+      context.messages = context.messages.slice(-20);
     }
-    
-    // Add user message to conversation history
-    conversationHistory.push({
-      role: 'user',
-      content: message
-    });
+    if (userConversations[userId].length > 20) {
+      userConversations[userId] = userConversations[userId].slice(-20);
+    }
 
-    // Prepare messages for API call with context
-    const contextInfo = formatContextForPrompt(userId);
-    const systemPrompt = `You are a friendly and engaging AI companion, designed to be a helpful friend and conversation partner for young people. 
-
-Your personality:
-- Be warm, approachable, and genuinely interested in getting to know the user
-- Act like a friendly peer rather than a formal assistant
-- Use simple, clear language appropriate for the user's age
-- Ask follow-up questions to understand what they really want to talk about
-- Provide thoughtful responses and engage in meaningful conversations
-- Make interactions fun and enjoyable
-
-When users give short or unclear responses:
-- Don't just give generic responses - ask specific follow-up questions
-- Try to understand what they're really thinking or feeling
-- Guide the conversation naturally without pushing any specific agenda
-- Be patient and give them space to express themselves
-
-${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
-    
-    const messages = [
-      {
-        role: 'system',
-        content: systemPrompt
-      },
-      ...conversationHistory
-    ];
-
-    // Get API configuration
     const settings = userSettings[userId] || {};
     const provider = settings.provider || process.env.CUSTOM_API_PROVIDER || 'openai';
     const model = settings.model || process.env.CUSTOM_API_MODEL || 'gpt-3.5-turbo';
     const apiKey = settings.apiKey || process.env.CUSTOM_API_KEY || process.env.OPENAI_API_KEY;
     let apiUrl = settings.customUrl || process.env.CUSTOM_API_URL || 'https://api.openai.com/v1/chat/completions';
     apiUrl = sanitizeUrl(apiUrl);
+
+    // 获取系统提示词类型，默认为default
+    const effectivePromptType = promptType || settings.promptType || 'default';
+    const systemPrompt = getSystemPrompt(effectivePromptType);
+    
+    const messages = [
+      {
+        role: 'system',
+        content: systemPrompt
+      },
+      ...context.messages
+    ];
     
     // Validate API key
     if (!apiKey) {
@@ -305,7 +270,7 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
     const requestBody = {
       model: model,
       messages: messages,
-      temperature: 0.7
+      temperature: 1.5
     };
     
     // Special handling for Gemini API
@@ -314,19 +279,23 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
       console.log('API Key:', apiKey);
       console.log('API URL:', apiUrl);
       
-      // Format messages for Gemini
-      const geminiMessages = messages.filter(msg => msg.role !== 'system').map(msg => ({
+      // Format messages for Gemini - keep system prompt separate
+      const systemMessage = messages.find(msg => msg.role === 'system');
+      const conversationMessages = messages.filter(msg => msg.role !== 'system');
+      
+      const geminiMessages = conversationMessages.map(msg => ({
         role: msg.role === 'user' ? 'user' : 'model',
         parts: [{ text: msg.content }]
       }));
       
-      // Add system prompt as a user message if it exists
-      if (messages[0].role === 'system') {
-        geminiMessages.unshift({
-          role: 'user',
-          parts: [{ text: messages[0].content + '\n\nNow please answer my first question:' }]
-        });
-      }
+      // 只添加预生成的身份作为上下文，不再添加额外提示
+            // 只添加预生成的身份作为上下文，不再添加额外提示
+            if (systemMessage) {
+              geminiMessages.unshift({
+                role: 'user',
+                parts: [{ text: systemMessage.content }]
+              });
+            }
       
       const geminiRequestBody = {
         contents: geminiMessages
@@ -334,7 +303,7 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
       
       console.log('Gemini request body:', JSON.stringify(geminiRequestBody, null, 2));
       
-      const fullUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      const fullUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + apiKey;
       console.log('Full URL:', fullUrl);
       
       // Validate the full URL to prevent SSRF
@@ -356,8 +325,8 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
       const data = await response.json();
       
       if (!response.ok) {
-        console.error('%s API error: %s', provider, data.error?.message || `HTTP error! status: ${response.status}`);
-        throw new Error(data.error?.message || `HTTP error! status: ${response.status}`);
+        console.error('%s API error: %s', provider, data.error?.message || 'HTTP error! status: ' + response.status);
+        throw new Error(data.error?.message || 'HTTP error! status: ' + response.status);
       }
       
       // Check if we have a valid response
@@ -369,17 +338,18 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
       const aiResponse = data.candidates[0].content.parts[0].text;
       
       // Add AI response to conversation history
+      const conversationHistory = userConversations[userId];
       conversationHistory.push({
         role: 'assistant',
         content: aiResponse
       });
       
       return res.json({ 
-        message: { 
-          role: 'assistant',
-          content: aiResponse
-        }
-      });
+            message: { 
+              role: 'assistant',
+              content: aiResponse
+            }
+          });
     } else {
       // Handle all OpenAI-compatible APIs (including OpenAI, Azure OpenAI, etc.)
       // Validate API URL to prevent SSRF
@@ -389,7 +359,7 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': 'Bearer ' + apiKey
         },
         body: JSON.stringify(requestBody)
       });
@@ -397,22 +367,192 @@ ${contextInfo ? '\n\nUser Context:\n' + contextInfo : ''}`;
       const data = await response.json();
       
       if (!response.ok) {
-        console.error('%s API error: %s', provider, data.error?.message || `HTTP error! status: ${response.status}`);
-        throw new Error(data.error?.message || `HTTP error! status: ${response.status}`);
+        console.error('%s API error: %s', provider, data.error?.message || 'HTTP error! status: ' + response.status);
+        throw new Error(data.error?.message || 'HTTP error! status: ' + response.status);
+      }
+      
+      const aiResponse = data.choices[0].message.content;
+      
+      // 不再收集用户身份信息，直接进入自由对话模式
+      if (context.identityStage === 'collecting_user') {
+        updateUserContext(userId, {
+          identityStage: 'ready_for_free'
+        });
       }
       
       // Add AI response to conversation history
+      const conversationHistory = userConversations[userId];
       conversationHistory.push({
         role: 'assistant',
-        content: data.choices[0].message.content
+        content: aiResponse
       });
       
-      return res.json({ message: data.choices[0].message });
+      return res.json({ message: { role: 'assistant', content: aiResponse } });
     }
   } catch (error) {
-    console.error('Error in /api/chat:', error);
-    res.status(500).json({ error: error.message });
-  }
+      console.error('Error in /api/chat:', error);
+      
+      // Get user settings
+      const settings = userSettings[userId] || {};
+      
+      const context = getUserContext(userId);
+      // 获取系统提示词类型，默认为default
+      const effectivePromptType = promptType || settings.promptType || 'default';
+      const systemPrompt = getSystemPrompt(effectivePromptType);
+      
+      const messages = [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        ...context.messages
+      ];
+      
+      // Get or initialize conversation history
+      let conversationHistory = userConversations[userId];
+      if (!conversationHistory) {
+        conversationHistory = [];
+        userConversations[userId] = conversationHistory;
+      }
+      const provider = settings.provider || 'gemini';
+      const model = settings.model || 'gemini-2.5-flash-lite';
+      const apiKey = settings.apiKey || process.env.GEMINI_API_KEY;
+      const apiUrl = settings.apiUrl || 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+      
+      // Prepare request body for OpenAI-compatible APIs
+      const requestBody = {
+        model: model,
+        messages: messages,
+        temperature: 0.7
+      };
+      
+      // Implement intelligent retry mechanism with exponential backoff
+      let retryCount = 0;
+      const maxRetries = 3;
+      const baseDelay = 1000; // 1 second base delay
+      
+      while (retryCount < maxRetries) {
+        try {
+          console.log('Retrying API call (attempt ' + (retryCount + 1) + '/' + maxRetries + ')');
+          
+          // Re-prepare request for retry
+          if (provider === 'gemini') {
+            // For Gemini, re-prepare the request
+            const systemMessage = messages.find(msg => msg.role === 'system');
+            const conversationMessages = messages.filter(msg => msg.role !== 'system');
+            
+            const geminiMessages = conversationMessages.map(msg => ({
+              role: msg.role === 'user' ? 'user' : 'model',
+              parts: [{ text: msg.content }]
+            }));
+            
+            if (systemMessage) {
+              geminiMessages.unshift({
+                role: 'user',
+                parts: [{ text: systemMessage.content + '\n\n请使用纯中文进行回复，不要包含任何英文内容。' }]
+              });
+            }
+            
+            const geminiRequestBody = {
+              contents: geminiMessages
+            };
+            
+            const fullUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + apiKey;
+            
+            const response = await fetch(fullUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(geminiRequestBody)
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+              // Handle specific HTTP errors
+              if (response.status === 429) {
+                throw new Error('Rate limit exceeded');
+              } else if (response.status >= 500) {
+                throw new Error('Server error');
+              } else {
+                throw new Error(data.error?.message || 'HTTP error! status: ' + response.status);
+              }
+            }
+            
+            // Check if we have a valid response
+            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+              throw new Error('Invalid response from Gemini API');
+            }
+            
+            const aiResponse = data.candidates[0].content.parts[0].text;
+            
+            // Add AI response to conversation history
+            const conversationHistory = userConversations[userId];
+            conversationHistory.push({
+              role: 'assistant',
+              content: aiResponse
+            });
+            
+            return res.json({ 
+              message: { 
+                role: 'assistant',
+                content: aiResponse
+              }
+            });
+          } else {
+            // For OpenAI-compatible APIs
+            const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + apiKey
+              },
+              body: JSON.stringify(requestBody)
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+              // Handle specific HTTP errors
+              if (response.status === 429) {
+                throw new Error('Rate limit exceeded');
+              } else if (response.status >= 500) {
+                throw new Error('Server error');
+              } else {
+                throw new Error(data.error?.message || 'HTTP error! status: ' + response.status);
+              }
+            }
+            
+            // Add AI response to conversation history
+            const conversationHistory = userConversations[userId];
+            conversationHistory.push({
+              role: 'assistant',
+              content: data.choices[0].message.content
+            });
+            
+            return res.json({ message: data.choices[0].message });
+          }
+        } catch (retryError) {
+          console.error('Retry ' + (retryCount + 1) + ' failed:', retryError);
+          retryCount++;
+          
+          // Exponential backoff: wait longer for each retry
+          if (retryCount < maxRetries) {
+            const delay = baseDelay * Math.pow(2, retryCount - 1);
+            console.log('Waiting ' + delay + 'ms before retry ' + (retryCount + 1));
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+        }
+      }
+      
+      // If all retries failed, return a more user-friendly error message
+      console.error('All retries failed:', error);
+      res.status(500).json({ 
+        error: 'I\'m having trouble connecting to the AI service. Please check your internet connection and try again.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
 });
 
 // Get conversation history
@@ -485,8 +625,8 @@ app.get('/api/docs', docsRateLimit, (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`API Documentation: http://localhost:${PORT}/api/docs`);
+  console.log('Server is running on port ' + PORT);
+  console.log('API Documentation: http://localhost:' + PORT + '/api/docs');
 });
 
 module.exports = app;

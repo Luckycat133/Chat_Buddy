@@ -1,5 +1,7 @@
 # Chat Buddy - AI Chat Application
 
+> **由 Qwen3-Coder 辅助开发**
+
 [English](#english) | [中文](#中文)
 
 <div id="english">
@@ -25,7 +27,7 @@ This ensures a simplified user experience and consistent API access.
 The application now supports multiple AI providers:
 - OpenAI (default model: gpt-3.5-turbo)
 - Groq API (default model: mixtral-8x7b-32768)
-- Google Gemini API (default model: gemini-2.5-flash)
+- Google Gemini API (default model: gemini-2.5-flash-lite)
 
 The default provider is set to Google Gemini, but you can use any provider for which you have an API key.
 
@@ -373,6 +375,18 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
 - 在完成初始信息收集后由AI生成的最终问候消息
 - 语言适配以匹配用户的交流风格，实现更自然的对话
 
+### 多系统提示词支持
+
+应用程序现在支持多种系统提示词，允许用户根据不同的场景选择不同的AI行为模式：
+
+- **默认模式**：友好的AI助手，用中文进行自然对话
+- **专业模式**：专业的AI助手，用准确、专业的语言回答问题
+- **创意模式**：富有创造力的AI助手，用创新和有趣的方式交流
+- **教育模式**：教育型AI助手，用教学的方式帮助用户理解问题
+- **苏晓模式**：温暖、有同理心且专业的心理咨询师朋友，提供情感支持和心理学见解
+
+用户可以通过前端界面的下拉菜单选择所需的提示词类型。
+
 ## 后端API端点
 
 ### 发送聊天消息
@@ -469,6 +483,15 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
 - `CUSTOM_API_MODEL` - 要使用的模型名称（可选）
 - `PORT` - 服务器端口（默认：5001）
 - `DEBUG` - 启用调试日志（可选）
+
+多系统提示词配置：
+- `SYSTEM_PROMPT_DEFAULT` - 默认模式的系统提示词
+- `SYSTEM_PROMPT_PROFESSIONAL` - 专业模式的系统提示词
+- `SYSTEM_PROMPT_CREATIVE` - 创意模式的系统提示词
+- `SYSTEM_PROMPT_EDUCATIONAL` - 教育模式的系统提示词
+- `SYSTEM_PROMPT_SUXIAO` - 苏晓模式的系统提示词
+
+用户可以通过前端界面选择提示词类型，也可以在环境变量中设置默认值。
 
 ## 部署
 

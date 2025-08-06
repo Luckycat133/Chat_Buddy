@@ -21,12 +21,14 @@ const ChatContainer = styled.div`
 
 const Header = styled.div`
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   padding: 20px;
   background: linear-gradient(135deg, #FFD8BE 0%, #FFB48A 100%);
   color: #8B4513;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow: hidden;
 `;
 
 const Title = styled.h1`
@@ -35,6 +37,29 @@ const Title = styled.h1`
   font-weight: 700;
   color: #8B4513;
   letter-spacing: -0.025em;
+`;
+
+const PromptSelector = styled.select`
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: none;
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #8B4513;
+  font-weight: 600;
+  font-size: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  &:focus {
+    outline: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
 `;
 
 const MessagesContainer = styled.div`
@@ -214,9 +239,7 @@ const ChatWindow = ({ userId }) => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [aiName, setAiName] = useState('');
-  const [conversationStage, setConversationStage] = useState('initial'); // initial, askingName, askingAge, askingHobbies, askingJob, completed
-  const [userInfo, setUserInfo] = useState({});
+  const [promptType, setPromptType] = useState('default');
   const messagesEndRef = useRef(null);
   
   // Initialize MarkdownIt
@@ -226,60 +249,11 @@ const ChatWindow = ({ userId }) => {
     typographer: true
   }).use(mdKatex);
   
-  // Send user context information to backend
-  const sendContextToBackend = async (contextMessage) => {
-    try {
-      const requestBody = {
-        userId: userId,
-        message: contextMessage
-      };
-      
-              const response = await fetch('http://localhost:5001/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Context sent successfully:', data);
-    } catch (error) {
-      console.error('Error sending context to backend:', error);
-    }
-  };
+
   
-  // Generate a random English name for the AI
-  const generateRandomName = () => {
-    const firstNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Avery', 'Quinn', 'Skyler', 'Cameron', 'Dakota', 'Reese', 'Rowan', 'Emerson', 'Finley', 'Harper', 'Hayden', 'Jamie', 'Kendall', 'Peyton'];
-    const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin'];
-    
-    const randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-    const randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-    
-    return `${randomFirstName} ${randomLastName}`;
-  };
-  
-  // Initialize the AI name and first message
   useEffect(() => {
-    const name = generateRandomName();
-    setAiName(name);
-    
-    // Add the first AI message asking for the user's name
-    const firstMessage = {
-      id: Date.now(),
-      text: `Hey there! I'm ${name}. I'm really excited to chat with you today! What should I call you?`,
-      isUser: false,
-      timestamp: new Date()
-    };
-    
-    setMessages([firstMessage]);
-    setConversationStage('askingName');
-  }, []);
+    setMessages([]);
+  }, [userId]);
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -288,209 +262,7 @@ const ChatWindow = ({ userId }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-  
-  const handleNextQuestion = async (userResponse) => {
-    // Extract information from user response based on current stage
-    let extractedInfo = userResponse;
-    
-    switch (conversationStage) {
-      case 'askingName':
-        // Extract name from various language inputs
-        // Handle patterns like "我是Jack", "I'm Jack", "Je suis Jack", "Ich bin Jack", etc.
-        const extractedName = userResponse
-          .replace(/^\s*[我Ii]|^\s*[是sS]\s*/i, '')  // Remove leading "我" or "I" or "s" (for "is")
-          .replace(/^\s*[是sS]\s*/i, '')  // Remove any remaining "是" or "s"
-          .replace(/^[\s\W]+/, '')  // Remove leading spaces and non-word characters
-          .trim() || userResponse;
-        
-        // If the extracted name is still in a phrase format, try to get the last word
-        const finalName = extractedName.split(/\s+/).pop() || extractedName;
-        
-        setUserInfo(prev => ({ ...prev, name: finalName }));
-        extractedInfo = finalName;
-        break;
-        
-      case 'askingAge':
-        // Extract age from various language inputs
-        // Handle patterns like "我15岁", "I'm 15", "15 years old", etc.
-        const ageMatch = userResponse.match(/(?:[我Ii].*|\b)(\d{1,2})\s*(?:年|years?\s*old|\b)/i) || 
-                         userResponse.match(/\d{1,2}/);
-        extractedInfo = ageMatch ? ageMatch[1] : userResponse;
-        setUserInfo(prev => ({ ...prev, age: extractedInfo }));
-        break;
-        
-      case 'askingHobbies':
-        // Extract hobbies from various language inputs
-        // Handle different ways people might describe their hobbies
-        let extractedHobbies = userResponse;
-        
-        // Remove common prefixes
-        extractedHobbies = extractedHobbies
-          .replace(/^(我喜欢|I\s*like\s*to|I\s*love\s*to|My\s*hobbies\s*are|我喜欢的活动是)\s*/i, '')
-          .trim();
-        
-        setUserInfo(prev => ({ ...prev, hobbies: extractedHobbies }));
-        extractedInfo = extractedHobbies;
-        break;
-        
-      case 'askingJob':
-        // Extract job/study information from various language inputs
-        // Handle different ways people might describe their job or study interests
-        let extractedJob = userResponse;
-        
-        // Remove common prefixes
-        extractedJob = extractedJob
-          .replace(/^(我是|I\s*am\s*|I'm\s*|我在|我正在|我的目标是|我想成为|我想做|我想要当|我将来想做)\s*/i, '')
-          .trim();
-        
-        setUserInfo(prev => ({ ...prev, job: extractedJob }));
-        extractedInfo = extractedJob;
-        
-        // Send all collected info to backend for context with a special termination marker
-        const contextMessage = `[CONTEXT_START]\nUser Information:\nName: ${userInfo.name}\nAge: ${userInfo.age}\nHobbies: ${userInfo.hobbies}\nJob: ${extractedJob}\nAI Name: ${aiName}\nUser Name: ${userInfo.name}\n\nPlease use this information to personalize our conversation. You are ${aiName}, and you are having a friendly chat with ${userInfo.name}.\n[CONTEXT_END]`;
-        
-        // Send context to backend
-        sendContextToBackend(contextMessage);
-        break;
-        
-      default:
-        return;
-    }
-    
-    // Determine next stage
-    let nextStage = '';
-    switch (conversationStage) {
-      case 'askingName':
-        nextStage = 'askingAge';
-        break;
-      case 'askingAge':
-        nextStage = 'askingHobbies';
-        break;
-      case 'askingHobbies':
-        nextStage = 'askingJob';
-        break;
-      case 'askingJob':
-        nextStage = 'completed';
-        break;
-      default:
-        nextStage = 'completed';
-    }
-    
-    setConversationStage(nextStage);
-    
-    // If we've completed the questionnaire, ask AI to generate the final greeting message
-    if (nextStage === 'completed') {
-      setIsLoading(true);
-      
-      try {
-        // Prepare request body with conversation history and current context
-        const requestBody = {
-          userId: userId,
-          message: `Generate a personalized greeting message for ${userInfo.name} after completing the initial information collection. The collected information is: Name: ${userInfo.name}, Age: ${userInfo.age}, Hobbies: ${userInfo.hobbies}, Job/Study: ${userInfo.job || extractedJob}. Ask what they would like to talk about today.`,
-          context: {
-            currentStage: conversationStage,
-            nextStage: nextStage,
-            userInfo: userInfo
-          }
-        };
-        
-              const response = await fetch('http://localhost:5001/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        const aiMessage = {
-          id: Date.now() + Math.random(),
-          text: data.message.content,
-          isUser: false,
-          timestamp: new Date()
-        };
-        
-        setMessages(prev => [...prev, aiMessage]);
-      } catch (error) {
-        console.error('Error getting final greeting from AI:', error);
-        
-        // Let AI handle the error gracefully by asking again
-        const errorMessage = {
-          id: Date.now() + Math.random(),
-          text: `Sorry, I'm having trouble generating a response. Let me try again - what's on your mind today?`,
-          isUser: false,
-          timestamp: new Date()
-        };
-        
-        setMessages(prev => [...prev, errorMessage]);
-      } finally {
-        setIsLoading(false);
-      }
-      
-      return;
-    }
-    
-    // For all other stages, ask AI to generate the next question
-    setIsLoading(true);
-    
-    try {
-      // Prepare request body with conversation history and current context
-      const requestBody = {
-        userId: userId,
-        message: `Please ask the next question in the initial conversation template. Current stage: ${conversationStage}, Next stage: ${nextStage}. User's previous response: ${userResponse}`,
-        // Add context about what information we're trying to gather
-        context: {
-          currentStage: conversationStage,
-          nextStage: nextStage,
-          extractedInfo: extractedInfo,
-          userInfo: userInfo
-        }
-      };
-      
-            const response = await fetch('http://localhost:5001/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      const aiMessage = {
-        id: Date.now() + Math.random(),
-        text: data.message.content,
-        isUser: false,
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, aiMessage]);
-    } catch (error) {
-      console.error('Error getting next question from AI:', error);
-      
-      // Let AI handle the error gracefully by asking again
-      const errorMessage = {
-        id: Date.now() + Math.random(),
-        text: `Sorry, I'm having trouble generating the next question. Could you tell me more about yourself?`,
-        isUser: false,
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
+
   const sendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
     
@@ -502,27 +274,16 @@ const ChatWindow = ({ userId }) => {
     };
     
     setMessages(prev => [...prev, userMessage]);
-    
-    // If we're in the initial conversation phase, handle the next question
-    if (conversationStage !== 'completed') {
-      const userResponse = inputValue;
-      setInputValue('');
-      
-      // Let AI handle identity questions naturally through the API
-      // No preset responses for identity questions
-      
-      handleNextQuestion(userResponse);
-      return;
-    }
-    
     setInputValue('');
+    
     setIsLoading(true);
     
     try {
-      // Prepare request body
+      
       const requestBody = {
         userId: userId,
-        message: inputValue
+        message: inputValue,
+        promptType: promptType
       };
       
       const response = await fetch('http://localhost:5001/api/chat', {
@@ -552,7 +313,7 @@ const ChatWindow = ({ userId }) => {
       
       const errorMessage = {
         id: Date.now() + Math.random(),
-        text: `Sorry, I encountered an error: ${error.message}`,
+        text: 'Sorry, I encountered an error. Please try again.',
         isUser: false,
         timestamp: new Date(),
         isError: true
@@ -574,7 +335,14 @@ const ChatWindow = ({ userId }) => {
   return (
     <ChatContainer>
       <Header>
-        <Title>{aiName || 'Chat Buddy'}</Title>
+        <Title>Chat Buddy</Title>
+        <PromptSelector value={promptType} onChange={(e) => setPromptType(e.target.value)}>
+              <option value="default">默认</option>
+              <option value="professional">专业</option>
+              <option value="creative">创意</option>
+              <option value="educational">教育</option>
+              <option value="suxiao">苏晓</option>
+            </PromptSelector>
       </Header>
       
       <MessagesContainer>
@@ -630,30 +398,3 @@ const ChatWindow = ({ userId }) => {
 };
 
 export default ChatWindow;
-
-  // Send user context information to backend
-  const sendContextToBackend = async (contextMessage) => {
-    try {
-      const requestBody = {
-        userId: userId,
-        message: contextMessage
-      };
-      
-      const response = await fetch('http://localhost:5001/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Context sent successfully:', data);
-    } catch (error) {
-      console.error('Error sending context to backend:', error);
-    }
-  };

@@ -11,7 +11,7 @@ This change was made to simplify the user experience and ensure consistent API a
 The application now supports any OpenAI-compatible API providers, including but not limited to:
 - OpenAI (default model: gpt-3.5-turbo)
 - Groq API (default model: mixtral-8x7b-32768)
-- Google Gemini API (default model: gemini-2.5-flash)
+- Google Gemini API (default model: gemini-2.5-flash-lite)
 - Azure OpenAI
 - Anthropic Claude
 - And many other OpenAI-compatible APIs
