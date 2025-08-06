@@ -10,8 +10,7 @@ import '@fontsource/inter/700.css';
 import DOMPurify from 'dompurify';
 
 const roleNames = {
-  suchen: "苏辰",
-  chenxi: "晨曦"
+  evelyn: "Dr. Evelyn Lin"
 };
 
 const ChatContainer = styled.div`
@@ -92,28 +91,7 @@ const PulseDot = styled.div`
   }
 `;
 
-const PromptSelector = styled.select`
-  padding: 8px 12px;
-  border-radius: 20px;
-  border: none;
-  background-color: rgba(255, 255, 255, 0.9);
-  color: #8B4513;
-  font-weight: 600;
-  font-size: 14px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  
-  &:hover {
-    background-color: rgba(255, 255, 255, 1);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  }
-  
-  &:focus {
-    outline: none;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  }
-`;
+
 
 const MessagesContainer = styled.div`
   flex: 1;
@@ -347,8 +325,8 @@ const ChatWindow = ({ userId }) => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [promptType, setPromptType] = useState('chenxi');
-  const [titleKey, setTitleKey] = useState('chenxi');
+
+  const [titleKey, setTitleKey] = useState('evelyn');
   const messagesEndRef = useRef(null);
   
   // Initialize MarkdownIt
@@ -365,12 +343,8 @@ const ChatWindow = ({ userId }) => {
   }, [userId]);
 
   useEffect(() => {
-    setTitleKey('');
-    const timer = setTimeout(() => {
-      setTitleKey(promptType);
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [promptType]);
+    setTitleKey('evelyn');
+  }, []);
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -398,12 +372,14 @@ const ChatWindow = ({ userId }) => {
     setIsTyping(true);
     
     try {
-      await delay(1000);
+      // 更真实的延迟模拟：思考时间 + 打字时间
+      const thinkTime = 800 + Math.random() * 1200; // 0.8-2秒思考时间
+      await delay(thinkTime);
       
       const requestBody = {
         userId: userId,
         message: inputValue,
-        promptType: promptType
+        promptType: 'evelyn'
       };
       
       const response = await fetch('http://localhost:5001/api/chat', {
@@ -420,7 +396,10 @@ const ChatWindow = ({ userId }) => {
       
       const data = await response.json();
       
-      await delay(800);
+      // 基于消息长度计算打字时间（模拟真人打字速度）
+      const words = data.message.content.split(/\s+/).length;
+      const typingTime = Math.max(400, words * 180 + Math.random() * 400); // 每个词约180ms + 随机变化
+      await delay(typingTime);
       
       setIsTyping(false);
       
@@ -471,10 +450,6 @@ const ChatWindow = ({ userId }) => {
              <Title show={true}>{roleNames[titleKey] || "Chat Buddy"}</Title>
            )}
          </TitleContainer>
-        <PromptSelector value={promptType} onChange={(e) => setPromptType(e.target.value)}>
-              <option value="suchen">苏辰</option>
-              <option value="chenxi">晨曦</option>
-            </PromptSelector>
       </Header>
       
       <MessagesContainer>

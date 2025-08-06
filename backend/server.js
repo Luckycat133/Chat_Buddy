@@ -184,8 +184,8 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const settings = userSettings[userId] || {};
-    const provider = settings.provider || process.env.CUSTOM_API_PROVIDER || 'openai';
-    const model = settings.model || process.env.CUSTOM_API_MODEL || 'gpt-3.5-turbo';
+    const provider = settings.provider || process.env.CUSTOM_API_PROVIDER || 'gemini';
+    const model = settings.model || process.env.CUSTOM_API_MODEL || 'gemini-2.5-flash';
     const apiKey = settings.apiKey || process.env.CUSTOM_API_KEY || process.env.OPENAI_API_KEY;
     let apiUrl = settings.customUrl || process.env.CUSTOM_API_URL || 'https://api.openai.com/v1/chat/completions';
     apiUrl = sanitizeUrl(apiUrl);
@@ -258,7 +258,7 @@ app.post('/api/chat', async (req, res) => {
       
       console.log('Gemini request body:', JSON.stringify(geminiRequestBody, null, 2));
       
-      const fullUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + apiKey;
+      const fullUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
       console.log('Full URL:', fullUrl);
       
       // Validate the full URL to prevent SSRF
