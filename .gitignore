@@ -22,3 +22,18 @@ dist/
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Redis related
+redis-stable/
+redis-stable.tar.gz
+dump.rdb
+
+# MongoDB related
+backend/mongodb-macos-x86_64-*/
+backend/mongodb-macos-x86_64-*.tgz
+
+# Data directory
+data/
+
+# Vercel
+.vercel/
