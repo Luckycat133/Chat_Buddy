@@ -4,6 +4,26 @@
 
 <div id="english">
 
+## [v0.2.4](#v024) (2025-08-06)
+
+### New Features
+
+- **Message Deletion**: Added ability to delete individual messages from conversation history with visual confirmation and smooth animations
+- **Enhanced Error Handling**: Improved frontend error handling for network connectivity issues with user-friendly error messages
+- **Server Health Monitoring**: Added automatic server restart capabilities and connection status monitoring
+
+### Bug Fixes
+
+- **Variable Reference Fix**: Resolved undefined variable reference errors in ChatWindow.js affecting message sending functionality
+- **Connection Stability**: Fixed intermittent connection failures between frontend and backend servers
+- **Process Management**: Improved server restart procedures to prevent port conflicts and ensure clean process termination
+
+### Technical Improvements
+
+- **Code Quality**: Enhanced variable scope management and error handling in frontend components
+- **Development Experience**: Streamlined development server startup process with better error reporting
+- **System Reliability**: Implemented robust connection retry mechanisms for improved stability
+
 ## [v0.2.3](#v023) (2025-08-06)
 
 ### Bug Fixes
@@ -193,6 +213,26 @@
 </div>
 
 <div id="中文">
+
+## [v0.2.4](#v024) (2025-08-06)
+
+### 新增功能
+
+- **消息删除**：新增从对话历史中删除单个消息的功能，包含视觉确认和平滑动画效果
+- **增强错误处理**：改进前端的网络连接错误处理，提供用户友好的错误消息
+- **服务器健康监控**：添加自动服务器重启功能和连接状态监控
+
+### 错误修复
+
+- **变量引用修复**：修复ChatWindow.js中影响消息发送功能的未定义变量引用错误
+- **连接稳定性**：修复前端和后端服务器之间的间歇性连接失败问题
+- **进程管理**：改进服务器重启流程，防止端口冲突并确保干净进程终止
+
+### 技术改进
+
+- **代码质量**：增强前端组件中的变量作用域管理和错误处理
+- **开发体验**：简化开发服务器启动流程，提供更好的错误报告
+- **系统可靠性**：实现强大的连接重试机制以提高稳定性
 
 ## [v0.2.3](#v023) (2025-08-06)
 

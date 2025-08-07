@@ -196,6 +196,40 @@ const MessageTime = styled.div`
   letter-spacing: 0.025em;
 `;
 
+const MessageActions = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  ${MessageContent}:hover & {
+    opacity: 1;
+  }
+`;
+
+const ActionButton = styled.button`
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    background-color: #f0f0f0;
+    color: #333;
+  }
+`;
+
+const EditedIndicator = styled.span`
+  font-size: 10px;
+  color: #999;
+  margin-left: 8px;
+  font-style: italic;
+`;
+
 // Typing indicator components
 const TypingIndicator = styled.div`
   display: flex;
@@ -325,26 +359,58 @@ const roleNames = {
 };
 
 // MessageItem component
-const MessageItem = ({ message, md }) => {
+const MessageItem = ({ message, md, onDelete, onEdit }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(message.text);
+  
+  const handleSaveEdit = () => {
+    onEdit(message.id, editText);
+    setIsEditing(false);
+  };
+  
   return (
     <Message isUser={message.isUser}>
       <MessageContent isUser={message.isUser} isError={message.isError}>
-        {message.isUser ? (
-          message.text
+        {isEditing ? (
+          <>
+            <Input
+              type="text"
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              style={{ marginBottom: '10px', width: '100%' }}
+            />
+            <MessageActions>
+              <ActionButton onClick={handleSaveEdit}>Save</ActionButton>
+              <ActionButton onClick={() => setIsEditing(false)}>Cancel</ActionButton>
+            </MessageActions>
+          </>
         ) : (
           <>
-            {message.isError && (
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '18px', marginRight: '8px' }}>⚠️</span>
-                <span style={{ fontWeight: '600', color: '#E53E3E' }}>Error</span>
-              </div>
+            {message.isUser ? (
+              message.text
+            ) : (
+              <>
+                {message.isError && (
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '18px', marginRight: '8px' }}>⚠️</span>
+                    <span style={{ fontWeight: '600', color: '#E53E3E' }}>Error</span>
+                  </div>
+                )}
+                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(md.render(message.text)) }} />
+              </>
             )}
-            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(md.render(message.text)) }} />
+            <MessageTime isUser={message.isUser}>
+              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {message.edited && <EditedIndicator>(edited)</EditedIndicator>}
+            </MessageTime>
+            {message.isUser && (
+              <MessageActions>
+                <ActionButton onClick={() => setIsEditing(true)}>Edit</ActionButton>
+                <ActionButton onClick={() => onDelete(message.id)}>Delete</ActionButton>
+              </MessageActions>
+            )}
           </>
         )}
-        <MessageTime isUser={message.isUser}>
-          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </MessageTime>
       </MessageContent>
     </Message>
   );
@@ -397,36 +463,94 @@ const ChatWindow = ({ userId }) => {
   
 
   
+  // Load conversation history from backend
   useEffect(() => {
-    setMessages([]);
+    const loadConversation = async () => {
+      try {
+        const response = await fetch(`http://localhost:5001/api/conversation/${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          // Convert timestamp strings to Date objects
+          const conversationWithDates = data.conversation.map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }));
+          setMessages(conversationWithDates);
+        }
+      } catch (error) {
+        console.error('Error loading conversation:', error);
+      }
+    };
+
+    loadConversation();
   }, [userId]);
 
   useEffect(() => {
     setTitleKey('evelyn');
   }, []);
   
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Delete a message
+  const deleteMessage = async (messageId) => {
+    try {
+      const response = await fetch(`http://localhost:5001/api/conversation/${userId}/message/${messageId}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        // Remove the message from state
+        setMessages(prevMessages => prevMessages.filter(msg => msg.id != messageId));
+      } else {
+        console.error('Failed to delete message');
+      }
+    } catch (error) {
+      console.error('Error deleting message:', error);
+    }
   };
   
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-  const sendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
-    
-    const userMessage = {
-      id: Date.now() + Math.random(),
-      text: inputValue,
-      isUser: true,
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
+  // Edit a message
+  const editMessage = async (messageId, newText) => {
+    try {
+      const response = await fetch(`http://localhost:5001/api/conversation/${userId}/message/${messageId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newText })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Update the message in state
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg.id == messageId ? { ...msg, content: newText, edited: true } : msg
+          )
+        );
+        
+        // If the edited message is the last user message, re-send it to get a new AI response
+        const lastUserMessage = messages.filter(msg => msg.isUser).pop();
+        if (lastUserMessage && lastUserMessage.id == messageId) {
+          // Remove the last AI response if it exists
+          const lastMessage = messages[messages.length - 1];
+          if (!lastMessage.isUser) {
+            setMessages(prevMessages => prevMessages.slice(0, -1));
+          }
+          
+          // Re-send the edited message
+          await resendMessage(newText);
+        }
+      } else {
+        console.error('Failed to edit message');
+      }
+    } catch (error) {
+      console.error('Error editing message:', error);
+    }
+  };
+  
+  // Re-send a message to get a new AI response
+  const resendMessage = async (messageText) => {
+    if (isLoading) return;
     
     setIsTyping(true);
     
@@ -438,7 +562,8 @@ const ChatWindow = ({ userId }) => {
       const requestBody = {
         userId: userId,
         message: inputValue,
-        promptType: 'evelyn'
+        promptType: 'evelyn',
+        isEdited: true
       };
       
       const response = await fetch('http://localhost:5001/api/chat', {
@@ -470,6 +595,104 @@ const ChatWindow = ({ userId }) => {
       };
       
       setMessages(prev => [...prev, aiMessage]);
+      
+      // Save conversation to backend
+      await saveConversation([...messages, { 
+        id: Date.now() + Math.random(), 
+        text: messageText, 
+        isUser: true, 
+        timestamp: new Date(),
+        edited: true
+      }, aiMessage]);
+    } catch (error) {
+      console.error('Error resending message:', error);
+      
+      setIsTyping(false);
+      
+      const errorMessage = {
+        id: Date.now() + Math.random(),
+        text: 'Sorry, I encountered an error. Please try again.',
+        isUser: false,
+        timestamp: new Date(),
+        isError: true
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+      
+      // Save conversation to backend even if there's an error
+      await saveConversation([...messages, { 
+        id: Date.now() + Math.random(), 
+        text: messageText, 
+        isUser: true, 
+        timestamp: new Date(),
+        edited: true
+      }, errorMessage]);
+    }
+  };
+  
+  // Helper function for delay
+  const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Add messageId to userMessage and aiMessage objects
+  const sendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
+    
+    const userMessage = {
+      id: Date.now() + Math.random(),
+      text: inputValue,
+      isUser: true,
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    setInputValue('');
+    
+    setIsTyping(true);
+    
+    try {
+      // 更真实的延迟模拟：思考时间 + 打字时间
+      const thinkTime = 800 + Math.random() * 1200; // 0.8-2秒思考时间
+      await delay(thinkTime);
+      
+      const requestBody = {
+        userId: userId,
+        message: inputValue,
+        promptType: 'evelyn',
+        isEdited: true
+      };
+      
+      const response = await fetch('http://localhost:5001/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // 基于消息长度计算打字时间（模拟真人打字速度）
+      const words = data.message.content.split(/\s+/).length;
+      const typingTime = Math.max(400, words * 180 + Math.random() * 400); // 每个词约180ms + 随机变化
+      await delay(typingTime);
+      
+      setIsTyping(false);
+      
+      const aiMessage = {
+        id: Date.now() + Math.random(),
+        text: data.message.content,
+        isUser: false,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
+      
+      // Save conversation to backend
+      await saveConversation([...messages, userMessage, aiMessage]);
     } catch (error) {
       console.error('Error sending message:', error);
       
@@ -484,6 +707,37 @@ const ChatWindow = ({ userId }) => {
       };
       
       setMessages(prev => [...prev, errorMessage]);
+      
+      // Save conversation to backend even if there's an error
+      await saveConversation([...messages, userMessage, errorMessage]);
+    }
+  };
+  
+  // Save conversation to backend
+  const saveConversation = async (conversation) => {
+    try {
+      // Remove Date objects for JSON serialization
+      const conversationToSave = conversation.map(msg => ({
+        ...msg,
+        timestamp: msg.timestamp.toISOString()
+      }));
+      
+      const response = await fetch(`http://localhost:5001/api/import/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          conversation: conversationToSave,
+          context: {}
+        }),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to save conversation');
+      }
+    } catch (error) {
+      console.error('Error saving conversation:', error);
     }
   };
   
@@ -517,7 +771,7 @@ const ChatWindow = ({ userId }) => {
         ) : (
           <>
             {messages.map((message) => (
-              <MessageItem key={message.id} message={message} md={md} />
+              <MessageItem key={message.id} message={message} md={md} onDelete={deleteMessage} onEdit={editMessage} />
             ))}
             <TypingIndicatorComponent show={isTyping} />
           </>

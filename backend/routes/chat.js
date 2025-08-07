@@ -23,7 +23,7 @@ const { securityMiddleware } = require('../middleware/security');
     // Get userSettings from app locals
     const userSettings = req.app.get('userSettings');
     
-    const { userId, message, promptType } = req.body;
+    const { userId, message, promptType, isEdited } = req.body;
 
   if (!userId || !message) {
     return res.status(400).json({ error: 'Missing userId or message' });
@@ -41,7 +41,11 @@ const { securityMiddleware } = require('../middleware/security');
     }
     
     // Add user message to conversation
-    conversation.push({ role: 'user', content: message });
+    const userMessage = { role: 'user', content: message };
+    if (isEdited) {
+      userMessage.content += " (这条消息已被用户修改)";
+    }
+    conversation.push(userMessage);
     
     // Get system prompt
     const systemPrompt = getSystemPrompt(promptType, context.language);
