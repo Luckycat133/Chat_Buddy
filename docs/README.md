@@ -6,7 +6,7 @@
 
 <div id="english">
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 .
@@ -16,13 +16,13 @@
 └── README.md          # Main project documentation
 ```
 
-## Important Notice
+## ⚠️ Important Notice
 
 API keys are configured by the developer in the backend environment variables. Users cannot configure their own API keys through the application interface.
 
 This ensures a simplified user experience and consistent API access.
 
-## Supported AI Providers
+## 🤖 Supported AI Providers
 
 The application now supports multiple AI providers:
 - OpenAI (default model: gpt-3.5-turbo)
@@ -31,7 +31,7 @@ The application now supports multiple AI providers:
 
 The default provider is set to Google Gemini, but you can use any provider for which you have an API key.
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 
@@ -77,7 +77,7 @@ The default provider is set to Google Gemini, but you can use any provider for w
 
 4. Open your browser and navigate to `http://localhost:3000`
 
-## API Configuration
+## ⚙️ API Configuration
 
 API keys are configured by the developer in the backend environment variables. Users cannot configure their own API keys through the application interface.
 
@@ -94,7 +94,7 @@ You can also configure a custom API endpoint by setting these environment variab
 - `CUSTOM_API_MODEL` - The model name to use with your custom API (optional)
 - `CUSTOM_API_PROVIDER` - The provider name for your custom API (optional)
 
-## Features
+## 🌟 Features
 
 ### Chat Interface
 
@@ -133,7 +133,7 @@ The chat interface features a beautifully designed macaron orange theme with pro
 - AI-generated final greeting message after completing initial information collection
 - Language adaptation to match the user's communication style for more natural conversations
 
-## Backend API Endpoints
+## 📡 Backend API Endpoints
 
 ### Send Chat Message
 - **URL**: `/api/chat`
@@ -195,7 +195,7 @@ The chat interface features a beautifully designed macaron orange theme with pro
   }
   ```
 
-## Development
+## 🧑‍💻 Development
 
 ### Frontend
 
@@ -230,7 +230,7 @@ Required environment variables:
 - `PORT` - Server port (default: 5001)
 - `DEBUG` - Enable debug logging (optional)
 
-## Deployment
+## ☁️ Deployment
 
 For production deployment:
 
@@ -242,11 +242,11 @@ For production deployment:
 2. Update the backend server to serve the frontend build files
 3. Deploy both the backend and frontend build files to your hosting platform
 
-## Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License.
 
@@ -254,7 +254,7 @@ This project is licensed under the MIT License.
 
 <div id="中文">
 
-## 项目结构
+## 📁 项目结构
 
 ```
 .
@@ -264,19 +264,19 @@ This project is licensed under the MIT License.
 └── README.md          # 主项目文档
 ```
 
-## 重要通知
+## ⚠️ 重要通知
 
 用户通过应用程序界面配置自己的API密钥的功能已被移除。现在API密钥由开发人员在后端环境变量中配置。
 
 此更改是为了简化用户体验并确保一致的API访问。
 
-## 支持的AI提供商
+## 🤖 支持的AI提供商
 
 该应用程序现在支持所有兼容OpenAI API格式的AI提供商。
 
 默认使用自定义API配置，您需要设置相应的环境变量。
 
-## 开始使用
+## 🚀 开始使用
 
 ### 先决条件
 
@@ -322,7 +322,7 @@ This project is licensed under the MIT License.
 
 4. 打开浏览器并导航到`http://localhost:3000`
 
-## API配置
+## ⚙️ API配置
 
 该应用程序支持通过环境变量配置API访问：
 
@@ -336,7 +336,7 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
    
    此配置在本地存储，可以随时更改。
 
-## 功能特性
+## 🌟 功能特性
 
 ### 聊天界面
 
@@ -387,7 +387,7 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
 
 用户可以通过前端界面的下拉菜单选择所需的提示词类型。
 
-## 后端API端点
+## 📡 后端API端点
 
 ### 发送聊天消息
 - **URL**: `/api/chat`
@@ -449,7 +449,7 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
   }
   ```
 
-## 开发
+## 🧑‍💻 开发
 
 ### 前端
 
@@ -492,7 +492,7 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
 
 用户可以通过前端界面选择提示词类型，也可以在环境变量中设置默认值。
 
-## 部署
+## ☁️ 部署
 
 生产环境部署：
 
@@ -504,11 +504,11 @@ API密钥可以由开发人员在后端环境变量中配置。要使用任何�
 2. 更新后端服务器以提供前端构建文件
 3. 将后端和前端构建文件部署到您的托管平台
 
-## 贡献
+## 🤝 贡献
 
 欢迎贡献！请随时提交Pull Request。
 
-## 许可证
+## 📄 许可证
 
 该项目采用MIT许可证。
 

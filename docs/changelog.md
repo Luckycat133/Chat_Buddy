@@ -4,7 +4,7 @@
 
 <div id="english">
 
-## v0.2.3 (2025-08-06)
+## [v0.2.3](#v023) (2025-08-06)
 
 ### Bug Fixes
 
@@ -30,7 +30,7 @@
 - **Configuration Management**: Enhanced default configuration handling for API providers, improving system robustness and user experience
 - **Authentication Flow**: Optimized API authentication flow with proper error handling and fallback strategies
 
-## v0.2.2 (2025-08-05)
+## [v0.2.2](#v022) (2025-08-05)
 
 ### New Features
 
@@ -51,7 +51,7 @@
 - **UI Polish**: Resolved header overlap issues and removed redundant icons for cleaner interface
 - **System Stability**: Fixed variable scope issues in retry mechanisms and API error handling
 
-## v0.2.1 (2025-08-04)
+## [v0.2.1](#v021) (2025-08-04)
 
 ### Security Fixes
 
@@ -61,7 +61,7 @@
 - **Input Validation**: Fixed format string and prototype pollution vulnerabilities
 - **CORS & Port Configuration**: Enhanced CORS configuration and resolved port binding conflicts
 
-## v0.2.0 (2025-08-04)
+## [v0.2.0](#v020) (2025-08-04)
 
 ### New Features
 
@@ -80,7 +80,7 @@
 
 - **Performance**: Resolved font loading issues and enhanced button interaction states
 
-## v0.1.4 (2025-08-03)
+## [v0.1.4](#v014) (2025-08-03)
 
 ### New Features
 
@@ -102,7 +102,7 @@
 - **Port Conflict Resolution**: Fixed issue where the frontend development server failed to start due to port 3000 being occupied by a previous process
 - **Process Management**: Improved server restart procedures to ensure clean shutdown of existing processes before starting new instances
 
-## v0.1.3 (2025-08-03)
+## [v0.1.3](#v013) (2025-08-03)
 
 ### New Features
 
@@ -136,7 +136,7 @@
 - **Debug Mode**: Added detailed debug logging for development environments
 - **Configuration Testing**: Built-in configuration validation tools
 
-## v0.1.2 (2025-08-02)
+## [v0.1.2](#v012) (2025-08-02)
 
 ### Enhancements
 
@@ -144,7 +144,7 @@
 - Unified API configuration to use custom API endpoint with OpenAI-compatible format
 - Updated documentation to reflect the new API configuration approach
 
-## v0.1.1 (2025-08-03)
+## [v0.1.1](#v011) (2025-08-03)
 
 ### New Features
 
@@ -153,7 +153,7 @@
 - Improved API key security by moving hardcoded keys to environment variables
 - Consolidated documentation into a single comprehensive README.md file
 
-## v0.1.0 (2025-08-02)
+## [v0.1.0](#v010) (2025-08-02)
 
 ### New Features
 
@@ -194,7 +194,7 @@
 
 <div id="中文">
 
-## v0.2.3 (2025-08-06)
+## [v0.2.3](#v023) (2025-08-06)
 
 ### 错误修复
 
@@ -220,7 +220,7 @@
 - **配置管理**：增强API提供商的默认配置处理，提高系统健壮性和用户体验
 - **认证流程**：优化API认证流程，添加适当的错误处理和回退策略
 
-## v0.2.2 (2025-08-05)
+## [v0.2.2](#v022) (2025-08-05)
 
 ### 新增功能
 
@@ -241,7 +241,7 @@
 - **界面优化**：解决顶部栏重叠问题，移除冗余图标使界面更简洁
 - **系统稳定性**：修复重试机制和API错误处理中的变量作用域问题
 
-## v0.2.1 (2025-08-04)
+## [v0.2.1](#v021) (2025-08-04)
 
 ### 安全修复
 
@@ -251,8 +251,7 @@
 - **输入验证**：修复格式字符串和原型污染漏洞
 - **CORS与端口配置**：增强CORS配置并解决端口绑定冲突
 
-
-## v0.2.0 (2025-08-04)
+## [v0.2.0](#v020) (2025-08-04)
 
 ### 新增功能
 
@@ -271,7 +270,7 @@
 
 - **性能优化**：解决字体加载问题并增强按钮交互状态
 
-## v0.1.4 (2025-08-03)
+## [v0.1.4](#v014) (2025-08-03)
 
 ### 新增功能
 
@@ -287,7 +286,7 @@
 
 - **开发体验**：解决端口占用问题，优化服务器重启流程
 
-## v0.1.3 (2025-08-03)
+## [v0.1.3](#v013) (2025-08-03)
 
 ### 新增功能
 
@@ -308,14 +307,14 @@
 
 - **调试支持**：新增健康检查端点、诊断脚本和配置验证工具
 
-## v0.1.2 (2025-08-02)
+## [v0.1.2](#v012) (2025-08-02)
 
 ### 功能优化
 
 - **配置简化**：统一为OpenAI兼容格式，移除特定提供商依赖
 - **文档更新**：同步更新配置说明文档
 
-## v0.1.1 (2025-08-03)
+## [v0.1.1](#v011) (2025-08-03)
 
 ### 新增功能
 
@@ -324,7 +323,7 @@
 - **安全增强**：迁移至环境变量存储，提升API密钥安全性
 - **文档整合**：统一README文档，提升用户体验
 
-## v0.1.0 (2025-08-02)
+## [v0.1.0](#v010) (2025-08-02)
 
 ### 新增功能
 

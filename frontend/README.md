@@ -2,62 +2,80 @@
 
 This is the frontend for the Chat Buddy AI Chat Application.
 
-## Important Notice
+For detailed information about the project, including API configuration and installation instructions, please refer to the [main README](../README.md) file.
 
-The ability for users to configure their own API keys through the application interface has been removed. API keys are now configured by the developer in the backend environment variables.
+## Frontend-Specific Information
 
-This change was made to simplify the user experience and ensure consistent API access.
+### Development
 
-The application now supports any OpenAI-compatible API providers, including but not limited to:
-- OpenAI (default model: gpt-3.5-turbo)
-- Groq API (default model: mixtral-8x7b-32768)
-- Google Gemini API (default model: gemini-2.5-flash-lite)
-- Azure OpenAI
-- Anthropic Claude
-- And many other OpenAI-compatible APIs
+The frontend is built with React and styled-components:
 
-The default provider is set to OpenAI.
+- `src/App.js` - Main application component
+- `src/components/ChatWindow.js` - Chat interface component
 
-## Installation and Setup
+### Available Scripts
 
-1. Navigate to the frontend directory:
-   ```
-   cd frontend
-   ```
+In the project directory, you can run:
 
-2. Install dependencies:
-   ```
-   npm install
-   ```
+#### `npm start`
 
-3. Start the development server:
-   ```
-   npm start
-   ```
+Runs the app in the development mode.\
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
-   Alternatively, if you want to start both the frontend and backend at the same time, you can run this command from the root directory of the project:
-   ```
-   npm start
-   ```
+The page will reload if you make edits.\
+You will also see any lint errors in the console.
 
-The frontend will start on `http://localhost:3000`.
+#### `npm test`
 
-## API Key Configuration
+Launches the test runner in the interactive watch mode.\
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-To use this application, you must configure your API keys in the backend:
+#### `npm run build`
 
-1. Navigate to the backend directory:
-   ```
-   cd backend
-   ```
+Builds the app for production to the `build` folder.\
+It correctly bundles React in production mode and optimizes the build for the best performance.
 
-2. Create a `.env` file by copying the example:
-   ```
-   cp .env.example .env
-   ```
+The build is minified and the filenames include the hashes.\
+Your app is ready to be deployed!
 
-3. Edit the `.env` file and replace `your_actual_api_key_here` with your actual API key from your chosen provider.
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-4. You can also modify the other settings in the `.env` file to use a different provider or model if desired.
+#### `npm run eject`
 
-5. Restart the backend server for the changes to take effect.
+**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+
+If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+
+Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+
+You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+
+## Learn More
+
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+
+To learn React, check out the [React documentation](https://reactjs.org/).
+
+### Code Splitting
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+
+### Analyzing the Bundle Size
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+
+### Making a Progressive Web App
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+
+### Advanced Configuration
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+
+### Deployment
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+
+### `npm run build` fails to minify
+
+This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
