@@ -70,10 +70,13 @@ const { securityMiddleware } = require('../middleware/security');
       response = await callOpenAICompatibleAPI(messages, settings);
     }
     
-    // Add AI response to conversation
-    conversation.push({ role: 'assistant', content: response.content });
+    // Ensure response content is a string
+    const content = String(response.content || '');
     
-    res.json({ message: response });
+    // Add AI response to conversation
+    conversation.push({ role: 'assistant', content: content });
+    
+    res.json({ message: { content: content } });
   } catch (error) {
     // Enhanced error logging
     console.error('Error in /api/chat:');

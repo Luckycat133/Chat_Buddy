@@ -110,10 +110,36 @@ const callGeminiAPI = async (messages, settings) => {
   
   try {
     // Convert messages to Gemini format
-    const contents = messages.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
+    // Gemini API doesn't support system messages, so we merge system prompt with first user message
+    let contents = [];
+    let systemPrompt = '';
+    
+    for (const msg of messages) {
+      if (msg.role === 'system') {
+        systemPrompt = msg.content;
+      } else {
+        const role = msg.role === 'assistant' ? 'model' : 'user';
+        let content = msg.content;
+        
+        // If this is the first user message and we have system prompt, prepend it
+        if (role === 'user' && systemPrompt && contents.length === 0) {
+          content = systemPrompt + "\n\n" + content;
+        }
+        
+        contents.push({
+          role: role,
+          parts: [{ text: content }]
+        });
+      }
+    };
+    
+    // If only system message exists, create a user message with it
+    if (contents.length === 0 && systemPrompt) {
+      contents.push({
+        role: 'user',
+        parts: [{ text: systemPrompt }]
+      });
+    }
     
     // Prepare the request body for Gemini API
     const requestBody = {
