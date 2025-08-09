@@ -183,7 +183,7 @@
 - `POST /api/configure` - Configure user API keys
 - `POST /api/chat` - Send messages to AI model
 - `GET /api/conversation/:userId` - Get user conversation history
-- `DELETE /api/reset/:userId` - Reset API keys and conversation history
+- `DELETE /api/reset/:userId` - Reset conversation history for a user
 - `PUT /api/settings/:userId` - Save user settings
 - `GET /api/settings/:userId` - Get user settings
 - `GET /api/export/:userId` - Export user data

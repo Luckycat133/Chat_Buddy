@@ -82,6 +82,12 @@ const getUserConversation = (userId) => {
   return userConversations[userId];
 };
 
+// Reset conversation history and context for a user
+const resetUserConversation = (userId) => {
+  delete userConversations[userId];
+  userContexts.delete(userId);
+};
+
 // 获取用户上下文
 function getUserContext(userId) {
   if (!userContexts.has(userId)) {
@@ -124,6 +130,7 @@ module.exports = {
   sanitizeUrl,
   validateApiUrl,
   getUserConversation,
+  resetUserConversation,
   getUserContext,
   updateUserContext,
   detectUserLanguage,
