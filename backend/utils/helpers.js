@@ -108,7 +108,8 @@ function detectUserLanguage(message) {
   if (chineseRegex.test(message)) {
     return 'zh';
   }
-  return 'zh';
+  // Default to English when no Chinese characters are detected
+  return 'en';
 }
 
 // 引入系统提示词配置
