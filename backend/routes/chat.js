@@ -2,15 +2,18 @@ const express = require('express');
 const router = express.Router();
 
 // Import helper functions
-const { 
-  sanitizeUrl, 
-  validateApiUrl, 
-  getUserConversation, 
-  getUserContext, 
+const {
+  sanitizeUrl,
+  validateApiUrl,
+  getUserConversation,
+  getUserContext,
   updateUserContext,
   detectUserLanguage,
   getSystemPrompt
 } = require('../utils/helpers');
+
+// Import memory utils
+const { addUserMemory } = require('../utils/memory');
 
 // Import API functions
 const { callOpenAICompatibleAPI, callGeminiAPI } = require('../services/api');
@@ -18,73 +21,71 @@ const { callOpenAICompatibleAPI, callGeminiAPI } = require('../services/api');
 // Import middleware
 const { securityMiddleware } = require('../middleware/security');
 
+const ONE_HOUR = 60 * 60 * 1000;
+
 // Chat endpoint
-  router.post('/', securityMiddleware, async (req, res) => {
-    // Get userSettings from app locals
-    const userSettings = req.app.get('userSettings');
-    
-    const { userId, message, promptType } = req.body;
+router.post('/', securityMiddleware, async (req, res) => {
+  const userSettings = req.app.get('userSettings');
+  const { userId, message, role = 'assistant' } = req.body;
 
   if (!userId || !message) {
     return res.status(400).json({ error: 'Missing userId or message' });
   }
 
   try {
-    // Get or initialize user conversation and context
-    let conversation = getUserConversation(userId);
+    let conversation = getUserConversation(userId, role);
     let context = getUserContext(userId);
-    
-    // Detect user language if not already detected
+
     if (!context.language) {
       context.language = detectUserLanguage(message);
       updateUserContext(userId, context);
     }
-    
-    // Add user message to conversation
-    conversation.push({ role: 'user', content: message });
-    
-    // Get system prompt
-    const systemPrompt = getSystemPrompt(promptType, context.language);
-    
-    // Prepare messages for API call
+
+    const now = new Date();
+    conversation.push({ role: 'user', content: message, timestamp: now.toISOString() });
+
+    const systemPrompt = getSystemPrompt(role, context.language);
+
+    const recentMessages = conversation.filter(m => now - new Date(m.timestamp) <= ONE_HOUR);
+
     const messages = [
       { role: 'system', content: systemPrompt },
-      ...conversation
+      ...recentMessages.map(m => ({ role: m.role, content: m.content }))
     ];
-    
-    // Get user settings
+
     const settings = userSettings[userId] || {};
-    
-    // Use environment default if no user setting is provided
     const provider = settings.customApiProvider || process.env.CUSTOM_API_PROVIDER || 'openai';
-    
-    // Call appropriate API based on settings
+
     let response;
     if (provider === 'gemini') {
       response = await callGeminiAPI(messages, settings);
     } else {
       response = await callOpenAICompatibleAPI(messages, settings);
     }
-    
-    // Add AI response to conversation
-    conversation.push({ role: 'assistant', content: response.content });
-    
-    res.json({ message: response });
+
+    let content = response.content;
+    const memoryRegex = /{{remember}}([\s\S]*?){{\/remember}}/i;
+    const match = content.match(memoryRegex);
+    if (match) {
+      const memoryText = match[1].trim();
+      addUserMemory(userId, role, memoryText);
+      content = content.replace(memoryRegex, '').trim();
+    }
+
+    conversation.push({ role: 'assistant', content, timestamp: new Date().toISOString() });
+
+    res.json({ message: { ...response, content } });
   } catch (error) {
-    // Enhanced error logging
     console.error('Error in /api/chat:');
     console.error('Error message:', error.message);
     console.error('Stack trace:', error.stack);
-    
-    // Log request details for debugging
     console.error('Request details:', {
       userId: req.body.userId,
       message: req.body.message,
-      promptType: req.body.promptType
+      role: req.body.role
     });
-    
-    // Send user-friendly error message
-    res.status(500).json({ 
+
+    res.status(500).json({
       error: 'Sorry, I encountered an error. Please try again.',
       errorCode: 'INTERNAL_ERROR'
     });

@@ -1,6 +1,6 @@
 // Helper functions for Chat Buddy backend
 
-// In-memory storage for API keys, settings, and conversation history
+// In-memory storage for API keys, settings, conversation history, and contexts
 const userConversations = {};
 const userContexts = new Map();
 
@@ -32,27 +32,27 @@ const validateApiUrl = (url) => {
   try {
     const urlObj = new URL(url);
     const hostname = urlObj.hostname;
-    
+
     // Strict protocol check - only allow HTTPS
     if (urlObj.protocol !== 'https:') {
       throw new Error('Invalid API URL: Only HTTPS protocol is allowed');
     }
-    
+
     // Check if the hostname is in our allowed list
-    const isAllowed = allowedDomains.some(domain => 
+    const isAllowed = allowedDomains.some(domain =>
       hostname === domain || hostname.endsWith('.' + domain)
     );
-    
+
     if (!isAllowed) {
       throw new Error('Invalid API URL: Domain not allowed');
     }
-    
+
     // Block all IP addresses including localhost and 127.0.0.1
     const ipPattern = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
     if (ipPattern.test(hostname) || hostname === 'localhost') {
       throw new Error('Invalid API URL: IP addresses and localhost not allowed');
     }
-    
+
     // Block private/internal network ranges
     const privateIpRanges = [
       /^10\./,
@@ -62,10 +62,7 @@ const validateApiUrl = (url) => {
       /^0\./,
       /^169\.254\./
     ];
-    
-    // Also check the resolved IP if possible (note: this is a basic check)
-    // In production, consider using DNS resolution and IP checking
-    
+    // Additional checks could be added here
   } catch (error) {
     if (error.message.startsWith('Invalid API URL:')) {
       throw error;
@@ -75,11 +72,14 @@ const validateApiUrl = (url) => {
 };
 
 // Helper function to get or initialize user conversation history
-const getUserConversation = (userId) => {
+const getUserConversation = (userId, role = 'assistant') => {
   if (!userConversations[userId]) {
-    userConversations[userId] = [];
+    userConversations[userId] = {};
   }
-  return userConversations[userId];
+  if (!userConversations[userId][role]) {
+    userConversations[userId][role] = [];
+  }
+  return userConversations[userId][role];
 };
 
 // 获取用户上下文
@@ -111,13 +111,8 @@ function detectUserLanguage(message) {
   return 'zh';
 }
 
-// 引入系统提示词配置
-const { SYSTEM_PROMPTS } = require('../prompts');
-
-// 选择系统提示词的函数
-const getSystemPrompt = (promptType = 'default') => {
-  return SYSTEM_PROMPTS[promptType] || SYSTEM_PROMPTS.default;
-};
+// Prompt management
+const { getSystemPrompt, listRoles } = require('./promptManager');
 
 module.exports = {
   sanitizeUrl,
@@ -126,5 +121,6 @@ module.exports = {
   getUserContext,
   updateUserContext,
   detectUserLanguage,
-  getSystemPrompt
+  getSystemPrompt,
+  listRoles,
 };

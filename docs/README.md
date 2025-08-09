@@ -112,6 +112,18 @@ The chat interface features a beautifully designed macaron orange theme with pro
 - **Responsive design**: Perfectly adapted for all device sizes
 - **Smooth scrolling**: Automatic scrolling to the latest message
 
+### Multi-role Architecture
+
+- Developer-managed prompt files for each role and system directives
+- Roles are detected dynamically; no server restart is required when adding or removing them
+- Sidebar interface allows switching between roles, each with isolated conversation history
+
+### AI-directed Memory
+
+- AI responses can include `{{remember}}` blocks to store important facts
+- Memories are saved per user and role with timestamps and can be edited or deleted by the user
+- Messages older than one hour are excluded from the AI context while full history remains available
+
 ### API Key Management
 
 - Secure storage of API keys in environment variables
