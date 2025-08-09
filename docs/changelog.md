@@ -9,6 +9,7 @@
 ### New Features
 
 - **Message Deletion**: Added ability to delete individual messages from conversation history with visual confirmation and smooth animations
+- **Message Editing**: Users can revise previously sent messages, automatically prompting a fresh AI response
 - **Enhanced Error Handling**: Improved frontend error handling for network connectivity issues with user-friendly error messages
 - **Server Health Monitoring**: Added automatic server restart capabilities and connection status monitoring
 - **Message Bubble Styling**: Implemented enhanced message bubble design with distinct styling for user (orange) and AI (light gray) messages, including proper padding, rounded corners, and directional tails
@@ -223,6 +224,7 @@
 ### 新增功能
 
 - **消息删除**：新增从对话历史中删除单个消息的功能，包含视觉确认和平滑动画效果
+- **消息编辑**：允许用户修改已发送的消息，并自动重新请求AI响应
 - **增强错误处理**：改进前端的网络连接错误处理，提供用户友好的错误消息
 - **服务器健康监控**：添加自动服务器重启功能和连接状态监控
 - **消息气泡样式**：实现增强的消息气泡设计，用户消息（橙色）和AI消息（浅灰色）具有不同的样式，包括适当的内边距、圆角和方向性尾巴

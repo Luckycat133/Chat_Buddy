@@ -663,9 +663,9 @@ const ChatWindow = ({ userId }) => {
         const data = await response.json();
         
         // Update the message in state
-        setMessages(prevMessages => 
-          prevMessages.map(msg => 
-            msg.id == messageId ? { ...msg, content: newText, edited: true } : msg
+        setMessages(prevMessages =>
+          prevMessages.map(msg =>
+            msg.id == messageId ? { ...msg, text: newText, edited: true } : msg
           )
         );
         
@@ -702,7 +702,7 @@ const ChatWindow = ({ userId }) => {
       
       const requestBody = {
         userId: userId,
-        message: inputValue,
+        message: messageText,
         promptType: 'evelyn',
         isEdited: true
       };
@@ -734,17 +734,12 @@ const ChatWindow = ({ userId }) => {
         isUser: false,
         timestamp: new Date()
       };
-      
-      setMessages(prev => [...prev, aiMessage]);
-      
-      // Save conversation to backend
-      await saveConversation([...messages, { 
-        id: Date.now() + Math.random(), 
-        text: messageText, 
-        isUser: true, 
-        timestamp: new Date(),
-        edited: true
-      }, aiMessage]);
+
+      setMessages(prev => {
+        const updated = [...prev, aiMessage];
+        saveConversation(updated);
+        return updated;
+      });
     } catch (error) {
       console.error('Error resending message:', error);
       
@@ -758,16 +753,11 @@ const ChatWindow = ({ userId }) => {
         isError: true
       };
       
-      setMessages(prev => [...prev, errorMessage]);
-      
-      // Save conversation to backend even if there's an error
-      await saveConversation([...messages, { 
-        id: Date.now() + Math.random(), 
-        text: messageText, 
-        isUser: true, 
-        timestamp: new Date(),
-        edited: true
-      }, errorMessage]);
+      setMessages(prev => {
+        const updated = [...prev, errorMessage];
+        saveConversation(updated);
+        return updated;
+      });
     }
   };
   

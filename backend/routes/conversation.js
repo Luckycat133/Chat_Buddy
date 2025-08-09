@@ -44,7 +44,10 @@ router.delete('/:userId/message/:messageId', (req, res) => {
     
     // Remove the message
     conversation.splice(messageIndex, 1);
-    
+
+    // Persist the updated conversation
+    setUserConversation(userId, conversation);
+
     res.json({ message: 'Message deleted successfully' });
   } catch (error) {
     console.error('Error in DELETE /api/conversation/:userId/message/:messageId:', error);
@@ -75,9 +78,12 @@ router.put('/:userId/message/:messageId', (req, res) => {
     }
     
     // Update the message text
-    conversation[messageIndex].content = newText;
+    conversation[messageIndex].text = newText;
     conversation[messageIndex].edited = true; // Mark as edited
-    
+
+    // Persist the updated conversation
+    setUserConversation(userId, conversation);
+
     res.json({ message: 'Message updated successfully', updatedMessage: conversation[messageIndex] });
   } catch (error) {
     console.error('Error in PUT /api/conversation/:userId/message/:messageId:', error);
