@@ -59,10 +59,17 @@ const callOpenAICompatibleAPI = async (messages, settings) => {
   
   try {
     // Prepare the request body for OpenAI-compatible API
+    // Ensure messages are properly formatted
+    const validMessages = messages.filter(msg => msg.content && msg.content.trim() !== '');
+    if (validMessages.length === 0) {
+      throw new Error('No valid messages to send to API');
+    }
+    
     const requestBody = {
       model: apiModel,
-      messages: messages,
-      temperature: 0.7
+      messages: validMessages,
+      temperature: 0.7,
+      max_tokens: 2000  // Add reasonable limit to prevent issues
     };
     
     // Make the API call
@@ -80,7 +87,21 @@ const callOpenAICompatibleAPI = async (messages, settings) => {
       if (response.status === 401 || response.status === 403) {
         clearApiKeyCache('openai');
       }
-      throw new Error(`API request failed with status ${response.status}`);
+      
+      // Try to get error details from response
+      let errorMessage = `API request failed with status ${response.status}`;
+      try {
+        const errorData = await response.json();
+        if (errorData.error && errorData.error.message) {
+          errorMessage = errorData.error.message;
+        }
+      } catch (e) {
+        // Ignore JSON parsing errors
+      }
+      
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      throw error;
     }
     
     const data = await response.json();
@@ -110,10 +131,36 @@ const callGeminiAPI = async (messages, settings) => {
   
   try {
     // Convert messages to Gemini format
-    const contents = messages.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
+    // Gemini API doesn't support system messages, so we merge system prompt with first user message
+    let contents = [];
+    let systemPrompt = '';
+    
+    for (const msg of messages) {
+      if (msg.role === 'system') {
+        systemPrompt = msg.content;
+      } else {
+        const role = msg.role === 'assistant' ? 'model' : 'user';
+        let content = msg.content;
+        
+        // If this is the first user message and we have system prompt, prepend it
+        if (role === 'user' && systemPrompt && contents.length === 0) {
+          content = systemPrompt + "\n\n" + content;
+        }
+        
+        contents.push({
+          role: role,
+          parts: [{ text: content }]
+        });
+      }
+    };
+    
+    // If only system message exists, create a user message with it
+    if (contents.length === 0 && systemPrompt) {
+      contents.push({
+        role: 'user',
+        parts: [{ text: systemPrompt }]
+      });
+    }
     
     // Prepare the request body for Gemini API
     const requestBody = {

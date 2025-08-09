@@ -7,10 +7,8 @@
     "start:backend": "cd backend && npm start",
     "start:frontend": "cd frontend && npm start",
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "clean": "rm -rf frontend/build frontend/node_modules/.cache backend/node_modules/.cache",
     "postinstall": "npx playwright install"
-  },
-  "dependencies": {
-    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "concurrently": "^7.6.0",

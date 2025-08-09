@@ -101,6 +101,16 @@ function updateUserContext(userId, updates) {
   return context;
 }
 
+// 设置用户对话历史
+function setUserConversation(userId, conversation) {
+  userConversations[userId] = conversation;
+}
+
+// 设置用户上下文
+function setUserContext(userId, context) {
+  userContexts.set(userId, context);
+}
+
 // Function to detect user's language preference
 function detectUserLanguage(message) {
   // Simple heuristic to detect Chinese characters
@@ -120,12 +130,25 @@ const getSystemPrompt = (promptType = 'default') => {
   return SYSTEM_PROMPTS[promptType] || SYSTEM_PROMPTS.default;
 };
 
+// 重置用户对话
+function resetUserConversation(userId) {
+  if (userConversations[userId]) {
+    userConversations[userId] = [];
+  }
+  if (userContexts.has(userId)) {
+    userContexts.delete(userId);
+  }
+}
+
 module.exports = {
   sanitizeUrl,
   validateApiUrl,
   getUserConversation,
   getUserContext,
   updateUserContext,
+  setUserConversation,
+  setUserContext,
   detectUserLanguage,
-  getSystemPrompt
+  getSystemPrompt,
+  resetUserConversation
 };

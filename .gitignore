@@ -2,23 +2,117 @@
 .env
 .env.local
 .env.production
-backend/.env
-backend/.env.local
-backend/.env.production
+.env.development
+.env.test
+backend/.env*
+frontend/.env*
 
 # Dependencies
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # Build outputs
 build/
 dist/
+frontend/build/
+frontend/dist/
+*.tsbuildinfo
 
 # IDE and editor files
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+*.bak
 
 # OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# React/Node specific
+.next/
+out/
+
+# Redis related
+redis-stable/
+redis-stable.tar.gz
+dump.rdb
+
+# MongoDB related
+mongodb-*
+
+# Data directory
+data/
+
+# Vercel
+.vercel/
+
+# Test results
+playwright-report/
+playwright/.cache/
+cypress/videos/
+cypress/screenshots/
+
+# Temporary folders
+tmp/
+temp/
+
+# Misc
+*.backup
+*.old

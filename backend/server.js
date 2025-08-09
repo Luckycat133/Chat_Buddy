@@ -75,7 +75,8 @@ const {
   getUserContext, 
   updateUserContext,
   detectUserLanguage,
-  getSystemPrompt
+  getSystemPrompt,
+  resetUserConversation
 } = require('./utils/helpers');
 
 // Import modular routes
@@ -87,7 +88,7 @@ const exportRouter = require('./routes/export');
 const importRouter = require('./routes/import');
 
 // Middleware
-app.use(cors({ origin: ['http://localhost:3001', 'http://192.168.0.98:3001'] }));
+app.use(cors({ origin: ['http://localhost:3001', 'http://192.168.0.98:3001', 'http://localhost:3002'] }));
 app.use(express.json());
 
 // Health check endpoint
@@ -106,6 +107,8 @@ app.get('/api/docs', (req, res) => {
     endpoints: {
       'POST /api/chat': 'Send a message to the AI',
       'GET /api/conversation/:userId': 'Get conversation history for a user',
+      'DELETE /api/conversation/:userId/message/:messageId': 'Delete a message from conversation',
+      'PUT /api/conversation/:userId/message/:messageId': 'Edit a message in conversation',
       'DELETE /api/reset/:userId': 'Reset conversation history for a user',
       'POST /api/configure': 'Configure API settings',
       'GET /api/export/:userId': 'Export user data',
