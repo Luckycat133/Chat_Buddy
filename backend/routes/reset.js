@@ -5,7 +5,7 @@ const router = express.Router();
 const { resetUserConversation } = require('../utils/helpers');
 
 // Reset conversation endpoint
-router.post('/:userId', (req, res) => {
+router.delete('/:userId', (req, res) => {
   const { userId } = req.params;
   
   if (!userId) {

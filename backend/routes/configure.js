@@ -3,6 +3,8 @@ const router = express.Router();
 
 // Import middleware
 const { securityMiddleware } = require('../middleware/security');
+// Import helper functions
+const { validateApiUrl, sanitizeUrl } = require('../utils/helpers');
 
 // Configure API settings endpoint
 router.post('/', securityMiddleware, (req, res) => {
