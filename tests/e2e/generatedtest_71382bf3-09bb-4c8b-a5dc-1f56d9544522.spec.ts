@@ -1,8 +1,6 @@
-
 import { test } from '@playwright/test';
-import { expect } from '@playwright/test';
 
-test('GeneratedTest_2025-08-05', async ({ page, context }) => {
+test('GeneratedTest_2025-08-05', async ({ page }) => {
   
     // Navigate to URL
     await page.goto('http://localhost:3000/');

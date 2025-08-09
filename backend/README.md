@@ -9,7 +9,7 @@ backend/
 ├── server.js          # Main server file
 ├── .env.example       # Example environment variables
 ├── package.json       # Backend dependencies
-├── prompts.js         # System prompts configuration
+├── prompts/           # Prompt files (system & roles)
 ├── middleware/
 │   └── security.js    # Security middleware
 ├── routes/            # API route handlers
@@ -74,16 +74,14 @@ The backend implements several security measures:
 - API URL validation against allowed domains
 - XSS prevention
 
-## 🤖 System Prompts
+## 🤖 Prompt Files
 
-The backend supports multiple system prompts for different conversation modes:
-- **default** - Friendly AI assistant
-- **professional** - Professional AI assistant
-- **creative** - Creative AI assistant
-- **educational** - Educational AI assistant
-- **suxiao** - Virtual friend with心理咨询 background
+System-level and role-specific prompts are stored as plain text files:
 
-To use a specific prompt, set the `promptType` parameter in the frontend API call.
+- `prompts/system/` – global instructions applied to all roles
+- `prompts/roles/` – individual role definitions
+
+The server automatically detects changes in these directories. Available roles can be queried via `GET /api/roles`, and the desired role can be selected in the frontend without modifying backend code.
 
 ## 📡 Supported API Providers
 

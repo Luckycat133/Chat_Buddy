@@ -13,7 +13,8 @@ import DOMPurify from 'dompurify';
 const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  flex: 1;
+  height: 100%;
   background-color: #F8F7F4;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -319,10 +320,8 @@ const Dot = styled.div`
   }
 `;
 
-// Role names
-const roleNames = {
-  evelyn: "Dr. Evelyn Lin"
-};
+// Role names mapping (extendable)
+const roleNames = {};
 
 // MessageItem component
 const MessageItem = ({ message, md }) => {
@@ -378,14 +377,14 @@ const EmptyState = () => {
 };
 
 // ChatWindow component
-const ChatWindow = ({ userId }) => {
+const ChatWindow = ({ userId, role }) => {
   // State
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
 
-  const [titleKey, setTitleKey] = useState('evelyn');
+  const [titleKey, setTitleKey] = useState(role);
   const messagesEndRef = useRef(null);
   
   // Initialize MarkdownIt
@@ -399,11 +398,30 @@ const ChatWindow = ({ userId }) => {
   
   useEffect(() => {
     setMessages([]);
-  }, [userId]);
+  }, [userId, role]);
 
   useEffect(() => {
-    setTitleKey('evelyn');
-  }, []);
+    async function loadConversation() {
+      try {
+        const res = await fetch(`http://localhost:5001/api/conversation/${userId}?role=${role}`);
+        const data = await res.json();
+        const conv = (data.conversation || []).map((m, idx) => ({
+          id: idx + '-' + Date.now(),
+          text: m.content,
+          isUser: m.role === 'user',
+          timestamp: m.timestamp ? new Date(m.timestamp) : new Date()
+        }));
+        setMessages(conv);
+      } catch (e) {
+        setMessages([]);
+      }
+    }
+    loadConversation();
+  }, [userId, role]);
+
+  useEffect(() => {
+    setTitleKey(role);
+  }, [role]);
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -438,7 +456,7 @@ const ChatWindow = ({ userId }) => {
       const requestBody = {
         userId: userId,
         message: inputValue,
-        promptType: 'evelyn'
+        role: role
       };
       
       const response = await fetch('http://localhost:5001/api/chat', {
@@ -506,7 +524,7 @@ const ChatWindow = ({ userId }) => {
                <PulseDot />
              </TypingTitle>
            ) : (
-             <Title show={true}>{roleNames[titleKey] || "Chat Buddy"}</Title>
+             <Title show={true}>{roleNames[titleKey] || titleKey || "Chat Buddy"}</Title>
            )}
          </TitleContainer>
       </Header>

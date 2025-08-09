@@ -77,6 +77,14 @@ The default provider is set to Google Gemini, but you can use any provider for w
 
 4. Open your browser and navigate to `http://localhost:3000`
 
+### Testing
+
+Run end-to-end tests with Playwright:
+
+```
+npx playwright test
+```
+
 ## ⚙️ API Configuration
 
 API keys are configured by the developer in the backend environment variables. Users cannot configure their own API keys through the application interface.
@@ -111,6 +119,18 @@ The chat interface features a beautifully designed macaron orange theme with pro
 - **Accurate timestamps**: Precise time display with optimized font weights
 - **Responsive design**: Perfectly adapted for all device sizes
 - **Smooth scrolling**: Automatic scrolling to the latest message
+
+### Multi-role Architecture
+
+- Developer-managed prompt files for each role and system directives
+- Roles are detected dynamically; no server restart is required when adding or removing them
+- Sidebar interface allows switching between roles, each with isolated conversation history
+
+### AI-directed Memory
+
+- AI responses can include `{{remember}}` blocks to store important facts
+- Memories are saved per user and role with timestamps and can be edited or deleted by the user
+- Messages older than one hour are excluded from the AI context while full history remains available
 
 ### API Key Management
 
@@ -321,6 +341,14 @@ This project is licensed under the MIT License.
    前端将在`http://localhost:3000`启动
 
 4. 打开浏览器并导航到`http://localhost:3000`
+
+### 测试
+
+使用 Playwright 运行端到端测试：
+
+```
+npx playwright test
+```
 
 ## ⚙️ API配置
 
