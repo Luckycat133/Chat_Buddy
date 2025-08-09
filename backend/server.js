@@ -75,7 +75,8 @@ const {
   getUserContext, 
   updateUserContext,
   detectUserLanguage,
-  getSystemPrompt
+  getSystemPrompt,
+  resetUserConversation
 } = require('./utils/helpers');
 
 // Import modular routes
@@ -106,7 +107,6 @@ app.get('/api/docs', (req, res) => {
     endpoints: {
       'POST /api/chat': 'Send a message to the AI',
       'GET /api/conversation/:userId': 'Get conversation history for a user',
-<<<<<<< HEAD
       'DELETE /api/conversation/:userId/message/:messageId': 'Delete a message from conversation',
       'PUT /api/conversation/:userId/message/:messageId': 'Edit a message in conversation',
       'DELETE /api/reset/:userId': 'Reset conversation history for a user',

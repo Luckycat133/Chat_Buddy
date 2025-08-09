@@ -130,6 +130,16 @@ const getSystemPrompt = (promptType = 'default') => {
   return SYSTEM_PROMPTS[promptType] || SYSTEM_PROMPTS.default;
 };
 
+// 重置用户对话
+function resetUserConversation(userId) {
+  if (userConversations[userId]) {
+    userConversations[userId] = [];
+  }
+  if (userContexts.has(userId)) {
+    userContexts.delete(userId);
+  }
+}
+
 module.exports = {
   sanitizeUrl,
   validateApiUrl,
@@ -139,5 +149,6 @@ module.exports = {
   setUserConversation,
   setUserContext,
   detectUserLanguage,
-  getSystemPrompt
+  getSystemPrompt,
+  resetUserConversation
 };
