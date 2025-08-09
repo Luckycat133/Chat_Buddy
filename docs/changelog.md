@@ -11,18 +11,22 @@
 - **Message Deletion**: Added ability to delete individual messages from conversation history with visual confirmation and smooth animations
 - **Enhanced Error Handling**: Improved frontend error handling for network connectivity issues with user-friendly error messages
 - **Server Health Monitoring**: Added automatic server restart capabilities and connection status monitoring
+- **Message Bubble Styling**: Implemented enhanced message bubble design with distinct styling for user (orange) and AI (light gray) messages, including proper padding, rounded corners, and directional tails
+- **Enhanced Timestamp Display**: Improved timestamp display logic to show more contextual time information (Just now, X min ago, day of week for recent messages, and date for older messages)
 
 ### Bug Fixes
 
 - **Variable Reference Fix**: Resolved undefined variable reference errors in ChatWindow.js affecting message sending functionality
 - **Connection Stability**: Fixed intermittent connection failures between frontend and backend servers
 - **Process Management**: Improved server restart procedures to prevent port conflicts and ensure clean process termination
+- **Message Container Structure**: Fixed message container structure by replacing StyledMessageContentWrapperWithProps with MessageContent component for proper styling application
 
 ### Technical Improvements
 
 - **Code Quality**: Enhanced variable scope management and error handling in frontend components
 - **Development Experience**: Streamlined development server startup process with better error reporting
 - **System Reliability**: Implemented robust connection retry mechanisms for improved stability
+- **UI Architecture**: Refactored message rendering structure to use "bento box" and "sandwich" design pattern with proper component isolation and styling
 
 ## [v0.2.3](#v023) (2025-08-06)
 
@@ -221,18 +225,22 @@
 - **消息删除**：新增从对话历史中删除单个消息的功能，包含视觉确认和平滑动画效果
 - **增强错误处理**：改进前端的网络连接错误处理，提供用户友好的错误消息
 - **服务器健康监控**：添加自动服务器重启功能和连接状态监控
+- **消息气泡样式**：实现增强的消息气泡设计，用户消息（橙色）和AI消息（浅灰色）具有不同的样式，包括适当的内边距、圆角和方向性尾巴
+- **增强时间戳显示**：改进时间戳显示逻辑，显示更具上下文的时间信息（刚刚、X分钟前、最近消息显示星期几，较早消息显示日期）
 
 ### 错误修复
 
 - **变量引用修复**：修复ChatWindow.js中影响消息发送功能的未定义变量引用错误
 - **连接稳定性**：修复前端和后端服务器之间的间歇性连接失败问题
 - **进程管理**：改进服务器重启流程，防止端口冲突并确保干净进程终止
+- **消息容器结构**：通过将StyledMessageContentWrapperWithProps替换为MessageContent组件来修复消息容器结构，以正确应用样式
 
 ### 技术改进
 
 - **代码质量**：增强前端组件中的变量作用域管理和错误处理
 - **开发体验**：简化开发服务器启动流程，提供更好的错误报告
 - **系统可靠性**：实现强大的连接重试机制以提高稳定性
+- **界面架构**：重构消息渲染结构，使用"饭盒"和"三明治"设计模式，实现适当的组件隔离和样式
 
 ## [v0.2.3](#v023) (2025-08-06)
 

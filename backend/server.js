@@ -87,7 +87,7 @@ const exportRouter = require('./routes/export');
 const importRouter = require('./routes/import');
 
 // Middleware
-app.use(cors({ origin: ['http://localhost:3001', 'http://192.168.0.98:3001'] }));
+app.use(cors({ origin: ['http://localhost:3001', 'http://192.168.0.98:3001', 'http://localhost:3002'] }));
 app.use(express.json());
 
 // Health check endpoint

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import styled from 'styled-components';
+import React, { useState, useEffect, useRef, forwardRef } from 'react';
+import styled, { css } from 'styled-components';
 import MarkdownIt from 'markdown-it';
 import mdKatex from 'markdown-it-katex';
 import 'katex/dist/katex.min.css';
@@ -14,7 +14,7 @@ const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background-color: #F8F7F4;
+  background-color: #FFFFFF; /* 改为纯白色 */
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -25,7 +25,7 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  background: linear-gradient(135deg, #FFD8BE 0%, #FFB48A 100%);
+  background: linear-gradient(135deg, #FFD8BE 0%, #FFA77F 100%);
   color: #8B4513;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   position: relative;
@@ -91,33 +91,30 @@ const PulseDot = styled.div`
 const MessagesContainer = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 30px;
 `;
 
 const InputContainer = styled.div`
   display: flex;
-  padding: 20px;
+  padding: 10px;
   background-color: #FFFFFF;
-  border-top: 1px solid #E0E0E0;
-  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.08), 0 -2px 4px -1px rgba(0, 0, 0, 0.06);
+  border-top: 1px solid #E0E0E0; /* 添加灰色分隔线 */
 `;
 
 const Input = styled.input`
   flex: 1;
-  padding: 15px 20px;
+  padding: 10px 15px;
   border: none;
-  border-bottom: 2px solid #E0E0E0;
-  border-radius: 0;
+  border-radius: 18px;
   font-size: 16px;
   outline: none;
-  transition: all 0.2s ease-in-out;
-  background-color: transparent;
+  background-color: #f0f0f0;
   color: #333333;
   font-family: 'Inter', sans-serif;
   
   &:focus {
-    border-bottom-color: #FFB48A;
-    box-shadow: 0 2px 0 0 rgba(255, 180, 138, 0.2);
+    outline: none;
+    background-color: #fff;
   }
   
   &::placeholder {
@@ -127,12 +124,12 @@ const Input = styled.input`
 `;
 
 const SendButton = styled.button`
-  background: #555555;
-  color: white;
+  background: #FFA77F; /* 改为橙色 */
+  color: #FFFFFF; /* 白色文字 */
   border: none;
   border-radius: 50%;
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   margin-left: 10px;
   cursor: pointer;
   font-size: 18px;
@@ -140,87 +137,97 @@ const SendButton = styled.button`
   align-items: center;
   justify-content: center;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   
   &:hover:not(:disabled) {
-    transform: scale(1.08) translateY(-2px);
-    background: linear-gradient(135deg, #FFB48A, #FF8C42);
-    box-shadow: 0 8px 16px -4px rgba(255, 180, 138, 0.4), 0 4px 8px -2px rgba(255, 180, 138, 0.3);
+    background: #FF8A5F; /* 深一点的橙色 */
   }
   
   &:active:not(:disabled) {
-    transform: scale(0.95) translateY(0);
-    box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+    transform: scale(0.95);
   }
   
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
     transform: none;
-    background: #555555;
+    background: #FFA77F;
   }
 `;
 
 // Message components
+
+
 const Message = styled.div`
   display: flex;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
   flex-direction: ${props => props.isUser ? 'row-reverse' : 'row'};
+  align-items: flex-end;
 `;
 
 const MessageContent = styled.div`
   max-width: 70%;
-  padding: 18px 20px;
-  border-radius: 20px;
-  background-color: ${props => props.isUser ? '#FFB48A' : props.isError ? '#FFECEB' : '#FFFFFF'};
-  color: ${props => props.isUser ? '#FFFFFF' : '#333333'};
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: ${props => props.isUser ? 'none' : props.isError ? '1px solid #FFCCC9' : '1px solid #E0E0E0'};
+  padding: 12px 16px;
+  border-radius: 18px;
+  background-color: ${props => props.isUser ? '#FFA77F' : '#F5F5F5'}; /* 用户消息橙色，AI消息浅灰色 */
+  color: ${props => props.isUser ? '#FFFFFF' : '#333333'}; /* 用户消息白色文字，AI消息深色文字 */
   position: relative;
   font-size: 15px;
-  line-height: 1.5;
-  transition: all 0.2s ease-in-out;
+  line-height: 1.4;
+  margin: 0 10px;
   
-  &:hover {
-    box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.1), 0 3px 6px -1px rgba(0, 0, 0, 0.08);
-    transform: translateY(-1px);
+  // Add tails for message bubbles
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: 6px;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
   }
+  
+  // Tail for AI messages (left)
+  &:not(.user-message)::before {
+    left: -12px;
+    border-right-color: #F5F5F5;
+    border-left: 0;
+  }
+  
+  // Tail for user messages (right)
+  &.user-message::before {
+    right: -12px;
+    border-left-color: #FFA77F; /* 用户消息气泡尾巴颜色 */
+    border-right: 0;
+  }
+`;
+
+const MessageContentWrapper = forwardRef((props, ref) => (
+  <div ref={ref} {...props} />
+));
+
+const StyledMessageContentWrapper = styled(MessageContentWrapper)`
+  position: relative;
+`;
+
+const StyledMessageContentWrapperWithProps = styled(React.forwardRef(({ isUser, isError, ...props }, ref) => <StyledMessageContentWrapper ref={ref} {...props} />)).attrs({ isUser: undefined, isError: undefined })`
+  position: relative;
+  
+  ${props => props.isUser && css`
+    // Styles for user messages
+  `}
+  
+  ${props => props.isError && css`
+    // Styles for error messages
+  `}
 `;
 
 const MessageTime = styled.div`
-  font-size: 11px;
+  font-size: 12px;
   color: #999;
-  margin-top: 8px;
-  text-align: ${props => props.isUser ? 'right' : 'left'};
+  text-align: center;
   font-weight: 300;
   letter-spacing: 0.025em;
-`;
-
-const MessageActions = styled.div`
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  opacity: 0;
-  transition: opacity 0.2s ease-in-out;
-  ${MessageContent}:hover & {
-    opacity: 1;
-  }
-`;
-
-const ActionButton = styled.button`
-  background: none;
-  border: none;
-  color: #666;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.2s ease-in-out;
-  
-  &:hover {
-    background-color: #f0f0f0;
-    color: #333;
-  }
+  margin: 20px 0;
+  clear: both;
 `;
 
 const EditedIndicator = styled.span`
@@ -358,61 +365,195 @@ const roleNames = {
   evelyn: "Dr. Evelyn Lin"
 };
 
+// Context menu component
+const ContextMenu = styled.div`
+  position: absolute;
+  background-color: #FFD8BE;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 8px 0;
+  z-index: 100;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  min-width: 120px;
+  transform: translateY(10px);
+  opacity: 0;
+  transition: all 0.3s ease-in-out;
+  
+  &.visible {
+    transform: translateY(0);
+    opacity: 1;
+  }
+`;
+
+const ContextMenuItem = styled.div`
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #8B4513;
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    background-color: rgba(255, 167, 127, 0.3);
+  }
+`;
+
+// Helper function to format timestamp
+const formatTimestamp = (timestamp) => {
+  const now = new Date();
+  const diffInMinutes = Math.floor((now - timestamp) / (1000 * 60));
+  
+  if (diffInMinutes < 1) {
+    return 'Just now';
+  } else if (diffInMinutes < 20) { // Less than 20 minutes
+    return `${diffInMinutes} min ago`;
+  } else {
+    // Check if the timestamp is within the current week
+    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+    const timestampDate = new Date(timestamp);
+    
+    if (timestampDate >= startOfWeek) {
+      // Within the current week, show day of week
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      return days[timestampDate.getDay()];
+    } else {
+      // Not within the current week, show date
+      const month = timestampDate.getMonth() + 1;
+      const day = timestampDate.getDate();
+      const year = timestampDate.getFullYear();
+      return `${month}/${day}/${year}`;
+    }
+  }
+};
+
 // MessageItem component
-const MessageItem = ({ message, md, onDelete, onEdit }) => {
+const MessageItem = ({ message, md, onDelete, onEdit, prevMessage }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.text);
+  const [showContextMenu, setShowContextMenu] = useState(false);
+  const messageRef = useRef(null);
   
   const handleSaveEdit = () => {
     onEdit(message.id, editText);
     setIsEditing(false);
   };
   
+  const handleLongPress = () => {
+    if (message.isUser) {
+      setShowContextMenu(true);
+    }
+  };
+  
+  const handleClickOutside = (event) => {
+    if (messageRef.current && !messageRef.current.contains(event.target)) {
+      setShowContextMenu(false);
+    }
+  };
+  
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+  
+  // Simulate long press
+  const longPressTimer = useRef(null);
+  
+  const startLongPress = () => {
+    longPressTimer.current = setTimeout(() => {
+      handleLongPress();
+    }, 500);
+  };
+  
+  const cancelLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+  };
+  
+  // Check if we should show timestamp (only when there's a significant gap)
+  const shouldShowTimestamp = () => {
+    if (!prevMessage) return true; // Always show for first message
+    
+    const timeDiff = message.timestamp - prevMessage.timestamp;
+    const diffInMinutes = Math.floor(timeDiff / (1000 * 60));
+    
+    // Show timestamp if gap is more than 20 minutes
+    return diffInMinutes >= 20;
+  };
+  
+  const showTimestamp = shouldShowTimestamp();
+  
   return (
-    <Message isUser={message.isUser}>
-      <MessageContent isUser={message.isUser} isError={message.isError}>
-        {isEditing ? (
-          <>
-            <Input
-              type="text"
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              style={{ marginBottom: '10px', width: '100%' }}
-            />
-            <MessageActions>
-              <ActionButton onClick={handleSaveEdit}>Save</ActionButton>
-              <ActionButton onClick={() => setIsEditing(false)}>Cancel</ActionButton>
-            </MessageActions>
-          </>
-        ) : (
-          <>
-            {message.isUser ? (
-              message.text
-            ) : (
-              <>
-                {message.isError && (
-                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '18px', marginRight: '8px' }}>⚠️</span>
-                    <span style={{ fontWeight: '600', color: '#E53E3E' }}>Error</span>
-                  </div>
-                )}
-                <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(md.render(message.text)) }} />
-              </>
-            )}
-            <MessageTime isUser={message.isUser}>
-              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              {message.edited && <EditedIndicator>(edited)</EditedIndicator>}
-            </MessageTime>
-            {message.isUser && (
+    <>
+      {showTimestamp && (
+        <MessageTime>
+          {formatTimestamp(message.timestamp)}
+        </MessageTime>
+      )}
+      <Message isUser={message.isUser}>
+        <MessageContent 
+          isUser={message.isUser} 
+          ref={messageRef}
+          className={message.isUser ? 'user-message' : ''}
+          onMouseDown={message.isUser ? startLongPress : undefined}
+          onMouseUp={message.isUser ? cancelLongPress : undefined}
+          onMouseLeave={message.isUser ? cancelLongPress : undefined}
+          onTouchStart={message.isUser ? startLongPress : undefined}
+          onTouchEnd={message.isUser ? cancelLongPress : undefined}
+        >
+          {isEditing ? (
+            <>
+              <Input
+                type="text"
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                style={{ marginBottom: '10px', width: '100%' }}
+              />
               <MessageActions>
-                <ActionButton onClick={() => setIsEditing(true)}>Edit</ActionButton>
-                <ActionButton onClick={() => onDelete(message.id)}>Delete</ActionButton>
+                <ActionButton onClick={handleSaveEdit}>Save</ActionButton>
+                <ActionButton onClick={() => setIsEditing(false)}>Cancel</ActionButton>
               </MessageActions>
-            )}
-          </>
-        )}
-      </MessageContent>
-    </Message>
+            </>
+          ) : (
+            <>
+              {message.isUser ? (
+                message.text
+              ) : (
+                <>
+                  {message.isError && (
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '18px', marginRight: '8px' }}>⚠️</span>
+                      <span style={{ fontWeight: '600', color: '#E53E3E' }}>Error</span>
+                    </div>
+                  )}
+                  <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(md.render(message.text)) }} />
+                </>
+              )}
+              {message.edited && <EditedIndicator>(edited)</EditedIndicator>}
+              {message.isUser && (
+                <ContextMenu className={showContextMenu ? 'visible' : ''}>
+                  <ContextMenuItem onClick={() => {
+                    setIsEditing(true);
+                    setShowContextMenu(false);
+                  }}>
+                    Edit
+                  </ContextMenuItem>
+                  <ContextMenuItem onClick={() => {
+                    onDelete(message.id);
+                    setShowContextMenu(false);
+                  }}>
+                    Delete
+                  </ContextMenuItem>
+                </ContextMenu>
+              )}
+            </>
+          )}
+        </MessageContent>
+      </Message>
+    </>
   );
 };
 
@@ -770,8 +911,15 @@ const ChatWindow = ({ userId }) => {
           <EmptyState />
         ) : (
           <>
-            {messages.map((message) => (
-              <MessageItem key={message.id} message={message} md={md} onDelete={deleteMessage} onEdit={editMessage} />
+            {messages.map((message, index) => (
+              <MessageItem 
+                key={message.id} 
+                message={message} 
+                md={md} 
+                onDelete={deleteMessage} 
+                onEdit={editMessage} 
+                prevMessage={index > 0 ? messages[index - 1] : null}
+              />
             ))}
             <TypingIndicatorComponent show={isTyping} />
           </>
