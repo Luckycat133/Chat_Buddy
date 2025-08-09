@@ -7,13 +7,14 @@ const { resetUserConversation } = require('../utils/helpers');
 // Reset conversation endpoint
 router.post('/:userId', (req, res) => {
   const { userId } = req.params;
-  
+  const role = req.query.role;
+
   if (!userId) {
     return res.status(400).json({ error: 'Missing userId' });
   }
-  
+
   try {
-    resetUserConversation(userId);
+    resetUserConversation(userId, role);
     res.json({ message: 'Conversation reset successfully' });
   } catch (error) {
     console.error('Error in /api/reset/:userId:', error);

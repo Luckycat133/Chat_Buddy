@@ -85,6 +85,8 @@ const resetRouter = require('./routes/reset');
 const configureRouter = require('./routes/configure');
 const exportRouter = require('./routes/export');
 const importRouter = require('./routes/import');
+const rolesRouter = require('./routes/roles');
+const memoryRouter = require('./routes/memory');
 
 // Middleware
 app.use(cors({ origin: ['http://localhost:3001', 'http://192.168.0.98:3001'] }));
@@ -124,6 +126,8 @@ app.use('/api/reset', resetRouter);
 app.use('/api/configure', configureRouter);
 app.use('/api/export', exportRouter);
 app.use('/api/import', importRouter);
+app.use('/api/roles', rolesRouter);
+app.use('/api/memory', memoryRouter);
 
 
 

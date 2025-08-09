@@ -378,14 +378,13 @@ const EmptyState = () => {
 };
 
 // ChatWindow component
-const ChatWindow = ({ userId }) => {
+const ChatWindow = ({ userId, role }) => {
   // State
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
 
-  const [titleKey, setTitleKey] = useState('evelyn');
   const messagesEndRef = useRef(null);
   
   // Initialize MarkdownIt
@@ -397,13 +396,16 @@ const ChatWindow = ({ userId }) => {
   
 
   
+  // Load messages for current role
   useEffect(() => {
-    setMessages([]);
-  }, [userId]);
+    const stored = localStorage.getItem(`chat_${userId}_${role}`);
+    setMessages(stored ? JSON.parse(stored) : []);
+  }, [userId, role]);
 
+  // Persist messages
   useEffect(() => {
-    setTitleKey('evelyn');
-  }, []);
+    localStorage.setItem(`chat_${userId}_${role}`, JSON.stringify(messages));
+  }, [messages, userId, role]);
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -438,10 +440,10 @@ const ChatWindow = ({ userId }) => {
       const requestBody = {
         userId: userId,
         message: inputValue,
-        promptType: 'evelyn'
+        role: role
       };
-      
-      const response = await fetch('http://localhost:5001/api/chat', {
+
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -506,7 +508,7 @@ const ChatWindow = ({ userId }) => {
                <PulseDot />
              </TypingTitle>
            ) : (
-             <Title show={true}>{roleNames[titleKey] || "Chat Buddy"}</Title>
+             <Title show={true}>{roleNames[role] || "Chat Buddy"}</Title>
            )}
          </TitleContainer>
       </Header>

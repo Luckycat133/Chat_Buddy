@@ -4,6 +4,18 @@
 
 <div id="english">
 
+## [v0.2.5](#v025) (2025-08-07)
+
+### New Features
+
+- Modular prompt architecture with automatic role loading from prompt files
+- Role-based chat interface with dedicated history per character
+- AI-driven memory system with editable memory points and hidden `<memory>` directives
+
+### Improvements
+
+- Context management omits messages older than one hour and inserts periodic timestamps
+
 ## [v0.2.3](#v023) (2025-08-06)
 
 ### Bug Fixes
@@ -193,6 +205,18 @@
 </div>
 
 <div id="中文">
+
+## [v0.2.5](#v025) (2025-08-07)
+
+### 新增功能
+
+- 模块化提示词架构，自动从文件加载所有角色
+- 基于角色的聊天界面，每个角色拥有独立的历史记录
+- AI 驱动的记忆系统，通过隐藏的 `<memory>` 指令保存并可编辑的记忆点
+
+### 改进
+
+- 上下文管理自动排除一小时以前的消息，并按需插入时间戳
 
 ## [v0.2.3](#v023) (2025-08-06)
 

@@ -118,6 +118,13 @@ The chat interface features a beautifully designed macaron orange theme with pro
 - Support for multiple AI providers
 - Easy configuration through `.env` file
 
+### Multi-Role & Memory System
+
+- Prompts for each AI role are stored as individual files and loaded automatically at runtime
+- Sidebar allows switching between roles, each with its own persistent chat history
+- AI can embed `<memory>` directives in replies to save important facts; users manage these memories through a dedicated interface
+- Conversation context automatically excludes messages older than one hour and adds lightweight timestamps for clarity
+
 ### Persistent Memory
 
 - All conversations are stored with accurate timestamps

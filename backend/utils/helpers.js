@@ -3,6 +3,7 @@
 // In-memory storage for API keys, settings, and conversation history
 const userConversations = {};
 const userContexts = new Map();
+const userMemories = {};
 
 // Function to sanitize and validate URLs
 const sanitizeUrl = (url) => {
@@ -74,12 +75,15 @@ const validateApiUrl = (url) => {
   }
 };
 
-// Helper function to get or initialize user conversation history
-const getUserConversation = (userId) => {
+// Helper function to get or initialize user conversation history per role
+const getUserConversation = (userId, role) => {
   if (!userConversations[userId]) {
-    userConversations[userId] = [];
+    userConversations[userId] = {};
   }
-  return userConversations[userId];
+  if (!userConversations[userId][role]) {
+    userConversations[userId][role] = [];
+  }
+  return userConversations[userId][role];
 };
 
 // 获取用户上下文
@@ -111,13 +115,47 @@ function detectUserLanguage(message) {
   return 'zh';
 }
 
-// 引入系统提示词配置
-const { SYSTEM_PROMPTS } = require('../prompts');
+// Prompt loader for system and role prompts
+const { getPromptForRole, getRoleList } = require('../services/promptLoader');
 
-// 选择系统提示词的函数
-const getSystemPrompt = (promptType = 'default') => {
-  return SYSTEM_PROMPTS[promptType] || SYSTEM_PROMPTS.default;
+// Combine system and role prompts for a given role
+const getSystemPrompt = (role = 'default') => {
+  return getPromptForRole(role);
 };
+
+// Memory management helpers
+function addMemory(userId, text) {
+  if (!userMemories[userId]) {
+    userMemories[userId] = [];
+  }
+  userMemories[userId].push({ timestamp: Date.now(), text });
+}
+
+function listMemories(userId) {
+  return userMemories[userId] || [];
+}
+
+function updateMemory(userId, index, text) {
+  if (userMemories[userId] && userMemories[userId][index]) {
+    userMemories[userId][index].text = text;
+  }
+}
+
+function deleteMemory(userId, index) {
+  if (userMemories[userId]) {
+    userMemories[userId].splice(index, 1);
+  }
+}
+
+function resetUserConversation(userId, role) {
+  if (userConversations[userId]) {
+    if (role) {
+      delete userConversations[userId][role];
+    } else {
+      delete userConversations[userId];
+    }
+  }
+}
 
 module.exports = {
   sanitizeUrl,
@@ -126,5 +164,11 @@ module.exports = {
   getUserContext,
   updateUserContext,
   detectUserLanguage,
-  getSystemPrompt
+  getSystemPrompt,
+  getRoleList,
+  addMemory,
+  listMemories,
+  updateMemory,
+  deleteMemory,
+  resetUserConversation
 };

@@ -2,14 +2,15 @@ const express = require('express');
 const router = express.Router();
 
 // Import helper functions
-const { 
-  sanitizeUrl, 
-  validateApiUrl, 
-  getUserConversation, 
-  getUserContext, 
+const {
+  sanitizeUrl,
+  validateApiUrl,
+  getUserConversation,
+  getUserContext,
   updateUserContext,
   detectUserLanguage,
-  getSystemPrompt
+  getSystemPrompt,
+  addMemory
 } = require('../utils/helpers');
 
 // Import API functions
@@ -23,7 +24,7 @@ const { securityMiddleware } = require('../middleware/security');
     // Get userSettings from app locals
     const userSettings = req.app.get('userSettings');
     
-    const { userId, message, promptType } = req.body;
+    const { userId, message, role } = req.body;
 
   if (!userId || !message) {
     return res.status(400).json({ error: 'Missing userId or message' });
@@ -31,7 +32,8 @@ const { securityMiddleware } = require('../middleware/security');
 
   try {
     // Get or initialize user conversation and context
-    let conversation = getUserConversation(userId);
+    const roleName = role || 'default';
+    let conversation = getUserConversation(userId, roleName);
     let context = getUserContext(userId);
     
     // Detect user language if not already detected
@@ -41,16 +43,25 @@ const { securityMiddleware } = require('../middleware/security');
     }
     
     // Add user message to conversation
-    conversation.push({ role: 'user', content: message });
+    conversation.push({ role: 'user', content: message, timestamp: Date.now() });
     
     // Get system prompt
-    const systemPrompt = getSystemPrompt(promptType, context.language);
-    
-    // Prepare messages for API call
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...conversation
-    ];
+    const systemPrompt = getSystemPrompt(roleName, context.language);
+
+    // Prepare messages for API call with context filtering
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    const recent = conversation.filter(m => m.timestamp >= oneHourAgo);
+    const messages = [{ role: 'system', content: systemPrompt }];
+    let lastTime = 0;
+    recent.forEach(m => {
+      let content = m.content;
+      if (m.timestamp - lastTime > 5 * 60 * 1000) {
+        const time = new Date(m.timestamp).toLocaleTimeString('en-US', { hour12: false });
+        content = `[${time}] ${content}`;
+        lastTime = m.timestamp;
+      }
+      messages.push({ role: m.role, content });
+    });
     
     // Get user settings
     const settings = userSettings[userId] || {};
@@ -67,9 +78,19 @@ const { securityMiddleware } = require('../middleware/security');
     }
     
     // Add AI response to conversation
-    conversation.push({ role: 'assistant', content: response.content });
-    
-    res.json({ message: response });
+    // Extract memory directive from AI response
+    const regex = /<memory>([\s\S]*?)<\/memory>/i;
+    let aiText = response.content;
+    const match = aiText.match(regex);
+    if (match) {
+      const memoryText = match[1].trim();
+      addMemory(userId, memoryText);
+      aiText = aiText.replace(regex, '').trim();
+    }
+
+    conversation.push({ role: 'assistant', content: aiText, timestamp: Date.now() });
+
+    res.json({ message: { content: aiText } });
   } catch (error) {
     // Enhanced error logging
     console.error('Error in /api/chat:');
