@@ -85,6 +85,8 @@ const resetRouter = require('./routes/reset');
 const configureRouter = require('./routes/configure');
 const exportRouter = require('./routes/export');
 const importRouter = require('./routes/import');
+const rolesRouter = require('./routes/roles');
+const memoryRouter = require('./routes/memory');
 
 // Middleware
 app.use(cors({ origin: ['http://localhost:3001', 'http://192.168.0.98:3001'] }));
@@ -106,6 +108,8 @@ app.get('/api/docs', (req, res) => {
     endpoints: {
       'POST /api/chat': 'Send a message to the AI',
       'GET /api/conversation/:userId': 'Get conversation history for a user',
+      'GET /api/roles': 'List available AI roles',
+      'GET /api/memory/:userId/:role': 'Get saved memories for a user and role',
       'POST /api/reset/:userId': 'Reset conversation history for a user',
       'POST /api/configure': 'Configure API settings',
       'GET /api/export/:userId': 'Export user data',
@@ -120,6 +124,8 @@ app.get('/api/docs', (req, res) => {
 // API routes
 app.use('/api/chat', chatRouter);
 app.use('/api/conversation', conversationRouter);
+app.use('/api/roles', rolesRouter);
+app.use('/api/memory', memoryRouter);
 app.use('/api/reset', resetRouter);
 app.use('/api/configure', configureRouter);
 app.use('/api/export', exportRouter);
