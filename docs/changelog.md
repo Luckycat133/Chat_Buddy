@@ -8,7 +8,8 @@
 
 ### Bug Fixes
 
-- **CORS Configuration**: Extended CORS origin configuration to support both localhost:3001 and 192.168.0.98:3001 for flexible access
+- **CORS Configuration**: Extended CORS origin configuration to support both
+  localhost:3001 and 192.168.0.98:3001 for flexible access
 
 ### Security Enhancements
 
@@ -183,7 +184,7 @@
 - `POST /api/configure` - Configure user API keys
 - `POST /api/chat` - Send messages to AI model
 - `GET /api/conversation/:userId` - Get user conversation history
-- `DELETE /api/reset/:userId` - Reset API keys and conversation history
+- `DELETE /api/reset/:userId` - Reset conversation history for a user
 - `PUT /api/settings/:userId` - Save user settings
 - `GET /api/settings/:userId` - Get user settings
 - `GET /api/export/:userId` - Export user data
