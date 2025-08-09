@@ -48,7 +48,7 @@ backend/
 
 - `POST /api/chat` - Send a message to the AI
 - `GET /api/conversation/:userId` - Get conversation history for a user
-- `POST /api/reset/:userId` - Reset conversation history for a user
+- `DELETE /api/reset/:userId` - Reset conversation history for a user
 - `POST /api/configure` - Configure API settings
 - `GET /api/export/:userId` - Export user data
 - `POST /api/import/:userId` - Import user data
