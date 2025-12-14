@@ -1,0 +1,317 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
+
+@theme {
+  /* Macaron Orange Palette (WeChat Layout Style) */
+  --color-primary: #FFAB76;
+  /* Macaron Orange */
+  --color-primary-hover: #FF9655;
+  --color-primary-light: #FFE8D9;
+  --color-primary-softer: #FFF5EE;
+  --color-primary-glow: rgba(255, 171, 118, 0.3);
+
+  --color-text-main: #191919;
+  --color-text-secondary: #576B95;
+  /* WeChat link blue */
+  --color-text-muted: #999999;
+  --color-text-light: #B2B2B2;
+
+  --color-bg-app: #EDEDED;
+  /* WeChat background gray */
+  --color-bg-white: #FFFFFF;
+  --color-bg-hover: #D8D8D8;
+  --color-bg-chat: #EDEDED;
+  --color-bg-glass: rgba(255, 255, 255, 0.85);
+
+  --color-border: #E6E6E6;
+  --color-border-light: #F0F0F0;
+
+  /* Enhanced Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 20px var(--color-primary-glow);
+
+  /* Refined Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-bubble: 4px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background-color: var(--color-bg-app);
+  color: var(--color-text-main);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 14px;
+}
+
+/* Hide scrollbar for cleaner look */
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+/* Selection styling */
+::selection {
+  background-color: var(--color-primary-light);
+  color: var(--color-text-main);
+}
+
+/* Focus outline */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* Smooth transitions */
+button,
+a,
+input,
+textarea {
+  transition: all 0.15s ease;
+}
+
+/* ========== Modern Animations ========== */
+
+/* Message entrance animation */
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-message-in {
+  animation: message-in 0.25s ease-out;
+}
+
+/* Fade in animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Scale in animation (for menus/popups) */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.15s ease-out;
+}
+
+/* Slide up animation */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Pulse animation for typing indicator */
+@keyframes pulse-soft {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse-soft 1.5s ease-in-out infinite;
+}
+
+/* Typing dots animation */
+@keyframes typing-dots {
+
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+
+  30% {
+    transform: translateY(-4px);
+  }
+}
+
+.typing-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--color-primary);
+  margin: 0 2px;
+}
+
+.typing-dot:nth-child(1) {
+  animation: typing-dots 1s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) {
+  animation: typing-dots 1s ease-in-out 0.2s infinite;
+}
+
+.typing-dot:nth-child(3) {
+  animation: typing-dots 1s ease-in-out 0.4s infinite;
+}
+
+/* ========== Glass Effect ========== */
+.glass-effect {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: var(--color-bg-glass);
+}
+
+/* ========== Button Styles ========== */
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-primary-hover);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* ========== Card Styles ========== */
+.card {
+  background: var(--color-bg-white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.card-hover {
+  transition: all 0.2s ease;
+}
+
+.card-hover:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* ========== Avatar Styles ========== */
+.avatar {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar-glow {
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+/* ========== Input Styles ========== */
+.input-modern {
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.625rem 0.875rem;
+  font-size: 15px;
+  transition: all 0.15s ease;
+}
+
+.input-modern:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* ========== Time Separator ========== */
+.time-separator {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.time-separator span {
+  padding: 0.25rem 0.75rem;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  border-radius: 999px;
+}
+
+/* ========== Chat Bubble Enhancements ========== */
+.bubble-shadow {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* ========== Logo Animation ========== */
+@keyframes logo-float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.logo-animated {
+  animation: logo-float 3s ease-in-out infinite;
+}
+
+/* ========== Responsive Adjustments ========== */
+@media (max-width: 768px) {
+  .card {
+    border-radius: var(--radius-md);
+  }
+}
