@@ -1,19 +1,21 @@
 import React, { useEffect, useRef } from 'react';
-import { Copy, Forward, Quote, Trash2, RotateCcw } from 'lucide-react';
+import { Copy, Forward, Quote, Trash2, RotateCcw, Pin } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
 
 export default function MessageMenu({
     message,
     isOwnMessage,
+    isPinned,
     position,
     onClose,
     onCopy,
     onQuote,
     onDelete,
-    onForward
+    onForward,
+    onPin
 }) {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
     const menuRef = useRef(null);
 
     // Close on outside click
@@ -52,10 +54,16 @@ export default function MessageMenu({
         onClose?.();
     };
 
+    const handlePin = () => {
+        onPin?.(message.id, !isPinned);
+        onClose?.();
+    };
+
     const menuItems = [
         { icon: Copy, label: t('copy'), action: handleCopy, show: true },
         { icon: Quote, label: t('quote'), action: handleQuote, show: true },
         { icon: Forward, label: t('forward'), action: handleForward, show: true },
+        { icon: Pin, label: isPinned ? (language === 'zh' ? '取消置顶' : 'Unpin') : (language === 'zh' ? '置顶' : 'Pin'), action: handlePin, show: true },
         { icon: Trash2, label: canRecall ? t('recall') : t('delete'), action: handleDelete, show: isOwnMessage, danger: true }
     ].filter(item => item.show);
 

@@ -4,7 +4,13 @@ import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
 
 // Preset avatars from public/avatars
-const PRESET_AVATARS = [
+// Default user avatars first, then character avatars
+const DEFAULT_USER_AVATARS = [
+    { id: 'default_male', name: 'Male', path: '/avatars/default_male.png' },
+    { id: 'default_female', name: 'Female', path: '/avatars/default_female.png' },
+];
+
+const CHARACTER_AVATARS = [
     { id: 'miku', name: 'Miku', path: '/avatars/avatar_miku.png' },
     { id: 'rem', name: 'Rem', path: '/avatars/avatar_rem.png' },
     { id: 'rin', name: 'Rin', path: '/avatars/avatar_rin.png' },
@@ -19,6 +25,8 @@ const PRESET_AVATARS = [
     { id: 'oliver', name: 'Oliver', path: '/avatars/avatar_oliver.png' },
     { id: 'sophie', name: 'Sophie', path: '/avatars/avatar_sophie.png' },
 ];
+
+const PRESET_AVATARS = [...DEFAULT_USER_AVATARS, ...CHARACTER_AVATARS];
 
 export default function AvatarSelector({ isOpen, onClose, currentAvatar, onSelect }) {
     const { t } = useLanguage();

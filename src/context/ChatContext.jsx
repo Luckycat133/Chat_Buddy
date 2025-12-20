@@ -105,6 +105,49 @@ export const ChatProvider = ({ children }) => {
         }));
     }, [setChats]);
 
+    // Logic: Pin/Unpin Chat (Session Management)
+    const pinChat = useCallback((chatId, isPinned) => {
+        setChats(prev => prev.map(chat =>
+            chat.id === chatId ? { ...chat, isPinned } : chat
+        ));
+    }, [setChats]);
+
+    // Logic: Mark Chat as Unread (Session Management)
+    const markChatUnread = useCallback((chatId, isUnread = true) => {
+        setChats(prev => prev.map(chat =>
+            chat.id === chatId ? { ...chat, isUnread } : chat
+        ));
+    }, [setChats]);
+
+    // Logic: Set Chat Category (Session Management)
+    const setChatCategory = useCallback((chatId, category) => {
+        setChats(prev => prev.map(chat =>
+            chat.id === chatId ? { ...chat, category } : chat
+        ));
+    }, [setChats]);
+
+    // Logic: Pin/Unpin Message
+    const pinMessage = useCallback((chatId, messageId, isPinned = true) => {
+        setChats(prev => prev.map(chat => {
+            if (chat.id !== chatId) return chat;
+            const pinnedMessages = chat.pinnedMessages || [];
+            if (isPinned && !pinnedMessages.includes(messageId)) {
+                return { ...chat, pinnedMessages: [...pinnedMessages, messageId] };
+            } else if (!isPinned) {
+                return { ...chat, pinnedMessages: pinnedMessages.filter(id => id !== messageId) };
+            }
+            return chat;
+        }));
+    }, [setChats]);
+
+    // Logic: Get Pinned Messages for a Chat
+    const getPinnedMessages = useCallback((chatId) => {
+        const chat = chats.find(c => c.id === chatId);
+        if (!chat || !chat.pinnedMessages) return [];
+        return chat.messages.filter(m => chat.pinnedMessages.includes(m.id));
+    }, [chats]);
+
+
 
     // --- AI TOOL CALL MESSAGING SYSTEM ---
     // Queue system to prevent message overwrites
@@ -573,7 +616,14 @@ RULES:
         updateChat,
         deleteChat,
         deleteMessage,
-        typingIndicators
+        typingIndicators,
+        // Session Management
+        pinChat,
+        markChatUnread,
+        setChatCategory,
+        // Message Pinning
+        pinMessage,
+        getPinnedMessages
     };
 
     return (

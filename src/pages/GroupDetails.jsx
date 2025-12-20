@@ -1,19 +1,25 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Trash2, Megaphone, BarChart3 } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
+import GroupAnnouncement from '../components/GroupAnnouncement';
+import GroupPoll from '../components/GroupPoll';
 
 export default function GroupDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { chats, personas, deleteChat, updateChat } = useChat();
+    const { chats, personas, deleteChat, updateChat, sendMessage } = useChat();
     const { t, language } = useLanguage();
 
     const chat = chats.find(c => c.id === id);
     const [name, setName] = useState(chat?.name || '');
     const [permissions, setPermissions] = useState(chat?.permissions || { allowReactions: true, allowImages: false });
+
+    // Feature modals
+    const [showAnnouncement, setShowAnnouncement] = useState(false);
+    const [showPoll, setShowPoll] = useState(false);
 
     if (!chat) return <div className="flex items-center justify-center h-full bg-[var(--color-bg-app)] text-[var(--color-text-muted)]">{t('chat_not_found')}</div>;
 
@@ -39,6 +45,22 @@ export default function GroupDetails() {
             deleteChat(id);
             navigate('/');
         }
+    };
+
+    const handleSaveAnnouncement = (announcementData) => {
+        updateChat(id, { announcement: announcementData });
+        // Optionally send a system message
+        sendMessage(id, language === 'zh' ? `[公告] ${announcementData.content}` : `[Announcement] ${announcementData.content}`);
+    };
+
+    const handleDeleteAnnouncement = () => {
+        updateChat(id, { announcement: null });
+    };
+
+    const handleCreatePoll = (poll) => {
+        const currentPolls = chat.polls || [];
+        updateChat(id, { polls: [poll, ...currentPolls] });
+        sendMessage(id, `[GAME:Poll: ${poll.question}]`); // Reusing GAME type for simple display for now
     };
 
     const aiParticipants = chat.participants.filter(pid => pid !== 'user-me');
@@ -93,6 +115,35 @@ export default function GroupDetails() {
                 </div>
             </div>
 
+            {/* Group Features */}
+            <div className="bg-white mb-2">
+                <div
+                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-gray-50"
+                    onClick={() => setShowAnnouncement(true)}
+                >
+                    <Megaphone size={20} className="text-[var(--color-primary)] mr-3" />
+                    <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
+                        {language === 'zh' ? '群公告' : 'Group Announcement'}
+                    </span>
+                    {chat.announcement && (
+                        <span className="text-xs text-[var(--color-text-muted)] mr-2 truncate max-w-[100px]">
+                            {chat.announcement.content}
+                        </span>
+                    )}
+                    <ChevronRight size={20} className="text-[#C7C7CC]" />
+                </div>
+                <div
+                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-gray-50"
+                    onClick={() => setShowPoll(true)}
+                >
+                    <BarChart3 size={20} className="text-[var(--color-primary)] mr-3" />
+                    <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
+                        {language === 'zh' ? '群投票' : 'Group Poll'}
+                    </span>
+                    <ChevronRight size={20} className="text-[#C7C7CC]" />
+                </div>
+            </div>
+
             {/* AI Permissions */}
             <div className="bg-white mb-2">
                 <ToggleItem
@@ -107,6 +158,20 @@ export default function GroupDetails() {
                 />
             </div>
 
+            {/* Group Admin Settings */}
+            <div className="bg-white mb-2">
+                <ToggleItem
+                    label={language === 'zh' ? '消息免打扰' : 'Mute Notifications'}
+                    checked={chat.isMuted || false}
+                    onChange={(v) => updateChat(id, { isMuted: v })}
+                />
+                <ToggleItem
+                    label={language === 'zh' ? '仅管理员可发言' : 'Admin Only Chat'}
+                    checked={chat.adminOnly || false}
+                    onChange={(v) => updateChat(id, { adminOnly: v })}
+                />
+            </div>
+
             {/* Delete */}
             <div className="bg-white mb-2">
                 <button
@@ -116,6 +181,25 @@ export default function GroupDetails() {
                     {t('delete_chat')}
                 </button>
             </div>
+
+            {/* Modals */}
+            {showAnnouncement && (
+                <GroupAnnouncement
+                    announcement={chat.announcement}
+                    isAdmin={true} // Assuming current user is admin for now
+                    onClose={() => setShowAnnouncement(false)}
+                    onSave={handleSaveAnnouncement}
+                    onDelete={handleDeleteAnnouncement}
+                />
+            )}
+
+            {showPoll && (
+                <GroupPoll
+                    chatId={id}
+                    onClose={() => setShowPoll(false)}
+                    onCreatePoll={handleCreatePoll}
+                />
+            )}
         </div>
     );
 }

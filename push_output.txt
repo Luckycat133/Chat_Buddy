@@ -1,0 +1,28 @@
+﻿git : git: 'credentia
+l-manager' is not a g
+it command. See 'git 
+--help'.
+所在位置 行:1 字符: 1
++ git push -u origin 
+remake 2>&1 | Out-Fil
+e -FilePath "push_out
+put.txt" ...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (git: 'c   
+ redentia...e 'gi    
+t --help'.:Strin    g
+) [], RemoteExc    ep
+tion
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 
+git: 'credential-mana
+ger' is not a git com
+mand. See 'git --help
+'.
+branch 'remake' set up to track 'origin/remake'.
+Everything up-to-date

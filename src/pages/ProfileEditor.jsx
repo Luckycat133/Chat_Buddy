@@ -99,6 +99,8 @@ export default function ProfileEditor() {
                             type="text"
                             value={nickname}
                             onChange={(e) => setNickname(e.target.value)}
+                            onBlur={(e) => setNickname(e.target.value)}
+                            onInput={(e) => setNickname(e.target.value)}
                             placeholder={t('nickname_placeholder') || 'Enter your nickname'}
                             maxLength={20}
                             className="flex-1 py-2 text-[16px] bg-transparent outline-none placeholder:text-[var(--color-text-light)]"

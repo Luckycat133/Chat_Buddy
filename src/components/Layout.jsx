@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
-import { MessageSquare, Users, Settings, Plus } from 'lucide-react';
+import { MessageSquare, Users, Settings, Plus, UserCircle, Camera } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -28,8 +28,8 @@ export default function Layout() {
 
                 <nav className="flex-1 flex flex-col items-center gap-1">
                     <NavItem to="/" icon={<MessageSquare size={22} />} label={t('nav_chats')} />
-                    <NavItem to="/groups" icon={<Users size={22} />} label={t('nav_groups')} />
-                    <NavItem to="/create" icon={<Plus size={22} />} label="+" />
+                    <NavItem to="/friends" icon={<UserCircle size={22} />} label={t('friends')} />
+                    <NavItem to="/moments" icon={<Camera size={22} />} label={t('moments')} />
                 </nav>
 
                 <div className="mt-auto pb-2">
@@ -45,8 +45,8 @@ export default function Layout() {
             {/* Mobile Bottom Tab Bar (WeChat style) */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#F7F7F7] border-t border-[#D9D9D9] flex justify-around items-center px-2 py-1 z-50">
                 <MobileNavItem to="/" icon={<MessageSquare size={24} />} label={t('nav_chats')} />
-                <MobileNavItem to="/groups" icon={<Users size={24} />} label={t('nav_groups')} />
-                <MobileNavItem to="/create" icon={<Plus size={24} />} label="+" />
+                <MobileNavItem to="/friends" icon={<UserCircle size={24} />} label={t('friends') || 'Friends'} />
+                <MobileNavItem to="/moments" icon={<Camera size={24} />} label={t('moments') || 'Moments'} />
                 <MobileNavItem to="/settings" icon={<Settings size={24} />} label={t('nav_settings')} />
             </nav>
         </div>
