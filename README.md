@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.2.1-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
 
@@ -140,15 +140,16 @@ Meet your favorite anime characters:
 
 ```bash
 # 1. Clone the repository / 克隆仓库
-git clone https://github.com/user/chat-buddy-remake.git
-cd chat-buddy-remake
+git clone https://github.com/Luckycat133/Chat_Buddy.git
+cd Chat_Buddy
 
 # 2. Install dependencies / 安装依赖
 npm install
 
 # 3. Configure environment / 配置环境变量
-# Create .env file in root directory / 在根目录创建.env文件
-echo "VITE_DEEPSEEK_API_KEY=your_api_key_here" > .env
+# Copy .env.example to .env and edit / 复制.env.example为.env并编辑
+cp .env.example .env
+# Edit .env with your API settings / 编辑.env配置你的API设置
 
 # 4. Start development server / 启动开发服务器
 npm run dev
@@ -156,9 +157,13 @@ npm run dev
 
 ### Environment Variables / 环境变量
 
-| Variable | Required | Description |
+| Variable | Required | Description / 说明 |
 |----------|----------|-------------|
-| `VITE_DEEPSEEK_API_KEY` | Optional | DeepSeek API key for AI responses |
+| `VITE_AI_API_URL` | Yes | API Base URL (e.g., `https://api.deepseek.com`) |
+| `VITE_AI_API_KEY` | Yes | Your API key for AI responses |
+| `VITE_AI_MODEL` | Yes | Model name (e.g., `deepseek-chat`, `sonar`) |
+
+> **Supported Providers / 支持的API提供商**: DeepSeek, Perplexity, OpenAI, and other OpenAI-compatible APIs.
 
 ---
 
@@ -289,14 +294,15 @@ We welcome contributions! Please follow these guidelines:
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-**Current Version**: v0.2.1 (2025-12-13)
+**Current Version**: v0.2.2 (2025-12-20)
 
 ### Recent Updates / 最近更新
-- ✨ AI multi-message capability (consecutive messages)
-- ⌨️ Typing indicators ("X人正在输入...")
-- ⏰ WeChat-style time display and separators
-- 📸 Realistic selfie-style avatars
-- 🚀 AI proactive messaging with scheduling
+- 😊 Emoji picker with 8 categories / 8分类表情选择器
+- 💬 Message context menu (copy, quote, delete) / 消息右键菜单
+- 📁 File upload and AI file generation / 文件上传与AI生成
+- 🔍 RAG (Retrieval Augmented Generation) / RAG检索增强
+- ✨ AI multi-message capability / AI连续消息功能
+- ⌨️ Typing indicators / 输入中指示器
 
 ---
 
