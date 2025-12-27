@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Trash2, Megaphone, BarChart3 } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Trash2, Megaphone, BarChart3, Download } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
@@ -10,7 +10,7 @@ import GroupPoll from '../components/GroupPoll';
 export default function GroupDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { chats, personas, deleteChat, updateChat, sendMessage } = useChat();
+    const { chats, personas, deleteChat, updateChat, sendMessage, clearChatMessages } = useChat();
     const { t, language } = useLanguage();
 
     const chat = chats.find(c => c.id === id);
@@ -57,10 +57,35 @@ export default function GroupDetails() {
         updateChat(id, { announcement: null });
     };
 
+    const handleExportChat = () => {
+        if (!chat.messages.length) {
+            alert(t('no_messages_export') || 'No messages to export');
+            return;
+        }
+
+        let content = `${chat.name} - Chat History\nExported: ${new Date().toLocaleString()}\n\n`;
+
+        chat.messages.forEach(msg => {
+            const sender = msg.senderId === 'user-me' ? (language === 'zh' ? '我' : 'Me') : personas.find(p => p.id === msg.senderId)?.name || 'Unknown';
+            const time = new Date(msg.timestamp).toLocaleString();
+            content += `[${time}] ${sender}: ${msg.content}\n`;
+        });
+
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${chat.name}_original_export.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     const handleCreatePoll = (poll) => {
         const currentPolls = chat.polls || [];
         updateChat(id, { polls: [poll, ...currentPolls] });
-        sendMessage(id, `[GAME:Poll: ${poll.question}]`); // Reusing GAME type for simple display for now
+        sendMessage(id, `[POLL:${poll.id}]`);
     };
 
     const aiParticipants = chat.participants.filter(pid => pid !== 'user-me');
@@ -144,6 +169,20 @@ export default function GroupDetails() {
                 </div>
             </div>
 
+            {/* Export */}
+            <div className="bg-white mb-2">
+                <div
+                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-gray-50"
+                    onClick={handleExportChat}
+                >
+                    <Download size={20} className="text-[var(--color-text-main)] mr-3" />
+                    <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
+                        {language === 'zh' ? '导出聊天记录' : 'Export Chat History'}
+                    </span>
+                    <ChevronRight size={20} className="text-[#C7C7CC]" />
+                </div>
+            </div>
+
             {/* AI Permissions */}
             <div className="bg-white mb-2">
                 <ToggleItem
@@ -172,8 +211,19 @@ export default function GroupDetails() {
                 />
             </div>
 
-            {/* Delete */}
-            <div className="bg-white mb-2">
+            {/* Danger Zone */}
+            <div className="bg-white mb-6">
+                <button
+                    onClick={() => {
+                        if (window.confirm(language === 'zh' ? '确定要清空聊天记录吗？' : 'Are you sure you want to clear chat history?')) {
+                            clearChatMessages(id);
+                            alert(language === 'zh' ? '聊天记录已清空' : 'Chat history cleared');
+                        }
+                    }}
+                    className="w-full px-4 py-3 text-center text-[var(--color-text-main)] text-[16px] border-b border-[var(--color-border-light)]"
+                >
+                    {language === 'zh' ? '清空聊天记录' : 'Clear Chat History'}
+                </button>
                 <button
                     onClick={handleDeleteChat}
                     className="w-full px-4 py-3 text-center text-[#FA5151] text-[16px]"
@@ -183,24 +233,28 @@ export default function GroupDetails() {
             </div>
 
             {/* Modals */}
-            {showAnnouncement && (
-                <GroupAnnouncement
-                    announcement={chat.announcement}
-                    isAdmin={true} // Assuming current user is admin for now
-                    onClose={() => setShowAnnouncement(false)}
-                    onSave={handleSaveAnnouncement}
-                    onDelete={handleDeleteAnnouncement}
-                />
-            )}
+            {
+                showAnnouncement && (
+                    <GroupAnnouncement
+                        announcement={chat.announcement}
+                        isAdmin={true} // Assuming current user is admin for now
+                        onClose={() => setShowAnnouncement(false)}
+                        onSave={handleSaveAnnouncement}
+                        onDelete={handleDeleteAnnouncement}
+                    />
+                )
+            }
 
-            {showPoll && (
-                <GroupPoll
-                    chatId={id}
-                    onClose={() => setShowPoll(false)}
-                    onCreatePoll={handleCreatePoll}
-                />
-            )}
-        </div>
+            {
+                showPoll && (
+                    <GroupPoll
+                        chatId={id}
+                        onClose={() => setShowPoll(false)}
+                        onCreatePoll={handleCreatePoll}
+                    />
+                )
+            }
+        </div >
     );
 }
 

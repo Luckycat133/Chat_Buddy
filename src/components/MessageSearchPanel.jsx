@@ -1,24 +1,67 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { X, Search, MessageSquare, ChevronRight } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
 
-export default function MessageSearchPanel({ onClose, onSelectMessage }) {
+export default function MessageSearchPanel({ onClose, onSelectMessage, currentChatId }) {
     const { chats, personas } = useChat();
     const { t, language } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedTerm, setDebouncedTerm] = useState('');
+    const [searchScope, setSearchScope] = useState(currentChatId ? 'current' : 'all'); // 'all' or 'current'
+    const [fileType, setFileType] = useState('all'); // 'all', 'text', 'image', 'file', 'audio'
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedTerm(searchTerm);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     // Search through all messages
     const searchResults = useMemo(() => {
-        if (!searchTerm.trim() || searchTerm.length < 2) return [];
+        if (!debouncedTerm.trim() || debouncedTerm.length < 2) return [];
+        if (!chats || !personas) return [];
 
         const results = [];
-        const term = searchTerm.toLowerCase();
+        const term = debouncedTerm.toLowerCase();
 
-        chats.forEach(chat => {
+        const chatsToSearch = searchScope === 'current' && currentChatId
+            ? chats.filter(c => c.id === currentChatId)
+            : chats;
+
+        chatsToSearch.forEach(chat => {
+            if (!chat || !chat.messages) return;
+
             chat.messages.forEach(msg => {
-                if (msg.content?.toLowerCase().includes(term)) {
+                let matchesType = true;
+                const content = String(msg.content || '');
+
+                // Filter by type
+                if (fileType === 'image') {
+                    matchesType = content.includes('[IMG:');
+                } else if (fileType === 'file') {
+                    matchesType = content.includes('[FILE]');
+                } else if (fileType === 'audio') {
+                    matchesType = content.includes('[VOICE:');
+                } else if (fileType === 'text') {
+                    matchesType = !content.includes('[IMG:') && !content.includes('[FILE]') && !content.includes('[VOICE:');
+                }
+
+                if (!matchesType) return;
+
+                // For specialized types, we might want to match generic terms or just show all if search is generic
+                // But typically search matches content.
+                // If it's a file, we search filename.
+                let contentToMatch = content;
+                if (content.includes('[FILE]')) {
+                    contentToMatch = content.replace('[FILE]', '').trim();
+                } else if (content.includes('[IMG:')) {
+                    contentToMatch = "Image";
+                }
+
+                if (contentToMatch.toLowerCase().includes(term)) {
                     const sender = msg.senderId === 'user-me'
                         ? { name: language === 'zh' ? '我' : 'Me' }
                         : personas.find(p => p.id === msg.senderId);
@@ -27,7 +70,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage }) {
                         chatId: chat.id,
                         chatName: chat.name || getChatName(chat),
                         messageId: msg.id,
-                        content: msg.content,
+                        content: content,
                         senderName: sender ? (language === 'zh' ? sender.name_zh || sender.name : sender.name) : 'Unknown',
                         timestamp: msg.timestamp
                     });
@@ -37,45 +80,59 @@ export default function MessageSearchPanel({ onClose, onSelectMessage }) {
 
         // Sort by timestamp, newest first
         return results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 50);
-    }, [searchTerm, chats, personas, language]);
+    }, [debouncedTerm, chats, personas, language, searchScope, currentChatId, fileType]);
 
     const getChatName = (chat) => {
+        if (!chat || !chat.participants) return 'Chat';
         const otherId = chat.participants.find(p => p !== 'user-me');
-        const persona = personas.find(p => p.id === otherId);
+        const persona = personas?.find(p => p.id === otherId);
         return persona ? (language === 'zh' ? persona.name_zh || persona.name : persona.name) : 'Chat';
     };
 
     const highlightMatch = (text, term) => {
-        if (!term) return text;
-        const regex = new RegExp(`(${term})`, 'gi');
-        const parts = text.split(regex);
-        return parts.map((part, i) =>
-            part.toLowerCase() === term.toLowerCase()
-                ? <mark key={i} className="bg-yellow-200 text-yellow-900 px-0.5 rounded">{part}</mark>
-                : part
-        );
+        if (!term || !text) return text;
+        try {
+            // Escape special regex characters
+            const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${escapedTerm})`, 'gi');
+            const parts = text.split(regex);
+            return parts.map((part, i) =>
+                part.toLowerCase() === term.toLowerCase()
+                    ? <mark key={i} className="bg-yellow-200 text-yellow-900 px-0.5 rounded">{part}</mark>
+                    : part
+            );
+        } catch (e) {
+            console.error("Search highlight error:", e);
+            return text;
+        }
     };
 
     const formatTime = (timestamp) => {
-        const date = new Date(timestamp);
-        const now = new Date();
-        const diff = now - date;
-        const days = Math.floor(diff / 86400000);
+        try {
+            const date = new Date(timestamp);
+            if (isNaN(date.getTime())) return '';
 
-        if (days === 0) {
-            return date.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        } else if (days === 1) {
-            return language === 'zh' ? '昨天' : 'Yesterday';
-        } else if (days < 7) {
-            return date.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'short' });
-        } else {
-            return date.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', {
-                month: 'short',
-                day: 'numeric'
-            });
+            const now = new Date();
+            const diff = now - date;
+            const days = Math.floor(diff / 86400000);
+
+            if (days === 0) {
+                return date.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } else if (days === 1) {
+                return language === 'zh' ? '昨天' : 'Yesterday';
+            } else if (days < 7) {
+                return date.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'short' });
+            } else {
+                return date.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                });
+            }
+        } catch (e) {
+            return '';
         }
     };
 
@@ -97,6 +154,51 @@ export default function MessageSearchPanel({ onClose, onSelectMessage }) {
                         autoFocus
                         className="w-full pl-10 pr-4 py-2 bg-[var(--color-bg-app)] rounded-lg text-[15px] outline-none focus:ring-2 ring-[var(--color-primary)]/30"
                     />
+                </div>
+            </div>
+
+            {/* Filters */}
+            <div className="px-4 py-2 bg-white border-b border-[var(--color-border-light)] flex flex-wrap gap-2">
+                {currentChatId && (
+                    <div className="flex bg-[var(--color-bg-app)] rounded-lg p-0.5">
+                        <button
+                            onClick={() => setSearchScope('current')}
+                            className={cn(
+                                "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                                searchScope === 'current' ? "bg-white shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                            )}
+                        >
+                            {language === 'zh' ? '当前聊天' : 'Current Chat'}
+                        </button>
+                        <button
+                            onClick={() => setSearchScope('all')}
+                            className={cn(
+                                "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                                searchScope === 'all' ? "bg-white shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                            )}
+                        >
+                            {language === 'zh' ? '所有聊天' : 'All Chats'}
+                        </button>
+                    </div>
+                )}
+
+                <div className="flex bg-[var(--color-bg-app)] rounded-lg p-0.5 overflow-x-auto no-scrollbar">
+                    {['all', 'text', 'image', 'file', 'audio'].map(type => (
+                        <button
+                            key={type}
+                            onClick={() => setFileType(type)}
+                            className={cn(
+                                "px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap",
+                                fileType === type ? "bg-white shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                            )}
+                        >
+                            {type === 'all' ? (language === 'zh' ? '全部' : 'All') :
+                                type === 'text' ? (language === 'zh' ? '文本' : 'Text') :
+                                    type === 'image' ? (language === 'zh' ? '图片' : 'Image') :
+                                        type === 'file' ? (language === 'zh' ? '文件' : 'File') :
+                                            (language === 'zh' ? '语音' : 'Audio')}
+                        </button>
+                    ))}
                 </div>
             </div>
 
@@ -144,7 +246,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage }) {
                                         {result.senderName}
                                     </p>
                                     <p className="text-sm text-[var(--color-text-main)] mt-1 line-clamp-2">
-                                        {highlightMatch(result.content, searchTerm)}
+                                        {highlightMatch(result.content, debouncedTerm)}
                                     </p>
                                 </div>
 

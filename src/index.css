@@ -1,42 +1,60 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @theme {
-  /* Macaron Orange Palette (WeChat Layout Style) */
+  /* Refined Macaron Orange Palette */
   --color-primary: #FFAB76;
-  /* Macaron Orange */
-  --color-primary-hover: #FF9655;
-  --color-primary-light: #FFE8D9;
-  --color-primary-softer: #FFF5EE;
-  --color-primary-glow: rgba(255, 171, 118, 0.3);
+  --color-primary-hover: #FF9A5B;
+  --color-primary-active: #E68A50;
+  --color-primary-light: #FFF0E6;
+  --color-primary-softer: #FFFAF5;
+  --color-primary-glow: rgba(255, 171, 118, 0.4);
 
-  --color-text-main: #191919;
-  --color-text-secondary: #576B95;
-  /* WeChat link blue */
-  --color-text-muted: #999999;
-  --color-text-light: #B2B2B2;
+  /* Modern Neutral Palette */
+  --color-gray-50: #F9FAFB;
+  --color-gray-100: #F3F4F6;
+  --color-gray-200: #E5E7EB;
+  --color-gray-300: #D1D5DB;
+  --color-gray-400: #9CA3AF;
+  --color-gray-500: #6B7280;
+  --color-gray-600: #4B5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1F2937;
+  --color-gray-900: #111827;
 
-  --color-bg-app: #EDEDED;
-  /* WeChat background gray */
+  /* Semantic Colors */
+  --color-text-main: var(--color-gray-900);
+  --color-text-secondary: var(--color-gray-600);
+  --color-text-muted: var(--color-gray-400);
+  --color-text-light: var(--color-gray-300);
+  --color-danger: #EF4444;
+  --color-success: #10B981;
+
+  /* Backgrounds */
+  --color-bg-app: #F5F7FA;
   --color-bg-white: #FFFFFF;
-  --color-bg-hover: #D8D8D8;
-  --color-bg-chat: #EDEDED;
-  --color-bg-glass: rgba(255, 255, 255, 0.85);
+  --color-bg-hover: var(--color-gray-100);
+  --color-bg-active: var(--color-gray-200);
+  --color-bg-chat: #F2F4F7;
+  --color-bg-glass: rgba(255, 255, 255, 0.75);
 
-  --color-border: #E6E6E6;
-  --color-border-light: #F0F0F0;
+  /* Border */
+  --color-border: var(--color-gray-200);
+  --color-border-light: var(--color-gray-100);
 
-  /* Enhanced Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-glow: 0 0 20px var(--color-primary-glow);
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-float: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+  --shadow-glow: 0 0 15px var(--color-primary-glow);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.03);
 
-  /* Refined Radius */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-bubble: 4px;
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-bubble: 12px;
 }
 
 * {
@@ -44,30 +62,44 @@
 }
 
 body {
-  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--color-bg-app);
   color: var(--color-text-main);
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
+  line-height: 1.5;
 }
 
-/* Hide scrollbar for cleaner look */
+/* Custom Scrollbar - Slim & Minimal */
 ::-webkit-scrollbar {
-  width: 0px;
-  height: 0px;
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
 
 /* Selection styling */
 ::selection {
   background-color: var(--color-primary-light);
-  color: var(--color-text-main);
+  color: var(--color-primary-active);
 }
 
 /* Focus outline */
 :focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-primary-hover);
   outline-offset: 1px;
 }
 
@@ -75,138 +107,29 @@ body {
 button,
 a,
 input,
-textarea {
-  transition: all 0.15s ease;
+textarea,
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
 }
 
-/* ========== Modern Animations ========== */
-
-/* Message entrance animation */
-@keyframes message-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-message-in {
-  animation: message-in 0.25s ease-out;
-}
-
-/* Fade in animation */
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out;
-}
-
-/* Scale in animation (for menus/popups) */
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-scale-in {
-  animation: scale-in 0.15s ease-out;
-}
-
-/* Slide up animation */
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
-}
-
-/* Pulse animation for typing indicator */
-@keyframes pulse-soft {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.animate-pulse {
-  animation: pulse-soft 1.5s ease-in-out infinite;
-}
-
-/* Typing dots animation */
-@keyframes typing-dots {
-
-  0%,
-  60%,
-  100% {
-    transform: translateY(0);
-  }
-
-  30% {
-    transform: translateY(-4px);
-  }
-}
-
-.typing-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: var(--color-primary);
-  margin: 0 2px;
-}
-
-.typing-dot:nth-child(1) {
-  animation: typing-dots 1s ease-in-out infinite;
-}
-
-.typing-dot:nth-child(2) {
-  animation: typing-dots 1s ease-in-out 0.2s infinite;
-}
-
-.typing-dot:nth-child(3) {
-  animation: typing-dots 1s ease-in-out 0.4s infinite;
-}
-
-/* ========== Glass Effect ========== */
-.glass-effect {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+/* Glassmorphism Utilities */
+.glass {
   background: var(--color-bg-glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
-/* ========== Button Styles ========== */
+.glass-dark {
+  background: rgba(30, 30, 30, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Reusable Component Styles */
 .btn-primary {
   background-color: var(--color-primary);
   color: white;
@@ -215,55 +138,28 @@ textarea {
   border-radius: var(--radius-md);
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary:hover {
   background-color: var(--color-primary-hover);
-  box-shadow: var(--shadow-glow);
+  box-shadow: var(--shadow-glow), var(--shadow-md);
   transform: translateY(-1px);
 }
 
 .btn-primary:active {
   transform: translateY(0);
+  background-color: var(--color-primary-active);
 }
 
-/* ========== Card Styles ========== */
-.card {
-  background: var(--color-bg-white);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-}
-
-.card-hover {
-  transition: all 0.2s ease;
-}
-
-.card-hover:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-}
-
-/* ========== Avatar Styles ========== */
-.avatar {
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.avatar-glow {
-  box-shadow: 0 0 0 2px var(--color-primary-light);
-}
-
-/* ========== Input Styles ========== */
 .input-modern {
   background: var(--color-bg-white);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 0.625rem 0.875rem;
-  font-size: 15px;
-  transition: all 0.15s ease;
+  font-size: 14px;
+  color: var(--color-text-main);
+  box-shadow: var(--shadow-sm);
 }
 
 .input-modern:focus {
@@ -272,46 +168,67 @@ textarea {
   box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
-/* ========== Time Separator ========== */
-.time-separator {
-  display: flex;
-  justify-content: center;
-  margin: 1rem 0;
-}
-
-.time-separator span {
-  padding: 0.25rem 0.75rem;
-  background: rgba(0, 0, 0, 0.05);
+.input-modern::placeholder {
   color: var(--color-text-muted);
-  font-size: 12px;
-  border-radius: 999px;
 }
 
-/* ========== Chat Bubble Enhancements ========== */
-.bubble-shadow {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* ========== Logo Animation ========== */
-@keyframes logo-float {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-3px);
-  }
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
-.logo-animated {
-  animation: logo-float 3s ease-in-out infinite;
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
-/* ========== Responsive Adjustments ========== */
+.animate-fade-in { animation: fadeIn 0.3s ease-out; }
+.animate-slide-up { animation: slideUp 0.3s ease-out; }
+.animate-scale-in { animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+
+/* Message Animations specialized */
+@keyframes messagePop {
+  0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-message-in {
+  animation: messagePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom left;
+}
+
+.justify-end .animate-message-in {
+  transform-origin: bottom right;
+}
+
+/* Typing Indicator Beat */
+@keyframes beat {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.8); opacity: 0.6; }
+}
+
+.typing-dot {
+  animation: beat 1.2s infinite ease-in-out;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background-color: var(--color-primary);
+  border-radius: 50%;
+  margin: 0 2px;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Responsive Adjustments */
 @media (max-width: 768px) {
-  .card {
-    border-radius: var(--radius-md);
+  :root {
+    --radius-lg: 12px;
+    --radius-xl: 16px;
   }
 }

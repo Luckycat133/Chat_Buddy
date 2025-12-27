@@ -8,6 +8,19 @@ import { cn } from '../utils/cn';
 const DEFAULT_USER_AVATARS = [
     { id: 'default_male', name: 'Male', path: '/avatars/default_male.png' },
     { id: 'default_female', name: 'Female', path: '/avatars/default_female.png' },
+    { id: 'default_abstract', name: 'Abstract', path: '/avatars/default_abstract.png' },
+    { id: 'default_cat', name: 'Cat', path: '/avatars/default_cat.png' },
+    { id: 'default_stardew_cat', name: 'Pixel Cat', path: '/avatars/default_stardew_cat.png' },
+    { id: 'default_watercolor_dog', name: 'Puppy', path: '/avatars/default_watercolor_dog.png' },
+    { id: 'default_watercolor_flower', name: 'Flower', path: '/avatars/default_watercolor_flower.png' },
+    { id: 'default_watercolor_mountain', name: 'Mountain', path: '/avatars/default_watercolor_mountain.png' },
+    { id: 'default_watercolor_bird', name: 'Bird', path: '/avatars/default_watercolor_bird.png' },
+    { id: 'default_watercolor_coffee', name: 'Coffee', path: '/avatars/default_watercolor_coffee.png' },
+    { id: 'default_watercolor_splash', name: 'Splash', path: '/avatars/default_watercolor_splash.png' },
+    { id: 'default_clay', name: 'Cloud', path: '/avatars/default_clay.png' },
+    { id: 'default_robot', name: 'Robot', path: '/avatars/default_robot.png' },
+    { id: 'default_minimalist', name: 'Minimalist', path: '/avatars/default_minimalist.png' },
+    { id: 'default_cyberpunk', name: 'Cyberpunk', path: '/avatars/default_cyberpunk.png' },
 ];
 
 const CHARACTER_AVATARS = [

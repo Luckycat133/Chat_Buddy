@@ -1,24 +1,28 @@
 import React, { useState } from 'react';
-import { Camera, Image as ImageIcon, Heart, MessageCircle, MoreHorizontal, Trash2, Share2 } from 'lucide-react';
+import { MapPin, Heart, MessageCircle, MoreHorizontal, Trash2, Share2, SmilePlus } from 'lucide-react';
 import { useMoments } from '../context/MomentsContext';
 import { useFriend } from '../context/FriendContext';
 import { useUser } from '../context/UserContext';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
 
+const REACTION_EMOJIS = ['😂', '❤️', '👍', '🔥', '😮', '😢'];
+
 export default function MomentCard({ post, onCommentClick }) {
-    const { toggleLike, deletePost, getAuthor } = useMoments();
+    const { toggleLike, deletePost, getAuthor, addReaction } = useMoments();
     const { getDisplayName } = useFriend();
     const { userProfile, getDisplayName: getUserDisplayName } = useUser();
     const { t, language } = useLanguage();
 
     const [showMenu, setShowMenu] = useState(false);
+    const [showReactions, setShowReactions] = useState(false);
 
     const author = getAuthor(post.authorId);
     const isOwn = post.authorId === 'user-me';
     const hasLiked = post.likes.includes('user-me');
     const likeCount = post.likes.length;
     const commentCount = post.comments.length;
+    const reactions = post.reactions || {};
 
     // Get display name
     const getAuthorName = () => {
@@ -66,6 +70,12 @@ export default function MomentCard({ post, onCommentClick }) {
         return names.join(', ');
     };
 
+    // Get visible reactions
+    const getReactionSummary = () => {
+        const entries = Object.entries(reactions).filter(([_, users]) => users.length > 0);
+        return entries.slice(0, 4); // Show max 4 different emoji types
+    };
+
     const handleShare = () => {
         if (navigator.share) {
             navigator.share({
@@ -73,10 +83,40 @@ export default function MomentCard({ post, onCommentClick }) {
                 text: post.content,
             });
         } else {
-            // Fallback: copy to clipboard
             navigator.clipboard.writeText(post.content);
             alert(language === 'zh' ? '已复制到剪贴板' : 'Copied to clipboard!');
         }
+    };
+
+    const handleReaction = (emoji) => {
+        addReaction(post.id, emoji, 'user-me');
+        setShowReactions(false);
+    };
+
+    // Format comment with reply info
+    const formatComment = (comment) => {
+        const commenter = getAuthor(comment.authorId);
+        const commenterName = comment.authorId === 'user-me'
+            ? getUserDisplayName(language)
+            : getDisplayName(commenter, language);
+
+        if (comment.replyTo) {
+            return (
+                <span>
+                    <span className="font-medium text-[var(--color-primary)]">{commenterName}</span>
+                    <span className="text-[var(--color-text-muted)]"> {t('reply_to') || 'replied'} </span>
+                    <span className="font-medium text-[var(--color-primary)]">{comment.replyTo.authorName}</span>
+                    <span className="text-[var(--color-text-main)]">: {comment.content}</span>
+                </span>
+            );
+        }
+
+        return (
+            <span>
+                <span className="font-medium text-[var(--color-primary)]">{commenterName}:</span>
+                <span className="text-[var(--color-text-main)] ml-1">{comment.content}</span>
+            </span>
+        );
     };
 
     return (
@@ -154,6 +194,14 @@ export default function MomentCard({ post, onCommentClick }) {
                         </div>
                     )}
 
+                    {/* Location */}
+                    {post.location && (
+                        <div className="flex items-center gap-1 mt-2 text-[var(--color-text-muted)] text-[12px]">
+                            <MapPin size={12} />
+                            <span>{post.location}</span>
+                        </div>
+                    )}
+
                     {/* Time and Actions */}
                     <div className="flex items-center justify-between mt-3">
                         <span className="text-[var(--color-text-muted)] text-[12px]">
@@ -161,10 +209,36 @@ export default function MomentCard({ post, onCommentClick }) {
                         </span>
 
                         <div className="flex items-center gap-4">
+                            {/* Reaction Picker */}
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowReactions(!showReactions)}
+                                    className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                >
+                                    <SmilePlus size={16} />
+                                </button>
+                                {showReactions && (
+                                    <>
+                                        <div className="fixed inset-0 z-10" onClick={() => setShowReactions(false)} />
+                                        <div className="absolute bottom-6 right-0 bg-white rounded-full shadow-lg border border-[var(--color-border)] z-20 flex gap-1 p-1">
+                                            {REACTION_EMOJIS.map(emoji => (
+                                                <button
+                                                    key={emoji}
+                                                    onClick={() => handleReaction(emoji)}
+                                                    className="w-8 h-8 flex items-center justify-center hover:bg-[var(--color-bg-app)] rounded-full text-[18px] transition-transform hover:scale-125"
+                                                >
+                                                    {emoji}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
                             {/* Share */}
                             <button
                                 onClick={handleShare}
-                                className="flex items-center gap-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
                             >
                                 <Share2 size={16} />
                             </button>
@@ -192,6 +266,21 @@ export default function MomentCard({ post, onCommentClick }) {
                         </div>
                     </div>
 
+                    {/* Reactions Display */}
+                    {getReactionSummary().length > 0 && (
+                        <div className="flex items-center gap-1 mt-2 flex-wrap">
+                            {getReactionSummary().map(([emoji, users]) => (
+                                <div
+                                    key={emoji}
+                                    className="flex items-center bg-[var(--color-bg-app)] rounded-full px-2 py-0.5 text-[12px]"
+                                >
+                                    <span>{emoji}</span>
+                                    <span className="ml-1 text-[var(--color-text-muted)]">{users.length}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Likes and Comments Section */}
                     {(likeCount > 0 || commentCount > 0) && (
                         <div className="mt-2 bg-[var(--color-bg-app)] rounded-lg overflow-hidden">
@@ -208,23 +297,11 @@ export default function MomentCard({ post, onCommentClick }) {
                             {/* Recent Comments */}
                             {commentCount > 0 && (
                                 <div className="px-2 py-1.5">
-                                    {post.comments.slice(-3).map((comment) => {
-                                        const commenter = getAuthor(comment.authorId);
-                                        const commenterName = comment.authorId === 'user-me'
-                                            ? getUserDisplayName(language)
-                                            : getDisplayName(commenter, language);
-
-                                        return (
-                                            <div key={comment.id} className="text-[13px] py-0.5">
-                                                <span className="font-medium text-[var(--color-primary)]">
-                                                    {commenterName}:
-                                                </span>
-                                                <span className="text-[var(--color-text-main)] ml-1">
-                                                    {comment.content}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
+                                    {post.comments.slice(-3).map((comment) => (
+                                        <div key={comment.id} className="text-[13px] py-0.5">
+                                            {formatComment(comment)}
+                                        </div>
+                                    ))}
                                     {commentCount > 3 && (
                                         <button
                                             onClick={() => onCommentClick(post)}

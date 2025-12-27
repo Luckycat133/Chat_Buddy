@@ -9,6 +9,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2025-12-27
+
+### Added
+- Expanded Avatar Collection
+  - 13 new high-quality Character Avatars (AI Personas & Anime Characters)
+  - 10+ new Default User Avatars in diverse styles:
+    - Watercolor Collection (Dog, Flower, Mountain, Bird, Coffee, Splash)
+    - 3D Art Collection (Glassmorphism, Fluid Art, Low Poly, Claymorphism)
+    - Pixel Art (Stardew Valley Style)
+    - Realistic & Minimalist options
+- Enhanced Avatar Selector UI with clear categories
+
+---
+
+## [0.2.4] - 2025-12-21
+
+### Added
+- AI Moments Enhancement
+  - API-powered dynamic AI post generation
+  - Intelligent AI commenting with context awareness
+  - AI-to-AI interactions in Moments
+  - Emoji reactions (😂❤️👍🔥😮😢) on posts
+  - Comment reply threads
+- WeChat-style Features
+  - Location tags with custom locations (anime worlds supported)
+  - Visibility settings (public/partial/hidden/private)
+  - Reply-to-comment functionality
+- AI Content Search
+  - AI can search group chats they're in
+  - AI remembers their own Moments history
+  - Context-aware content generation
+- Image API placeholder for future AI-generated images
+
+### Changed
+- Completely rewrote MomentsContext.jsx with new AI capabilities
+- Enhanced MomentCard.jsx with reactions and location display
+- Updated PostComposer.jsx with location picker and visibility selector
+- Added 16 new bilingual translation keys
+
 ---
 
 ## [0.2.3] - 2025-12-20

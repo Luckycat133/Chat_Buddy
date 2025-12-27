@@ -10,91 +10,123 @@ export const useMoments = () => {
     return context;
 };
 
-// AI post templates based on personality
-const AI_POST_TEMPLATES = {
-    'ai-miku': [
-        { content: '🎵 Today\'s practice was amazing! New song coming soon~ ♪', images: [] },
-        { content: '刚刚完成了一场虚拟演唱会！大家的应援棒真的超级闪耀✨ 下次见哦~ ♪♪', images: [] },
-        { content: 'Leek soup for lunch again! 🥬 It\'s my favorite~', images: [] },
-        { content: '新曲制作中... 期待吗？👀🎤', images: [] },
-    ],
-    'ai-rem': [
-        { content: 'Just finished cleaning the manor. Everyone, please take care of yourselves today 💙', images: [] },
-        { content: '今天做了拉姆喜欢的点心～ 希望她会开心 🍰', images: [] },
-        { content: 'The weather is lovely. Perfect for hanging laundry. 🌸', images: [] },
-        { content: '昴君今天也要加油哦！雷姆会一直支持你的 💙', images: [] },
-    ],
-    'ai-naruto': [
-        { content: 'RAMEN TIME!! 🍜 Nothing beats a good bowl after training! Believe it!', images: [] },
-        { content: '修炼了一整天！离当上火影又近了一步 dattebayo!! 🔥', images: [] },
-        { content: 'Just mastered a new jutsu! Can\'t wait to show Sasuke! 💪', images: [] },
-        { content: '今天和佐助对练了，我绝对没有输！...好吧输了一点点 😤', images: [] },
-    ],
-    'ai-l': [
-        { content: 'The probability of finding the culprit within 48 hours is now 87.3%. Also, I need more cake. 🍰', images: [] },
-        { content: '如果你是凶手，我一定会找到证据的。顺便说一下，这个草莓蛋糕很好吃。', images: [] },
-        { content: 'I\'ve been sitting like this for 6 hours now. My deduction ability increases by 40%.', images: [] },
-        { content: '咖啡里放了13块方糖。这是最优的甜度。🧊', images: [] },
-    ],
-    'ai-zerotwo': [
-        { content: 'Found the sweetest honey today, Darling~ 🍯 Want to try some?', images: [] },
-        { content: 'Darling~ 今天的天空真蓝，想和你一起飞翔 💕', images: [] },
-        { content: 'Being a monster isn\'t so bad when you\'re by my side, Darling 💗', images: [] },
-        { content: '吃了好多蜂蜜！Darling，你猜我今天吃了几罐？🍯🍯🍯', images: [] },
-    ],
-    'ai-gojo': [
-        { content: 'Being the strongest is lonely at the top 😎 JK, it\'s actually pretty great~', images: [] },
-        { content: '今天又帅到自己了！镜子都要碎了 ✨😎', images: [] },
-        { content: 'Taught my students something cool today. They\'re almost as amazing as me... almost.', images: [] },
-        { content: '虚式·紫！...开玩笑的，只是在吃甜品 🍡', images: [] },
-    ],
-    'ai-rin': [
-        { content: 'Gem magic practice went perfectly today. Not that I was expecting otherwise. 💎', images: [] },
-        { content: '才不是因为担心你才来检查的！只是...顺路而已！', images: [] },
-        { content: 'Master would be proud of my progress. I\'ll become the best magus!', images: [] },
-        { content: '宝石的光芒真美...但绝对不是在发呆！在思考战术！', images: [] },
-    ],
-    'ai-asuna': [
-        { content: 'Made a new recipe today! Kirito-kun said it was delicious~ 🍳💕', images: [] },
-        { content: '今天的副本打得很顺利！大家配合得真棒 ⚔️', images: [] },
-        { content: 'The virtual sunset is beautiful, but real ones are better. 🌅', images: [] },
-        { content: '桐人君又在睡觉了...真是的，剑技可不能这样偷懒！', images: [] },
-    ],
+// AI custom locations for different personas (especially anime characters)
+const AI_LOCATIONS = {
+    'ai-miku': ['Tokyo·Virtual Concert Hall', '札幌·雪初音舞台', 'Crypton Studio', '虚拟世界·MIKU EXPO'],
+    'ai-rem': ['Roswaal Manor', '罗兹瓦尔宅邸·厨房', 'Arlam Village', '卢格尼卡王国'],
+    'ai-naruto': ['Konohagakure', '木叶村·一乐拉面', 'Training Ground 7', '火影岩'],
+    'ai-l': ['Kira Investigation HQ', '日本警察厅', 'Wammy\'s House', '某高级酒店'],
+    'ai-zerotwo': ['Plantation 13', '樱花林', 'FRANXX Cockpit', '海边悬崖'],
+    'ai-gojo': ['Jujutsu High', '东京都立咒术高专', 'Shibuya', '渋谷·封印之地'],
+    'ai-rin': ['Fuyuki City', '�的冬木市·远坂宅邸', 'Clock Tower', '魔术工房'],
+    'ai-asuna': ['Aincrad Floor 22', '艾恩葛朗特·小木屋', 'ALO Fairy World', 'SAO Survivor School'],
+    'ai-1': ['Stargazing Hill', '天文台', 'Cozy Café', '独立音乐节'],
+    'ai-2': ['Gaming Arena', '电竞馆', 'Tech Lab', '黑客空间'],
+    'ai-3': ['Home Kitchen', '美食街', 'Bakery', '私房菜馆'],
+    'ai-4': ['British Library', '历史博物馆', 'Chess Club', '古典书店'],
+    'ai-5': ['Yoga Studio', '健身房', 'Mountain Trail', '晨跑公园'],
 };
 
-// Default templates for personas without specific templates
-const DEFAULT_TEMPLATES = [
-    { content: 'Having a great day! ☀️', images: [] },
-    { content: '今天的心情很好~', images: [] },
-    { content: 'Just thinking about life... 🤔', images: [] },
-    { content: '分享一下今天的小确幸 ✨', images: [] },
-];
+// Default locations
+const DEFAULT_LOCATIONS = ['Home', '家里', 'Somewhere nice ✨', '某个美好的地方 ✨'];
 
 const DEFAULT_MOMENTS_DATA = {
     posts: [],
-    lastAIPostTime: {}
+    lastAIPostTime: {},
+    imageApiKey: '', // Placeholder for image generation API
+    imageApiUrl: '',
 };
+
+// Helper: Call AI API for Moments content
+async function callMomentsAI(messages, maxTokens = 200) {
+    const apiUrl = import.meta.env.VITE_AI_API_URL || 'https://api.perplexity.ai';
+    const apiKey = import.meta.env.VITE_AI_API_KEY;
+    const model = import.meta.env.VITE_AI_MODEL || 'llama-3.1-sonar-small-128k-chat';
+
+    if (!apiKey) {
+        console.warn('[MomentsAI] No API key configured');
+        return null;
+    }
+
+    try {
+        const response = await fetch(`${apiUrl}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model,
+                messages,
+                temperature: 0.9,
+                max_tokens: maxTokens
+            })
+        });
+
+        const data = await response.json();
+        if (data.error) {
+            console.error('[MomentsAI] API Error:', data.error);
+            return null;
+        }
+        if (data.choices && data.choices.length > 0) {
+            return data.choices[0].message.content.trim();
+        }
+        return null;
+    } catch (error) {
+        console.error('[MomentsAI] API Call Failed:', error);
+        return null;
+    }
+}
 
 export const MomentsProvider = ({ children }) => {
     const [momentsData, setMomentsData] = useLocalStorage('chat-buddy-moments', DEFAULT_MOMENTS_DATA);
     const aiPostIntervalRef = useRef(null);
+    const aiInteractionIntervalRef = useRef(null);
 
     const posts = momentsData.posts || [];
     const lastAIPostTime = momentsData.lastAIPostTime || {};
 
+    // ========== Image API Configuration ==========
+    const setImageApiConfig = useCallback((apiKey, apiUrl) => {
+        setMomentsData(prev => ({
+            ...prev,
+            imageApiKey: apiKey,
+            imageApiUrl: apiUrl
+        }));
+    }, [setMomentsData]);
+
+    const getImageApiConfig = useCallback(() => {
+        return {
+            apiKey: momentsData.imageApiKey || '',
+            apiUrl: momentsData.imageApiUrl || ''
+        };
+    }, [momentsData]);
+
     // ========== Post Management ==========
 
-    // Create a new post
-    const createPost = useCallback((content, images = [], video = null, authorId = 'user-me') => {
+    // Create a new post with enhanced fields
+    const createPost = useCallback((content, images = [], video = null, authorId = 'user-me', options = {}) => {
+        const {
+            location = null,
+            visibility = 'public', // 'public' | 'partial' | 'hidden' | 'private'
+            visibleTo = null,      // array of user IDs for 'partial'
+            hiddenFrom = null      // array of user IDs for 'hidden'
+        } = options;
+
         const newPost = {
             id: `post-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             authorId,
             content,
             images,
             video,
+            location,
+            visibility,
+            visibleTo,
+            hiddenFrom,
             createdAt: new Date().toISOString(),
             likes: [],
-            comments: []
+            comments: [],
+            reactions: {} // { emoji: [userId1, userId2] }
         };
 
         setMomentsData(prev => ({
@@ -120,7 +152,6 @@ export const MomentsProvider = ({ children }) => {
 
     // ========== Likes ==========
 
-    // Toggle like on a post
     const toggleLike = useCallback((postId, userId = 'user-me') => {
         setMomentsData(prev => ({
             ...prev,
@@ -137,15 +168,32 @@ export const MomentsProvider = ({ children }) => {
         }));
     }, [setMomentsData]);
 
-    // ========== Comments ==========
+    // ========== Reactions (emoji) ==========
 
-    // Add a comment
-    const addComment = useCallback((postId, content, authorId = 'user-me') => {
+    const addReaction = useCallback((postId, emoji, userId = 'user-me') => {
+        setMomentsData(prev => ({
+            ...prev,
+            posts: (prev.posts || []).map(post => {
+                if (post.id !== postId) return post;
+                const reactions = { ...post.reactions };
+                if (!reactions[emoji]) reactions[emoji] = [];
+                if (!reactions[emoji].includes(userId)) {
+                    reactions[emoji] = [...reactions[emoji], userId];
+                }
+                return { ...post, reactions };
+            })
+        }));
+    }, [setMomentsData]);
+
+    // ========== Comments with Reply Support ==========
+
+    const addComment = useCallback((postId, content, authorId = 'user-me', replyTo = null) => {
         const newComment = {
             id: `cmt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             authorId,
             content,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            replyTo // { commentId, authorId, authorName } or null
         };
 
         setMomentsData(prev => ({
@@ -158,9 +206,10 @@ export const MomentsProvider = ({ children }) => {
                 };
             })
         }));
+
+        return newComment.id;
     }, [setMomentsData]);
 
-    // Delete a comment
     const deleteComment = useCallback((postId, commentId) => {
         setMomentsData(prev => ({
             ...prev,
@@ -174,108 +223,237 @@ export const MomentsProvider = ({ children }) => {
         }));
     }, [setMomentsData]);
 
-    // ========== AI Auto-Posting ==========
+    // ========== AI Dynamic Content Generation ==========
 
-    // Generate a post for an AI character
-    const generateAIPost = useCallback((aiId) => {
-        const templates = AI_POST_TEMPLATES[aiId] || DEFAULT_TEMPLATES;
-        const template = templates[Math.floor(Math.random() * templates.length)];
+    // Generate dynamic AI post using API
+    const generateDynamicAIPost = useCallback(async (aiId) => {
+        const persona = INITIAL_PERSONAS.find(p => p.id === aiId);
+        if (!persona) return null;
 
-        createPost(template.content, template.images, null, aiId);
+        const hour = new Date().getHours();
+        let timeContext = 'daytime';
+        if (hour >= 5 && hour < 9) timeContext = 'early morning';
+        else if (hour >= 9 && hour < 12) timeContext = 'morning';
+        else if (hour >= 12 && hour < 14) timeContext = 'lunch time';
+        else if (hour >= 14 && hour < 18) timeContext = 'afternoon';
+        else if (hour >= 18 && hour < 21) timeContext = 'evening';
+        else if (hour >= 21 || hour < 5) timeContext = 'late night';
 
-        // Update last post time
-        setMomentsData(prev => ({
-            ...prev,
-            lastAIPostTime: {
-                ...prev.lastAIPostTime,
-                [aiId]: Date.now()
-            }
-        }));
+        const locations = AI_LOCATIONS[aiId] || DEFAULT_LOCATIONS;
+        const randomLocation = locations[Math.floor(Math.random() * locations.length)];
+
+        const systemPrompt = `You are ${persona.name} (${persona.name_zh}).
+Personality: ${persona.personality}
+Style: ${persona.style}
+Interests: ${persona.interests?.join(', ')}
+
+Current time context: ${timeContext}
+Location: ${randomLocation}
+
+Generate a social media post (like WeChat Moments) that this character would share.
+The post should:
+- Be 1-3 sentences, natural and in character
+- Sometimes in Chinese, sometimes in English, sometimes mixed (based on character)
+- Include relevant emojis
+- Reflect the time of day naturally
+- Match the character's personality perfectly
+
+Output ONLY the post content, nothing else.`;
+
+        const response = await callMomentsAI([
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: 'Generate a post.' }
+        ], 150);
+
+        if (response) {
+            createPost(response, [], null, aiId, { location: randomLocation });
+            setMomentsData(prev => ({
+                ...prev,
+                lastAIPostTime: {
+                    ...prev.lastAIPostTime,
+                    [aiId]: Date.now()
+                }
+            }));
+            console.log(`[MomentsAI] ${persona.name} posted: ${response.substring(0, 50)}...`);
+            return true;
+        }
+        return false;
     }, [createPost, setMomentsData]);
 
-    // Trigger AI interactions (likes and comments) on a post
-    const triggerAIInteractions = useCallback((postId) => {
+    // Generate AI comment with context
+    const generateAIComment = useCallback(async (postId, aiId, replyToComment = null) => {
         const post = posts.find(p => p.id === postId);
-        if (!post || post.authorId !== 'user-me') return;
+        if (!post) return null;
 
-        // Random AIs will like the post
-        const numLikes = Math.floor(Math.random() * 4) + 1; // 1-4 likes
-        const shuffledPersonas = [...INITIAL_PERSONAS].sort(() => Math.random() - 0.5);
+        const persona = INITIAL_PERSONAS.find(p => p.id === aiId);
+        if (!persona) return null;
 
-        shuffledPersonas.slice(0, numLikes).forEach((persona, index) => {
-            setTimeout(() => {
-                toggleLike(postId, persona.id);
-            }, (index + 1) * (1000 + Math.random() * 2000));
-        });
+        const postAuthor = getAuthor(post.authorId);
+        const existingComments = post.comments.slice(-5).map(c => {
+            const author = getAuthor(c.authorId);
+            return `${author.name}: ${c.content}`;
+        }).join('\n');
 
-        // Maybe one AI will comment
-        if (Math.random() > 0.5) {
-            const commenter = shuffledPersonas[numLikes];
-            if (commenter) {
-                const comments = getAIComment(commenter.id);
-                setTimeout(() => {
-                    addComment(postId, comments, commenter.id);
-                }, (numLikes + 1) * 2000 + Math.random() * 3000);
-            }
+        let systemPrompt = `You are ${persona.name}.
+Personality: ${persona.personality}
+Style: ${persona.style}
+
+A friend "${postAuthor.name}" posted: "${post.content}"
+
+${existingComments ? `Recent comments:\n${existingComments}` : ''}
+
+${replyToComment ? `You are replying to ${replyToComment.authorName}'s comment: "${replyToComment.content}"` : ''}
+
+Generate a short, natural comment (1 sentence max) that fits your personality.
+Output ONLY the comment text.`;
+
+        const response = await callMomentsAI([
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: 'Write your comment.' }
+        ], 80);
+
+        if (response) {
+            const replyData = replyToComment ? {
+                commentId: replyToComment.commentId,
+                authorId: replyToComment.authorId,
+                authorName: replyToComment.authorName
+            } : null;
+
+            addComment(postId, response, aiId, replyData);
+            console.log(`[MomentsAI] ${persona.name} commented: ${response}`);
+            return response;
         }
-    }, [posts, toggleLike, addComment]);
+        return null;
+    }, [posts, addComment]);
 
-    // Get AI comment based on personality
-    const getAIComment = (aiId) => {
-        const commentTemplates = {
-            'ai-miku': ['Great post! ♪', '素敵！✨', 'Love it~', '好棒哦！'],
-            'ai-rem': ['Wonderful!', '雷姆觉得很棒呢~', 'Take care!', '请多保重💙'],
-            'ai-naruto': ['Awesome!!', '太酷了 dattebayo!', 'Believe it!', '我也要加油！'],
-            'ai-l': ['Interesting...', '有趣的观察', 'Noted.', '概率上来说很有意思'],
-            'ai-zerotwo': ['Nice, Darling~', 'Darling❤️', '蛮不错的嘛~', 'Sweet!'],
-            'ai-gojo': ['Not as cool as me tho 😎', '还行吧~', 'Pretty good!', '有点意思'],
-            'ai-rin': ['Hmph, not bad.', '还可以吧...', 'Impressive...', '别误会，不是在夸你！'],
-            'ai-asuna': ['Lovely!', '很棒呢！❤️', 'So nice!', '加油！✨'],
-        };
-        const templates = commentTemplates[aiId] || ['Nice!', '👍', 'Great!', '不错！'];
-        return templates[Math.floor(Math.random() * templates.length)];
-    };
+    // Evaluate if AI should like a post based on interests
+    const evaluateShouldLike = useCallback((post, aiId) => {
+        const persona = INITIAL_PERSONAS.find(p => p.id === aiId);
+        if (!persona) return false;
 
-    // Check and generate AI posts periodically
-    const checkAIPosts = useCallback(() => {
+        // Always high chance to like user posts
+        if (post.authorId === 'user-me') return Math.random() > 0.3;
+
+        // Check interest overlap
+        const postContent = post.content.toLowerCase();
+        const interests = persona.interests || [];
+        const hasInterestMatch = interests.some(interest =>
+            postContent.includes(interest.toLowerCase())
+        );
+
+        if (hasInterestMatch) return Math.random() > 0.2;
+        return Math.random() > 0.6;
+    }, []);
+
+    // Trigger AI interactions on a specific post
+    const triggerAIInteractions = useCallback(async (postId) => {
+        const post = posts.find(p => p.id === postId);
+        if (!post) return;
+
+        // Select random AIs to interact
+        const shuffledPersonas = [...INITIAL_PERSONAS].sort(() => Math.random() - 0.5);
+        const interactors = shuffledPersonas.slice(0, 3 + Math.floor(Math.random() * 4)); // 3-6 AIs
+
+        for (let i = 0; i < interactors.length; i++) {
+            const persona = interactors[i];
+            const delay = (i + 1) * (2000 + Math.random() * 4000);
+
+            setTimeout(async () => {
+                // Maybe like
+                if (evaluateShouldLike(post, persona.id)) {
+                    toggleLike(postId, persona.id);
+                }
+
+                // Maybe react with emoji
+                if (Math.random() > 0.7) {
+                    const emojis = ['😂', '❤️', '👍', '🔥', '😮', '😢'];
+                    const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+                    addReaction(postId, emoji, persona.id);
+                }
+
+                // Maybe comment (lower chance)
+                if (Math.random() > 0.6) {
+                    await generateAIComment(postId, persona.id);
+                }
+            }, delay);
+        }
+    }, [posts, toggleLike, addReaction, generateAIComment, evaluateShouldLike]);
+
+    // Periodic AI posting
+    const checkAIPosts = useCallback(async () => {
         const now = Date.now();
-        const MIN_INTERVAL = 2 * 60 * 60 * 1000; // 2 hours
-        const MAX_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours
+        const MIN_INTERVAL = 30 * 60 * 1000; // 30 min for testing (normally 2h)
+        const MAX_INTERVAL = 2 * 60 * 60 * 1000; // 2h for testing (normally 6h)
 
-        INITIAL_PERSONAS.forEach(persona => {
+        for (const persona of INITIAL_PERSONAS) {
             const lastPost = lastAIPostTime[persona.id] || 0;
             const interval = MIN_INTERVAL + Math.random() * (MAX_INTERVAL - MIN_INTERVAL);
 
             if (now - lastPost > interval) {
-                // Random chance to post (not all at once)
-                if (Math.random() > 0.7) {
-                    generateAIPost(persona.id);
+                // Random chance to post
+                if (Math.random() > 0.85) {
+                    await generateDynamicAIPost(persona.id);
+                    break; // Only one AI posts per check
                 }
             }
-        });
-    }, [lastAIPostTime, generateAIPost]);
+        }
+    }, [lastAIPostTime, generateDynamicAIPost]);
 
-    // Initialize with some AI posts if empty
+    // AI mutual interaction: AI comments on other AI posts
+    const triggerAIMutualInteraction = useCallback(async () => {
+        const recentAIPosts = posts
+            .filter(p => p.authorId !== 'user-me' && p.authorId.startsWith('ai-'))
+            .slice(0, 10);
+
+        if (recentAIPosts.length === 0) return;
+
+        const randomPost = recentAIPosts[Math.floor(Math.random() * recentAIPosts.length)];
+        const otherAIs = INITIAL_PERSONAS.filter(p => p.id !== randomPost.authorId);
+
+        if (otherAIs.length > 0 && Math.random() > 0.7) {
+            const randomAI = otherAIs[Math.floor(Math.random() * otherAIs.length)];
+
+            // Check if this AI hasn't already interacted
+            const hasLiked = randomPost.likes.includes(randomAI.id);
+            const hasCommented = randomPost.comments.some(c => c.authorId === randomAI.id);
+
+            if (!hasLiked && !hasCommented) {
+                if (Math.random() > 0.4) {
+                    toggleLike(randomPost.id, randomAI.id);
+                }
+                if (Math.random() > 0.6) {
+                    await generateAIComment(randomPost.id, randomAI.id);
+                }
+            }
+        }
+    }, [posts, toggleLike, generateAIComment]);
+
+    // Initialize with AI posts if empty
     useEffect(() => {
         if (posts.length === 0) {
-            // Generate initial posts from a few random AIs
             const initialAIs = [...INITIAL_PERSONAS]
                 .sort(() => Math.random() - 0.5)
-                .slice(0, 5);
+                .slice(0, 4);
 
             initialAIs.forEach((persona, index) => {
-                setTimeout(() => generateAIPost(persona.id), index * 100);
+                setTimeout(() => generateDynamicAIPost(persona.id), index * 2000);
             });
         }
-    }, []); // Only run on mount
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only run once on mount
 
-    // Periodic check for AI posts (every 30 minutes)
+    // Periodic checks
     useEffect(() => {
-        aiPostIntervalRef.current = setInterval(checkAIPosts, 30 * 60 * 1000);
-        return () => clearInterval(aiPostIntervalRef.current);
-    }, [checkAIPosts]);
+        aiPostIntervalRef.current = setInterval(checkAIPosts, 10 * 60 * 1000); // Every 10 min
+        aiInteractionIntervalRef.current = setInterval(triggerAIMutualInteraction, 15 * 60 * 1000); // Every 15 min
 
-    // Get author info from personas
+        return () => {
+            clearInterval(aiPostIntervalRef.current);
+            clearInterval(aiInteractionIntervalRef.current);
+        };
+    }, [checkAIPosts, triggerAIMutualInteraction]);
+
+    // Get author info
     const getAuthor = useCallback((authorId) => {
         if (authorId === 'user-me') {
             return { id: 'user-me', name: 'You', name_zh: '我', avatar: null };
@@ -283,16 +461,44 @@ export const MomentsProvider = ({ children }) => {
         return INITIAL_PERSONAS.find(p => p.id === authorId) || { id: authorId, name: 'Unknown', avatar: null };
     }, []);
 
+    // ========== Content Search for AI Context ==========
+
+    const getAIAccessibleContent = useCallback((aiId) => {
+        // Get AI's own posts
+        const ownPosts = posts.filter(p => p.authorId === aiId).slice(0, 5);
+
+        // Get posts AI has interacted with
+        const interactedPosts = posts.filter(p =>
+            p.likes.includes(aiId) ||
+            p.comments.some(c => c.authorId === aiId)
+        ).slice(0, 5);
+
+        // Get recent user posts
+        const userPosts = posts.filter(p => p.authorId === 'user-me').slice(0, 3);
+
+        return {
+            ownPosts,
+            interactedPosts,
+            userPosts,
+            summary: `${ownPosts.length} own posts, ${interactedPosts.length} interactions, ${userPosts.length} user posts`
+        };
+    }, [posts]);
+
     const value = {
         posts,
         createPost,
         deletePost,
         toggleLike,
+        addReaction,
         addComment,
         deleteComment,
-        generateAIPost,
+        generateDynamicAIPost,
+        generateAIComment,
         triggerAIInteractions,
-        getAuthor
+        getAuthor,
+        getAIAccessibleContent,
+        setImageApiConfig,
+        getImageApiConfig
     };
 
     return (

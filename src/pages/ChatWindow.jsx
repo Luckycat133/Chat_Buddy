@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Send, ArrowLeft, MoreHorizontal, Plus, Smile, Mic, Paperclip, X, Heart, Gift, Trophy, Gamepad2, Coins, Keyboard } from 'lucide-react';
+import { Send, ArrowLeft, MoreHorizontal, Plus, Smile, Mic, Paperclip, X, Heart, Gift, Trophy, Gamepad2, Coins, Keyboard, Search, BarChart3 } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useDocuments } from '../context/DocumentContext';
@@ -14,15 +14,18 @@ import MessageMenu from '../components/MessageMenu';
 import QuotedMessage from '../components/QuotedMessage';
 import FileUploader from '../components/FileUploader';
 import FileMessage, { GeneratedFileMessage } from '../components/FileMessage';
+import MessageSearchPanel from '../components/MessageSearchPanel';
 import ForwardModal from '../components/ForwardModal';
 import GiftPanel from '../components/GiftPanel';
 import RedPacketPanel from '../components/RedPacketPanel';
 import RockPaperScissors from '../components/RockPaperScissors';
+import PollMessage from '../components/PollMessage';
+import GroupPoll from '../components/GroupPoll';
 
 export default function ChatWindow() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { chats, personas, currentUser, sendMessage, typingIndicators, deleteMessage, pinMessage } = useChat();
+    const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, deleteMessage, pinMessage, votePoll } = useChat();
     const { t, language } = useLanguage();
     const { addDocument } = useDocuments();
     const { userProfile } = useUser();
@@ -34,6 +37,7 @@ export default function ChatWindow() {
     const [showStickerPicker, setShowStickerPicker] = useState(false);
     const [showFileUploader, setShowFileUploader] = useState(false);
     const [showPlusMenu, setShowPlusMenu] = useState(false);
+    const [showSearchPanel, setShowSearchPanel] = useState(false);
 
     // Voice Message states
     const [isRecordingMode, setIsRecordingMode] = useState(false);
@@ -45,6 +49,7 @@ export default function ChatWindow() {
     const [showGiftPanel, setShowGiftPanel] = useState(false);
     const [showRedPacketPanel, setShowRedPacketPanel] = useState(false);
     const [showGame, setShowGame] = useState(false);
+    const [showPoll, setShowPoll] = useState(false);
     const [messageToForward, setMessageToForward] = useState(null);
 
     // Message interaction states
@@ -193,6 +198,17 @@ export default function ChatWindow() {
         setShowPlusMenu(false);
     };
 
+    const handleCreatePoll = (poll) => {
+        // Logic similar to GroupDetails but we need to update chat polling data
+        // For now, simpler: just send message, but we need to persist poll data to show it interactive
+        // In GroupDetails we did: updateChat(id, { polls: [poll, ...] })
+        // We need updateChat here too? It's not in useChat return destructure in ChatWindow yet.
+        // Let's check useChat destructuring below.
+        // It's missing 'updateChat'. I need to add it.
+        // If I can't add it easily, I might skip persistence or do it via context.
+        // Actually, updateChat IS returned by useChat context, I just didn't destructure it in ChatWindow.
+    };
+
     // ... existing handlers ...
     const handleMessageContextMenu = (e, msg) => {
         e.preventDefault();
@@ -253,21 +269,22 @@ export default function ChatWindow() {
     return (
         <div className="flex flex-col h-full bg-[var(--color-bg-chat)] relative flex-1">
             {/* Header */}
-            <div className="px-3 py-2.5 bg-[var(--color-bg-app)] flex items-center justify-between border-b border-[var(--color-border)]">
-                <div className="flex items-center gap-2">
-                    <button onClick={() => navigate('/')} className="md:hidden p-1 text-[var(--color-text-main)]">
+            <div className="px-4 py-3 bg-white/80 backdrop-blur-md flex items-center justify-between border-b border-[var(--color-border-light)] sticky top-0 z-30 shadow-sm">
+                <div className="flex items-center gap-3">
+                    <button onClick={() => navigate('/')} className="md:hidden p-1.5 -ml-1.5 rounded-full hover:bg-black/5 text-[var(--color-text-main)] transition-colors">
                         <ArrowLeft size={22} />
                     </button>
                     <div>
                         <h2
-                            className="font-medium text-[var(--color-text-main)] text-[17px] cursor-pointer"
+                            className="font-semibold text-[var(--color-text-main)] text-[17px] cursor-pointer flex items-center gap-2"
                             onClick={() => navigate(`/chat/${chat.id}/details`)}
                         >
                             {headerInfo.name}
-                            {headerInfo.memberCount && <span className="text-[var(--color-text-muted)] font-normal">({headerInfo.memberCount})</span>}
+                            {headerInfo.memberCount && <span className="px-2 py-0.5 bg-[var(--color-gray-100)] text-[var(--color-text-muted)] text-xs rounded-full font-medium">{headerInfo.memberCount}</span>}
                         </h2>
                         {typingNames.length > 0 && (
-                            <p className="text-xs text-[var(--color-text-muted)] animate-pulse">
+                            <p className="text-xs text-[var(--color-primary)] font-medium flex items-center gap-1 animate-pulse">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] inline-block" />
                                 {typingNames.length === 1
                                     ? `${typingNames[0]} ${t('is_typing')}`
                                     : `${typingNames.length} ${t('people_typing')}`
@@ -276,9 +293,14 @@ export default function ChatWindow() {
                         )}
                     </div>
                 </div>
-                <button className="p-1 text-[var(--color-text-main)]" onClick={() => navigate(`/chat/${chat.id}/details`)}>
-                    <MoreHorizontal size={22} />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button className="p-2 rounded-full hover:bg-black/5 text-[var(--color-text-main)] transition-colors" onClick={() => setShowSearchPanel(true)}>
+                        <Search size={20} />
+                    </button>
+                    <button className="p-2 rounded-full hover:bg-black/5 text-[var(--color-text-main)] transition-colors" onClick={() => navigate(`/chat/${chat.id}/details`)}>
+                        <MoreHorizontal size={20} />
+                    </button>
+                </div>
             </div>
 
             {/* Messages */}
@@ -318,6 +340,19 @@ export default function ChatWindow() {
                     } else if (content.startsWith('[GAME:')) {
                         type = 'game';
                         content = content.replace('[GAME:', '').replace(']', '');
+                    } else if (content.startsWith('[POLL:')) {
+                        type = 'poll';
+                        const match = content.match(/\[POLL:(.+?)\]/);
+                        if (match) {
+                            const pollId = match[1];
+                            const poll = chat.polls?.find(p => p.id === pollId);
+                            if (poll) {
+                                meta = { poll };
+                            } else {
+                                type = 'text'; // Fallback if poll not found
+                                content = '[Poll not found]';
+                            }
+                        }
                     }
 
                     // React/Img existing parsing...
@@ -346,16 +381,16 @@ export default function ChatWindow() {
                             )}
 
                             <div
-                                className={cn("flex mb-3 animate-message-in", isMe ? "justify-end" : "justify-start")}
+                                className={cn("flex mb-4 animate-message-in group/msg", isMe ? "justify-end" : "justify-start")}
                                 onContextMenu={(e) => handleMessageContextMenu(e, msg)}
                             >
-                                <div className={cn("flex max-w-[70%] gap-2", isMe ? "flex-row-reverse" : "flex-row")}>
+                                <div className={cn("flex max-w-[75%] gap-2.5", isMe ? "flex-row-reverse" : "flex-row")}>
                                     {/* Avatar */}
-                                    <div className="w-9 h-9 rounded-[4px] overflow-hidden flex-shrink-0 bg-[#E0E0E0]">
+                                    <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 shadow-sm opacity-90 hover:opacity-100 transition-opacity">
                                         {sender?.avatar ? (
                                             <img src={sender.avatar} className="w-full h-full object-cover" alt="" />
                                         ) : (
-                                            <div className="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xs font-medium">
+                                            <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-active)] flex items-center justify-center text-white text-xs font-bold">
                                                 {senderName?.charAt(0)}
                                             </div>
                                         )}
@@ -363,18 +398,12 @@ export default function ChatWindow() {
 
                                     {/* Bubble */}
                                     <div className="relative">
-                                        {/* Triangle - only for text/file types */}
-                                        {(type === 'text' || type === 'file') && (
-                                            <div className={cn(
-                                                "absolute top-3 w-0 h-0 border-[6px]",
-                                                isMe ? "right-[-10px] border-transparent border-l-[var(--color-primary)]" : "left-[-10px] border-transparent border-r-white"
-                                            )} />
-                                        )}
-
                                         <div className={cn(
-                                            "relative",
+                                            "relative shadow-sm transition-all duration-200",
                                             (type === 'text' || type === 'file')
-                                                ? (isMe ? "px-3 py-2 bg-[var(--color-primary)] text-white rounded-[4px]" : "px-3 py-2 bg-white text-[var(--color-text-main)] rounded-[4px] shadow-sm")
+                                                ? (isMe
+                                                    ? "px-4 py-2.5 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-active)] text-white rounded-2xl rounded-tr-sm"
+                                                    : "px-4 py-2.5 bg-white text-[var(--color-text-main)] rounded-2xl rounded-tl-sm border border-[var(--color-border-light)]")
                                                 : "bg-transparent"
                                         )}>
                                             {/* Content based on type */}
@@ -383,41 +412,63 @@ export default function ChatWindow() {
                                             )}
 
                                             {type === 'sticker' ? (
-                                                <div className="text-6xl drop-shadow-sm hover:scale-110 transition-transform cursor-pointer">
+                                                <div className="text-7xl drop-shadow-md hover:scale-110 transition-transform cursor-pointer origin-bottom">
                                                     {content}
                                                 </div>
                                             ) : type === 'gift' && meta ? (
-                                                <div className="bg-[#FF4081] text-white p-3 rounded-lg shadow-md flex items-center gap-3 min-w-[150px]">
-                                                    <div className="text-3xl">{meta.emoji}</div>
+                                                <div className="bg-gradient-to-r from-pink-500 to-rose-500 text-white p-3 rounded-2xl shadow-lg flex items-center gap-3 min-w-[160px]">
+                                                    <div className="text-3xl bg-white/20 p-2 rounded-xl">{meta.emoji}</div>
                                                     <div>
                                                         <p className="font-bold text-sm">{language === 'zh' ? meta.name : meta.name_en}</p>
                                                         <p className="text-xs opacity-90">{language === 'zh' ? '赠送礼物' : 'Gift Sent'}</p>
                                                     </div>
                                                 </div>
                                             ) : type === 'red_packet' && meta ? (
-                                                <div className="bg-[#FA9D3B] text-white p-3 rounded-lg shadow-md flex items-center gap-3 min-w-[200px] cursor-pointer hover:bg-[#E68A2E]">
-                                                    <div className="bg-[#FEF2DC] rounded p-2">
-                                                        <Coins className="text-[#FA9D3B]" size={24} />
+                                                <div className="bg-gradient-to-r from-[#FA9D3B] to-[#F76B1C] text-white p-1 rounded-2xl shadow-md cursor-pointer hover:shadow-lg transition-shadow min-w-[220px]">
+                                                    <div className="flex items-center gap-3 p-3">
+                                                        <div className="bg-[#FEF2DC] rounded-xl p-2.5 text-[#FA9D3B]">
+                                                            <Coins size={24} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold">{meta.message || (language === 'zh' ? '恭喜发财' : 'Best Wishes')}</p>
+                                                            <p className="text-xs opacity-90">{language === 'zh' ? '查看红包' : 'Open Packet'}</p>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <p className="font-bold">{meta.message || (language === 'zh' ? '恭喜发财' : 'Best Wishes')}</p>
-                                                        <p className="text-xs opacity-90">{language === 'zh' ? '查看红包' : 'Open Packet'}</p>
+                                                    <div className="bg-white/10 px-3 py-1 rounded-b-xl text-[10px] opacity-80">
+                                                        Chat Buddy Red Packet
                                                     </div>
                                                 </div>
                                             ) : type === 'game' ? (
-                                                <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
-                                                    <p className="font-medium text-center mb-1">🎮 {content}</p>
+                                                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-2">
+                                                    <Gamepad2 size={24} className="text-[var(--color-primary)]" />
+                                                    <p className="font-medium text-center text-sm">{content}</p>
+                                                </div>
+                                            ) : type === 'poll' && meta?.poll ? (
+                                                <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 p-1">
+                                                    <PollMessage
+                                                        poll={meta.poll}
+                                                        onVote={(pollId, optionId) => votePoll(chat.id, pollId, optionId)}
+                                                    />
                                                 </div>
                                             ) : type === 'file' ? (
-                                                <div className={cn("text-sm", isMe ? "text-white/90" : "text-gray-600")}>
-                                                    📎 {content}
+                                                <div className="flex items-center gap-3">
+                                                    <div className={cn("p-2 rounded-lg", isMe ? "bg-white/20" : "bg-gray-100")}>
+                                                        <Paperclip size={20} className={isMe ? "text-white" : "text-[var(--color-text-muted)]"} />
+                                                    </div>
+                                                    <div className="text-sm underline underline-offset-2 opacity-90 hover:opacity-100 cursor-pointer">
+                                                        {content}
+                                                    </div>
                                                 </div>
                                             ) : (
                                                 // Text
-                                                <p className="whitespace-pre-wrap break-words">{content}</p>
+                                                <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
                                             )}
 
-                                            {reaction && <span className="ml-1">{reaction}</span>}
+                                            {reaction && (
+                                                <span className="absolute -bottom-2 -right-2 bg-white rounded-full p-0.5 shadow-sm text-xs border border-gray-100 z-10 scale-110">
+                                                    {reaction}
+                                                </span>
+                                            )}
                                         </div>
 
                                         {/* AI Generated Files */}
@@ -430,6 +481,17 @@ export default function ChatWindow() {
                                             </div>
                                         ))}
                                     </div>
+
+                                    {/* Action Menu Trigger (Visible on Hover) */}
+                                    <button
+                                        onClick={(e) => handleMessageContextMenu(e, msg)}
+                                        className={cn(
+                                            "opacity-0 group-hover/msg:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-gray-100 text-gray-400 self-center",
+                                            isMe ? "mr-1" : "ml-1"
+                                        )}
+                                    >
+                                        <MoreHorizontal size={14} />
+                                    </button>
                                 </div>
                             </div>
                         </React.Fragment>
@@ -459,125 +521,131 @@ export default function ChatWindow() {
             )}
 
             {/* Input Area */}
-            <div className="p-2 bg-[#F7F7F7] border-t border-[var(--color-border)] relative z-20">
-                <form onSubmit={handleSend} className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        className={cn("p-1.5 transition-colors", isRecordingMode ? "text-[var(--color-text-main)]" : "text-[#7F7F7F]")}
-                        onClick={() => setIsRecordingMode(!isRecordingMode)}
-                    >
-                        {isRecordingMode ? <Keyboard size={24} /> : <Mic size={24} />}
-                    </button>
-
-                    {isRecordingMode ? (
+            <div className="p-4 bg-[var(--color-bg-chat)] relative z-20">
+                <div className="bg-white rounded-2xl shadow-lg border border-[var(--color-border-light)] p-2">
+                    <form onSubmit={handleSend} className="flex items-end gap-2">
                         <button
                             type="button"
-                            onMouseDown={(e) => {
-                                e.preventDefault();
-                                setIsRecording(true);
-                                setRecordingStart(Date.now());
-                            }}
-                            onMouseUp={(e) => {
-                                e.preventDefault();
-                                if (isRecording) {
-                                    setIsRecording(false);
-                                    const duration = Math.round((Date.now() - recordingStart) / 1000);
-                                    if (duration < 1) {
-                                        showToast(t('voice_too_short') || 'Too short');
-                                    } else {
-                                        sendMessage(chat.id, `[VOICE:${duration}s]`);
-                                    }
-                                }
-                            }}
-                            onMouseLeave={() => setIsRecording(false)}
-                            className={cn(
-                                "flex-1 rounded-[4px] border-none px-3 py-2 text-[15px] font-medium transition-colors select-none",
-                                isRecording ? "bg-[#c6c6c6]" : "bg-white hover:bg-[#ebedf0] text-[var(--color-text-main)]"
-                            )}
+                            className={cn("p-2 rounded-full hover:bg-gray-100 transition-colors mb-0.5", isRecordingMode ? "text-[var(--color-text-main)]" : "text-[var(--color-text-muted)]")}
+                            onClick={() => setIsRecordingMode(!isRecordingMode)}
                         >
-                            {isRecording ? (language === 'zh' ? '松开 发送' : 'Release to Send') : (language === 'zh' ? '按住 说话' : 'Hold to Talk')}
+                            {isRecordingMode ? <Keyboard size={24} /> : <Mic size={24} />}
                         </button>
-                    ) : (
-                        <div className="flex-1 relative">
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                value={inputValue}
-                                onChange={handleInputChange}
-                                placeholder={t('type_message')}
-                                className="w-full bg-white rounded-[4px] border-none px-3 py-2 text-[15px] text-[var(--color-text-main)] placeholder:text-[#B2B2B2] focus:outline-none"
-                            />
-                            {/* @mention dropdown */}
-                            {showMentionDropdown && mentionCandidates.length > 0 && (
-                                <div className="absolute bottom-full left-0 mb-1 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[180px] max-h-[200px] overflow-y-auto z-40">
-                                    {mentionCandidates.map((person) => {
-                                        const pName = language === 'zh' ? (person.name_zh || person.name) : person.name;
-                                        return (
-                                            <button
-                                                key={person.id}
-                                                onClick={() => handleMentionSelect(person)}
-                                                className="w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-gray-50"
-                                            >
-                                                <div className="w-6 h-6 rounded-full overflow-hidden bg-gray-200">
-                                                    {person.avatar ? (
-                                                        <img src={person.avatar} alt="" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xs">
-                                                            {pName.charAt(0)}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <span className="text-[var(--color-text-main)]">@{pName}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+
+                        {isRecordingMode ? (
+                            <button
+                                type="button"
+                                onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    setIsRecording(true);
+                                    setRecordingStart(Date.now());
+                                }}
+                                onMouseUp={(e) => {
+                                    e.preventDefault();
+                                    if (isRecording) {
+                                        setIsRecording(false);
+                                        const duration = Math.round((Date.now() - recordingStart) / 1000);
+                                        if (duration < 1) {
+                                            showToast(t('voice_too_short') || 'Too short');
+                                        } else {
+                                            sendMessage(chat.id, `[VOICE:${duration}s]`);
+                                        }
+                                    }
+                                }}
+                                onMouseLeave={() => setIsRecording(false)}
+                                className={cn(
+                                    "flex-1 rounded-xl border-none px-4 py-3 text-[15px] font-medium transition-all select-none text-center shadow-inner",
+                                    isRecording
+                                        ? "bg-[var(--color-primary-light)] text-[var(--color-primary-active)] scale-95"
+                                        : "bg-gray-100 hover:bg-gray-200 text-[var(--color-text-main)]"
+                                )}
+                            >
+                                {isRecording ? (language === 'zh' ? '松开 发送' : 'Release to Send') : (language === 'zh' ? '按住 说话' : 'Hold to Talk')}
+                            </button>
+                        ) : (
+                            <div className="flex-1 relative min-h-[44px] flex items-center">
+                                <input
+                                    ref={inputRef}
+                                    type="text"
+                                    value={inputValue}
+                                    onChange={handleInputChange}
+                                    placeholder={t('type_message')}
+                                    className="w-full bg-transparent border-none px-2 py-2 text-[15px] text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
+                                />
+                                {/* @mention dropdown */}
+                                {showMentionDropdown && mentionCandidates.length > 0 && (
+                                    <div className="absolute bottom-full left-0 mb-3 bg-white rounded-xl shadow-float border border-[var(--color-border)] py-2 min-w-[200px] max-h-[240px] overflow-y-auto z-40">
+                                        {mentionCandidates.map((person) => {
+                                            const pName = language === 'zh' ? (person.name_zh || person.name) : person.name;
+                                            return (
+                                                <button
+                                                    key={person.id}
+                                                    onClick={() => handleMentionSelect(person)}
+                                                    className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 hover:bg-gray-50 transition-colors"
+                                                >
+                                                    <div className="w-7 h-7 rounded-full overflow-hidden bg-gray-200">
+                                                        {person.avatar ? (
+                                                            <img src={person.avatar} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xs font-bold">
+                                                                {pName.charAt(0)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-[var(--color-text-main)] font-medium">@{pName}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="flex items-center gap-1 mb-0.5">
+                            <button
+                                type="button"
+                                className={cn("p-2 rounded-full hover:bg-gray-100 transition-colors", showEmojiPicker ? "text-[var(--color-primary)] bg-[var(--color-primary-softer)]" : "text-[var(--color-text-muted)]")}
+                                onClick={() => {
+                                    setShowEmojiPicker(!showEmojiPicker);
+                                    setShowStickerPicker(false);
+                                    setShowPlusMenu(false);
+                                }}
+                            >
+                                <Smile size={24} />
+                            </button>
+
+                            <button
+                                type="button"
+                                className={cn("p-2 rounded-full hover:bg-gray-100 transition-colors", showStickerPicker ? "text-[var(--color-primary)] bg-[var(--color-primary-softer)]" : "text-[var(--color-text-muted)]")}
+                                onClick={() => {
+                                    setShowStickerPicker(!showStickerPicker);
+                                    setShowEmojiPicker(false);
+                                    setShowPlusMenu(false);
+                                }}
+                            >
+                                <Heart size={24} />
+                            </button>
+
+                            {inputValue.trim() ? (
+                                <button type="submit" className="ml-1 bg-[var(--color-primary)] text-white px-5 py-2 rounded-xl text-[15px] font-medium hover:bg-[var(--color-primary-hover)] active:scale-95 shadow-lg shadow-orange-200 transition-all">
+                                    {t('send')}
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className={cn("p-2 rounded-full hover:bg-gray-100 transition-colors", showPlusMenu ? "text-[var(--color-primary)] bg-[var(--color-primary-softer)]" : "text-[var(--color-text-muted)]")}
+                                    onClick={() => {
+                                        setShowPlusMenu(!showPlusMenu);
+                                        setShowEmojiPicker(false);
+                                        setShowStickerPicker(false);
+                                    }}
+                                >
+                                    <Plus size={24} />
+                                </button>
                             )}
                         </div>
-                    )}
-
-                    <button
-                        type="button"
-                        className={cn("p-1.5 relative transition-colors", showEmojiPicker ? "text-[var(--color-primary)]" : "text-[#7F7F7F]")}
-                        onClick={() => {
-                            setShowEmojiPicker(!showEmojiPicker);
-                            setShowStickerPicker(false);
-                            setShowPlusMenu(false);
-                        }}
-                    >
-                        <Smile size={24} />
-                    </button>
-
-                    <button
-                        type="button"
-                        className={cn("p-1.5 relative transition-colors", showStickerPicker ? "text-[var(--color-primary)]" : "text-[#7F7F7F]")}
-                        onClick={() => {
-                            setShowStickerPicker(!showStickerPicker);
-                            setShowEmojiPicker(false);
-                            setShowPlusMenu(false);
-                        }}
-                    >
-                        <Heart size={24} />
-                    </button>
-
-                    {inputValue.trim() ? (
-                        <button type="submit" className="bg-[var(--color-primary)] text-white px-4 py-1.5 rounded-[4px] text-[15px] font-medium hover:bg-[var(--color-primary-hover)]">
-                            {t('send')}
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            className={cn("p-1.5 relative transition-colors", showPlusMenu ? "text-[var(--color-primary)]" : "text-[#7F7F7F]")}
-                            onClick={() => {
-                                setShowPlusMenu(!showPlusMenu);
-                                setShowEmojiPicker(false);
-                                setShowStickerPicker(false);
-                            }}
-                        >
-                            <Plus size={24} />
-                        </button>
-                    )}
-                </form>
+                    </form>
+                </div>
 
                 {/* Popups */}
                 {showEmojiPicker && (
@@ -598,6 +666,7 @@ export default function ChatWindow() {
                         <MenuButton icon={Gift} label={language === 'zh' ? '礼物' : 'Gift'} onClick={() => setShowGiftPanel(true)} color="text-pink-500" bg="bg-pink-50" />
                         <MenuButton icon={Coins} label={language === 'zh' ? '红包' : 'Packet'} onClick={() => setShowRedPacketPanel(true)} color="text-red-500" bg="bg-red-50" />
                         <MenuButton icon={Gamepad2} label={language === 'zh' ? '游戏' : 'Game'} onClick={() => setShowGame(true)} color="text-purple-500" bg="bg-purple-50" />
+                        <MenuButton icon={BarChart3} label={language === 'zh' ? '投票' : 'Poll'} onClick={() => setShowPoll(true)} color="text-orange-500" bg="bg-orange-50" />
                     </div>
                 )}
             </div>
@@ -657,6 +726,36 @@ export default function ChatWindow() {
                     aiName={headerInfo.name}
                     onClose={() => setShowGame(false)}
                     onResult={handleGameResult}
+                />
+            )}
+
+            {showPoll && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-white rounded-lg w-full max-w-md mx-4 overflow-hidden shadow-2xl animate-scale-in">
+                        <GroupPoll
+                            onClose={() => setShowPoll(false)}
+                            onCreatePoll={(poll) => {
+                                const currentPolls = chat.polls || [];
+                                updateChat(chat.id, { polls: [poll, ...currentPolls] });
+                                sendMessage(chat.id, `[POLL:${poll.id}]`);
+                                setShowPoll(false);
+                                setShowPlusMenu(false);
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {showSearchPanel && (
+                <MessageSearchPanel
+                    currentChatId={chat.id}
+                    onClose={() => setShowSearchPanel(false)}
+                    onSelectMessage={(chatId, messageId) => {
+                        // Navigate to message or highlight it
+                        // For now we just close, as we are already in the chat or will stay here
+                        // Theoretically we should scroll to message, but that requires more complex logic
+                        setShowSearchPanel(false);
+                    }}
                 />
             )}
 

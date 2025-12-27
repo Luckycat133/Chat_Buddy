@@ -39,7 +39,6 @@ export default function ChatList() {
             const meta = getChatMetadata(chat);
             return meta.name.toLowerCase().includes(searchTerm.toLowerCase());
         })
-        // Sort: pinned first, then by last message time
         .sort((a, b) => {
             if (a.isPinned && !b.isPinned) return -1;
             if (!a.isPinned && b.isPinned) return 1;
@@ -75,30 +74,28 @@ export default function ChatList() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[var(--color-bg-white)] w-full md:w-[280px] flex-shrink-0 border-r border-[var(--color-border)]" onClick={closeContextMenu}>
+        <div className="flex flex-col h-full bg-[var(--color-bg-white)] w-full md:w-[320px] flex-shrink-0 border-r border-[var(--color-border)] relative z-10" onClick={closeContextMenu}>
             {/* Search Header */}
-            <div className="p-2 bg-[var(--color-bg-app)]">
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#B2B2B2]" size={14} />
+            <div className="p-4 bg-white/50 backdrop-blur-sm sticky top-0 z-10 border-b border-[var(--color-border-light)]">
+                <div className="relative group">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors group-focus-within:text-[var(--color-primary)]" size={16} />
                     <input
                         type="text"
                         placeholder={t('search')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-[var(--color-bg-white)] border-none rounded py-1.5 pl-8 pr-3 text-sm text-[var(--color-text-main)] placeholder:text-[#B2B2B2] focus:outline-none"
+                        className="w-full bg-[var(--color-bg-app)] border border-transparent rounded-xl py-2 pl-9 pr-3 text-sm text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:bg-white focus:border-[var(--color-primary-light)] focus:shadow-sm transition-all"
                     />
                 </div>
             </div>
 
             {/* Chat List */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
                 {filteredChats.map((chat) => {
                     const meta = getChatMetadata(chat);
                     const lastMsg = chat.lastMessage;
                     const time = lastMsg ? formatChatListTime(lastMsg.timestamp, language) : '';
                     const isActive = location.pathname === `/chat/${chat.id}`;
-
-                    // Check if anyone is typing in this chat
                     const typingAIs = typingIndicators?.[chat.id] || [];
                     const isTyping = typingAIs.length > 0;
 
@@ -108,42 +105,58 @@ export default function ChatList() {
                             to={`/chat/${chat.id}`}
                             onContextMenu={(e) => handleContextMenu(e, chat.id)}
                             className={cn(
-                                "flex items-center gap-3 px-3 py-2.5 border-b border-[var(--color-border-light)] transition-colors",
+                                "flex items-center gap-3.5 px-3 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden",
                                 isActive
-                                    ? "bg-[#C9C9C9]"
+                                    ? "bg-[var(--color-primary-softer)] shadow-sm"
                                     : chat.isPinned
-                                        ? "bg-[#F0F0F0] hover:bg-[#E8E8E8]"
-                                        : "bg-[var(--color-bg-white)] hover:bg-[#F5F5F5] active:bg-[#EBEBEB]"
+                                        ? "bg-[var(--color-bg-app)]/50 hover:bg-[var(--color-bg-app)]"
+                                        : "hover:bg-[var(--color-bg-hover)] active:bg-[var(--color-bg-active)]"
                             )}
                         >
+                            {/* Active Indicator Line */}
+                            {isActive && (
+                                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-[var(--color-primary)] rounded-r-full" />
+                            )}
+
                             {/* Avatar */}
-                            <div className="w-10 h-10 rounded-[4px] overflow-hidden flex-shrink-0 bg-[#E0E0E0] relative">
-                                {meta.avatar ? (
-                                    <img src={meta.avatar} alt="avatar" className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-white text-sm font-medium">
-                                        {meta.name.charAt(0)}
-                                    </div>
-                                )}
-                                {/* Online indicator */}
-                                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white" />
+                            <div className="relative flex-shrink-0">
+                                <div className={cn(
+                                    "w-12 h-12 rounded-xl overflow-hidden shadow-sm transition-transform duration-300",
+                                    isActive ? "ring-2 ring-[var(--color-primary-light)] scale-105" : "group-hover:scale-105"
+                                )}>
+                                    {meta.avatar ? (
+                                        <img src={meta.avatar} alt="avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-active)] flex items-center justify-center text-white text-lg font-bold">
+                                            {meta.name.charAt(0)}
+                                        </div>
+                                    )}
+                                </div>
+                                {/* Online indicator (mock) */}
+                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-sm" />
                             </div>
 
                             {/* Content */}
-                            <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="font-normal text-[15px] text-[var(--color-text-main)] truncate flex items-center gap-1">
-                                        {chat.isPinned && <Pin size={12} className="text-[var(--color-text-muted)]" />}
+                            <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                <div className="flex justify-between items-baseline mb-0.5">
+                                    <h3 className={cn(
+                                        "font-medium text-[15px] truncate flex items-center gap-1.5 transition-colors",
+                                        isActive ? "text-[var(--color-primary-active)]" : "text-[var(--color-text-main)]"
+                                    )}>
+                                        {chat.isPinned && <Pin size={12} className="text-[var(--color-primary)] fill-current rotate-45" />}
                                         {meta.name}
                                     </h3>
-                                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                                        {chat.isUnread && <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]" />}
-                                        <span className="text-xs text-[var(--color-text-muted)]">{time}</span>
+                                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                                        {chat.isUnread && <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-primary)] shadow-glow animate-pulse" />}
+                                        <span className={cn(
+                                            "text-xs",
+                                            isActive ? "text-[var(--color-primary)] font-medium" : "text-[var(--color-text-muted)]"
+                                        )}>{time}</span>
                                     </div>
                                 </div>
                                 <p className={cn(
-                                    "text-[13px] truncate mt-0.5",
-                                    isTyping ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                                    "text-[13px] truncate transition-colors",
+                                    isTyping ? "text-[var(--color-primary)] font-medium" : (isActive ? "text-[var(--color-text-secondary)]" : "text-[var(--color-text-muted)]")
                                 )}>
                                     {isTyping
                                         ? (language === 'zh' ? '正在输入...' : 'Typing...')
@@ -159,31 +172,32 @@ export default function ChatList() {
             {/* Context Menu */}
             {contextMenu && (
                 <div
-                    className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[140px] animate-scale-in"
+                    className="fixed z-50 bg-white/90 backdrop-blur-xl rounded-xl shadow-float border border-white/20 py-1.5 min-w-[160px] animate-scale-in origin-top-left overflow-hidden ring-1 ring-black/5"
                     style={{ left: contextMenu.x, top: contextMenu.y }}
                     onClick={(e) => e.stopPropagation()}
                 >
                     <button
                         onClick={() => handlePin(contextMenu.chatId)}
-                        className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 hover:bg-gray-50 text-gray-700"
+                        className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 hover:bg-[var(--color-primary-softer)] text-[var(--color-text-main)] transition-colors"
                     >
-                        <Pin size={16} />
+                        <Pin size={16} className={chats.find(c => c.id === contextMenu.chatId)?.isPinned ? "fill-current" : ""} />
                         {chats.find(c => c.id === contextMenu.chatId)?.isPinned
                             ? (language === 'zh' ? '取消置顶' : 'Unpin')
                             : (language === 'zh' ? '置顶' : 'Pin')}
                     </button>
                     <button
                         onClick={() => handleMarkUnread(contextMenu.chatId)}
-                        className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 hover:bg-gray-50 text-gray-700"
+                        className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 hover:bg-[var(--color-primary-softer)] text-[var(--color-text-main)] transition-colors"
                     >
                         <Circle size={16} />
                         {chats.find(c => c.id === contextMenu.chatId)?.isUnread
                             ? (language === 'zh' ? '标为已读' : 'Mark as Read')
                             : (language === 'zh' ? '标为未读' : 'Mark as Unread')}
                     </button>
+                    <div className="h-px bg-gray-100 my-1 mx-2" />
                     <button
                         onClick={() => handleDelete(contextMenu.chatId)}
-                        className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 hover:bg-red-50 text-red-500"
+                        className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 hover:bg-red-50 text-[var(--color-danger)] transition-colors"
                     >
                         <Trash2 size={16} />
                         {language === 'zh' ? '删除' : 'Delete'}

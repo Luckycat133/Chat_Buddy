@@ -1,9 +1,29 @@
 import React, { useState, useRef } from 'react';
-import { X, Image as ImageIcon, Send } from 'lucide-react';
+import { X, Image as ImageIcon, MapPin, Eye, ChevronDown, Check } from 'lucide-react';
 import { useMoments } from '../context/MomentsContext';
 import { useUser } from '../context/UserContext';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
+
+const PRESET_LOCATIONS = [
+    { en: 'Home', zh: '家里' },
+    { en: 'Office', zh: '办公室' },
+    { en: 'Café', zh: '咖啡厅' },
+    { en: 'Restaurant', zh: '餐厅' },
+    { en: 'Park', zh: '公园' },
+    { en: 'Gym', zh: '健身房' },
+    { en: 'Shopping Mall', zh: '商场' },
+    { en: 'Movie Theater', zh: '电影院' },
+    { en: 'Beach', zh: '海边' },
+    { en: 'Travel ✈️', zh: '旅行中 ✈️' },
+];
+
+const VISIBILITY_OPTIONS = [
+    { value: 'public', icon: '🌍', en: 'Public', zh: '公开' },
+    { value: 'partial', icon: '👥', en: 'Selected friends', zh: '部分可见' },
+    { value: 'hidden', icon: '🚫', en: 'Hide from...', zh: '不给谁看' },
+    { value: 'private', icon: '🔒', en: 'Only me', zh: '仅自己可见' },
+];
 
 export default function PostComposer({ isOpen, onClose }) {
     const { createPost } = useMoments();
@@ -13,13 +33,17 @@ export default function PostComposer({ isOpen, onClose }) {
     const [content, setContent] = useState('');
     const [images, setImages] = useState([]);
     const [isPosting, setIsPosting] = useState(false);
+    const [location, setLocation] = useState('');
+    const [showLocationPicker, setShowLocationPicker] = useState(false);
+    const [customLocation, setCustomLocation] = useState('');
+    const [visibility, setVisibility] = useState('public');
+    const [showVisibilityPicker, setShowVisibilityPicker] = useState(false);
     const fileInputRef = useRef(null);
 
     const handleImageSelect = (e) => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
 
-        // Limit to 9 images total
         const remaining = 9 - images.length;
         const filesToProcess = files.slice(0, remaining);
 
@@ -28,7 +52,6 @@ export default function PostComposer({ isOpen, onClose }) {
 
             const reader = new FileReader();
             reader.onload = (event) => {
-                // Resize image
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
@@ -56,7 +79,6 @@ export default function PostComposer({ isOpen, onClose }) {
             reader.readAsDataURL(file);
         });
 
-        // Reset input
         e.target.value = '';
     };
 
@@ -69,14 +91,38 @@ export default function PostComposer({ isOpen, onClose }) {
 
         setIsPosting(true);
 
-        // Create the post
-        createPost(content.trim(), images);
+        createPost(content.trim(), images, null, 'user-me', {
+            location: location || null,
+            visibility,
+            visibleTo: null,
+            hiddenFrom: null
+        });
 
         // Reset and close
         setContent('');
         setImages([]);
+        setLocation('');
+        setVisibility('public');
         setIsPosting(false);
         onClose();
+    };
+
+    const selectLocation = (loc) => {
+        setLocation(language === 'zh' ? loc.zh : loc.en);
+        setShowLocationPicker(false);
+    };
+
+    const handleCustomLocation = () => {
+        if (customLocation.trim()) {
+            setLocation(customLocation.trim());
+            setCustomLocation('');
+            setShowLocationPicker(false);
+        }
+    };
+
+    const getVisibilityLabel = () => {
+        const opt = VISIBILITY_OPTIONS.find(o => o.value === visibility);
+        return opt ? (language === 'zh' ? opt.zh : opt.en) : '';
     };
 
     if (!isOpen) return null;
@@ -117,10 +163,48 @@ export default function PostComposer({ isOpen, onClose }) {
                         </div>
                     )}
                 </div>
-                <span className="font-medium text-[var(--color-text-main)]">
-                    {getDisplayName(language)}
-                </span>
+                <div className="flex flex-col">
+                    <span className="font-medium text-[var(--color-text-main)]">
+                        {getDisplayName(language)}
+                    </span>
+                    {/* Visibility Selector */}
+                    <button
+                        onClick={() => setShowVisibilityPicker(!showVisibilityPicker)}
+                        className="flex items-center gap-1 text-[12px] text-[var(--color-text-muted)] mt-0.5"
+                    >
+                        <Eye size={12} />
+                        <span>{getVisibilityLabel()}</span>
+                        <ChevronDown size={12} />
+                    </button>
+                </div>
             </div>
+
+            {/* Visibility Picker Dropdown */}
+            {showVisibilityPicker && (
+                <div className="mx-4 mb-2 bg-[var(--color-bg-app)] rounded-lg overflow-hidden border border-[var(--color-border)]">
+                    {VISIBILITY_OPTIONS.map(opt => (
+                        <button
+                            key={opt.value}
+                            onClick={() => {
+                                setVisibility(opt.value);
+                                setShowVisibilityPicker(false);
+                            }}
+                            className={cn(
+                                "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
+                                visibility === opt.value ? "bg-[var(--color-primary)]/10" : "hover:bg-white"
+                            )}
+                        >
+                            <span className="text-[18px]">{opt.icon}</span>
+                            <span className="flex-1 text-[14px]">
+                                {language === 'zh' ? opt.zh : opt.en}
+                            </span>
+                            {visibility === opt.value && (
+                                <Check size={18} className="text-[var(--color-primary)]" />
+                            )}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto px-4">
@@ -157,10 +241,76 @@ export default function PostComposer({ isOpen, onClose }) {
                         ))}
                     </div>
                 )}
+
+                {/* Location Display */}
+                {location && (
+                    <div className="flex items-center gap-2 mt-4 text-[var(--color-primary)]">
+                        <MapPin size={16} />
+                        <span className="text-[14px]">{location}</span>
+                        <button
+                            onClick={() => setLocation('')}
+                            className="ml-auto text-[var(--color-text-muted)]"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                )}
             </div>
 
+            {/* Location Picker Modal */}
+            {showLocationPicker && (
+                <div className="absolute inset-0 bg-white z-10 flex flex-col">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
+                        <button onClick={() => setShowLocationPicker(false)} className="text-[var(--color-text-muted)]">
+                            <X size={24} />
+                        </button>
+                        <h3 className="font-medium text-[17px]">{t('add_location') || 'Add Location'}</h3>
+                        <div className="w-6" />
+                    </div>
+
+                    {/* Custom Location Input */}
+                    <div className="p-4 border-b border-[var(--color-border)]">
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={customLocation}
+                                onChange={(e) => setCustomLocation(e.target.value)}
+                                placeholder={language === 'zh' ? '输入自定义位置...' : 'Enter custom location...'}
+                                className="flex-1 px-3 py-2 bg-[var(--color-bg-app)] rounded-lg text-[14px] outline-none"
+                            />
+                            <button
+                                onClick={handleCustomLocation}
+                                disabled={!customLocation.trim()}
+                                className={cn(
+                                    "px-4 py-2 rounded-lg text-[14px] font-medium",
+                                    customLocation.trim()
+                                        ? "bg-[var(--color-primary)] text-white"
+                                        : "bg-[var(--color-bg-app)] text-[var(--color-text-muted)]"
+                                )}
+                            >
+                                {t('confirm') || 'OK'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Preset Locations */}
+                    <div className="flex-1 overflow-y-auto">
+                        {PRESET_LOCATIONS.map((loc, index) => (
+                            <button
+                                key={index}
+                                onClick={() => selectLocation(loc)}
+                                className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border-light)] hover:bg-[var(--color-bg-app)]"
+                            >
+                                <MapPin size={18} className="text-[var(--color-text-muted)]" />
+                                <span className="text-[14px]">{language === 'zh' ? loc.zh : loc.en}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Bottom Actions */}
-            <div className="border-t border-[var(--color-border)] px-4 py-3">
+            <div className="border-t border-[var(--color-border)] px-4 py-3 flex gap-2">
                 <input
                     type="file"
                     ref={fileInputRef}
@@ -181,8 +331,21 @@ export default function PostComposer({ isOpen, onClose }) {
                 >
                     <ImageIcon size={20} />
                     <span className="text-[14px]">
-                        {t('add_photos') || 'Add Photos'} {images.length > 0 && `(${images.length}/9)`}
+                        {t('add_photos') || 'Photos'} {images.length > 0 && `(${images.length}/9)`}
                     </span>
+                </button>
+
+                <button
+                    onClick={() => setShowLocationPicker(true)}
+                    className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-lg transition-colors",
+                        location
+                            ? "text-[var(--color-primary)]"
+                            : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-app)]"
+                    )}
+                >
+                    <MapPin size={20} />
+                    <span className="text-[14px]">{t('location') || 'Location'}</span>
                 </button>
             </div>
         </div>

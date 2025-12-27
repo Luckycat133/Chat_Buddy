@@ -86,6 +86,7 @@ export const LOCALES = {
         feature_tech: 'Powered by DeepSeek API for intelligent responses',
         feature_anime: '8 beloved anime characters to chat with',
         changelog_title: 'Recent Updates',
+        changelog_v024: 'AI Moments: Dynamic posting, smart comments, reactions, location tags, visibility settings, content search',
         changelog_v023: 'Social features: Moments, Friends, Check-in, Achievements, Red Packet, Gift, Games, Theme & Notification settings',
         changelog_v022: 'Emoji picker, message menu, file upload, RAG search, bilingual fixes',
         changelog_v021: 'AI multi-message, typing indicators, WeChat-style time, new avatars',
@@ -222,7 +223,23 @@ export const LOCALES = {
         just_now: 'Just now',
         no_posts: 'No moments yet',
         be_first: 'Be the first to share!',
-        view_all_comments: 'View all comments'
+        view_all_comments: 'View all comments',
+        // v0.2.4 - Location & Visibility
+        location: 'Location',
+        add_location: 'Add Location',
+        visibility: 'Who can see',
+        public: 'Public',
+        partial_visible: 'Selected friends',
+        hidden_from: 'Hide from',
+        private_only: 'Only me',
+        // v0.2.4 - Replies & Reactions
+        reply: 'Reply',
+        reply_to: 'replied',
+        replying_to: 'Replying to',
+        reactions: 'Reactions',
+        ai_posting: 'AI is sharing thoughts...',
+        ai_commented: 'commented on your post',
+        ai_liked: 'liked your post'
     },
     zh: {
         nav_chats: '聊天列表',
@@ -311,6 +328,7 @@ export const LOCALES = {
         feature_tech: '基于DeepSeek API提供智能回复',
         feature_anime: '8位心爱的二次元角色可以聊天',
         changelog_title: '最近更新',
+        changelog_v024: 'AI朋友圈：动态发布、智能评论、表情回应、位置标签、可见范围、内容搜索',
         changelog_v023: '社交功能：朋友圈、好友管理、签到、成就、红包、礼物、小游戏、主题与通知设置',
         changelog_v022: '表情选择器、消息菜单、文件上传、RAG搜索、双语修复',
         changelog_v021: 'AI多条消息、输入指示器、微信时间格式、真实头像',
@@ -447,6 +465,22 @@ export const LOCALES = {
         just_now: '刚刚',
         no_posts: '暂无动态',
         be_first: '成为第一个分享的人！',
-        view_all_comments: '查看全部评论'
+        view_all_comments: '查看全部评论',
+        // v0.2.4 - 位置与可见性
+        location: '位置',
+        add_location: '添加位置',
+        visibility: '谁可以看',
+        public: '公开',
+        partial_visible: '部分可见',
+        hidden_from: '不给谁看',
+        private_only: '仅自己可见',
+        // v0.2.4 - 回复与表情
+        reply: '回复',
+        reply_to: '回复了',
+        replying_to: '回复',
+        reactions: '表情',
+        ai_posting: 'AI正在分享动态...',
+        ai_commented: '评论了你的动态',
+        ai_liked: '赞了你的动态'
     }
 };

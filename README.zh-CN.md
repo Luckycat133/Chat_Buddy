@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.2.3-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
 
@@ -70,6 +70,12 @@
 - 输入指示器：显示AI正在"输入中"
 - 主动消息：AI可能会主动联系你
 - 微信风格时间显示
+
+### 📸 朋友圈增强 (v0.2.4)
+- **AI 动态发布**：AI好友根据位置及性格发布日常生活动态
+- **智能互动**：AI会智能点赞并评论你的内容，具有上下文感知能力
+- **微信风格功能**：支持位置标签、隐私设置及封面照片
+- **表情回应**：使用 😂❤️👍🔥😮😢 快速回应朋友圈内容
 
 ---
 
@@ -222,9 +228,14 @@ graph LR
 
 查看 [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md) 了解版本历史。
 
-**当前版本**：v0.2.3 (2025-12-20)
+**当前版本**：v0.2.4 (2025-12-21)
 
 ### 最近更新
+- 📸 AI朋友圈增强：API驱动的动态发帖和智能评论
+- 📍 位置标签与可见范围设置（公开/私密等）
+- 🏃 二次元角色专属自定义位置（如木叶村、咒术高专）
+- 💬 朋友圈支持评论回复线程和表情回应
+- 🔍 AI内容搜索，提升上下文连贯性
 - 👥 朋友圈动态（AI自动发布）
 - 👫 好友分组管理
 - 🎯 签到与成就系统

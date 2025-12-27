@@ -12,6 +12,7 @@ export default function About() {
     ];
 
     const changelog = [
+        { version: 'v0.2.4', date: '2025-12-21', changes: t('changelog_v024') },
         { version: 'v0.2.3', date: '2025-12-20', changes: t('changelog_v023') },
         { version: 'v0.2.2', date: '2025-12-14', changes: t('changelog_v022') },
         { version: 'v0.2.1', date: '2025-12-13', changes: t('changelog_v021') },
@@ -39,7 +40,7 @@ export default function About() {
                     Chat Buddy
                 </h1>
                 <p className="text-[var(--color-primary)] font-medium mt-1">
-                    v0.2.3
+                    v0.2.4
                 </p>
                 <p className="text-sm text-[var(--color-text-muted)] mt-2">
                     {t('about_tagline')}

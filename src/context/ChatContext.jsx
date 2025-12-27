@@ -105,6 +105,19 @@ export const ChatProvider = ({ children }) => {
         }));
     }, [setChats]);
 
+    // Logic: Clear Chat History
+    const clearChatMessages = useCallback((chatId) => {
+        setChats(prev => prev.map(chat => {
+            if (chat.id !== chatId) return chat;
+            return {
+                ...chat,
+                messages: [],
+                lastMessage: null,
+                pinnedMessages: [] // Optionally clear pinned messages too? Yes, if messages are gone.
+            };
+        }));
+    }, [setChats]);
+
     // Logic: Pin/Unpin Chat (Session Management)
     const pinChat = useCallback((chatId, isPinned) => {
         setChats(prev => prev.map(chat =>
@@ -137,6 +150,56 @@ export const ChatProvider = ({ children }) => {
                 return { ...chat, pinnedMessages: pinnedMessages.filter(id => id !== messageId) };
             }
             return chat;
+        }));
+    }, [setChats]);
+
+    // Logic: Vote on Poll
+    const votePoll = useCallback((chatId, pollId, optionId) => {
+        setChats(prev => prev.map(chat => {
+            if (chat.id !== chatId) return chat;
+            const polls = chat.polls || [];
+            const pollIndex = polls.findIndex(p => p.id === pollId);
+            if (pollIndex === -1) return chat;
+
+            const poll = { ...polls[pollIndex] };
+            const userId = 'user-me'; // Currently only user votes this way
+
+            // Handle voting logic
+            if (poll.isMultiChoice) {
+                // Toggle
+                const newOptions = poll.options.map(opt => {
+                    if (opt.id === optionId) {
+                        const votes = opt.votes || [];
+                        if (votes.includes(userId)) {
+                            return { ...opt, votes: votes.filter(id => id !== userId) };
+                        } else {
+                            return { ...opt, votes: [...votes, userId] };
+                        }
+                    }
+                    return opt;
+                });
+                poll.options = newOptions;
+
+            } else {
+                // Single choice - remove from others, add to this
+                const newOptions = poll.options.map(opt => {
+                    const votes = opt.votes || [];
+                    if (opt.id === optionId) {
+                        if (!votes.includes(userId)) {
+                            return { ...opt, votes: [...votes, userId] };
+                        }
+                        return opt;
+                    } else {
+                        // Remove if exists
+                        return { ...opt, votes: votes.filter(id => id !== userId) };
+                    }
+                });
+                poll.options = newOptions;
+            }
+
+            const newPolls = [...polls];
+            newPolls[pollIndex] = poll;
+            return { ...chat, polls: newPolls };
         }));
     }, [setChats]);
 
@@ -197,6 +260,14 @@ export const ChatProvider = ({ children }) => {
         // Remove stray closing brackets (possibly orphaned)
         cleaned = cleaned.replace(/\]\]/g, ']');
         cleaned = cleaned.replace(/\]\s*$/g, '');
+
+        // Transform GAME:Poll messages for AI context instead of removing them
+        cleaned = cleaned.replace(/\[GAME:Poll:\s*(.+?)\]/gi, (match, question) => {
+            return `[System: A poll has been created: "${question}". Please vote for an option.]`;
+        });
+
+        // Note: [POLL:ID] messages are kept as is, handled in context preparation
+
 
         // Remove any remaining [...] patterns that look like tool markers
         // Match patterns like [Something:...] or [WORD] where WORD is all caps
@@ -465,9 +536,22 @@ If you don't have anything to say, output [SILENCE].
                     const rawHistory = messagesToProcess.slice(-12).map(m => {
                         const isUser = m.senderId === 'user-me';
                         const sender = isUser ? 'User' : personas.find(p => p.id === m.senderId)?.name || 'Unknown';
+
+                        let content = m.content;
+                        // Resolve Poll ID to content for AI
+                        if (content.startsWith('[POLL:') && currentChat.polls) {
+                            const pollMatch = content.match(/\[POLL:(.+?)\]/);
+                            if (pollMatch) {
+                                const poll = currentChat.polls.find(p => p.id === pollMatch[1]);
+                                if (poll) {
+                                    content = `[System: A poll has been created: "${poll.question}". Options: ${poll.options.map((o, i) => `${i + 1}. ${o.text}`).join(', ')}. Please vote.]`;
+                                }
+                            }
+                        }
+
                         return {
                             role: isUser ? 'user' : 'assistant',
-                            content: `${sender}: ${m.content}`
+                            content: `${sender}: ${content}`
                         };
                     });
 
@@ -513,6 +597,7 @@ RULES:
 - If the user greets → respond
 - If mentioned → respond  
 - If interesting topic → respond
+- If a poll is created → respond by voting for an option (e.g., "I vote for option 1")
 - If unrelated → [SILENCE]
 - Keep each message short (1 sentence)
 - Sometimes split long responses into multiple short messages using [MULTI:...]
@@ -616,6 +701,7 @@ RULES:
         updateChat,
         deleteChat,
         deleteMessage,
+        clearChatMessages,
         typingIndicators,
         // Session Management
         pinChat,
@@ -623,7 +709,8 @@ RULES:
         setChatCategory,
         // Message Pinning
         pinMessage,
-        getPinnedMessages
+        getPinnedMessages,
+        votePoll
     };
 
     return (

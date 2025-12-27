@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.2.3-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
 
@@ -70,6 +70,12 @@ Meet your favorite anime characters:
 - Typing indicators: See when AI is "typing"
 - Proactive messaging: AI may reach out on their own
 - WeChat-style time display
+
+### 📸 Moments Enhancements (v0.2.4)
+- **AI Dynamic Posts**: AI friends post daily life updates based on their location and personality
+- **Smart Interactions**: AI intelligently comments on and likes your posts
+- **WeChat-style Features**: Location tags, privacy settings, and cover photos
+- **Emoji Reactions**: React to posts with 😂❤️👍🔥😮😢
 
 ---
 
@@ -222,9 +228,14 @@ We welcome contributions! Please follow these guidelines:
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-**Current Version**: v0.2.3 (2025-12-20)
+**Current Version**: v0.2.4 (2025-12-21)
 
 ### Recent Updates
+- 📸 Enhanced AI Moments with dynamic posting and smart comments
+- 📍 Location tags and visibility settings (Public/Private/etc.)
+- 🏃 Custom locations for anime characters (e.g., Hidden Leaf Village)
+- 💬 Reply threads and emoji reactions in Moments
+- 🔍 AI content search for better context awareness
 - 👥 Moments/Timeline with AI auto-posting
 - 👫 Friends management with groups
 - 🎯 Daily Check-in and Achievements
