@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { Upload, X, File, AlertCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { validateFile, getFileTypeInfo, formatFileSize, processFileForChat } from '../utils/fileUtils';
+import { validateFile, processFileForChat } from '../utils/fileUtils';
 import { cn } from '../utils/cn';
 
 export default function FileUploader({ onFileSelect, onClose }) {

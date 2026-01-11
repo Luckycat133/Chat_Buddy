@@ -9,6 +9,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-01-08
+
+### Added
+- **Specialized AI Agents System**
+  - Introduced 6 new Task Agents with professional personas:
+    - **Coder**: Programming assistant for debugging and code generation
+    - **Muse**: Creative writing and translation aide
+    - **Scholar**: Research and fact-checking specialist
+    - **Sensei**: Educational tutor and quiz generator
+    - **Aurora**: Emotional support and mindfulness guide
+    - **Pixel**: UI/UX design and creative direction assistant
+  - Modular **Agent Skills** system with 17 reusable capabilities
+- **ReAct Tool Calling Architecture**
+  - Implemented Reason+Act loop for autonomous agent behavior
+  - Created `toolService` with mock implementations for:
+    - `run_code`, `search_docs` (Programming)
+    - `web_search`, `analyze_data`, `cite_sources` (Research)
+    - `generate_image`, `color_palette` (Creative)
+    - `check_grammar`, `translate` (Writing)
+  - Agents can now understand task-specific system prompts and execute tools
+- **Contact List Enhancements**
+  - Added filter tabs: **All**, **Social Companions**, **Task Assistants**
+  - Smart categorization based on agent type
+- **UI Enhancements**
+  - Placeholder avatars for new agents (Cyberpunk, Watercolor, Minimalist styles)
+- **Muse Immersive Translation System**
+  - **Reflective Workflow**: Two-step translation (Literal → Polished) for high fidelity
+  - **Domain Detection**: Auto-identifies Technical, Literary, or General content
+  - **Smart Formatting**: Preserves code blocks, markdown, and HTML tags strictly
+- **Sensei 2.0 Cognitive Architecture**
+  - **Semi-Socratic Teaching**: Implemented adaptable guiding strategy (Probing/Hint/Direct Instruction) based on student frustration levels.
+  - **GraphRAG Knowledge Graph**: Integrated local knowledge graph with 25+ nodes covering Math, Coding, and Science to understand concept dependencies.
+  - **Prerequisite Checking**: Automatically checks for missing foundational knowledge before teaching complex topics.
+  - **Symbolic Math Engine**: Integrated `math.js` to eliminate mathematical hallucinations and ensure calculation accuracy.
+  - **Learning Progress Tracking**: Implemented LRS-Lite using localStorage to record mastery, struggles, and quiz history.
+- **RouteLLM Cost Optimization**
+  - Implemented smart model routing: Simple queries use small models, while complex reasoning triggers large/online models.
+  - **Terminology Management**: Built-in glossary for consistent technical terms
+- **Perplexity Sonar API Integration (Scholar Agent)**
+  - **Real-time Research**: Enabled searching the web with citation-backed accuracy using Sonar models
+  - **Structured Citations**: Automatic parsing of `[1]` markers with title, snippet, and date metadata
+  - **Dual-Layer Control**: System prompt handles generation style while API parameters control search domains
+  - **Domain Filtering**: Built-in presets for Academic, News, and Tech sources
+  - **Deep Research**: Implemented multi-hop search capabilities for complex queries
+  - **Fact Checking**: New tool to verify claims with confidence scores
+
+### Changed
+- Updated `chatService.js` to support dynamic system prompts
+- Refactored `ChatContext.js` to handle recursive tool execution loops
+- Upgraded localization files with support for all new agent types and skills
+
 ## [0.2.5] - 2025-12-27
 
 ### Added

@@ -3,6 +3,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const SocialContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSocial = () => {
     const context = useContext(SocialContext);
     if (!context) throw new Error('useSocial must be used within a SocialProvider');

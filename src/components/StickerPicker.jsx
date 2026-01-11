@@ -4,7 +4,7 @@ import { useSticker } from '../context/StickerContext';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
 
-export default function StickerPicker({ aiId, onSelect, onClose }) {
+export default function StickerPicker({ aiId, onSelect }) {
     const { stickerPacks, getAIStickers, getFavorites, getRecentlyUsed, addRecentlyUsed, addFavorite, removeFavorite, isFavorite } = useSticker();
     const { language } = useLanguage();
     const [activeTab, setActiveTab] = useState('recent');

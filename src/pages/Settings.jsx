@@ -5,10 +5,10 @@ import { useUser } from '../context/UserContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSocial } from '../context/SocialContext';
-import { ChevronRight, User, Bell, Lock, Globe, Info, Moon, HelpCircle, Volume2, VolumeX, BellOff, Trophy, Calendar, Gift, Search, Paintbrush, Image } from 'lucide-react';
+import { ChevronRight, Bell, Lock, Globe, Info, Moon, HelpCircle, Volume2, VolumeX, BellOff, Trophy, Calendar, Gift, Search, Image } from 'lucide-react';
 import { cn } from '../utils/cn';
 import CheckInPanel from '../components/CheckInPanel';
-import MessageSearchPanel from '../components/MessageSearchPanel';
+import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
 
 export default function Settings() {
     const { language, toggleLanguage, t } = useLanguage();

@@ -6,7 +6,7 @@ import { cn } from '../utils/cn';
 
 export default function CheckInPanel({ onClose }) {
     const { checkIn, hasCheckedInToday, streakDays, points, getAchievements } = useSocial();
-    const { t, language } = useLanguage();
+    const { language } = useLanguage();
     const [checkInResult, setCheckInResult] = useState(null);
     const [showAnimation, setShowAnimation] = useState(false);
     const [recentAchievements, setRecentAchievements] = useState([]);
@@ -41,7 +41,6 @@ export default function CheckInPanel({ onClose }) {
         for (let i = 0; i < 7; i++) {
             const date = new Date(today);
             date.setDate(today.getDate() - dayOfWeek + i);
-            const dateStr = date.toISOString().split('T')[0];
             const isToday = i === dayOfWeek;
             const isPast = i < dayOfWeek;
 

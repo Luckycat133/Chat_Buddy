@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Plus, Edit2, Trash2, X, Check, Users } from 'lucide-react';
 import { useFriend } from '../context/FriendContext';
-import { useChat } from '../context/ChatContext';
+import { useChat } from '../features/chat/context/ChatContext';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
 

@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
 import { LOCALES } from '../data/locales';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const LanguageContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useLanguage = () => {
     const context = useContext(LanguageContext);
     if (!context) throw new Error('useLanguage must be used within a LanguageProvider');

@@ -1,8 +1,9 @@
-import React, { createContext, useContext, useCallback, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useRef } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const NotificationContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useNotification = () => {
     const context = useContext(NotificationContext);
     if (!context) throw new Error('useNotification must be used within a NotificationProvider');
@@ -53,7 +54,7 @@ export const NotificationProvider = ({ children }) => {
                     // Browser may block autoplay, ignore error
                 });
             }
-        } catch (e) {
+        } catch {
             // Fallback: create new audio instance
             const audio = new Audio('/sounds/notification.mp3');
             audio.volume = settings.soundVolume;

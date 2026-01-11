@@ -3,6 +3,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const StickerContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useSticker = () => {
     const context = useContext(StickerContext);
     if (!context) throw new Error('useSticker must be used within a StickerProvider');

@@ -1,10 +1,7 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import {
     loadIndex,
-    saveIndex,
-    indexDocument,
-    searchDocuments,
     buildRAGContext,
     addDocumentToIndex,
     removeDocumentFromIndex
@@ -12,6 +9,7 @@ import {
 
 const DocumentContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useDocuments = () => {
     const context = useContext(DocumentContext);
     if (!context) throw new Error('useDocuments must be used within a DocumentProvider');

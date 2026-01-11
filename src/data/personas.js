@@ -1,3 +1,13 @@
+/**
+ * Personas - AI character definitions for Chat Buddy
+ * 
+ * This file contains two types of AI characters:
+ * 1. Social Companions (INITIAL_PERSONAS) - For casual chat and companionship
+ * 2. Task Specialists (from taskAgents.js) - For specific task types like coding, writing, etc.
+ */
+
+import { TASK_AGENTS } from './taskAgents';
+
 export const INITIAL_PERSONAS = [
     {
         id: 'ai-1',
@@ -207,7 +217,65 @@ export const INITIAL_PERSONAS = [
         color: 'bg-indigo-100 text-indigo-800',
         responseDelay: { min: 1000, max: 2500 },  // Confident, responds quickly to show off
         readDelay: { min: 400, max: 1000 },
-        typingSpeed: 'fast'
+        typingSpeed: 'fast',
+        agentType: 'social-companion' // Added for categorization
     }
 ];
 
+// Add agentType to all social personas (for personas that don't have it explicitly defined)
+INITIAL_PERSONAS.forEach(persona => {
+    if (!persona.agentType) {
+        persona.agentType = 'social-companion';
+    }
+});
+
+/**
+ * Get all personas including task specialists
+ * @returns {Array} Combined array of social companions and task specialists
+ */
+export function getAllPersonas() {
+    return [...INITIAL_PERSONAS, ...TASK_AGENTS];
+}
+
+/**
+ * Get personas by type
+ * @param {string} type - 'social-companion' or 'task-specialist'
+ * @returns {Array} Filtered array of personas
+ */
+export function getPersonasByType(type) {
+    return getAllPersonas().filter(p => p.agentType === type);
+}
+
+/**
+ * Get social companion personas only
+ * @returns {Array} Array of social companion personas
+ */
+export function getSocialCompanions() {
+    return INITIAL_PERSONAS;
+}
+
+/**
+ * Get task specialist agents only
+ * @returns {Array} Array of task specialist agents
+ */
+export function getTaskSpecialists() {
+    return TASK_AGENTS;
+}
+
+/**
+ * Check if a persona is a task specialist
+ * @param {string} personaId - Persona ID
+ * @returns {boolean} True if persona is a task specialist
+ */
+export function isTaskSpecialist(personaId) {
+    return TASK_AGENTS.some(agent => agent.id === personaId);
+}
+
+/**
+ * Get persona by ID from all personas
+ * @param {string} personaId - Persona ID
+ * @returns {Object|null} Persona object or null
+ */
+export function getPersonaById(personaId) {
+    return getAllPersonas().find(p => p.id === personaId) || null;
+}

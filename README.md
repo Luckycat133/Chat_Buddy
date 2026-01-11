@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)
+![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
 
@@ -153,46 +153,43 @@ npm run dev
 
 ## Architecture
 
+> See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+
 ### Tech Stack
 
-```
-├── Frontend Framework: React 18+
-├── Build Tool: Vite
-├── Styling: TailwindCSS + Vanilla CSS
-├── State Management: React Context API
-├── AI Backend: DeepSeek API
-└── Storage: LocalStorage
-```
+- Frontend: React 19, Vite
+- Styling: TailwindCSS
+- State: Clean Architecture (ChatEngine + Context)
+- AI: DeepSeek / Perplexity API
+- Storage: LocalStorage
 
 ### Project Structure
 
 ```
-Chat_Buddy_Remake/
-├── public/
-│   └── avatars/          # AI character avatars
-├── src/
-│   ├── components/       # Reusable UI components
-│   ├── context/          # React Context providers
-│   ├── data/             # Static data (personas, locales)
-│   ├── hooks/            # Custom React hooks
-│   ├── pages/            # Page components
-│   ├── styles/           # CSS files
-│   └── utils/            # Utility functions
-├── .env                  # Environment variables
-├── CHANGELOG.md          # Version history
-└── README.md             # This file
+src/
+├── core/               # Domain logic (pure JS)
+│   └── chat/
+├── services/           # Infrastructure (API, Storage)
+├── features/           # Feature modules
+│   ├── chat/
+│   └── moments/
+├── providers/          # Context composition
+├── components/         # Shared UI
+└── pages/              # Routes
 ```
 
 ### Data Flow
 
 ```mermaid
 graph LR
-    A[User Input] --> B[ChatWindow]
-    B --> C[ChatContext]
-    C --> D[DeepSeek API]
-    D --> E[AI Response]
-    E --> C
-    C --> F[LocalStorage]
+    A[User] --> B[ChatComposer]
+    B --> C[ChatEngine]
+    C --> D[AIPipeline]
+    D --> E[AI API]
+    E --> D
+    D --> C
+    C --> F[Storage]
+    C --> G[UI]
 ```
 
 ---
@@ -228,7 +225,7 @@ We welcome contributions! Please follow these guidelines:
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-**Current Version**: v0.2.4 (2025-12-21)
+**Current Version**: v0.3.0 (2026-01-08)
 
 ### Recent Updates
 - 📸 Enhanced AI Moments with dynamic posting and smart comments

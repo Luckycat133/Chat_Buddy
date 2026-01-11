@@ -42,19 +42,20 @@
   --color-border: var(--color-gray-200);
   --color-border-light: var(--color-gray-100);
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --shadow-float: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-  --shadow-glow: 0 0 15px var(--color-primary-glow);
-  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.03);
+  /* Shadows - Refined for better depth */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+  --shadow-float: 0 12px 24px -6px rgba(0, 0, 0, 0.06), 0 4px 8px -4px rgba(0, 0, 0, 0.02);
+  --shadow-glow: 0 0 20px var(--color-primary-glow);
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
 
   /* Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-bubble: 12px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
+  --radius-bubble: 14px; /* Slightly softer bubble radius */
 }
 
 * {
@@ -69,10 +70,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
-/* Custom Scrollbar - Slim & Minimal */
+/* Custom Scrollbar - Refined */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -83,12 +84,15 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.06);
   border-radius: 99px;
+  border: 2px solid transparent; /* Creates padding effect */
+  background-clip: content-box;
+  transition: background-color 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.15);
 }
 
 /* Selection styling */
@@ -97,10 +101,10 @@ body {
   color: var(--color-primary-active);
 }
 
-/* Focus outline */
+/* Focus outline - more subtle but accessible */
 :focus-visible {
   outline: 2px solid var(--color-primary-hover);
-  outline-offset: 1px;
+  outline-offset: 2px;
 }
 
 /* Smooth transitions */
@@ -114,19 +118,36 @@ textarea,
   transition-duration: 200ms;
 }
 
+/* Micro-interaction Utilities */
+.hover-lift {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.hover-glow:hover {
+  box-shadow: var(--shadow-glow);
+}
+
+.active-press:active {
+  transform: scale(0.96);
+}
+
 /* Glassmorphism Utilities */
 .glass {
   background: var(--color-bg-glass);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
 .glass-dark {
-  background: rgba(30, 30, 30, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(20, 20, 20, 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Reusable Component Styles */
@@ -134,11 +155,12 @@ textarea,
   background-color: var(--color-primary);
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1.2rem;
   border-radius: var(--radius-md);
   font-weight: 500;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s, box-shadow 0.2s;
 }
 
 .btn-primary:hover {
@@ -148,7 +170,7 @@ textarea,
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+  transform: translateY(0.5px) scale(0.98);
   background-color: var(--color-primary-active);
 }
 
@@ -156,10 +178,11 @@ textarea,
   background: var(--color-bg-white);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  padding: 0.625rem 0.875rem;
+  padding: 0.7rem 1rem;
   font-size: 14px;
   color: var(--color-text-main);
   box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .input-modern:focus {
@@ -179,27 +202,32 @@ textarea,
 }
 
 @keyframes slideUp {
-  from { transform: translateY(10px); opacity: 0; }
+  from { transform: translateY(12px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
 @keyframes scaleIn {
-  from { transform: scale(0.95); opacity: 0; }
+  from { transform: scale(0.96); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
 
-.animate-fade-in { animation: fadeIn 0.3s ease-out; }
-.animate-slide-up { animation: slideUp 0.3s ease-out; }
-.animate-scale-in { animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+.animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.animate-scale-in { animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
 /* Message Animations specialized */
 @keyframes messagePop {
-  0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+  0% { opacity: 0; transform: translateY(10px) scale(0.95); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .animate-message-in {
-  animation: messagePop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  animation: messagePop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   transform-origin: bottom left;
 }
 
@@ -210,7 +238,7 @@ textarea,
 /* Typing Indicator Beat */
 @keyframes beat {
   0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(0.8); opacity: 0.6; }
+  50% { transform: scale(0.75); opacity: 0.6; }
 }
 
 .typing-dot {
@@ -222,13 +250,21 @@ textarea,
   border-radius: 50%;
   margin: 0 2px;
 }
+.typing-dot:nth-child(1) { animation-delay: 0s; }
 .typing-dot:nth-child(2) { animation-delay: 0.2s; }
 .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* Staggered Animation Utilities */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
   :root {
-    --radius-lg: 12px;
-    --radius-xl: 16px;
+    --radius-lg: 14px;
+    --radius-xl: 20px;
   }
 }

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Star, Users, ChevronRight, Settings } from 'lucide-react';
-import { useChat } from '../context/ChatContext';
+import { useChat } from '../features/chat/context/ChatContext';
 import { useFriend } from '../context/FriendContext';
 import { useLanguage } from '../context/LanguageContext';
 import FriendDetail from '../components/FriendDetail';

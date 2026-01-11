@@ -3,6 +3,90 @@
  * Supports both English and Chinese localization
  */
 
+// ========== Common Helper Functions ==========
+
+/**
+ * Get date context information for time comparisons
+ * @param {string|Date} timestamp - ISO timestamp or Date object
+ * @returns {Object} Date context with comparison flags
+ */
+function getDateContext(timestamp) {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const diffMs = now - date;
+    const diffMinutes = Math.floor(diffMs / 1000 / 60);
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    return {
+        date,
+        now,
+        diffMs,
+        diffMinutes,
+        diffDays,
+        isToday: date.toDateString() === now.toDateString(),
+        isYesterday: date.toDateString() === yesterday.toDateString(),
+        isSameYear: date.getFullYear() === now.getFullYear()
+    };
+}
+
+/**
+ * Format time as HH:mm string
+ * @param {Date} date - Date object
+ * @param {string} language - 'en' or 'zh'
+ * @returns {string} Formatted time string
+ */
+function formatTimeString(date, language = 'en') {
+    return date.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    });
+}
+
+/**
+ * Format date as localized string (same year)
+ * @param {Date} date - Date object
+ * @param {string} language - 'en' or 'zh'
+ * @param {boolean} includeTime - Whether to include time
+ * @returns {string} Formatted date string
+ */
+function formatDateSameYear(date, language, includeTime = false) {
+    const timeStr = includeTime ? ` ${formatTimeString(date, language)}` : '';
+
+    if (language === 'zh') {
+        return `${date.getMonth() + 1}月${date.getDate()}日${timeStr}`;
+    }
+    return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+    }) + timeStr;
+}
+
+/**
+ * Format date as localized string (different year)
+ * @param {Date} date - Date object
+ * @param {string} language - 'en' or 'zh'
+ * @param {boolean} includeTime - Whether to include time
+ * @returns {string} Formatted date string
+ */
+function formatDateDifferentYear(date, language, includeTime = false) {
+    const timeStr = includeTime ? ` ${formatTimeString(date, language)}` : '';
+
+    if (language === 'zh') {
+        return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日${timeStr}`;
+    }
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    }) + timeStr;
+}
+
+// ========== Exported Functions ==========
+
 /**
  * Format a timestamp into a relative or absolute time string
  * @param {string|Date} timestamp - ISO timestamp or Date object
@@ -10,72 +94,38 @@
  * @returns {string} Formatted time string
  */
 export function formatRelativeTime(timestamp, language = 'en') {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffSeconds = Math.floor(diffMs / 1000);
-    const diffMinutes = Math.floor(diffSeconds / 60);
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    // Format time as HH:mm
-    const timeStr = date.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    });
+    const ctx = getDateContext(timestamp);
+    const timeStr = formatTimeString(ctx.date, language);
 
     // Just now (< 1 minute)
-    if (diffMinutes < 1) {
+    if (ctx.diffMinutes < 1) {
         return language === 'zh' ? '刚刚' : 'Just now';
     }
 
     // X minutes ago (< 60 minutes)
-    if (diffMinutes < 60) {
+    if (ctx.diffMinutes < 60) {
         return language === 'zh'
-            ? `${diffMinutes}分钟前`
-            : `${diffMinutes} min ago`;
+            ? `${ctx.diffMinutes}分钟前`
+            : `${ctx.diffMinutes} min ago`;
     }
 
-    // Check if same day
-    const isToday = date.toDateString() === now.toDateString();
-    if (isToday) {
+    // Today
+    if (ctx.isToday) {
         return timeStr;
     }
 
-    // Check if yesterday
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const isYesterday = date.toDateString() === yesterday.toDateString();
-    if (isYesterday) {
-        return language === 'zh'
-            ? `昨天 ${timeStr}`
-            : `Yesterday ${timeStr}`;
+    // Yesterday
+    if (ctx.isYesterday) {
+        return language === 'zh' ? `昨天 ${timeStr}` : `Yesterday ${timeStr}`;
     }
 
-    // Check if same year
-    const isSameYear = date.getFullYear() === now.getFullYear();
-    if (isSameYear) {
-        if (language === 'zh') {
-            return `${date.getMonth() + 1}月${date.getDate()}日 ${timeStr}`;
-        } else {
-            return date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric'
-            }) + ` ${timeStr}`;
-        }
+    // Same year
+    if (ctx.isSameYear) {
+        return formatDateSameYear(ctx.date, language, true);
     }
 
-    // Different year - show full date
-    if (language === 'zh') {
-        return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
-    } else {
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    }
+    // Different year
+    return formatDateDifferentYear(ctx.date, language, false);
 }
 
 /**
@@ -85,54 +135,37 @@ export function formatRelativeTime(timestamp, language = 'en') {
  * @returns {string} Short formatted time string
  */
 export function formatChatListTime(timestamp, language = 'en') {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMinutes = Math.floor(diffMs / 1000 / 60);
-
-    // Format time as HH:mm
-    const timeStr = date.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    });
+    const ctx = getDateContext(timestamp);
+    const timeStr = formatTimeString(ctx.date, language);
 
     // Today - show time only
-    if (date.toDateString() === now.toDateString()) {
+    if (ctx.isToday) {
         return timeStr;
     }
 
     // Yesterday
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (date.toDateString() === yesterday.toDateString()) {
+    if (ctx.isYesterday) {
         return language === 'zh' ? '昨天' : 'Yesterday';
     }
 
     // This week (within 7 days)
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    if (diffDays < 7) {
+    if (ctx.diffDays < 7) {
         const weekdays = language === 'zh'
             ? ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
             : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        return weekdays[date.getDay()];
+        return weekdays[ctx.date.getDay()];
     }
 
     // Same year - show month/day
-    if (date.getFullYear() === now.getFullYear()) {
-        if (language === 'zh') {
-            return `${date.getMonth() + 1}/${date.getDate()}`;
-        } else {
-            return `${date.getMonth() + 1}/${date.getDate()}`;
-        }
+    if (ctx.isSameYear) {
+        return `${ctx.date.getMonth() + 1}/${ctx.date.getDate()}`;
     }
 
     // Different year
     if (language === 'zh') {
-        return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
-    } else {
-        return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear().toString().slice(-2)}`;
+        return `${ctx.date.getFullYear()}/${ctx.date.getMonth() + 1}/${ctx.date.getDate()}`;
     }
+    return `${ctx.date.getMonth() + 1}/${ctx.date.getDate()}/${ctx.date.getFullYear().toString().slice(-2)}`;
 }
 
 /**
@@ -160,43 +193,25 @@ export function shouldShowTimeSeparator(prevTimestamp, currentTimestamp, thresho
  * @returns {string} Separator text
  */
 export function formatTimeSeparator(timestamp, language = 'en') {
-    const date = new Date(timestamp);
-    const now = new Date();
-
-    // Format time as HH:mm
-    const timeStr = date.toLocaleTimeString(language === 'zh' ? 'zh-CN' : 'en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
-    });
+    const ctx = getDateContext(timestamp);
+    const timeStr = formatTimeString(ctx.date, language);
 
     // Today
-    if (date.toDateString() === now.toDateString()) {
+    if (ctx.isToday) {
         return timeStr;
     }
 
     // Yesterday
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (date.toDateString() === yesterday.toDateString()) {
+    if (ctx.isYesterday) {
         return language === 'zh' ? `昨天 ${timeStr}` : `Yesterday ${timeStr}`;
     }
 
-    // This year
-    if (date.getFullYear() === now.getFullYear()) {
-        if (language === 'zh') {
-            return `${date.getMonth() + 1}月${date.getDate()}日 ${timeStr}`;
-        } else {
-            const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            return `${monthDay} ${timeStr}`;
-        }
+    // Same year
+    if (ctx.isSameYear) {
+        return formatDateSameYear(ctx.date, language, true);
     }
 
     // Different year
-    if (language === 'zh') {
-        return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${timeStr}`;
-    } else {
-        const fullDate = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-        return `${fullDate} ${timeStr}`;
-    }
+    return formatDateDifferentYear(ctx.date, language, true);
 }
+

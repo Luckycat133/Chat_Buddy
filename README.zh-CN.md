@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)
+![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
 
@@ -153,46 +153,43 @@ npm run dev
 
 ## 技术架构
 
+> 详见 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
 ### 技术栈
 
-```
-├── 前端框架: React 18+
-├── 构建工具: Vite
-├── 样式: TailwindCSS + 原生CSS
-├── 状态管理: React Context API
-├── AI后端: DeepSeek API
-└── 存储: LocalStorage
-```
+- 前端：React 19, Vite
+- 样式：TailwindCSS
+- 状态：Clean Architecture (ChatEngine + Context)
+- AI：DeepSeek / Perplexity API
+- 存储：LocalStorage
 
 ### 项目结构
 
 ```
-Chat_Buddy_Remake/
-├── public/
-│   └── avatars/          # AI角色头像
-├── src/
-│   ├── components/       # 可复用UI组件
-│   ├── context/          # React Context提供者
-│   ├── data/             # 静态数据（角色、语言包）
-│   ├── hooks/            # 自定义React钩子
-│   ├── pages/            # 页面组件
-│   ├── styles/           # CSS文件
-│   └── utils/            # 工具函数
-├── .env                  # 环境变量
-├── CHANGELOG.md          # 版本历史
-└── README.md             # 本文件
+src/
+├── core/               # 领域逻辑（纯 JS）
+│   └── chat/
+├── services/           # 基础设施（API, 存储）
+├── features/           # 功能模块
+│   ├── chat/
+│   └── moments/
+├── providers/          # Context 组合
+├── components/         # 共享 UI
+└── pages/              # 路由
 ```
 
 ### 数据流
 
 ```mermaid
 graph LR
-    A[用户输入] --> B[聊天窗口]
-    B --> C[聊天Context]
-    C --> D[DeepSeek API]
-    D --> E[AI回复]
-    E --> C
-    C --> F[本地存储]
+    A[用户] --> B[ChatComposer]
+    B --> C[ChatEngine]
+    C --> D[AIPipeline]
+    D --> E[AI API]
+    E --> D
+    D --> C
+    C --> F[存储]
+    C --> G[UI]
 ```
 
 ---
@@ -228,9 +225,12 @@ graph LR
 
 查看 [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md) 了解版本历史。
 
-**当前版本**：v0.2.4 (2025-12-21)
+**当前版本**：v0.3.0 (2026-01-08)
 
 ### 最近更新
+- 🧠 **专门任务智能体**：代码、写作、研究等6大领域的专业助手
+- 🛠️ **工具调用架构**：支持AI自主调用工具（代码执行、搜索等）
+- 📑 **联系人分类**：区分社交伙伴和任务助手
 - 📸 AI朋友圈增强：API驱动的动态发帖和智能评论
 - 📍 位置标签与可见范围设置（公开/私密等）
 - 🏃 二次元角色专属自定义位置（如木叶村、咒术高专）

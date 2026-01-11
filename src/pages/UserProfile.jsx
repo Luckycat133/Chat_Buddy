@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Edit2, MessageCircle, Users, Calendar } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { useUser } from '../context/UserContext';
-import { useChat } from '../context/ChatContext';
+import { useChat } from '../features/chat/context/ChatContext';
 
 export default function UserProfile() {
     const navigate = useNavigate();

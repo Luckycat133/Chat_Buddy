@@ -3,6 +3,7 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const FriendContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useFriend = () => {
     const context = useContext(FriendContext);
     if (!context) throw new Error('useFriend must be used within a FriendProvider');
