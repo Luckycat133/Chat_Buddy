@@ -6,6 +6,10 @@ import { Paperclip, MoreHorizontal, Coins, Gamepad2 } from 'lucide-react';
 import { useLanguage } from '../../../../context/LanguageContext';
 import QuotedMessage from '../QuotedMessage';
 import PollMessage from '../PollMessage';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { GeneratedFileMessage } from '../FileMessage';
 
 export default function MessageTimeline({
@@ -114,7 +118,7 @@ export default function MessageTimeline({
                             className={cn("flex mb-4 animate-message-in group/msg", isMe ? "justify-end" : "justify-start")}
                             onContextMenu={(e) => onContextMenu(e, msg)}
                         >
-                            <div className={cn("flex max-w-[75%] gap-2.5", isMe ? "flex-row-reverse" : "flex-row")}>
+                            <div className={cn("flex max-w-[75%] gap-2.5 min-w-0", isMe ? "flex-row-reverse" : "flex-row")}>
                                 {/* Avatar */}
                                 <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 shadow-sm opacity-90 hover:opacity-100 transition-opacity">
                                     {sender?.avatar ? (
@@ -127,7 +131,7 @@ export default function MessageTimeline({
                                 </div>
 
                                 {/* Bubble */}
-                                <div className="relative">
+                                <div className="relative min-w-0 overflow-hidden">
                                     <div className={cn(
                                         "relative shadow-sm transition-all duration-200",
                                         (type === 'text' || type === 'file')
@@ -189,7 +193,42 @@ export default function MessageTimeline({
                                                 </div>
                                             </div>
                                         ) : (
-                                            <p className="whitespace-pre-wrap break-words leading-relaxed">{content}</p>
+                                            <div className="markdown-body prose prose-sm max-w-full break-words leading-relaxed text-inherit overflow-x-auto">
+                                                <ReactMarkdown
+                                                    remarkPlugins={[remarkGfm]}
+                                                    components={{
+                                                        // Custom components can be added here
+                                                        a: ({ node, ...props }) => <a {...props} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" />,
+                                                        code: ({ node, inline, className, children, ...props }) => {
+                                                            const match = /language-(\w+)/.exec(className || '');
+                                                            return !inline && match ? (
+                                                                <SyntaxHighlighter
+                                                                    style={vscDarkPlus}
+                                                                    language={match[1]}
+                                                                    PreTag="div"
+                                                                    className="rounded-md !bg-black/80 !p-3 !my-2 shadow-sm border border-white/10"
+                                                                    {...props}
+                                                                >
+                                                                    {String(children).replace(/\n$/, '')}
+                                                                </SyntaxHighlighter>
+                                                            ) : (
+                                                                <code className="bg-black/5 rounded px-1 py-0.5 text-[0.9em] font-mono" {...props}>
+                                                                    {children}
+                                                                </code>
+                                                            );
+                                                        },
+                                                        table: ({ node, ...props }) => (
+                                                            <div className="overflow-x-auto my-4 border border-gray-200 rounded-lg shadow-sm">
+                                                                <table className="min-w-full divide-y divide-gray-200" {...props} />
+                                                            </div>
+                                                        ),
+                                                        th: ({ node, ...props }) => <th className="px-3 py-2 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider" {...props} />,
+                                                        td: ({ node, ...props }) => <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700 border-t border-gray-100" {...props} />
+                                                    }}
+                                                >
+                                                    {content}
+                                                </ReactMarkdown>
+                                            </div>
                                         )}
 
                                         {reaction && (

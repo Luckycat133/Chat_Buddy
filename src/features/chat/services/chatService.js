@@ -91,18 +91,24 @@ export async function callAI(messages, options = {}) {
     }
 
     // Configure tokens and model based on options
-    const maxTokens = options.maxTokens || (options.systemPrompt ? 500 : 150);
+    // REMOVED: Default token limits. Let the model/provider decide the limit to prevent truncation.
+    const maxTokens = options.maxTokens;
     const temperature = options.temperature ?? 0.8;
     // Allow overriding model (e.g. for Perplexity Sonar search)
     const selectedModel = options.model || config.defaultModel;
 
+    const requestBody = {
+        model: selectedModel,
+        messages: apiMessages,
+        temperature: temperature
+    };
+
+    if (maxTokens) {
+        requestBody.max_tokens = maxTokens;
+    }
+
     try {
-        const response = await aiClient.post('/chat/completions', {
-            model: selectedModel,
-            messages: apiMessages,
-            temperature: temperature,
-            max_tokens: maxTokens
-        });
+        const response = await aiClient.post('/chat/completions', requestBody);
 
         const data = await response.json();
         if (data.error) {
@@ -158,15 +164,18 @@ export function cleanMessageContent(content) {
     // Note: [POLL:ID] messages are kept as is, handled in context preparation
 
     // Remove any remaining [...] patterns that look like tool markers
-    // Match patterns like [Something:...] or [WORD] where WORD is all caps
-    cleaned = cleaned.replace(/\[[A-Z]+:[^\]]*\]/g, '');
+    // Match patterns like [Something:...] or [snake_case:...]
+    // UPDATED: Allow lowercase keys for tools like [immersive_translate:...]
+    cleaned = cleaned.replace(/\[[a-zA-Z0-9_]+:[^\]]*\]/g, '');
     cleaned = cleaned.replace(/\[[A-Z]{2,}\]/g, '');
 
-    // Clean up pipe characters that might be left over from MULTI parsing
-    cleaned = cleaned.replace(/\s*\|\s*/g, ' ');
+    // Clean up pipe characters ONLY if surrounded by single spaces (MULTI tag remnants)
+    // Preserve pipes at line start/end which are table delimiters
+    // DISABLED: This was breaking markdown tables. Better to leave pipes alone.
+    // cleaned = cleaned.replace(/\s*\|\s*/g, ' ');
 
-    // Clean up double or triple spaces
-    cleaned = cleaned.replace(/\s{2,}/g, ' ');
+    // Clean up double or triple HORIZONTAL spaces only (preserve newlines for Markdown)
+    cleaned = cleaned.replace(/[^\S\n]{2,}/g, ' ');
 
     // Trim whitespace
     cleaned = cleaned.trim();

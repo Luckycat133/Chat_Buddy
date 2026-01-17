@@ -11,6 +11,7 @@ export default function ChatComposer({
     quotedMessage,
     onCancelQuote,
     chatId,
+    chat,
     personas,
     headerInfo, // For sticker picker
     // Menu triggers

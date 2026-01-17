@@ -23,21 +23,8 @@ export default function AgentsPage() {
     });
 
     const handleChat = (agentId) => {
-        // Check if a chat with this agent already exists (1-on-1)
-        const existingChat = chats.find(chat =>
-            chat.participants.length === 2 &&
-            chat.participants.includes(agentId) &&
-            chat.participants.includes('user-me')
-        );
-
-        if (existingChat) {
-            navigate(`/chat/${existingChat.id}`);
-        } else {
-            // Create new chat if none exists
-            const agent = taskAgents.find(a => a.id === agentId);
-            const chatId = createChat(agent ? agent.name : 'New Chat', [agentId], agent?.avatar);
-            navigate(`/chat/${chatId}`);
-        }
+        // Navigate to the agent's dedicated workspace
+        navigate(`/agents/${agentId}`);
     };
 
     return (

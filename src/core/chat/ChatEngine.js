@@ -94,6 +94,7 @@ export class ChatEngine {
 
         // Trigger AI if user sent message
         if (senderId === 'user-me') {
+            this._checkAutoNaming(updatedChat);
             this._triggerAIResponse(updatedChat);
         }
     }
@@ -261,6 +262,49 @@ export class ChatEngine {
             if (isDirect || isMentioned || Math.random() > 0.3) {
                 this.aiPipeline.processTurn(chat, this.personas, ai);
             }
+        });
+    }
+
+    _checkAutoNaming(chat) {
+        // Only run for 1-on-1 chats with Task Agents, when it's the first message
+        if (chat.messages.length !== 1) return;
+        if (chat.participants.length !== 2) return;
+
+        const aiId = chat.participants.find(p => p !== 'user-me');
+        const ai = this.personas.find(p => p.id === aiId);
+
+        // Only for Task Agents
+        if (!ai || ai.agentType !== 'task-specialist') return;
+
+        // Construct a prompt specifically for naming
+        const firstMessage = chat.messages[0].content;
+        const namingPrompt = `
+Generate a short, descriptive title (maximum 6 words) for a conversation that starts with the following message. 
+The title should allow a user to instantly understand the topic of the chat for future lookup.
+Do not use quotes or punctuation. Just the title text.
+
+Message: "${firstMessage}"
+Title:`;
+
+        // Call AI Service directly for the name
+        // We use a light model if possible, but standard callAI logic handles it
+        import('../../features/chat/services/chatService').then(({ callAI }) => {
+            callAI([
+                { role: 'system', content: 'You are a helpful assistant that summarizes conversation topics.' },
+                { role: 'user', content: namingPrompt }
+            ], {
+                maxTokens: 20,
+                temperature: 0.3
+            }).then(title => {
+                if (title) {
+                    // Clean up quotes just in case
+                    const cleanTitle = title.replace(/["']/g, '').trim();
+                    console.log(`[ChatEngine] Auto-naming chat ${chat.id} -> ${cleanTitle}`);
+
+                    // Update chat name
+                    this.updateChat(chat.id, { name: cleanTitle });
+                }
+            }).catch(err => console.error('[ChatEngine] Auto-naming failed:', err));
         });
     }
 }

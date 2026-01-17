@@ -16,6 +16,7 @@ import ProfileEditor from './pages/ProfileEditor';
 import FriendsPage from './pages/FriendsPage';
 import FriendGroups from './pages/FriendGroups';
 import AgentsPage from './pages/AgentsPage';
+import AgentWorkspace from './pages/AgentWorkspace';
 import MomentsPage from './features/moments/MomentsPage';
 import AchievementsPage from './pages/AchievementsPage';
 
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="chat/:id/details" element={<GroupDetails />} />
             <Route path="create" element={<CreateChat />} />
             <Route path="agents" element={<AgentsPage />} />
+            <Route path="agents/:agentId" element={<AgentWorkspace />} />
             <Route path="friends" element={<FriendsPage />} />
             <Route path="friends/groups" element={<FriendGroups />} />
             <Route path="moments" element={<MomentsPage />} />

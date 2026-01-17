@@ -26,8 +26,9 @@ const ModalLoadingFallback = () => (
     </div>
 );
 
-export default function ChatWindow() {
-    const { id } = useParams();
+export default function ChatWindow({ chatId: propChatId }) {
+    const { id: paramChatId } = useParams();
+    const id = propChatId || paramChatId;
     const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, deleteMessage, pinMessage, votePoll } = useChat();
     const { t, language } = useLanguage();
     const { addDocument } = useDocuments();
@@ -129,6 +130,7 @@ export default function ChatWindow() {
 
             <ChatComposer
                 chatId={chat.id}
+                chat={chat}
                 personas={personas}
                 headerInfo={{ id: chat.participants[1], name: chat.name }} // Approx for sticker picker
                 quotedMessage={quotedMessage}

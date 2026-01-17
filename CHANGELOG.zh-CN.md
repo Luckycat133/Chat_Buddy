@@ -9,6 +9,34 @@ Chat Buddy Remake 的所有重要变更都将记录在此文件中。
 
 ## [未发布]
 
+### 新增
+- **Agent Workspace 智能体工作区**
+  - 为任务智能体创建独立的聊天空间 (`/agents/:agentId`)
+  - 每个智能体拥有独立的对话历史列表
+  - 将任务智能体对话从主聊天列表中分离，避免混淆
+
+- **对话自动命名**
+  - 新对话根据首条用户消息自动生成描述性标题
+  - 使用 AI 提取关键主题（最长6个词）
+  - 实现于 `ChatEngine.js` 的 `_checkAutoNaming` 方法
+
+- **Markdown 渲染增强**
+  - 集成 `react-markdown` + `remark-gfm` 支持 GFM 语法
+  - 集成 `react-syntax-highlighter` 实现代码高亮（VS Code 暗色主题）
+  - 添加 `@tailwindcss/typography` 插件优化排版
+  - 支持表格、代码块、标题、列表等 Markdown 元素
+
+### 修复
+- **消息内容 Markdown 渲染失败**
+  - 修复 `cleanMessageContent()` 中错误的正则表达式
+  - 之前 `\s{2,}` 会移除换行符，现改为 `[^\S\n]{2,}` 仅清除水平空白
+  - 之前 `\s*\|\s*` 会移除表格分隔符，已禁用该替换
+
+- **消息气泡溢出屏幕**
+  - 添加 `min-w-0` 到 flex 容器，允许正确收缩
+  - 添加 `overflow-hidden` 到气泡容器，防止内容溢出
+  - 添加 `overflow-x-auto` 到 Markdown 容器，宽表格可水平滚动
+
 ## [0.3.0] - 2026-01-08
 
 ### 新增

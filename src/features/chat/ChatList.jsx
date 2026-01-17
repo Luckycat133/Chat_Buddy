@@ -125,7 +125,11 @@ export default function ChatList() {
         return chats
             .map(chat => ({ chat, meta: getChatMetadata(chat) }))
             .filter(({ meta }) => {
+                // EXCLUDE TASK AGENTS from main list per user request
+                if (meta.type === 'task') return false;
+
                 const matchesSearch = meta.name.toLowerCase().includes(searchTerm.toLowerCase());
+                // activeTab logic simpler now since we only have 'all' effectively for non-task
                 const matchesTab = activeTab === 'all' || meta.type === activeTab;
                 return matchesSearch && matchesTab;
             })
@@ -185,7 +189,7 @@ export default function ChatList() {
                     />
                 </div>
 
-                {/* Filter Tabs */}
+                {/* Filter Tabs - Simplified to just toggle All/Social since Tasks are moved */}
                 <div className="flex p-1 bg-[var(--color-bg-app)] rounded-lg">
                     <button
                         onClick={() => setActiveTab('all')}
@@ -196,30 +200,9 @@ export default function ChatList() {
                                 : "text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
                         )}
                     >
-                        {t('all_personas')}
+                        {t('all_chats') || 'All Chats'}
                     </button>
-                    <button
-                        onClick={() => setActiveTab('social')}
-                        className={cn(
-                            "flex-1 py-1.5 text-xs font-medium rounded-md transition-all duration-200",
-                            activeTab === 'social'
-                                ? "bg-white text-[var(--color-primary)] shadow-sm"
-                                : "text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
-                        )}
-                    >
-                        {t('social_companions')}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('task')}
-                        className={cn(
-                            "flex-1 py-1.5 text-xs font-medium rounded-md transition-all duration-200",
-                            activeTab === 'task'
-                                ? "bg-white text-[var(--color-primary)] shadow-sm"
-                                : "text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
-                        )}
-                    >
-                        {t('task_agents')}
-                    </button>
+                    {/* Removed specific 'Social' vs 'Task' tabs as Task chats are now separate */}
                 </div>
             </div>
 
