@@ -131,7 +131,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                     day: 'numeric'
                 });
             }
-        } catch (e) {
+        } catch {
             return '';
         }
     };

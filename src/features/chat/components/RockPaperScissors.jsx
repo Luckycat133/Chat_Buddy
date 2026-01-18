@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';

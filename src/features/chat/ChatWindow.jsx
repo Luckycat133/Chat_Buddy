@@ -19,6 +19,9 @@ const RockPaperScissors = lazy(() => import('./components/RockPaperScissors'));
 const GroupPoll = lazy(() => import('./components/GroupPoll'));
 const MessageSearchPanel = lazy(() => import('./components/MessageSearchPanel'));
 
+const BackgroundLayer = lazy(() => import('../background/BackgroundLayer'));
+const BackgroundSettingsModal = lazy(() => import('../background/BackgroundSettingsModal'));
+
 // Loading fallback
 const ModalLoadingFallback = () => (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -41,6 +44,7 @@ export default function ChatWindow({ chatId: propChatId }) {
     const [showPoll, setShowPoll] = useState(false);
     const [messageToForward, setMessageToForward] = useState(null);
     const [showSearchPanel, setShowSearchPanel] = useState(false); // Lifted state
+    const [showBackgroundSettings, setShowBackgroundSettings] = useState(false);
 
     // Interaction states
     const [selectedMessage, setSelectedMessage] = useState(null);
@@ -113,10 +117,14 @@ export default function ChatWindow({ chatId: propChatId }) {
 
     return (
         <div className="flex flex-col h-full bg-[var(--color-bg-chat)] relative flex-1">
+            <Suspense fallback={null}>
+                <BackgroundLayer chatId={chat.id} />
+            </Suspense>
             <ChatHeader
                 chat={chat}
                 personas={personas}
                 typingIndicators={typingIndicators}
+                onOpenBackground={() => setShowBackgroundSettings(true)}
             // onOpenSearch={() => setShowSearchPanel(true)} // If we want to verify search works, we need to wire this or let it use URL
             />
 
@@ -207,7 +215,7 @@ export default function ChatWindow({ chatId: propChatId }) {
             {showPoll && (
                 <Suspense fallback={<ModalLoadingFallback />}>
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                        <div className="bg-white rounded-lg w-full max-w-md mx-4 overflow-hidden shadow-2xl animate-scale-in">
+                        <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-lg w-full max-w-md mx-4 overflow-hidden shadow-2xl animate-scale-in">
                             <GroupPoll onClose={() => setShowPoll(false)} onCreatePoll={handleCreatePoll} />
                         </div>
                     </div>
@@ -221,6 +229,16 @@ export default function ChatWindow({ chatId: propChatId }) {
                         currentChatId={chat.id}
                         onClose={() => setShowSearchPanel(false)}
                         onSelectMessage={() => setShowSearchPanel(false)}
+                    />
+                </Suspense>
+            )}
+
+            {showBackgroundSettings && (
+                <Suspense fallback={<ModalLoadingFallback />}>
+                    <BackgroundSettingsModal
+                        isOpen={true}
+                        chatId={chat.id}
+                        onClose={() => setShowBackgroundSettings(false)}
                     />
                 </Suspense>
             )}

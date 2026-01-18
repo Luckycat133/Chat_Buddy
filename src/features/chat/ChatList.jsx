@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useCallback, memo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Search, Pin, Circle, Trash2, X } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Search, Pin, Circle, Trash2, MessageSquarePlus, Sparkles, X } from 'lucide-react';
 import { useChat } from './context/ChatContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { cn } from '../../utils/cn';
 import { formatChatListTime } from '../../utils/formatTime';
 
-// ========== Memoized Chat List Item ==========
+// ========== Memoized Chat List Item (iOS 26 Card Style) ==========
 const ChatListItem = memo(function ChatListItem({
     chat,
     meta,
@@ -15,82 +15,151 @@ const ChatListItem = memo(function ChatListItem({
     time,
     language,
     t,
-    onContextMenu
+    onContextMenu,
+    index
 }) {
     return (
         <Link
             to={`/chat/${chat.id}`}
             onContextMenu={(e) => onContextMenu(e, chat.id)}
             className={cn(
-                "flex items-center gap-3.5 px-3 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden",
+                "flex items-center gap-4 p-3 rounded-[var(--radius-lg)] transition-all duration-400 group relative",
+                "border border-transparent",
                 isActive
-                    ? "bg-[var(--color-primary-softer)] shadow-sm"
-                    : chat.isPinned
-                        ? "bg-[var(--color-bg-app)]/50 hover:bg-[var(--color-bg-app)]"
-                        : "hover:bg-[var(--color-bg-hover)] active:bg-[var(--color-bg-active)]"
+                    ? "bg-white shadow-glow scale-[1.02] ring-2 ring-[var(--color-primary)]/10"
+                    : "bg-white/40 hover:bg-white/80 hover:shadow-md hover:scale-[1.01]"
             )}
+            style={{ animationDelay: `${index * 50}ms` }}
         >
-            {/* Active Indicator Line */}
+            {/* Active Indicator - Glowing Dot instead of line */}
             {isActive && (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-[var(--color-primary)] rounded-r-full" />
+                <div className="absolute left-2 top-1/2 -translate-y-1/2 w-1 h-8 rounded-full bg-[var(--color-primary)] opacity-0" />
             )}
 
             {/* Avatar */}
             <div className="relative flex-shrink-0">
                 <div className={cn(
-                    "w-12 h-12 rounded-xl overflow-hidden shadow-sm transition-transform duration-300",
-                    isActive ? "ring-2 ring-[var(--color-primary-light)] scale-105" : "group-hover:scale-105"
+                    "w-14 h-14 rounded-[var(--radius-md)] overflow-hidden transition-all duration-400",
+                    isActive ? "shadow-md" : "shadow-sm"
                 )}>
                     {meta.avatar ? (
                         <img src={meta.avatar} alt="avatar" className="w-full h-full object-cover" />
                     ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-active)] flex items-center justify-center text-white text-lg font-bold">
+                        <div className="w-full h-full flex items-center justify-center text-white text-lg font-bold animate-aurora"
+                            style={{ background: 'var(--gradient-aurora)' }}>
                             {meta.name.charAt(0)}
                         </div>
                     )}
                 </div>
-                {/* Online indicator */}
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white shadow-sm" />
+                {/* Online Dot (if social) */}
+                {meta.type === 'social' && (
+                    <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[var(--color-success)] rounded-full 
+                        border-2 border-white shadow-sm" />
+                )}
             </div>
 
             {/* Content */}
             <div className="flex-1 min-w-0 flex flex-col justify-center">
-                <div className="flex justify-between items-baseline mb-0.5">
+                <div className="flex justify-between items-center mb-1">
                     <h3 className={cn(
-                        "font-medium text-[15px] truncate flex items-center gap-1.5 transition-colors",
+                        "font-bold text-[15px] truncate flex items-center gap-1.5 transition-colors",
                         isActive ? "text-[var(--color-primary-active)]" : "text-[var(--color-text-main)]"
                     )}>
-                        {chat.isPinned && <Pin size={12} className="text-[var(--color-primary)] fill-current rotate-45" />}
-                        {meta.name}
+                        {chat.isPinned && (
+                            <Pin size={12} className="text-[var(--color-primary)] fill-current rotate-45" />
+                        )}
+                        <span className="truncate">{meta.name}</span>
                     </h3>
-                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                        {chat.isUnread && <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-primary)] shadow-glow animate-pulse" />}
-                        <span className={cn(
-                            "text-xs",
-                            isActive ? "text-[var(--color-primary)] font-medium" : "text-[var(--color-text-muted)]"
-                        )}>{time}</span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        {chat.isUnread && (
+                            <div className="w-2.5 h-2.5 rounded-full animate-pulse"
+                                style={{ background: 'var(--gradient-aurora)' }} />
+                        )}
+                        <span className="text-xs font-medium text-[var(--color-text-muted)] opacity-80">{time}</span>
                     </div>
                 </div>
                 <p className={cn(
-                    "text-[13px] truncate transition-colors",
-                    isTyping ? "text-[var(--color-primary)] font-medium" : (isActive ? "text-[var(--color-text-secondary)]" : "text-[var(--color-text-muted)]")
+                    "text-[13px] truncate transition-colors font-medium",
+                    isTyping ? "text-[var(--color-primary)]" : "text-[var(--color-text-secondary)] opacity-80"
                 )}>
-                    {isTyping
-                        ? (language === 'zh' ? '正在输入...' : 'Typing...')
-                        : (chat.lastMessage ? chat.lastMessage.content : t('no_messages'))
-                    }
+                    {isTyping ? (
+                        <span className="flex items-center gap-1">
+                            {language === 'zh' ? '正在输入...' : 'Typing...'}
+                        </span>
+                    ) : (chat.lastMessage ? chat.lastMessage.content : t('no_messages'))}
                 </p>
             </div>
         </Link>
     );
 });
 
+// ========== Empty State Component ==========
+function EmptyState({ language, onCreateChat }) {
+    return (
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 animate-fade-slide-up">
+            {/* Floating animated icon */}
+            <div className="relative mb-8">
+                <div className="absolute inset-0 rounded-full blur-2xl opacity-40"
+                    style={{ background: 'var(--gradient-aurora)' }} />
+                <div className="relative w-28 h-28 rounded-full flex items-center justify-center animate-float"
+                    style={{ background: 'var(--gradient-aurora-soft)' }}>
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg"
+                        style={{ background: 'var(--gradient-aurora)' }}>
+                        <Sparkles size={36} className="text-white" />
+                    </div>
+                </div>
+            </div>
+
+            <h3 className="text-xl font-bold text-[var(--color-text-main)] mb-2 text-center font-display">
+                {language === 'zh' ? '开始你的AI伙伴之旅' : 'Start Your AI Adventure'}
+            </h3>
+            <p className="text-sm text-[var(--color-text-muted)] text-center max-w-xs mb-8 leading-relaxed">
+                {language === 'zh'
+                    ? '与独特的AI角色成为朋友，享受有趣的对话体验！'
+                    : 'Make friends with unique AI characters and enjoy fun conversations!'}
+            </p>
+
+            <button
+                onClick={onCreateChat}
+                className="btn-primary flex items-center gap-2 px-6 py-3 text-[15px]"
+            >
+                <MessageSquarePlus size={20} />
+                {language === 'zh' ? '开始聊天' : 'Start Chatting'}
+            </button>
+        </div>
+    );
+}
+
+// ========== Context Menu Item Helper ==========
+function ContextMenuItem({ icon, label, onClick, active, colorClass = "text-[var(--color-primary)]" }) {
+    return (
+        <button
+            onClick={onClick}
+            className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 
+                hover:bg-[var(--color-bg-hover)] text-[var(--color-text-main)] transition-colors group"
+        >
+            <div className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                active ? "bg-[var(--color-bg-active)]" : "bg-gray-50 group-hover:bg-white"
+            )}>
+                <span className={cn(active ? colorClass : "text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]")}>
+                    {icon}
+                </span>
+            </div>
+            <span className="font-medium">{label}</span>
+        </button>
+    );
+}
+
+
 // ========== Main ChatList Component ==========
 export default function ChatList() {
-    const { chats, personas, typingIndicators, pinChat, markChatUnread, deleteChat, setChatCategory } = useChat();
+    const { chats, personas, typingIndicators, pinChat, markChatUnread, deleteChat } = useChat();
     const { t, language } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchFocused, setSearchFocused] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
 
     const [activeTab, setActiveTab] = useState('all'); // 'all', 'social', 'task'
 
@@ -169,121 +238,133 @@ export default function ChatList() {
         closeContextMenu();
     }, [deleteChat, t, closeContextMenu]);
 
-    const handleSetCategory = useCallback((chatId, category) => {
-        setChatCategory(chatId, category);
-        closeContextMenu();
-    }, [setChatCategory, closeContextMenu]);
+
+    const handleCreateChat = useCallback(() => {
+        navigate('/friends');
+    }, [navigate]);
 
     return (
-        <div className="flex flex-col h-full bg-[var(--color-bg-white)] w-full md:w-[320px] flex-shrink-0 border-r border-[var(--color-border)] relative z-10" onClick={closeContextMenu}>
-            {/* Search Header */}
-            <div className="p-4 bg-white/50 backdrop-blur-sm sticky top-0 z-10 border-b border-[var(--color-border-light)] space-y-3">
-                <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] transition-colors group-focus-within:text-[var(--color-primary)]" size={16} />
-                    <input
-                        type="text"
-                        placeholder={t('search')}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-[var(--color-bg-app)] border border-transparent rounded-xl py-2 pl-9 pr-3 text-sm text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:bg-white focus:border-[var(--color-primary-light)] focus:shadow-sm transition-all"
-                    />
-                </div>
+        <div className="flex flex-col h-full w-full md:w-[360px] flex-shrink-0 relative z-10 
+            md:py-4 md:pl-4 overflow-hidden" onClick={closeContextMenu}>
 
-                {/* Filter Tabs - Simplified to just toggle All/Social since Tasks are moved */}
-                <div className="flex p-1 bg-[var(--color-bg-app)] rounded-lg">
-                    <button
-                        onClick={() => setActiveTab('all')}
-                        className={cn(
-                            "flex-1 py-1.5 text-xs font-medium rounded-md transition-all duration-200",
-                            activeTab === 'all'
-                                ? "bg-white text-[var(--color-primary)] shadow-sm"
-                                : "text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
-                        )}
-                    >
-                        {t('all_chats') || 'All Chats'}
-                    </button>
-                    {/* Removed specific 'Social' vs 'Task' tabs as Task chats are now separate */}
-                </div>
-            </div>
-
-
-            {/* Chat List */}
-            <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
-                {filteredChats.map(({ chat, meta }) => {
-                    const lastMsg = chat.lastMessage;
-                    const time = lastMsg ? formatChatListTime(lastMsg.timestamp, language) : '';
-                    const isActive = location.pathname === `/chat/${chat.id}`;
-                    const typingAIs = typingIndicators?.[chat.id] || [];
-                    const isTyping = typingAIs.length > 0;
-
-                    return (
-                        <ChatListItem
-                            key={chat.id}
-                            chat={chat}
-                            meta={meta}
-                            isActive={isActive}
-                            isTyping={isTyping}
-                            time={time}
-                            language={language}
-                            t={t}
-                            onContextMenu={handleContextMenu}
+            {/* Search Header - Floating Glass Pill */}
+            <div className="px-2 mb-2 z-20">
+                <div className="glass-crystal rounded-[var(--radius-xl)] p-2 shadow-floating transition-all duration-300">
+                    <div className={cn(
+                        "relative flex items-center transition-all duration-300",
+                        searchFocused && "scale-[1.01]"
+                    )}>
+                        <Search className={cn(
+                            "absolute left-4 transition-colors duration-300",
+                            searchFocused ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                        )} size={20} />
+                        <input
+                            type="text"
+                            placeholder={t('search')}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onFocus={() => setSearchFocused(true)}
+                            onBlur={() => setSearchFocused(false)}
+                            className="w-full bg-transparent border-none py-3 pl-12 pr-4 text-[15px]
+                                text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)]
+                                focus:outline-none font-medium"
                         />
-                    );
-                })}
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-3 p-1 rounded-full hover:bg-[var(--color-bg-hover)] 
+                                    text-[var(--color-text-muted)] transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Filter Tabs - Inside the Glass Shell */}
+                    <div className="flex gap-2 mt-2 px-1 pb-1 overflow-x-auto scrollbar-hide">
+                        {['all', 'social', 'task'].map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={cn(
+                                    "px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-300 whitespace-nowrap",
+                                    activeTab === tab
+                                        ? "text-white shadow-glow"
+                                        : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]"
+                                )}
+                                style={activeTab === tab ? {
+                                    background: 'var(--gradient-aurora)',
+                                } : {}}
+                            >
+                                {tab === 'all' && t('all_chats')}
+                                {tab === 'social' && t('social_companions')}
+                                {tab === 'task' && t('task_agents')}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </div>
 
-            {/* Context Menu */}
+            {/* Chat List - Floating Cards Container */}
+            <div className="flex-1 overflow-y-auto px-2 space-y-3 pb-32 md:pb-4 custom-scrollbar">
+                {filteredChats.length === 0 ? (
+                    <EmptyState language={language} onCreateChat={handleCreateChat} />
+                ) : (
+                    filteredChats.map(({ chat, meta }, index) => {
+                        const lastMsg = chat.lastMessage;
+                        const time = lastMsg ? formatChatListTime(lastMsg.timestamp, language) : '';
+                        const isActive = location.pathname === `/chat/${chat.id}`;
+                        const typingAIs = typingIndicators?.[chat.id] || [];
+                        const isTyping = typingAIs.length > 0;
+
+                        return (
+                            <ChatListItem
+                                key={chat.id}
+                                chat={chat}
+                                meta={meta}
+                                isActive={isActive}
+                                isTyping={isTyping}
+                                time={time}
+                                language={language}
+                                t={t}
+                                onContextMenu={handleContextMenu}
+                                index={index}
+                            />
+                        );
+                    })
+                )}
+            </div>
+
+            {/* Context Menu - Floating Crystal */}
             {contextMenu && (
                 <div
-                    className="fixed z-50 bg-white/90 backdrop-blur-xl rounded-xl shadow-float border border-white/20 py-1.5 min-w-[160px] animate-scale-in origin-top-left overflow-hidden ring-1 ring-black/5"
+                    className="fixed z-50 glass-crystal rounded-[var(--radius-lg)] shadow-floating py-2 min-w-[200px] 
+                        animate-scale-spring origin-top-left overflow-hidden ring-1 ring-white/60"
                     style={{ left: contextMenu.x, top: contextMenu.y }}
                     onClick={(e) => e.stopPropagation()}
                 >
-                    <button
+                    <ContextMenuItem
+                        icon={<Pin size={16} />}
+                        label={chats.find(c => c.id === contextMenu.chatId)?.isPinned ? t('unpin') : t('pin')}
+                        active={chats.find(c => c.id === contextMenu.chatId)?.isPinned}
                         onClick={() => handlePin(contextMenu.chatId)}
-                        className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 hover:bg-[var(--color-primary-softer)] text-[var(--color-text-main)] transition-colors"
-                    >
-                        <Pin size={16} className={chats.find(c => c.id === contextMenu.chatId)?.isPinned ? "fill-current" : ""} />
-                        {chats.find(c => c.id === contextMenu.chatId)?.isPinned
-                            ? (language === 'zh' ? '取消置顶' : 'Unpin')
-                            : (language === 'zh' ? '置顶' : 'Pin')}
-                    </button>
-                    <button
+                    />
+                    <ContextMenuItem
+                        icon={<Circle size={16} />}
+                        label={chats.find(c => c.id === contextMenu.chatId)?.isUnread ? t('mark_read') : t('mark_unread')}
+                        active={chats.find(c => c.id === contextMenu.chatId)?.isUnread}
+                        colorClass="text-[var(--color-accent-sky)]"
                         onClick={() => handleMarkUnread(contextMenu.chatId)}
-                        className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 hover:bg-[var(--color-primary-softer)] text-[var(--color-text-main)] transition-colors"
-                    >
-                        <Circle size={16} />
-                        {chats.find(c => c.id === contextMenu.chatId)?.isUnread
-                            ? (language === 'zh' ? '标为已读' : 'Mark as Read')
-                            : (language === 'zh' ? '标为未读' : 'Mark as Unread')}
-                    </button>
+                    />
 
-                    {/* Category Submenu */}
-                    <div className="h-px bg-gray-100 my-1 mx-2" />
-                    <div className="px-4 py-1.5 text-xs text-[var(--color-text-muted)] font-medium">
-                        {language === 'zh' ? '设置分类' : 'Set Category'}
-                    </div>
-                    <button
-                        onClick={() => handleSetCategory(contextMenu.chatId, 'social')}
-                        className="w-full px-8 py-1.5 text-left text-sm hover:bg-[var(--color-primary-softer)] text-[var(--color-text-main)]"
-                    >
-                        {t('social_companions')}
-                    </button>
-                    <button
-                        onClick={() => handleSetCategory(contextMenu.chatId, 'task')}
-                        className="w-full px-8 py-1.5 text-left text-sm hover:bg-[var(--color-primary-softer)] text-[var(--color-text-main)]"
-                    >
-                        {t('task_agents')}
-                    </button>
+                    <div className="h-px bg-[var(--color-border)] my-1 mx-3 opacity-50" />
 
-                    <div className="h-px bg-gray-100 my-1 mx-2" />
-                    <button
+                    <ContextMenuItem
+                        icon={<Trash2 size={16} />}
+                        label={t('delete')}
+                        colorClass="text-[var(--color-danger)]"
                         onClick={() => handleDelete(contextMenu.chatId)}
-                        className="w-full px-4 py-2.5 text-left text-sm flex items-center gap-3 hover:bg-red-50 text-[var(--color-danger)] transition-colors"
-                    >
-                        <Trash2 size={16} />
-                        {language === 'zh' ? '删除' : 'Delete'}
-                    </button>
+                    />
                 </div>
             )}
         </div>

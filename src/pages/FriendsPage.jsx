@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Star, Users, ChevronRight, Settings } from 'lucide-react';
+import { Search, Star, Users, ChevronRight, Settings, Sparkles, X } from 'lucide-react';
 import { useChat } from '../features/chat/context/ChatContext';
 import { useFriend } from '../context/FriendContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -14,6 +14,7 @@ export default function FriendsPage() {
     const { t, language } = useLanguage();
 
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchFocused, setSearchFocused] = useState(false);
     const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'starred', or group id
     const [selectedFriend, setSelectedFriend] = useState(null);
 
@@ -53,35 +54,76 @@ export default function FriendsPage() {
 
     return (
         <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-hidden flex flex-col pb-16 md:pb-0">
-            {/* Header */}
-            <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-[var(--color-border)]">
-                <h1 className="text-[17px] font-medium text-[var(--color-text-main)]">
-                    {t('friends') || 'Friends'}
-                </h1>
+            {/* Header - Premium with aurora accent */}
+            <div className="glass-strong px-4 py-4 flex items-center justify-between border-b border-[var(--color-border-light)]
+                sticky top-0 z-20 animate-fade-slide-down">
+                {/* Aurora accent */}
+                <div className="absolute bottom-0 left-0 right-0 h-[1px] opacity-40"
+                    style={{ background: 'var(--gradient-aurora)' }} />
+                
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm"
+                        style={{ background: 'var(--gradient-aurora-soft)' }}>
+                        <Users size={20} className="text-[var(--color-primary)]" />
+                    </div>
+                    <div>
+                        <h1 className="text-lg font-bold text-[var(--color-text-main)] font-display">
+                            {t('friends') || 'Friends'}
+                        </h1>
+                        <p className="text-xs text-[var(--color-text-muted)]">
+                            {personas.length} {language === 'zh' ? '位AI伙伴' : 'AI companions'}
+                        </p>
+                    </div>
+                </div>
                 <button
                     onClick={() => navigate('/friends/groups')}
-                    className="text-[var(--color-primary)]"
+                    className="p-2.5 rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-primary)]
+                        hover:bg-[var(--color-bg-hover)] transition-all duration-200"
                 >
                     <Settings size={22} />
                 </button>
             </div>
 
-            {/* Search */}
-            <div className="p-2 bg-[var(--color-bg-app)]">
-                <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#B2B2B2]" size={14} />
+            {/* Search - Premium */}
+            <div className="p-4 bg-[var(--color-bg-app)]">
+                <div className={cn(
+                    "relative transition-all duration-300",
+                    searchFocused && "scale-[1.02]"
+                )}>
+                    <Search className={cn(
+                        "absolute left-4 top-1/2 -translate-y-1/2 transition-all duration-300",
+                        searchFocused ? "text-[var(--color-primary)] scale-110" : "text-[var(--color-text-muted)]"
+                    )} size={18} />
                     <input
                         type="text"
                         placeholder={t('search') || 'Search'}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-white border-none rounded py-1.5 pl-8 pr-3 text-sm placeholder:text-[#B2B2B2] focus:outline-none"
+                        onFocus={() => setSearchFocused(true)}
+                        onBlur={() => setSearchFocused(false)}
+                        className={cn(
+                            "w-full bg-white border-2 rounded-xl py-3 pl-11 pr-10 text-sm",
+                            "text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)]",
+                            "focus:outline-none transition-all duration-300 shadow-sm",
+                            searchFocused
+                                ? "border-[var(--color-primary)] shadow-lg"
+                                : "border-transparent hover:border-[var(--color-border)]"
+                        )}
                     />
+                    {searchTerm && (
+                        <button
+                            onClick={() => setSearchTerm('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full
+                                hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] transition-colors"
+                        >
+                            <X size={14} />
+                        </button>
+                    )}
                 </div>
             </div>
 
-            {/* Filter Tabs */}
-            <div className="bg-white px-2 py-2 flex gap-2 overflow-x-auto border-b border-[var(--color-border)]">
+            {/* Filter Tabs - Premium Pills */}
+            <div className="px-4 pb-3 flex gap-2 overflow-x-auto scrollbar-hide">
                 <FilterTab
                     active={activeFilter === 'all'}
                     onClick={() => setActiveFilter('all')}
@@ -107,62 +149,79 @@ export default function FriendsPage() {
                 ))}
             </div>
 
-            {/* Friend List */}
-            <div className="flex-1 overflow-y-auto bg-white">
+            {/* Friend List - Card style */}
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
                 {filteredFriends.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-[var(--color-text-muted)]">
-                        <Users size={48} className="mb-4 opacity-50" />
-                        <p>{t('no_friends_found') || 'No friends found'}</p>
+                    <div className="flex flex-col items-center justify-center py-16 animate-fade-slide-up">
+                        <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 animate-float"
+                            style={{ background: 'var(--gradient-aurora-soft)' }}>
+                            <Users size={40} className="text-[var(--color-primary)] opacity-80" />
+                        </div>
+                        <p className="text-[var(--color-text-muted)] text-center">
+                            {t('no_friends_found') || 'No friends found'}
+                        </p>
                     </div>
                 ) : (
-                    filteredFriends.map((friend) => {
-                        const meta = getFriendMeta(friend.id);
-                        const displayName = getDisplayName(friend, language);
-                        const originalName = language === 'zh' ? (friend.name_zh || friend.name) : friend.name;
-                        const friendGroup = groups.find(g => g.id === meta.groupId);
+                    <div className="space-y-2">
+                        {filteredFriends.map((friend, index) => {
+                            const meta = getFriendMeta(friend.id);
+                            const displayName = getDisplayName(friend, language);
+                            const originalName = language === 'zh' ? (friend.name_zh || friend.name) : friend.name;
+                            const friendGroup = groups.find(g => g.id === meta.groupId);
 
-                        return (
-                            <div
-                                key={friend.id}
-                                onClick={() => setSelectedFriend(friend)}
-                                className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] active:bg-[#ECECEC] cursor-pointer"
-                            >
-                                {/* Avatar */}
-                                <div className="w-11 h-11 rounded-[4px] overflow-hidden flex-shrink-0 bg-[#E0E0E0] mr-3">
-                                    <img src={friend.avatar} alt={displayName} className="w-full h-full object-cover" />
-                                </div>
-
-                                {/* Name and Info */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[16px] text-[var(--color-text-main)] truncate">
-                                            {displayName}
-                                        </span>
-                                        {meta.starred && (
-                                            <Star size={14} className="text-yellow-500 fill-yellow-500 flex-shrink-0" />
-                                        )}
+                            return (
+                                <div
+                                    key={friend.id}
+                                    onClick={() => setSelectedFriend(friend)}
+                                    className="flex items-center px-4 py-3.5 bg-white rounded-2xl shadow-sm
+                                        border border-transparent hover:border-[var(--color-border-aurora)]
+                                        hover:shadow-md active:scale-[0.99] cursor-pointer
+                                        transition-all duration-300 group animate-fade-slide-up"
+                                    style={{ animationDelay: `${index * 30}ms` }}
+                                >
+                                    {/* Avatar with hover effect */}
+                                    <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 mr-4
+                                        shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-300">
+                                        <img src={friend.avatar} alt={displayName} className="w-full h-full object-cover" />
+                                        {/* Online indicator */}
+                                        <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[var(--color-success)]
+                                            rounded-full border-2 border-white shadow-sm" />
                                     </div>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        {meta.remark && displayName !== originalName && (
-                                            <span className="text-[12px] text-[var(--color-text-muted)]">
-                                                ({originalName})
-                                            </span>
-                                        )}
-                                        {friendGroup && (
-                                            <span
-                                                className="text-[11px] px-1.5 py-0.5 rounded-full"
-                                                style={{ backgroundColor: friendGroup.color + '20', color: friendGroup.color }}
-                                            >
-                                                {friendGroup.icon} {language === 'zh' ? friendGroup.name : friendGroup.name_en}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
 
-                                <ChevronRight size={20} className="text-[#C7C7CC] flex-shrink-0" />
-                            </div>
-                        );
-                    })
+                                    {/* Name and Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[15px] font-semibold text-[var(--color-text-main)] truncate
+                                                group-hover:text-[var(--color-primary)] transition-colors">
+                                                {displayName}
+                                            </span>
+                                            {meta.starred && (
+                                                <Star size={14} className="text-[var(--color-accent-gold)] fill-current flex-shrink-0" />
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            {meta.remark && displayName !== originalName && (
+                                                <span className="text-[12px] text-[var(--color-text-muted)]">
+                                                    ({originalName})
+                                                </span>
+                                            )}
+                                            {friendGroup && (
+                                                <span
+                                                    className="text-[11px] px-2 py-0.5 rounded-full font-medium"
+                                                    style={{ backgroundColor: friendGroup.color + '15', color: friendGroup.color }}
+                                                >
+                                                    {friendGroup.icon} {language === 'zh' ? friendGroup.name : friendGroup.name_en}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <ChevronRight size={20} className="text-[var(--color-text-light)] flex-shrink-0
+                                        group-hover:text-[var(--color-primary)] group-hover:translate-x-1 transition-all" />
+                                </div>
+                            );
+                        })}
+                    </div>
                 )}
             </div>
 
@@ -182,22 +241,28 @@ function FilterTab({ active, onClick, label, count, highlight, color }) {
         <button
             onClick={onClick}
             className={cn(
-                "px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap flex items-center gap-1 transition-all",
+                "px-4 py-2 rounded-xl text-[13px] font-semibold whitespace-nowrap flex items-center gap-1.5",
+                "transition-all duration-300 shadow-sm border",
                 active
-                    ? "bg-[var(--color-primary)] text-white"
+                    ? "text-white shadow-md border-transparent animate-aurora"
                     : highlight
-                        ? "bg-yellow-100 text-yellow-700"
+                        ? "bg-amber-50 text-amber-700 border-amber-100 hover:shadow-md"
                         : color
-                            ? "bg-opacity-20 text-[var(--color-text-main)]"
-                            : "bg-[var(--color-bg-app)] text-[var(--color-text-muted)]"
+                            ? "border-transparent hover:shadow-md"
+                            : "bg-white text-[var(--color-text-muted)] border-[var(--color-border-light)] hover:border-[var(--color-border)] hover:shadow-md"
             )}
-            style={!active && color ? { backgroundColor: color + '20', color: color } : {}}
+            style={active 
+                ? { background: 'var(--gradient-aurora)', backgroundSize: '200% 200%' }
+                : !highlight && color 
+                    ? { backgroundColor: color + '12', color: color, borderColor: color + '30' } 
+                    : {}
+            }
         >
             {label}
             {count !== undefined && (
                 <span className={cn(
-                    "text-[11px] px-1.5 py-0.5 rounded-full",
-                    active ? "bg-white/20 text-white" : "bg-black/5"
+                    "text-[11px] px-1.5 py-0.5 rounded-full font-medium",
+                    active ? "bg-white/25 text-white" : "bg-black/5"
                 )}>
                     {count}
                 </span>

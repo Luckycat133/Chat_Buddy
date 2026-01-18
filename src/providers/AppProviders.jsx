@@ -2,6 +2,7 @@ import React from 'react';
 
 // Context Imports
 import { ChatProvider } from '../features/chat/context/ChatContext';
+import { BackgroundProvider } from '../features/background/BackgroundContext';
 import { LanguageProvider } from '../context/LanguageContext';
 import { DocumentProvider } from '../context/DocumentContext';
 import { UserProvider } from '../context/UserContext';
@@ -29,7 +30,9 @@ export default function AppProviders({ children }) {
                                     <FriendProvider>
                                         <MomentsProvider>
                                             <ChatProvider>
-                                                {children}
+                                                <BackgroundProvider>
+                                                    {children}
+                                                </BackgroundProvider>
                                             </ChatProvider>
                                         </MomentsProvider>
                                     </FriendProvider>

@@ -9,6 +9,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Agent Workspace**
+  - Dedicated chat spaces for task agents (`/agents/:agentId`)
+  - Each agent has its own conversation history list
+  - Task agent chats separated from main chat list to avoid confusion
+
+- **Auto Chat Naming**
+  - New chats automatically generate descriptive titles based on first user message
+  - Uses AI to extract key topic (max 6 words)
+  - Implemented in `ChatEngine.js` `_checkAutoNaming` method
+
+- **Markdown Rendering Enhancement**
+  - Integrated `react-markdown` + `remark-gfm` for GFM syntax support
+  - Integrated `react-syntax-highlighter` for code highlighting (VS Code Dark theme)
+  - Added `@tailwindcss/typography` plugin for better typography
+  - Now supports tables, code blocks, headings, lists and more
+
+### Fixed
+- **Markdown Rendering Failures in Messages**
+  - Fixed incorrect regex in `cleanMessageContent()`
+  - Previously `\s{2,}` removed newlines, now uses `[^\S\n]{2,}` to preserve line breaks
+  - Previously `\s*\|\s*` removed table delimiters, this replacement is now disabled
+
+- **Message Bubble Overflow**
+  - Added `min-w-0` to flex containers for proper shrinking
+  - Added `overflow-hidden` to bubble containers to prevent content overflow
+  - Added `overflow-x-auto` to Markdown container for horizontal scrolling of wide tables
+
+## [0.3.1] - 2026-01-18
+
+### Added
+- **Immersive Background System**
+  - New `BackgroundContext` for global and per-chat background management
+  - `BackgroundLayer` component with parallax effects and smooth transitions
+  - `BackgroundSettingsModal` with preset themes and image upload support
+  - 20+ AI-generated background images tailored to each AI persona:
+    - Luna (Starry Night, Moon Garden, Crystal Cave)
+    - Max (Cyber Code, Neon City, Gaming Setup)
+    - Bella (Bakery Window, Garden Table, Cozy Kitchen)
+    - Oliver (Library, Chess Match, Study Room)
+    - Sophie (Sunrise Run, Yoga Studio, Gym)
+    - 初音未来 (Concert Stage, and more)
+  - 3 Global Theme Presets: Cyberpunk Rain, Ghibli Landscape, Cozy Library
+- **Per-Chat Background Customization**
+  - Each conversation can have its own unique background
+  - Automatic fallback to persona-default or global theme
+  - Persistent storage via localStorage
+
+### Changed
+- **Dark Mode Overhaul**
+  - Refactored `index.css` with comprehensive `.dark` mode CSS variable overrides
+  - Updated glass utility classes (`.glass`, `.glass-strong`, `.glass-crystal`, `.glass-aurora`) for dark mode compatibility
+  - Updated `.input-modern` styles with dark mode variants
+  - Introduced Tailwind v4 `@custom-variant dark` for class-based dark mode toggling
+- **Component Refactoring for Theming**
+  - `Settings.jsx`: Replaced hardcoded `bg-white` with semantic variables
+  - `BackgroundSettingsModal.jsx`: Applied semantic color tokens throughout
+  - `Layout.jsx`: Updated sidebar and navigation with theme-aware borders/backgrounds
+  - `ChatWindow.jsx`: Fixed poll modal styling for dark mode
+  - `ChatHeader.jsx`: Replaced hardcoded white rings/borders with CSS variables
+  - `ChatComposer.jsx`: Ensured input area adapts seamlessly to dark backgrounds
+
+### Fixed
+- Dark mode visual artifacts caused by mixed hardcoded light/dark styles
+- Glass effects now maintain correct transparency in both themes
+- Mobile responsiveness verified for dark mode across all key screens
+
+### Changed (v0.3.1 Patch - 2026-01-18)
+- **iOS 26 Style Refinement**
+  - Reduced global border-radius from aggressive `44px` to modern `24px` for better content fit
+  - Softened animation intensities (`scale-spring`: 1.02→1.01, `float`: -4px→-2px)
+  - Reduced hover/active scale effects for subtler interactions
+
+### Fixed (v0.3.1 Patch - 2026-01-18)
+- **Mobile Layout Overflow Issues**
+  - Chat list items no longer obscured by bottom navigation (`pb-20`→`pb-32`)
+  - Bottom navigation bar now hidden inside individual chat views on mobile
+  - Message bubble text no longer clipped by overly rounded corners
+
 ## [0.3.0] - 2026-01-08
 
 ### Added
@@ -242,10 +321,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.5...v0.3.0
+[0.2.5]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.4...v0.2.5
+[0.2.4]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Luckycat133/Chat_Buddy/releases/tag/v0.1.0
+

@@ -1,35 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react'; // Added Suspense
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { useUser } from '../context/UserContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
+import { useBackground } from '../features/background/BackgroundContext'; // New import
 import { useSocial } from '../context/SocialContext';
 import { ChevronRight, Bell, Lock, Globe, Info, Moon, HelpCircle, Volume2, VolumeX, BellOff, Trophy, Calendar, Gift, Search, Image } from 'lucide-react';
 import { cn } from '../utils/cn';
 import CheckInPanel from '../components/CheckInPanel';
 import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
 
+// Lazy load the modal
+const BackgroundSettingsModal = React.lazy(() => import('../features/background/BackgroundSettingsModal'));
+
 export default function Settings() {
     const { language, toggleLanguage, t } = useLanguage();
     const { userProfile, getDisplayName } = useUser();
     const { settings, toggleSound, toggleDoNotDisturb, toggleBrowserPush } = useNotification();
-    const { isDarkMode, toggleDarkMode, chatBackgrounds, setChatBackground, theme } = useTheme();
+    const { isDarkMode, toggleDarkMode, theme } = useTheme(); // Removed chatBackgrounds, setChatBackground
+    const { globalTheme } = useBackground(); // New hook
     const { points, streakDays, hasCheckedInToday } = useSocial();
     const navigate = useNavigate();
 
     const [showCheckIn, setShowCheckIn] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
-    const [showBackgrounds, setShowBackgrounds] = useState(false);
+    const [showBackgroundModal, setShowBackgroundModal] = useState(false); // New state
 
     return (
         <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto pb-16 md:pb-0">
-            {/* Profile Card */}
+            {/* ... Profile Card ... */}
             <div
-                className="bg-white px-4 py-5 mb-2 flex items-center gap-4 cursor-pointer active:bg-[#ECECEC]"
+                className="mx-4 mt-4 mb-4 p-5 rounded-2xl flex items-center gap-4 cursor-pointer 
+                    shadow-md hover:shadow-lg transition-all duration-300 group relative overflow-hidden"
+                style={{ background: 'var(--gradient-aurora-soft)' }}
                 onClick={() => navigate('/profile')}
             >
-                <div className="w-16 h-16 rounded-[4px] overflow-hidden flex items-center justify-center text-white text-2xl font-bold">
+                {/* ... same profile content ... */}
+                {/* Aurora decoration */}
+                <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full opacity-30 blur-2xl"
+                    style={{ background: 'var(--gradient-aurora)' }} />
+                <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center text-white text-2xl font-bold
+                    shadow-md group-hover:scale-105 transition-transform duration-300 relative z-10">
                     {userProfile.avatar ? (
                         <img
                             src={userProfile.avatar}
@@ -42,19 +54,20 @@ export default function Settings() {
                         </div>
                     )}
                 </div>
-                <div className="flex-1">
-                    <h3 className="font-medium text-[var(--color-text-main)] text-[17px]">
+                <div className="flex-1 relative z-10">
+                    <h3 className="font-bold text-[var(--color-text-main)] text-lg font-display group-hover:text-[var(--color-primary)] transition-colors">
                         {getDisplayName(language)}
                     </h3>
                     <p className="text-[var(--color-text-muted)] text-[14px] mt-0.5">
                         {userProfile.signature || `ID: ${userProfile.id}`}
                     </p>
                 </div>
-                <ChevronRight size={20} className="text-[#C7C7CC]" />
+                <ChevronRight size={20} className="text-[var(--color-text-muted)] relative z-10
+                    group-hover:text-[var(--color-primary)] group-hover:translate-x-1 transition-all" />
             </div>
 
             {/* Social Features */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mx-4 mb-3 rounded-2xl shadow-sm overflow-hidden border border-[var(--color-border)]">
                 <SettingItem
                     icon={<Calendar size={22} />}
                     iconBg="bg-[#FF9800]"
@@ -78,7 +91,7 @@ export default function Settings() {
             </div>
 
             {/* Notification Settings */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mx-4 mb-3 rounded-2xl shadow-sm overflow-hidden border border-[var(--color-border)]">
                 <SettingItem
                     icon={settings.soundEnabled ? <Volume2 size={22} /> : <VolumeX size={22} />}
                     iconBg="bg-[#4CAF50]"
@@ -106,7 +119,7 @@ export default function Settings() {
             </div>
 
             {/* Theme Settings */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mx-4 mb-3 rounded-2xl shadow-sm overflow-hidden border border-[var(--color-border)]">
                 <SettingItem
                     icon={<Moon size={22} />}
                     iconBg="bg-[#3F51B5]"
@@ -119,46 +132,26 @@ export default function Settings() {
                     icon={<Image size={22} />}
                     iconBg="bg-[#00BCD4]"
                     label={language === 'zh' ? '聊天背景' : 'Chat Background'}
-                    value={(() => {
-                        const bg = chatBackgrounds.find(b => b.id === theme.chatBackground);
-                        return bg ? (language === 'zh' ? bg.name : bg.name_en) : 'Default';
-                    })()}
-                    onClick={() => setShowBackgrounds(!showBackgrounds)}
+                    value={language === 'zh' ? '点击配置' : 'Configure'}
+                    onClick={() => setShowBackgroundModal(true)}
                 />
             </div>
 
-            {/* Background Picker */}
-            {showBackgrounds && (
-                <div className="bg-white mb-2 p-4">
-                    <p className="text-sm text-[var(--color-text-muted)] mb-3">
-                        {language === 'zh' ? '选择聊天背景' : 'Select chat background'}
-                    </p>
-                    <div className="grid grid-cols-4 gap-2">
-                        {chatBackgrounds.map(bg => (
-                            <button
-                                key={bg.id}
-                                onClick={() => setChatBackground(bg.id)}
-                                className={cn(
-                                    "aspect-square rounded-lg overflow-hidden border-2 transition-all",
-                                    theme.chatBackground === bg.id
-                                        ? "border-[var(--color-primary)] ring-2 ring-[var(--color-primary)]/30"
-                                        : "border-transparent"
-                                )}
-                                style={bg.value ? { background: bg.value } : { backgroundColor: '#EDEDED' }}
-                            >
-                                {!bg.value && (
-                                    <div className="w-full h-full flex items-center justify-center text-xs text-[var(--color-text-muted)]">
-                                        {language === 'zh' ? bg.name : bg.name_en}
-                                    </div>
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
+            {/* Modals */}
+            {showCheckIn && <CheckInPanel onClose={() => setShowCheckIn(false)} />}
+            {showSearch && <MessageSearchPanel onClose={() => setShowSearch(false)} />}
 
+            {showBackgroundModal && (
+                <Suspense fallback={null}>
+                    <BackgroundSettingsModal
+                        isOpen={true}
+                        onClose={() => setShowBackgroundModal(false)}
+                    // No chatId means Global Mode
+                    />
+                </Suspense>
+            )}
             {/* Language & General */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mx-4 mb-3 rounded-2xl shadow-sm overflow-hidden border border-[var(--color-border)]">
                 <SettingItem
                     icon={<Globe size={22} />}
                     iconBg="bg-[#2196F3]"
@@ -170,7 +163,7 @@ export default function Settings() {
             </div>
 
             {/* Help & About */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mx-4 mt-3 mb-3 rounded-2xl shadow-sm overflow-hidden border border-[var(--color-border)]">
                 <SettingItem
                     icon={<HelpCircle size={22} />}
                     iconBg="bg-[#2196F3]"
@@ -185,10 +178,6 @@ export default function Settings() {
                     onClick={() => navigate('/about')}
                 />
             </div>
-
-            {/* Modals */}
-            {showCheckIn && <CheckInPanel onClose={() => setShowCheckIn(false)} />}
-            {showSearch && <MessageSearchPanel onClose={() => setShowSearch(false)} />}
         </div>
     );
 }

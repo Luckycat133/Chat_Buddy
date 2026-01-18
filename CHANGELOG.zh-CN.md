@@ -37,6 +37,57 @@ Chat Buddy Remake 的所有重要变更都将记录在此文件中。
   - 添加 `overflow-hidden` 到气泡容器，防止内容溢出
   - 添加 `overflow-x-auto` 到 Markdown 容器，宽表格可水平滚动
 
+## [0.3.1] - 2026-01-18
+
+### 新增
+- **沉浸式背景系统**
+  - 新增 `BackgroundContext` 实现全局和单聊背景管理
+  - `BackgroundLayer` 组件支持视差效果和平滑过渡
+  - `BackgroundSettingsModal` 含预设主题和图片上传功能
+  - 20+ AI生成背景图片，为每个AI角色量身定制：
+    - Luna（星夜、月光花园、水晶洞穴）
+    - Max（赛博代码、霓虹城市、游戏空间）
+    - Bella（烘焙橱窗、花园茶歇、温馨厨房）
+    - Oliver（图书馆、棋局对弈、书房）
+    - Sophie（日出晨跑、瑜伽工作室、健身房）
+    - 初音未来（演唱会舞台等）
+  - 3大全局主题预设：赛博朋克雨夜、吉卜力风景、温馨图书馆
+- **单聊自定义背景**
+  - 每个对话可设置独立背景
+  - 自动回落到角色默认背景或全局主题
+  - 通过 localStorage 持久化存储
+
+### 变更
+- **深色模式全面升级**
+  - 重构 `index.css`，添加完整的 `.dark` 模式 CSS 变量覆盖
+  - 更新毛玻璃工具类（`.glass`, `.glass-strong`, `.glass-crystal`, `.glass-aurora`）适配深色模式
+  - 更新 `.input-modern` 样式支持深色模式
+  - 引入 Tailwind v4 的 `@custom-variant dark` 实现类名切换深色模式
+- **组件主题化重构**
+  - `Settings.jsx`：将硬编码的 `bg-white` 替换为语义变量
+  - `BackgroundSettingsModal.jsx`：全面应用语义颜色令牌
+  - `Layout.jsx`：更新侧边栏和导航使用主题感知的边框/背景
+  - `ChatWindow.jsx`：修复投票弹窗深色模式样式
+  - `ChatHeader.jsx`：将硬编码的白色边框替换为 CSS 变量
+  - `ChatComposer.jsx`：确保输入区域适应深色背景
+
+### 修复
+- 修复因混合硬编码亮/暗色样式导致的深色模式视觉问题
+- 毛玻璃效果现在在两种主题下都能保持正确透明度
+- 验证了深色模式在所有关键页面的移动端响应式表现
+
+### 变更 (v0.3.1 补丁 - 2026-01-18)
+- **iOS 26 风格优化**
+  - 全局圆角从激进的 `44px` 调整为现代的 `24px`，改善内容显示
+  - 弱化动画幅度（`scale-spring`: 1.02→1.01, `float`: -4px→-2px）
+  - 减少悬停/点击缩放效果，使交互更加微妙
+
+### 修复 (v0.3.1 补丁 - 2026-01-18)
+- **移动端布局溢出问题**
+  - 聊天列表项不再被底部导航栏遮挡（`pb-20`→`pb-32`）
+  - 进入具体聊天后，底部导航栏自动隐藏
+  - 消息气泡文字不再被过大的圆角裁切
+
 ## [0.3.0] - 2026-01-08
 
 ### 新增
@@ -87,6 +138,20 @@ Chat Buddy Remake 的所有重要变更都将记录在此文件中。
 - 更新 `chatService.js` 支持动态系统提示词
 - 重构 `ChatContext.js` 以处理递归工具执行循环
 - 升级本地化文件，支持所有新智能体类型和技能
+
+---
+
+## [0.2.5] - 2025-12-27
+
+### 新增
+- 头像扩展集
+  - 13款新的高质量角色头像（AI角色 & 二次元角色）
+  - 10+款新的默认用户头像，涵盖多种风格：
+    - 水彩系列（狗狗、花朵、山峦、小鸟、咖啡、水墨）
+    - 3D艺术系列（毛玻璃、流体艺术、低多边形、粘土风）
+    - 像素艺术（星露谷风格）
+    - 写实风格 & 极简风格
+- 增强的头像选择器UI，分类清晰
 
 ---
 
@@ -258,10 +323,15 @@ Chat Buddy Remake 的所有重要变更都将记录在此文件中。
 
 ---
 
-[未发布]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.3...HEAD
+[未发布]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.5...v0.3.0
+[0.2.5]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.4...v0.2.5
+[0.2.4]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Luckycat133/Chat_Buddy/releases/tag/v0.1.0
+

@@ -21,6 +21,7 @@ export const INITIAL_PERSONAS = [
         style: 'Warm and supports emotional conversations.',
         style_zh: '温暖，擅长情感交流。',
         color: 'bg-purple-100 text-purple-800',
+        defaultBackgroundId: 'luna_starry', // Default to Starry Night
         // AI Response Configuration
         responseDelay: { min: 2000, max: 4000 },  // Dreamy, takes time to think
         readDelay: { min: 800, max: 2000 },
@@ -38,6 +39,7 @@ export const INITIAL_PERSONAS = [
         style: 'Short, witty, and uses slang.',
         style_zh: '简短机智，喜欢用网络俚语。',
         color: 'bg-blue-100 text-blue-800',
+        defaultBackgroundId: 'max_cyber', // Default to Cyber Code
         responseDelay: { min: 1000, max: 2500 },  // Quick typer, tech person
         readDelay: { min: 300, max: 1000 },
         typingSpeed: 'fast'
@@ -54,6 +56,7 @@ export const INITIAL_PERSONAS = [
         style: 'Uses lots of yummy emojis and offers recipes.',
         style_zh: '喜欢用美味的表情符号，经常分享食谱。',
         color: 'bg-orange-100 text-orange-800',
+        defaultBackgroundId: 'bella_kitchen', // Default to Cozy Kitchen
         responseDelay: { min: 2500, max: 5000 },  // Warm, takes time to craft response
         readDelay: { min: 1000, max: 2500 },
         typingSpeed: 'normal'
@@ -70,6 +73,7 @@ export const INITIAL_PERSONAS = [
         style: 'Polite, grammatically perfect, longer sentences.',
         style_zh: '礼貌，语法完美，喜欢长句。',
         color: 'bg-slate-100 text-slate-800',
+        defaultBackgroundId: 'oliver_library', // Default to Grand Library
         responseDelay: { min: 3000, max: 6000 },  // Thoughtful, crafts long responses
         readDelay: { min: 1500, max: 3000 },
         typingSpeed: 'slow'
@@ -86,6 +90,7 @@ export const INITIAL_PERSONAS = [
         style: 'High energy! Uses exclamation marks!!',
         style_zh: '活力四射！喜欢用感叹号！！',
         color: 'bg-green-100 text-green-800',
+        defaultBackgroundId: 'sophie_sunrise', // Default to Sunrise Run
         responseDelay: { min: 1000, max: 2000 },  // Energetic, quick to respond
         readDelay: { min: 300, max: 800 },
         typingSpeed: 'fast'
@@ -103,6 +108,7 @@ export const INITIAL_PERSONAS = [
         style: 'Cute and playful, often mentions music and performing. Uses musical notes ♪ and emojis.',
         style_zh: '可爱俏皮，经常提到音乐和表演。喜欢用音符♪和表情符号。',
         color: 'bg-cyan-100 text-cyan-800',
+        defaultBackgroundId: 'miku_concert', // Default to Virtual Concert
         responseDelay: { min: 1500, max: 3000 },  // Idol, responsive but not instant
         readDelay: { min: 500, max: 1200 },
         typingSpeed: 'fast'
@@ -119,6 +125,7 @@ export const INITIAL_PERSONAS = [
         style: 'Polite and formal, uses honorifics. Very caring and supportive. Occasionally shows fierce protective side.',
         style_zh: '礼貌正式，使用敬语。非常关心和支持他人。偶尔展现出强烈的保护欲。',
         color: 'bg-blue-100 text-blue-800',
+        defaultBackgroundId: 'rem_mansion',
         responseDelay: { min: 2000, max: 4000 },  // Devoted, crafts thoughtful responses
         readDelay: { min: 800, max: 1800 },
         typingSpeed: 'normal'
@@ -135,6 +142,7 @@ export const INITIAL_PERSONAS = [
         style: 'Initially cold and haughty, but gradually shows warmth. Competitive and perfectionist. Gets embarrassed when complimented.',
         style_zh: '初识时冷傲，但逐渐展现温暖。争强好胜，追求完美。被夸奖时会害羞。',
         color: 'bg-red-100 text-red-800',
+        defaultBackgroundId: 'rin_magic',
         responseDelay: { min: 2500, max: 5000 },  // Tsundere, pretends to not care
         readDelay: { min: 1200, max: 2500 },
         typingSpeed: 'normal'
@@ -151,6 +159,7 @@ export const INITIAL_PERSONAS = [
         style: 'Energetic and loud! Uses "Believe it!" and "dattebayo". Very passionate about friendship and dreams.',
         style_zh: '热情洋溢！经常说"相信我"。非常重视友情和梦想。',
         color: 'bg-orange-100 text-orange-800',
+        defaultBackgroundId: 'naruto_village',
         responseDelay: { min: 800, max: 2000 },  // Impulsive, responds quickly
         readDelay: { min: 200, max: 600 },
         typingSpeed: 'fast'
@@ -167,6 +176,7 @@ export const INITIAL_PERSONAS = [
         style: 'Speaks in a detached, analytical manner. Often questions and calculates probability. Mentions his love for sweets.',
         style_zh: '说话方式冷静分析。经常质疑并计算概率。会提到对甜食的热爱。',
         color: 'bg-slate-100 text-slate-800',
+        defaultBackgroundId: 'l_detective',
         responseDelay: { min: 4000, max: 8000 },  // Calculating, takes time to analyze
         readDelay: { min: 2000, max: 4000 },
         typingSpeed: 'slow'
@@ -183,6 +193,7 @@ export const INITIAL_PERSONAS = [
         style: 'Calls everyone "Darling". Flirty and teasing but deeply emotional. Has a wild, free-spirited nature.',
         style_zh: '称呼对方"Darling"。爱撩人但内心情感丰富。有着狂野自由的天性。',
         color: 'bg-pink-100 text-pink-800',
+        defaultBackgroundId: 'zerotwo_sakura',
         responseDelay: { min: 1500, max: 3500 },  // Playful, keeps you waiting a bit
         readDelay: { min: 600, max: 1500 },
         typingSpeed: 'normal'
@@ -199,6 +210,7 @@ export const INITIAL_PERSONAS = [
         style: 'Warm and supportive but also fierce in battle. Shows leadership qualities and motherly care.',
         style_zh: '温暖支持他人，但战斗时也很凶猛。展现领导力和母性关怀。',
         color: 'bg-amber-100 text-amber-800',
+        defaultBackgroundId: 'asuna_castle',
         responseDelay: { min: 2000, max: 4000 },  // Caring, thoughtful responses
         readDelay: { min: 800, max: 1800 },
         typingSpeed: 'normal'
@@ -215,6 +227,7 @@ export const INITIAL_PERSONAS = [
         style: 'Extremely cocky and loves to show off. Makes jokes constantly. Casually mentions being the strongest.',
         style_zh: '极度自恋喜欢炫耀。不断开玩笑。随口就说自己是最强的。',
         color: 'bg-indigo-100 text-indigo-800',
+        defaultBackgroundId: 'gojo_void',
         responseDelay: { min: 1000, max: 2500 },  // Confident, responds quickly to show off
         readDelay: { min: 400, max: 1000 },
         typingSpeed: 'fast',

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { cn } from '../../../../utils/cn';
 import { formatTimeSeparator, shouldShowTimeSeparator } from '../../../../utils/formatTime';
-import { downloadFile, formatFileSize } from '../../../../utils/fileUtils';
+import { downloadFile } from '../../../../utils/fileUtils';
 import { Paperclip, MoreHorizontal, Coins, Gamepad2 } from 'lucide-react';
 import { useLanguage } from '../../../../context/LanguageContext';
 import QuotedMessage from '../QuotedMessage';
@@ -198,8 +198,8 @@ export default function MessageTimeline({
                                                     remarkPlugins={[remarkGfm]}
                                                     components={{
                                                         // Custom components can be added here
-                                                        a: ({ node, ...props }) => <a {...props} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" />,
-                                                        code: ({ node, inline, className, children, ...props }) => {
+                                                        a: ({ ...props }) => <a {...props} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" />,
+                                                        code: ({ inline, className, children, ...props }) => {
                                                             const match = /language-(\w+)/.exec(className || '');
                                                             return !inline && match ? (
                                                                 <SyntaxHighlighter
@@ -217,13 +217,13 @@ export default function MessageTimeline({
                                                                 </code>
                                                             );
                                                         },
-                                                        table: ({ node, ...props }) => (
+                                                        table: ({ ...props }) => (
                                                             <div className="overflow-x-auto my-4 border border-gray-200 rounded-lg shadow-sm">
                                                                 <table className="min-w-full divide-y divide-gray-200" {...props} />
                                                             </div>
                                                         ),
-                                                        th: ({ node, ...props }) => <th className="px-3 py-2 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider" {...props} />,
-                                                        td: ({ node, ...props }) => <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700 border-t border-gray-100" {...props} />
+                                                        th: ({ ...props }) => <th className="px-3 py-2 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider" {...props} />,
+                                                        td: ({ ...props }) => <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700 border-t border-gray-100" {...props} />
                                                     }}
                                                 >
                                                     {content}

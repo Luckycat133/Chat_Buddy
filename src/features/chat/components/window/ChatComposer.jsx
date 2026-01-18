@@ -1,241 +1,329 @@
 import React, { useState, useRef } from 'react';
-import { Smile, Mic, Paperclip, Plus, Heart, Keyboard, Gift, Coins, Gamepad2, BarChart3, X } from 'lucide-react';
-import { cn } from '../../../../utils/cn';
+import {
+    Smile, Paperclip, Mic, Send, MoreVertical, X,
+    Image as ImageIcon, FileText, Gift, Heart,
+    Gamepad2, BarChart3, Coins, Plus, Keyboard, MoreHorizontal
+} from 'lucide-react';
+import { useChat } from '../../context/ChatContext';
 import { useLanguage } from '../../../../context/LanguageContext';
+import { cn } from '../../../../utils/cn';
 import EmojiPicker from '../../../../components/EmojiPicker';
 import StickerPicker from '../../../../components/StickerPicker';
 import FileUploader from '../../../../components/FileUploader';
 
-export default function ChatComposer({
-    onSendMessage,
-    quotedMessage,
-    onCancelQuote,
-    chatId,
-    chat,
-    personas,
-    headerInfo, // For sticker picker
-    // Menu triggers
-    onOpenGift,
-    onOpenRedPacket,
-    onOpenGame,
-    onOpenPoll,
-    onFileSelect
-}) {
+// Menu Button Helper
+const MenuButton = ({ icon: IconComponent, label, onClick, color = "text-gray-600", bg = "bg-gray-50" }) => (
+    <button
+        onClick={onClick}
+        className="flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-gray-50 transition-colors group"
+    >
+        <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", bg)}>
+            <IconComponent size={24} className={color} />
+        </div>
+        <span className="text-xs font-medium text-gray-600">{label}</span>
+    </button>
+);
+
+export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSticker, quotedMessage, onCancelQuote }) {
     const { t, language } = useLanguage();
+    const { personas } = useChat();
     const [inputValue, setInputValue] = useState('');
+    const [isRecording, setIsRecording] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showStickerPicker, setShowStickerPicker] = useState(false);
-    const [showPlusMenu, setShowPlusMenu] = useState(false);
-    const [isRecordingMode, setIsRecordingMode] = useState(false);
-    const [isRecording, setIsRecording] = useState(false);
-    const [recordingStart, setRecordingStart] = useState(0);
     const [showFileUploader, setShowFileUploader] = useState(false);
-
-    // @mention state
-    const [showMentionDropdown, setShowMentionDropdown] = useState(false);
-    const [mentionQuery, setMentionQuery] = useState('');
+    const [showPlusMenu, setShowPlusMenu] = useState(false);
     const inputRef = useRef(null);
+    const [recordingStart, setRecordingStart] = useState(0);
+    const [isRecordingMode, setIsRecordingMode] = useState(false);
 
-    // Helpers
-    const getSenderName = (senderId) => {
-        if (senderId === 'user-me') return t('you');
-        const sender = personas.find(p => p.id === senderId);
-        return language === 'zh' ? (sender?.name_zh || sender?.name) : sender?.name;
-    };
+    // Mention state
+    const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+    const [mentionCandidates, setMentionCandidates] = useState([]);
+    const [mentionQuery, setMentionQuery] = useState('');
 
-    const mentionCandidates = chat ? chat.participants
-        .filter(pid => pid !== 'user-me')
-        .map(pid => personas.find(p => p.id === pid))
-        .filter(p => p && (p.name.toLowerCase().includes(mentionQuery) || (p.name_zh || '').includes(mentionQuery)))
-        : [];
+    const headerInfo = (() => {
+        if (!chat) return {};
+        const isDM = chat.participants.length === 2;
+        if (isDM) {
+            const otherId = chat.participants.find(p => p !== 'user-me');
+            const other = personas.find(p => p.id === otherId);
+            return other || {};
+        }
+        return { name: chat.name, id: chat.id };
+    })();
 
-    // Handlers
-    const handleSend = (e) => {
-        e?.preventDefault();
-        if (!inputValue.trim()) return;
-        onSendMessage(inputValue, quotedMessage?.id);
-        setInputValue('');
-        onCancelQuote();
+    // Close all popups
+    const closeAll = () => {
+        setShowEmojiPicker(false);
+        setShowStickerPicker(false);
+        setShowPlusMenu(false);
+        setShowFileUploader(false);
     };
 
     const handleInputChange = (e) => {
-        const value = e.target.value;
-        setInputValue(value);
+        const val = e.target.value;
+        setInputValue(val);
 
-        // Check for @ trigger
-        const lastAtIndex = value.lastIndexOf('@');
-        if (lastAtIndex !== -1) {
-            const textAfterAt = value.slice(lastAtIndex + 1);
-            if (lastAtIndex === 0 || value[lastAtIndex - 1] === ' ') {
-                setMentionQuery(textAfterAt.toLowerCase());
-                setShowMentionDropdown(true);
-                return;
+        // Detect mention trigger '@'
+        const lastChar = val.slice(-1);
+        if (lastChar === '@') {
+            setShowMentionDropdown(true);
+            setMentionQuery('');
+            setMentionCandidates(
+                chat.participants
+                    .filter(pid => pid !== 'user-me')
+                    .map(pid => personas.find(p => p.id === pid))
+                    .filter(Boolean)
+            );
+        } else if (showMentionDropdown) {
+            // Simple logic: if space, close. If typing, filter (simplified)
+            if (lastChar === ' ') {
+                setShowMentionDropdown(false);
             }
         }
-        setShowMentionDropdown(false);
     };
 
-    const handleMentionSelect = (person) => {
-        const lastAtIndex = inputValue.lastIndexOf('@');
-        const beforeAt = inputValue.slice(0, lastAtIndex);
-        const personName = language === 'zh' ? (person.name_zh || person.name) : person.name;
-        setInputValue(beforeAt + '@' + personName + ' ');
+    const handleMentionSelect = (persona) => {
+        setInputValue(prev => prev + (persona.name || 'User') + ' ');
         setShowMentionDropdown(false);
         inputRef.current?.focus();
+    };
+
+    const handleSend = (e) => {
+        e.preventDefault();
+        if (!inputValue.trim()) return;
+        onSendMessage(inputValue);
+        setInputValue('');
+        closeAll();
+    };
+
+    const getSenderName = (senderId) => {
+        if (senderId === 'user-me') return t('you');
+        const p = personas.find(p => p.id === senderId);
+        return p ? (p.name || 'AI') : 'Unknown';
+    };
+
+    const onFileSelect = (file) => {
+        onSendFile(file);
+        // Logic handled by parent or hook
     };
 
     const handleEmojiSelect = (emoji) => {
         setInputValue(prev => prev + emoji);
     };
 
-    const handleStickerSelect = (stickerEmoji) => {
-        onSendMessage(`[STICKER:${stickerEmoji}]`);
+    const handleStickerSelect = (stickerUrl) => {
+        onSendSticker(stickerUrl);
         setShowStickerPicker(false);
     };
 
-    const closeAll = () => {
-        setShowEmojiPicker(false);
-        setShowStickerPicker(false);
-        setShowPlusMenu(false);
+    // Features
+    const onOpenGift = () => {
+        alert(language === 'zh' ? '送礼物功能开发中...' : 'Gift feature coming soon...');
+    };
+    const onOpenRedPacket = () => {
+        alert(language === 'zh' ? '红包功能开发中...' : 'Red Packet feature coming soon...');
+    };
+    const onOpenGame = () => {
+        alert(language === 'zh' ? '互动游戏开发中...' : 'Game feature coming soon...');
+    };
+    const onOpenPoll = () => {
+        alert(language === 'zh' ? '投票功能开发中...' : 'Poll feature coming soon...');
     };
 
     return (
-        <div className="flex flex-col bg-[var(--color-bg-chat)] relative z-20">
-            {/* Quoted Preview */}
+        <div className="flex flex-col relative z-20 pb-4 px-4">
+            {/* Quoted Preview - Floating Pill */}
             {quotedMessage && (
-                <div className="px-3 py-2 bg-gray-100 border-t border-gray-200 flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="w-1 h-8 bg-[var(--color-primary)] rounded-full flex-shrink-0" />
+                <div className="mx-2 mb-2 px-4 py-3 glass-crystal rounded-[var(--radius-lg)] shadow-floating 
+                    flex items-center justify-between animate-fade-slide-up ring-1 ring-[var(--color-border)]">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-1 h-10 rounded-full animate-aurora"
+                            style={{ background: 'var(--gradient-aurora)' }} />
                         <div className="min-w-0">
-                            <p className="text-xs font-medium text-[var(--color-primary)]">
+                            <p className="text-xs font-bold text-[var(--color-primary)]">
                                 {t('reply_to')} {getSenderName(quotedMessage.senderId)}
                             </p>
-                            <p className="text-xs text-gray-500 truncate">
+                            <p className="text-xs text-[var(--color-text-muted)] truncate mt-0.5 font-medium opacity-80">
                                 {quotedMessage.content.slice(0, 50)}...
                             </p>
                         </div>
                     </div>
-                    <button onClick={onCancelQuote} className="p-1 hover:bg-gray-200 rounded text-gray-500">
+                    <button
+                        onClick={onCancelQuote}
+                        className="p-2 hover:bg-[var(--color-bg-hover)] rounded-full text-[var(--color-text-muted)]
+                            hover:text-[var(--color-danger)] transition-colors"
+                    >
                         <X size={16} />
                     </button>
                 </div>
             )}
 
-            <div className="p-4">
-                <div className="bg-white rounded-2xl shadow-lg border border-[var(--color-border-light)] p-2">
-                    <form onSubmit={handleSend} className="flex items-end gap-2">
+            {/* Main Composer Area - Floating Crystal Pill box */}
+            <div className="glass-crystal rounded-[var(--radius-xl)] shadow-floating p-2 ring-1 ring-[var(--color-border)] relative">
+                <form onSubmit={handleSend} className="flex items-end gap-2">
+                    {/* Voice/Keyboard Toggle */}
+                    <button
+                        type="button"
+                        className={cn(
+                            "p-3 rounded-full transition-all duration-300 mb-0.5",
+                            isRecordingMode
+                                ? "text-[var(--color-primary)] bg-[var(--color-primary-softer)] shadow-inner"
+                                : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)]"
+                        )}
+                        onClick={() => setIsRecordingMode(!isRecordingMode)}
+                    >
+                        {isRecordingMode ? <Keyboard size={24} /> : <Mic size={24} />}
+                    </button>
+
+                    {isRecordingMode ? (
                         <button
                             type="button"
-                            className={cn("p-2 rounded-full hover:bg-gray-100 transition-colors mb-0.5", isRecordingMode ? "text-[var(--color-text-main)]" : "text-[var(--color-text-muted)]")}
-                            onClick={() => setIsRecordingMode(!isRecordingMode)}
+                            onMouseDown={(e) => { e.preventDefault(); setIsRecording(true); setRecordingStart(Date.now()); }}
+                            onMouseUp={(e) => {
+                                e.preventDefault();
+                                if (isRecording) {
+                                    setIsRecording(false);
+                                    const duration = Math.round((Date.now() - recordingStart) / 1000);
+                                    if (duration >= 1) onSendMessage(`[VOICE:${duration}s]`);
+                                }
+                            }}
+                            onMouseLeave={() => setIsRecording(false)}
+                            className={cn(
+                                "flex-1 rounded-[var(--radius-lg)] px-4 py-3 text-[15px] font-bold transition-all select-none text-center",
+                                isRecording
+                                    ? "text-white scale-[0.98] shadow-inner animate-aurora"
+                                    : "bg-[var(--color-bg-white)]/50 hover:bg-[var(--color-bg-white)]/80 text-[var(--color-text-main)]"
+                            )}
+                            style={isRecording ? { background: 'var(--gradient-aurora)', backgroundSize: '150% 150%' } : {}}
                         >
-                            {isRecordingMode ? <Keyboard size={24} /> : <Mic size={24} />}
+                            {isRecording
+                                ? (language === 'zh' ? '🎙️ 松开发送' : '🎙️ Release to Send')
+                                : (language === 'zh' ? '按住说话' : 'Hold to Talk')}
                         </button>
+                    ) : (
+                        <div className="flex-1 relative min-h-[48px] flex items-center bg-[var(--color-bg-white)]/50 rounded-[var(--radius-lg)] transition-all hover:bg-[var(--color-bg-white)]/70 focus-within:bg-[var(--color-bg-white)] focus-within:shadow-sm ring-1 ring-transparent focus-within:ring-[var(--color-primary)]/20 px-4">
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={inputValue}
+                                onChange={handleInputChange}
 
-                        {isRecordingMode ? (
-                            <button
-                                type="button"
-                                onMouseDown={(e) => { e.preventDefault(); setIsRecording(true); setRecordingStart(Date.now()); }}
-                                onMouseUp={(e) => {
-                                    e.preventDefault();
-                                    if (isRecording) {
-                                        setIsRecording(false);
-                                        const duration = Math.round((Date.now() - recordingStart) / 1000);
-                                        if (duration >= 1) onSendMessage(`[VOICE:${duration}s]`);
-                                    }
-                                }}
-                                onMouseLeave={() => setIsRecording(false)}
-                                className={cn(
-                                    "flex-1 rounded-xl border-none px-4 py-3 text-[15px] font-medium transition-all select-none text-center shadow-inner",
-                                    isRecording ? "bg-[var(--color-primary-light)] text-[var(--color-primary-active)] scale-95" : "bg-gray-100 hover:bg-gray-200 text-[var(--color-text-main)]"
-                                )}
-                            >
-                                {isRecording ? (language === 'zh' ? '松开 发送' : 'Release to Send') : (language === 'zh' ? '按住 说话' : 'Hold to Talk')}
-                            </button>
-                        ) : (
-                            <div className="flex-1 relative min-h-[44px] flex items-center">
-                                <input
-                                    ref={inputRef}
-                                    type="text"
-                                    value={inputValue}
-                                    onChange={handleInputChange}
-                                    placeholder={t('type_message')}
-                                    className="w-full bg-transparent border-none px-2 py-2 text-[15px] text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)] focus:outline-none"
-                                />
-                                {showMentionDropdown && mentionCandidates.length > 0 && (
-                                    <div className="absolute bottom-full left-0 mb-3 bg-white rounded-xl shadow-float border border-[var(--color-border)] py-2 min-w-[200px] max-h-[240px] overflow-y-auto z-40">
-                                        {/* Simplified Mention List for brevity */}
-                                        {mentionCandidates.map(p => (
-                                            <button key={p.id} onClick={() => handleMentionSelect(p)} className="block w-full text-left px-4 py-2 hover:bg-gray-50">@{p.name}</button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        <div className="flex items-center gap-1 mb-0.5">
-                            <button
-                                type="button"
-                                className={cn("p-2 rounded-full hover:bg-gray-100 transition-colors", showEmojiPicker ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]")}
-                                onClick={() => { closeAll(); setShowEmojiPicker(!showEmojiPicker); }}
-                            >
-                                <Smile size={24} />
-                            </button>
-                            <button
-                                type="button"
-                                className={cn("p-2 rounded-full hover:bg-gray-100 transition-colors", showStickerPicker ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]")}
-                                onClick={() => { closeAll(); setShowStickerPicker(!showStickerPicker); }}
-                            >
-                                <Heart size={24} />
-                            </button>
-
-                            {inputValue.trim() ? (
-                                <button type="submit" className="ml-1 bg-[var(--color-primary)] text-white px-5 py-2 rounded-xl text-[15px] font-medium hover:bg-[var(--color-primary-hover)]">
-                                    {t('send')}
-                                </button>
-                            ) : (
-                                <button
-                                    type="button"
-                                    className={cn("p-2 rounded-full hover:bg-gray-100 transition-colors", showPlusMenu ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]")}
-                                    onClick={() => { closeAll(); setShowPlusMenu(!showPlusMenu); }}
-                                >
-                                    <Plus size={24} />
-                                </button>
+                                placeholder={t('type_message')}
+                                className="w-full bg-transparent border-none py-3 text-[16px] 
+                                    text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)] 
+                                    focus:outline-none font-medium"
+                            />
+                            {showMentionDropdown && mentionCandidates.length > 0 && (
+                                <div className="absolute bottom-full left-0 mb-4 glass-crystal rounded-[var(--radius-lg)] 
+                                    shadow-floating border border-[var(--color-border)] py-2 min-w-[220px] max-h-[240px] 
+                                    overflow-y-auto z-40 animate-scale-spring">
+                                    {mentionCandidates.map(p => (
+                                        <button
+                                            key={p.id}
+                                            onClick={() => handleMentionSelect(p)}
+                                            className="w-full text-left px-4 py-3 hover:bg-[var(--color-bg-hover)]
+                                                flex items-center gap-3 transition-all"
+                                        >
+                                            <div className="w-8 h-8 rounded-full overflow-hidden shadow-sm">
+                                                {p.avatar
+                                                    ? <img src={p.avatar} alt="" className="w-full h-full object-cover" />
+                                                    : <div className="w-full h-full flex items-center justify-center text-white text-xs font-bold"
+                                                        style={{ background: 'var(--gradient-aurora)' }}>{p.name.charAt(0)}</div>
+                                                }
+                                            </div>
+                                            <span className="font-bold text-[var(--color-text-main)]">
+                                                @{language === 'zh' ? (p.name_zh || p.name) : p.name}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
                             )}
                         </div>
-                    </form>
-                </div>
+                    )}
 
-                {/* Popups */}
-                {showEmojiPicker && <div className="absolute bottom-full left-0 mb-2 z-30"><EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} /></div>}
-                {showStickerPicker && <div className="absolute bottom-full left-0 mb-2 z-30"><StickerPicker aiId={headerInfo.id} onSelect={handleStickerSelect} onClose={() => setShowStickerPicker(false)} /></div>}
-                {showPlusMenu && (
-                    <div className="absolute bottom-full right-2 mb-2 bg-white rounded-xl shadow-xl border border-gray-200 p-2 min-w-[200px] grid grid-cols-4 gap-2 z-30 animate-scale-in">
-                        <MenuButton icon={Paperclip} label={t('file')} onClick={() => setShowFileUploader(true)} color="text-blue-500" bg="bg-blue-50" />
-                        <MenuButton icon={Gift} label={language === 'zh' ? '礼物' : 'Gift'} onClick={onOpenGift} color="text-pink-500" bg="bg-pink-50" />
-                        <MenuButton icon={Coins} label={language === 'zh' ? '红包' : 'Packet'} onClick={onOpenRedPacket} color="text-red-500" bg="bg-red-50" />
-                        <MenuButton icon={Gamepad2} label={language === 'zh' ? '游戏' : 'Game'} onClick={onOpenGame} color="text-purple-500" bg="bg-purple-50" />
-                        <MenuButton icon={BarChart3} label={language === 'zh' ? '投票' : 'Poll'} onClick={onOpenPoll} color="text-orange-500" bg="bg-orange-50" />
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1 mb-0.5">
+                        <button
+                            type="button"
+                            className={cn(
+                                "p-3 rounded-full transition-all duration-200",
+                                showEmojiPicker
+                                    ? "text-[var(--color-primary)] bg-[var(--color-primary-softer)]"
+                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-accent-gold)] hover:bg-[var(--color-bg-hover)]"
+                            )}
+                            onClick={() => { closeAll(); setShowEmojiPicker(!showEmojiPicker); }}
+                        >
+                            <Smile size={24} />
+                        </button>
+
+                        {inputValue.trim() ? (
+                            <button
+                                type="submit"
+                                className="ml-1 p-3 rounded-full text-white shadow-lg
+                                    hover:scale-105 active:scale-95
+                                    transition-all duration-300 animate-aurora"
+                                style={{ background: 'var(--gradient-aurora)', backgroundSize: '150% 150%' }}
+                            >
+                                <Send size={22} className="ml-0.5" />
+                            </button>
+                        ) : (
+                            <button
+                                type="button"
+                                className={cn(
+                                    "p-3 rounded-full transition-all duration-300",
+                                    showPlusMenu
+                                        ? "text-white rotate-45 shadow-md"
+                                        : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)]"
+                                )}
+                                style={showPlusMenu ? { background: 'var(--gradient-aurora)' } : {}}
+                                onClick={() => { closeAll(); setShowPlusMenu(!showPlusMenu); }}
+                            >
+                                <Plus size={24} />
+                            </button>
+                        )}
                     </div>
-                )}
+                </form>
             </div>
 
+            {/* Popups - Premium Glass Stylings */}
+            {showEmojiPicker && (
+                <div className="absolute bottom-full left-4 mb-3 z-30 animate-scale-spring max-h-[400px]">
+                    <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmojiPicker(false)} />
+                </div>
+            )}
+            {showStickerPicker && (
+                <div className="absolute bottom-full left-4 mb-3 z-30 animate-scale-spring">
+                    <StickerPicker aiId={headerInfo.id} onSelect={handleStickerSelect} onClose={() => setShowStickerPicker(false)} />
+                </div>
+            )}
+            {showPlusMenu && (
+                <div className="absolute bottom-full right-4 mb-3 glass-crystal rounded-[var(--radius-xl)] shadow-floating 
+                    border border-[var(--color-border)] p-4 min-w-[280px] grid grid-cols-4 gap-3 z-30 animate-scale-spring">
+                    <MenuButton icon={Paperclip} label={t('file')} onClick={() => setShowFileUploader(true)}
+                        color="text-[var(--color-accent-sky)]" bg="bg-sky-50" />
+                    <MenuButton icon={Heart} label={language === 'zh' ? '贴纸' : 'Sticker'} onClick={() => setShowStickerPicker(true)}
+                        color="text-[var(--color-accent-coral)]" bg="bg-pink-50" />
+                    <MenuButton icon={Gift} label={language === 'zh' ? '礼物' : 'Gift'} onClick={onOpenGift}
+                        color="text-[var(--color-accent-coral)]" bg="bg-pink-50" />
+                    <MenuButton icon={Coins} label={language === 'zh' ? '红包' : 'Packet'} onClick={onOpenRedPacket}
+                        color="text-red-500" bg="bg-red-50" />
+                    <MenuButton icon={Gamepad2} label={language === 'zh' ? '游戏' : 'Game'} onClick={onOpenGame}
+                        color="text-[var(--color-accent-lavender)]" bg="bg-purple-50" />
+                    <MenuButton icon={BarChart3} label={language === 'zh' ? '投票' : 'Poll'} onClick={onOpenPoll}
+                        color="text-[var(--color-primary)]" bg="bg-orange-50" />
+                </div>
+            )}
+
             {showFileUploader && (
-                <div className="absolute bottom-16 left-2 mb-2 z-40">
-                    <FileUploader onFileSelect={(file) => { onFileSelect(file); setShowFileUploader(false); closeAll(); }} onClose={() => setShowFileUploader(false)} />
+                <div className="absolute bottom-20 left-4 mb-2 z-40 animate-scale-spring">
+                    <FileUploader
+                        onFileSelect={(file) => { onFileSelect(file); setShowFileUploader(false); closeAll(); }}
+                        onClose={() => setShowFileUploader(false)}
+                    />
                 </div>
             )}
         </div>
-    );
-}
-
-function MenuButton({ icon: Icon, label, onClick, color, bg }) {
-    return (
-        <button onClick={onClick} className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg hover:bg-gray-100 transition-colors">
-            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center mb-1", bg, color)}>
-                <Icon size={24} />
-            </div>
-            <span className="text-xs text-gray-600">{label}</span>
-        </button>
     );
 }
