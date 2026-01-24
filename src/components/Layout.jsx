@@ -93,8 +93,8 @@ export default function Layout() {
                 </main>
             </div>
 
-            {/* Mobile Bottom Tab Bar - Floating Dock (Hidden in Chat) */}
-            {!location.pathname.startsWith('/chat/') && (
+            {/* Mobile Bottom Tab Bar - Floating Dock (Hidden in Chat and Agent Workspace) */}
+            {!location.pathname.startsWith('/chat/') && !location.pathname.match(/^\/agents\/[^/]+$/) && (
                 <nav className="md:hidden fixed bottom-6 left-6 right-6 glass-crystal rounded-[var(--radius-xl)] shadow-floating 
                     flex justify-around items-center px-4 py-3 z-50 animate-fade-slide-up border border-white/50">
 

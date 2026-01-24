@@ -19,6 +19,7 @@ import AgentsPage from './pages/AgentsPage';
 import AgentWorkspace from './pages/AgentWorkspace';
 import MomentsPage from './features/moments/MomentsPage';
 import AchievementsPage from './pages/AchievementsPage';
+import Dashboard from './pages/Dashboard';
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<ChatList />} />
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="chat/:id" element={<ChatWindow />} />
             <Route path="chat/:id/details" element={<GroupDetails />} />
             <Route path="create" element={<CreateChat />} />

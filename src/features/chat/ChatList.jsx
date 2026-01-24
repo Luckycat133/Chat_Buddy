@@ -194,8 +194,8 @@ export default function ChatList() {
         return chats
             .map(chat => ({ chat, meta: getChatMetadata(chat) }))
             .filter(({ meta }) => {
-                // EXCLUDE TASK AGENTS from main list per user request
-                if (meta.type === 'task') return false;
+                // EXCLUDE TASK AGENTS from main list ('all') unless in 'task' tab
+                if (meta.type === 'task' && activeTab !== 'task') return false;
 
                 const matchesSearch = meta.name.toLowerCase().includes(searchTerm.toLowerCase());
                 // activeTab logic simpler now since we only have 'all' effectively for non-task

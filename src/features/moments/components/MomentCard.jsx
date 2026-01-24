@@ -171,7 +171,7 @@ export default function MomentCard({ post, onCommentClick }) {
                     </div>
 
                     {/* Post Content */}
-                    <p className="text-[var(--color-text-main)] text-[15px] mt-1 whitespace-pre-wrap">
+                    <p className="text-slate-700 text-[15px] mt-1 whitespace-pre-wrap">
                         {post.content}
                     </p>
 
@@ -196,7 +196,7 @@ export default function MomentCard({ post, onCommentClick }) {
 
                     {/* Location */}
                     {post.location && (
-                        <div className="flex items-center gap-1 mt-2 text-[var(--color-text-muted)] text-[12px]">
+                        <div className="flex items-center gap-1 mt-2 text-slate-500 text-[12px]">
                             <MapPin size={12} />
                             <span>{post.location}</span>
                         </div>
@@ -204,7 +204,7 @@ export default function MomentCard({ post, onCommentClick }) {
 
                     {/* Time and Actions */}
                     <div className="flex items-center justify-between mt-3">
-                        <span className="text-[var(--color-text-muted)] text-[12px]">
+                        <span className="text-slate-500 text-[12px]">
                             {formatTime(post.createdAt)}
                         </span>
 

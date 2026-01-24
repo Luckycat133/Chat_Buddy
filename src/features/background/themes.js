@@ -22,6 +22,224 @@ export const BACKGROUND_THEMES = {
             description: 'AI Generated - Warm Reading Nook'
         }
     ],
+    IP: [
+        // Attack on Titan
+        {
+            id: 'ip_aot',
+            name: 'Attack on Titan: The Wall',
+            url: '/backgrounds/ip/aot_wall.png',
+            preview: '/backgrounds/ip/aot_wall.png',
+            description: 'Massive walls of Wall Maria at sunset'
+        },
+        // Demon Slayer
+        {
+            id: 'ip_demonslayer',
+            name: 'Demon Slayer: Wisteria Forest',
+            url: '/backgrounds/ip/demonslayer_wisteria.png',
+            preview: '/backgrounds/ip/demonslayer_wisteria.png',
+            description: 'Mystical purple wisteria forest'
+        },
+        // One Piece
+        {
+            id: 'ip_onepiece',
+            name: 'One Piece: Grand Line',
+            url: '/backgrounds/ip/onepiece_ocean.png',
+            preview: '/backgrounds/ip/onepiece_ocean.png',
+            description: 'Epic ocean adventure at sunset'
+        },
+        // Spy x Family
+        {
+            id: 'ip_spyfamily',
+            name: 'Spy x Family: Forger Home',
+            url: '/backgrounds/ip/spyfamily_home.png',
+            preview: '/backgrounds/ip/spyfamily_home.png',
+            description: 'Elegant 1960s European living room'
+        },
+        // Genshin Impact
+        {
+            id: 'ip_genshin_mondstadt',
+            name: 'Genshin: Mondstadt',
+            url: '/backgrounds/ip/genshin_mondstadt.png',
+            preview: '/backgrounds/ip/genshin_mondstadt.png',
+            description: 'City of Freedom with windmills'
+        },
+        {
+            id: 'ip_genshin_inazuma',
+            name: 'Genshin: Inazuma',
+            url: '/backgrounds/ip/genshin_inazuma.png',
+            preview: '/backgrounds/ip/genshin_inazuma.png',
+            description: 'Electro nation with lightning storms'
+        },
+        // Evangelion
+        {
+            id: 'ip_evangelion',
+            name: 'Evangelion: Tokyo-3',
+            url: '/backgrounds/ip/evangelion_tokyo3.png',
+            preview: '/backgrounds/ip/evangelion_tokyo3.png',
+            description: 'Futuristic fortress city at sunset'
+        },
+        // Makoto Shinkai Style
+        {
+            id: 'ip_shinkai',
+            name: 'Your Name: Shinkai Sky',
+            url: '/backgrounds/ip/shinkai_sky.png',
+            preview: '/backgrounds/ip/shinkai_sky.png',
+            description: 'Stunning detailed clouds with golden light'
+        },
+        // Pokemon
+        {
+            id: 'ip_pokemon',
+            name: 'Pokemon: Wild Forest',
+            url: '/backgrounds/ip/pokemon_forest.png',
+            preview: '/backgrounds/ip/pokemon_forest.png',
+            description: 'Magical forest clearing for encounters'
+        },
+        // Steins;Gate
+        {
+            id: 'ip_steinsgate',
+            name: 'Steins;Gate: Future Gadget Lab',
+            url: '/backgrounds/ip/steinsgate_lab.png',
+            preview: '/backgrounds/ip/steinsgate_lab.png',
+            description: 'Akihabara hacker apartment with retro tech'
+        },
+        // Violet Evergarden
+        {
+            id: 'ip_violet',
+            name: 'Violet Evergarden: Rose Garden',
+            url: '/backgrounds/ip/violet_garden.png',
+            preview: '/backgrounds/ip/violet_garden.png',
+            description: 'Beautiful European rose garden at sunset'
+        },
+        // Chainsaw Man
+        {
+            id: 'ip_chainsaw',
+            name: 'Chainsaw Man: Tokyo Night',
+            url: '/backgrounds/ip/chainsaw_tokyo.png',
+            preview: '/backgrounds/ip/chainsaw_tokyo.png',
+            description: 'Gritty 90s Tokyo alleyway with neon lights'
+        },
+        // My Hero Academia
+        {
+            id: 'ip_mha',
+            name: 'My Hero Academia: U.A. High',
+            url: '/backgrounds/ip/mha_ua_school.png',
+            preview: '/backgrounds/ip/mha_ua_school.png',
+            description: 'Heroic U.A. High School campus'
+        },
+        // Bocchi the Rock
+        {
+            id: 'ip_bocchi',
+            name: 'Bocchi the Rock: STARRY Stage',
+            url: '/backgrounds/ip/bocchi_livehouse.png',
+            preview: '/backgrounds/ip/bocchi_livehouse.png',
+            description: 'Underground live house stage scene'
+        },
+        // Frieren
+        {
+            id: 'ip_frieren',
+            name: 'Frieren: Medieval Town',
+            url: '/backgrounds/ip/frieren_town.png',
+            preview: '/backgrounds/ip/frieren_town.png',
+            description: 'Peaceful fantasy village at sunset'
+        },
+        // Tokyo Ghoul
+        {
+            id: 'ip_ghoul',
+            name: 'Tokyo Ghoul: Anteiku Cafe',
+            url: '/backgrounds/ip/ghoul_cafe.png',
+            preview: '/backgrounds/ip/ghoul_cafe.png',
+            description: 'Cozy vintage coffee shop on rainy day'
+        },
+        // Mob Psycho 100
+        {
+            id: 'ip_mob',
+            name: 'Mob Psycho: Seasoning City',
+            url: '/backgrounds/ip/mob_psycho_city.png',
+            preview: '/backgrounds/ip/mob_psycho_city.png',
+            description: 'Quirky colorful suburban cityscape'
+        },
+        // Solo Leveling
+        {
+            id: 'ip_sololeveling',
+            name: 'Solo Leveling: Dungeon Gate',
+            url: '/backgrounds/ip/sololeveling_gate.png',
+            preview: '/backgrounds/ip/sololeveling_gate.png',
+            description: 'Massive blue portal gate in urban setting'
+        },
+        // Cyberpunk Edgerunners
+        {
+            id: 'ip_edgerunners',
+            name: 'Cyberpunk Edgerunners: Night City',
+            url: '/backgrounds/ip/edgerunners_night.png',
+            preview: '/backgrounds/ip/edgerunners_night.png',
+            description: 'Neon-lit dystopian cityscape at night'
+        },
+        // Kaguya-sama
+        {
+            id: 'ip_kaguya',
+            name: 'Kaguya-sama: Student Council',
+            url: '/backgrounds/ip/kaguya_council.png',
+            preview: '/backgrounds/ip/kaguya_council.png',
+            description: 'Elegant student council room at sunset'
+        },
+        // Dragon Ball
+        {
+            id: 'ip_dragonball',
+            name: 'Dragon Ball: Battle Arena',
+            url: '/backgrounds/ip/dragonball_arena.png',
+            preview: '/backgrounds/ip/dragonball_arena.png',
+            description: 'Epic rocky wasteland battle scene'
+        },
+        // Hunter x Hunter
+        {
+            id: 'ip_hxh',
+            name: 'Hunter x Hunter: Zoldyck Forest',
+            url: '/backgrounds/ip/hxh_forest.png',
+            preview: '/backgrounds/ip/hxh_forest.png',
+            description: 'Dark mysterious forest with ancient trees'
+        },
+        // ===== GAME IPs =====
+        // Legend of Zelda
+        {
+            id: 'ip_zelda',
+            name: 'Zelda: Hyrule Plains',
+            url: '/backgrounds/ip/zelda_hyrule.png',
+            preview: '/backgrounds/ip/zelda_hyrule.png',
+            description: 'Epic adventure landscape with castle'
+        },
+        // Elden Ring
+        {
+            id: 'ip_eldenring',
+            name: 'Elden Ring: Erdtree',
+            url: '/backgrounds/ip/eldenring_erdtree.png',
+            preview: '/backgrounds/ip/eldenring_erdtree.png',
+            description: 'Massive golden tree over dark ruins'
+        },
+        // Persona 5
+        {
+            id: 'ip_persona5',
+            name: 'Persona 5: Shibuya',
+            url: '/backgrounds/ip/persona5_shibuya.png',
+            preview: '/backgrounds/ip/persona5_shibuya.png',
+            description: 'Stylish red and black Shibuya crossing'
+        },
+        // Nier Automata
+        {
+            id: 'ip_nier',
+            name: 'Nier Automata: Overgrown Ruins',
+            url: '/backgrounds/ip/nier_ruins.png',
+            preview: '/backgrounds/ip/nier_ruins.png',
+            description: 'Post-apocalyptic city with cherry blossoms'
+        },
+        // Hollow Knight
+        {
+            id: 'ip_hollowknight',
+            name: 'Hollow Knight: Hallownest',
+            url: '/backgrounds/ip/hollowknight_abyss.png',
+            preview: '/backgrounds/ip/hollowknight_abyss.png',
+            description: 'Dark cavernous ruins with bioluminescence'
+        }
+    ],
     CHARACTERS: [
         // Luna
         {
@@ -145,8 +363,8 @@ export const BACKGROUND_THEMES = {
         {
             id: 'rem_mansion',
             name: 'Rem: Gothic Mansion',
-            url: 'https://images.unsplash.com/photo-1518998053901-5348d3961a04?q=80&w=1920&auto=format&fit=crop',
-            preview: 'https://images.unsplash.com/photo-1518998053901-5348d3961a04?q=80&w=300&auto=format&fit=crop',
+            url: '/backgrounds/characters/rem_mansion.png',
+            preview: '/backgrounds/characters/rem_mansion.png',
             description: 'Victorian mansion with elegant interiors.'
         },
         {
@@ -160,8 +378,8 @@ export const BACKGROUND_THEMES = {
         {
             id: 'rin_magic',
             name: 'Rin: Magic Sanctum',
-            url: 'https://images.unsplash.com/photo-1519810755548-39cd217da494?q=80&w=1920&auto=format&fit=crop',
-            preview: 'https://images.unsplash.com/photo-1519810755548-39cd217da494?q=80&w=300&auto=format&fit=crop',
+            url: '/backgrounds/characters/rin_magic.png',
+            preview: '/backgrounds/characters/rin_magic.png',
             description: 'Mystical candle-lit chamber with ancient tomes.'
         },
         {
@@ -175,8 +393,8 @@ export const BACKGROUND_THEMES = {
         {
             id: 'naruto_village',
             name: 'Naruto: Hidden Village',
-            url: 'https://images.unsplash.com/photo-1480796927426-f609979314bd?q=80&w=1920&auto=format&fit=crop',
-            preview: 'https://images.unsplash.com/photo-1480796927426-f609979314bd?q=80&w=300&auto=format&fit=crop',
+            url: '/backgrounds/characters/naruto_village.png',
+            preview: '/backgrounds/characters/naruto_village.png',
             description: 'Traditional Japanese village at sunset.'
         },
         {
@@ -190,8 +408,8 @@ export const BACKGROUND_THEMES = {
         {
             id: 'l_detective',
             name: 'L: Detective Office',
-            url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1920&auto=format&fit=crop',
-            preview: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=300&auto=format&fit=crop',
+            url: '/backgrounds/characters/l_detective.png',
+            preview: '/backgrounds/characters/l_detective.png',
             description: 'Modern office with multiple monitors.'
         },
         {
@@ -205,8 +423,8 @@ export const BACKGROUND_THEMES = {
         {
             id: 'zerotwo_sakura',
             name: 'Zero Two: Sakura Sky',
-            url: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?q=80&w=1920&auto=format&fit=crop',
-            preview: 'https://images.unsplash.com/photo-1522383225653-ed111181a951?q=80&w=300&auto=format&fit=crop',
+            url: '/backgrounds/characters/zerotwo_sakura.png',
+            preview: '/backgrounds/characters/zerotwo_sakura.png',
             description: 'Cherry blossoms against pink sunset.'
         },
         {
@@ -220,8 +438,8 @@ export const BACKGROUND_THEMES = {
         {
             id: 'asuna_castle',
             name: 'Asuna: Floating Castle',
-            url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1920&auto=format&fit=crop',
-            preview: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=300&auto=format&fit=crop',
+            url: '/backgrounds/characters/asuna_castle.png',
+            preview: '/backgrounds/characters/asuna_castle.png',
             description: 'Majestic castle among the clouds.'
         },
         {
@@ -235,8 +453,8 @@ export const BACKGROUND_THEMES = {
         {
             id: 'gojo_void',
             name: 'Gojo: Infinite Void',
-            url: 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=1920&auto=format&fit=crop',
-            preview: 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=300&auto=format&fit=crop',
+            url: '/backgrounds/characters/gojo_void.png',
+            preview: '/backgrounds/characters/gojo_void.png',
             description: 'Abstract cosmic void with blue energy.'
         },
         {

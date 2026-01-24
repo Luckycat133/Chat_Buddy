@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Camera, RefreshCw } from 'lucide-react';
+import { Camera, Sparkles, Image as ImageIcon, Video, Smile } from 'lucide-react';
 import { useMoments } from './context/MomentsContext';
 import { useUser } from '../../context/UserContext';
 import { useLanguage } from '../../context/LanguageContext';
 import MomentCard from './components/MomentCard';
 import PostComposer from './components/PostComposer';
 import CommentsSheet from './components/CommentsSheet';
+import { cn } from '../../utils/cn';
 
 export default function MomentsPage() {
     const { posts } = useMoments();
@@ -14,90 +15,100 @@ export default function MomentsPage() {
 
     const [showComposer, setShowComposer] = useState(false);
     const [selectedPost, setSelectedPost] = useState(null);
+    const [scrolled, setScrolled] = useState(false);
 
     // Sort posts by date, newest first
     const sortedPosts = [...posts].sort((a, b) =>
         new Date(b.createdAt) - new Date(a.createdAt)
     );
 
+    const handleScroll = (e) => {
+        setScrolled(e.target.scrollTop > 50);
+    };
+
     return (
-        <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-hidden flex flex-col pb-16 md:pb-0">
-            {/* Header with Cover Photo */}
-            <div className="relative h-48 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-hover)]">
-                {/* Cover pattern */}
-                <div className="absolute inset-0 opacity-10">
-                    <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                                <circle fill="white" cx="10" cy="10" r="2" />
-                            </pattern>
-                        </defs>
-                        <rect width="100%" height="100%" fill="url(#dots)" />
-                    </svg>
-                </div>
+        <div
+            className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto custom-scrollbar relative"
+            onScroll={handleScroll}
+        >
+            {/* Header Background Gradient */}
+            <div className="fixed top-0 left-0 right-0 h-[300px] pointer-events-none opacity-20"
+                style={{ background: 'radial-gradient(ellipse at top, var(--color-primary-glow) 0%, transparent 70%)' }} />
 
-                {/* Title */}
-                <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-                    <h1 className="text-white text-[20px] font-bold drop-shadow-md">
-                        {t('moments') || 'Moments'}
-                    </h1>
-                    <button
-                        onClick={() => setShowComposer(true)}
-                        className="bg-white/20 backdrop-blur-sm p-2 rounded-full text-white hover:bg-white/30 transition-colors"
-                    >
-                        <Camera size={22} />
-                    </button>
-                </div>
+            {/* Floating Glass Header */}
+            <div className={cn(
+                "sticky top-0 z-20 px-6 py-4 transition-all duration-300 flex items-center justify-between",
+                scrolled ? "glass-strong border-b border-[var(--color-border-light)]" : "bg-transparent"
+            )}>
+                <h1 className="text-2xl font-display font-bold text-[var(--color-text-main)] flex items-center gap-2 animate-fade-in">
+                    <Sparkles className="text-[var(--color-accent-gold)] fill-current" size={24} />
+                    {t('moments') || 'Moments'}
+                </h1>
 
-                {/* User Profile at bottom right */}
-                <div className="absolute bottom-4 right-4 flex items-center gap-3">
-                    <span className="text-white font-medium drop-shadow-md">
-                        {getDisplayName(language)}
+                <div onClick={() => setShowComposer(true)}
+                    className="flex items-center gap-2 bg-[var(--color-bg-white)] hover:bg-[var(--color-bg-hover)] px-4 py-2 rounded-full cursor-pointer transition-all border border-[var(--color-border)] shadow-sm active:scale-95 group">
+                    <Camera size={18} className="text-[var(--color-primary)] group-hover:scale-110 transition-transform" />
+                    <span className="text-sm font-bold text-[var(--color-text-main)] hidden md:block">
+                        {language === 'zh' ? '发布动态' : 'Share Moment'}
                     </span>
-                    <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-white shadow-lg bg-[var(--color-primary)]">
-                        {userProfile.avatar ? (
-                            <img src={userProfile.avatar} alt="You" className="w-full h-full object-cover" />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-white text-2xl font-bold">
-                                {getDisplayName(language).charAt(0).toUpperCase()}
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
 
-            {/* Posts Feed */}
-            <div className="flex-1 overflow-y-auto">
+            {/* Profile Hero Section (Optional, or integrated into feed) */}
+            {/* Keeping it minimal for "Timeline Journey" feel, focus on the feed content */}
+
+            {/* Main Feed */}
+            <div className="max-w-2xl mx-auto px-4 pb-24 relative z-10">
+                {/* Horizontal "Create" Trigger for Desktop */}
+                <div
+                    onClick={() => setShowComposer(true)}
+                    className="mb-8 p-4 rounded-[var(--radius-xl)] bg-[var(--color-bg-white)] border border-[var(--color-border)] shadow-sm cursor-pointer hover:shadow-md transition-all group animate-fade-slide-up"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full bg-[var(--color-bg-active)] overflow-hidden">
+                            {userProfile.avatar ? (
+                                <img src={userProfile.avatar} alt="You" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[var(--color-primary)] font-bold">
+                                    {getDisplayName(language).charAt(0)}
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-1 bg-[var(--color-bg-app)] rounded-full h-10 flex items-center px-4 text-[var(--color-text-muted)] text-sm group-hover:text-[var(--color-text-main)] transition-colors">
+                            {language === 'zh' ? '分享当下的想法...' : 'Share your thoughts...'}
+                        </div>
+                        <div className="flex gap-3 text-[var(--color-text-muted)]">
+                            <ImageIcon size={20} className="hover:text-[var(--color-primary)] transition-colors" />
+                            <Smile size={20} className="hover:text-[var(--color-accent-gold)] transition-colors" />
+                        </div>
+                    </div>
+                </div>
+
                 {sortedPosts.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-[var(--color-text-muted)]">
-                        <Camera size={48} className="mb-4 opacity-50" />
-                        <p className="text-lg font-medium">{t('no_posts') || 'No moments yet'}</p>
-                        <p className="text-sm mt-1">{t('be_first') || 'Be the first to share!'}</p>
-                        <button
-                            onClick={() => setShowComposer(true)}
-                            className="mt-4 px-6 py-2 bg-[var(--color-primary)] text-white rounded-full font-medium"
-                        >
-                            {t('post') || 'Post'}
-                        </button>
+                    <div className="flex flex-col items-center justify-center py-20 animate-fade-in text-center">
+                        <div className="w-20 h-20 rounded-[var(--radius-xl)] bg-[var(--color-bg-active)] flex items-center justify-center mb-4 shadow-inner">
+                            <Camera size={32} className="text-[var(--color-text-muted)]" />
+                        </div>
+                        <h3 className="text-lg font-bold text-[var(--color-text-main)] mb-1">
+                            {t('no_posts') || 'Your timeline is empty'}
+                        </h3>
+                        <p className="text-[var(--color-text-muted)] text-sm max-w-xs">
+                            {t('be_first') || 'Be the first to capture and share a moment with your AI friends.'}
+                        </p>
                     </div>
                 ) : (
-                    sortedPosts.map((post) => (
-                        <MomentCard
-                            key={post.id}
-                            post={post}
-                            onCommentClick={setSelectedPost}
-                        />
-                    ))
+                    <div className="space-y-6">
+                        {sortedPosts.map((post, index) => (
+                            <div key={post.id} style={{ animationDelay: `${index * 100}ms` }} className="animate-fade-slide-up">
+                                <MomentCard
+                                    post={post}
+                                    onCommentClick={setSelectedPost}
+                                />
+                            </div>
+                        ))}
+                    </div>
                 )}
             </div>
-
-            {/* Floating Action Button */}
-            <button
-                onClick={() => setShowComposer(true)}
-                className="fixed bottom-20 right-4 md:bottom-8 w-14 h-14 bg-[var(--color-primary)] text-white rounded-full shadow-lg flex items-center justify-center hover:bg-[var(--color-primary-hover)] transition-all z-40"
-            >
-                <Camera size={24} />
-            </button>
 
             {/* Post Composer Modal */}
             <PostComposer

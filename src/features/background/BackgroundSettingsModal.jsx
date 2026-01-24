@@ -12,6 +12,7 @@ const TABS = [
 
 const CATEGORIES = [
     { id: 'EXCLUSIVE', label: '✨ 精选' },
+    { id: 'IP', label: '🎬 热门IP' },
     { id: 'CHARACTERS', label: '👤 角色' },
     { id: 'GAME', label: '游戏' },
     { id: 'MOVIE', label: '电影' },

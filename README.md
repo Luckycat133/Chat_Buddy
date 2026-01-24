@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
 
@@ -225,21 +225,23 @@ We welcome contributions! Please follow these guidelines:
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-**Current Version**: v0.3.0 (2026-01-08)
+**Current Version**: v0.3.1 (2026-01-18)
 
 ### Recent Updates
+- 🖼️ **Immersive Background System**: 20+ AI-generated backgrounds for each persona
+- 🌙 **Dark Mode Overhaul**: Complete CSS variable system with glass effects
+- 📱 **iOS 26 Style**: Refined border-radius and subtle animations
+- 🎨 **Per-Chat Backgrounds**: Custom background for each conversation
+- 🧠 **Specialized AI Agents**: 6 task-focused assistants (Coder, Muse, Scholar, etc.)
+- 🛠️ **ReAct Tool Calling**: AI can execute code, search, generate images
 - 📸 Enhanced AI Moments with dynamic posting and smart comments
 - 📍 Location tags and visibility settings (Public/Private/etc.)
-- 🏃 Custom locations for anime characters (e.g., Hidden Leaf Village)
 - 💬 Reply threads and emoji reactions in Moments
-- 🔍 AI content search for better context awareness
 - 👥 Moments/Timeline with AI auto-posting
 - 👫 Friends management with groups
 - 🎯 Daily Check-in and Achievements
 - 🧧 Red Packet and Gift system
 - 🎮 Rock-Paper-Scissors mini game
-- 🌙 Dark mode and theme settings
-- 🔔 Notification settings
 - 😊 Emoji picker with 8 categories
 
 ---

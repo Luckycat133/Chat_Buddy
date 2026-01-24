@@ -11,6 +11,7 @@ import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { GeneratedFileMessage } from '../FileMessage';
+import { getCharacterGlowClass, getCharacterThemeStyle } from '../CharacterTheme';
 
 export default function MessageTimeline({
     chat,
@@ -107,18 +108,26 @@ export default function MessageTimeline({
                 return (
                     <React.Fragment key={msg.id}>
                         {showTimeSeparator && (
-                            <div className="flex justify-center my-4">
-                                <span className="px-3 py-1 bg-black/5 text-[var(--color-text-muted)] text-xs rounded-full">
+                            <div className="flex justify-center my-6">
+                                <span className="px-3 py-1 bg-[var(--color-bg-active)] text-[var(--color-text-muted)] text-[11px] font-medium rounded-full shadow-sm">
                                     {formatTimeSeparator(msg.timestamp, language)}
                                 </span>
                             </div>
                         )}
 
                         <div
-                            className={cn("flex mb-4 animate-message-in group/msg", isMe ? "justify-end" : "justify-start")}
+                            className={cn(
+                                "flex mb-4 group/msg",
+                                isMe ? "justify-end" : "justify-start",
+                                "bubble-enter"
+                            )}
+                            style={{ animationDelay: `${(index % 5) * 50}ms` }}
                             onContextMenu={(e) => onContextMenu(e, msg)}
                         >
-                            <div className={cn("flex max-w-[75%] gap-2.5 min-w-0", isMe ? "flex-row-reverse" : "flex-row")}>
+                            <div
+                                className={cn("flex max-w-[75%] gap-2.5 min-w-0", isMe ? "flex-row-reverse" : "flex-row")}
+                                style={!isMe ? getCharacterThemeStyle(msg.senderId) : {}}
+                            >
                                 {/* Avatar */}
                                 <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 shadow-sm opacity-90 hover:opacity-100 transition-opacity">
                                     {sender?.avatar ? (
@@ -131,13 +140,17 @@ export default function MessageTimeline({
                                 </div>
 
                                 {/* Bubble */}
-                                <div className="relative min-w-0 overflow-hidden">
+                                <div className="relative min-w-0 overflow-visible">
                                     <div className={cn(
-                                        "relative shadow-sm transition-all duration-200",
+                                        "relative transition-all duration-200 message-bubble-hover",
                                         (type === 'text' || type === 'file')
                                             ? (isMe
-                                                ? "px-4 py-2.5 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-active)] text-white rounded-2xl rounded-tr-sm"
-                                                : "px-4 py-2.5 bg-white text-[var(--color-text-main)] rounded-2xl rounded-tl-sm border border-[var(--color-border-light)]")
+                                                ? "px-4.5 py-3 bg-[var(--gradient-aurora)] text-white rounded-[20px] rounded-tr-sm shadow-md"
+                                                : cn(
+                                                    "px-4.5 py-3 bg-[var(--color-bg-white)] text-[var(--color-text-main)] rounded-[20px] rounded-tl-sm border border-[var(--color-border-light)] shadow-sm",
+                                                    "message-bubble-ai",
+                                                    getCharacterGlowClass(msg.senderId)
+                                                ))
                                             : "bg-transparent"
                                     )}>
                                         {quotedData && (
@@ -185,7 +198,7 @@ export default function MessageTimeline({
                                             </div>
                                         ) : type === 'file' ? (
                                             <div className="flex items-center gap-3">
-                                                <div className={cn("p-2 rounded-lg", isMe ? "bg-white/20" : "bg-gray-100")}>
+                                                <div className={cn("p-2.5 rounded-xl", isMe ? "bg-white/20" : "bg-[var(--color-bg-active)]")}>
                                                     <Paperclip size={20} className={isMe ? "text-white" : "text-[var(--color-text-muted)]"} />
                                                 </div>
                                                 <div className="text-sm underline underline-offset-2 opacity-90 hover:opacity-100 cursor-pointer">
@@ -252,8 +265,8 @@ export default function MessageTimeline({
                                 <button
                                     onClick={(e) => onContextMenu(e, msg)}
                                     className={cn(
-                                        "opacity-0 group-hover/msg:opacity-100 transition-opacity p-1.5 rounded-full hover:bg-gray-100 text-gray-400 self-center",
-                                        isMe ? "mr-1" : "ml-1"
+                                        "opacity-0 group-hover/msg:opacity-100 transition-opacity p-2 rounded-full hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] self-center active:scale-95",
+                                        isMe ? "mr-2" : "ml-2"
                                     )}
                                 >
                                     <MoreHorizontal size={14} />

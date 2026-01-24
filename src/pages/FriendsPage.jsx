@@ -60,7 +60,7 @@ export default function FriendsPage() {
                 {/* Aurora accent */}
                 <div className="absolute bottom-0 left-0 right-0 h-[1px] opacity-40"
                     style={{ background: 'var(--gradient-aurora)' }} />
-                
+
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm"
                         style={{ background: 'var(--gradient-aurora-soft)' }}>
@@ -191,7 +191,7 @@ export default function FriendsPage() {
                                     {/* Name and Info */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[15px] font-semibold text-[var(--color-text-main)] truncate
+                                            <span className="text-[15px] font-semibold text-slate-800 truncate
                                                 group-hover:text-[var(--color-primary)] transition-colors">
                                                 {displayName}
                                             </span>
@@ -201,7 +201,7 @@ export default function FriendsPage() {
                                         </div>
                                         <div className="flex items-center gap-2 mt-1">
                                             {meta.remark && displayName !== originalName && (
-                                                <span className="text-[12px] text-[var(--color-text-muted)]">
+                                                <span className="text-[12px] text-slate-500">
                                                     ({originalName})
                                                 </span>
                                             )}
@@ -216,7 +216,7 @@ export default function FriendsPage() {
                                         </div>
                                     </div>
 
-                                    <ChevronRight size={20} className="text-[var(--color-text-light)] flex-shrink-0
+                                    <ChevronRight size={20} className="text-slate-300 flex-shrink-0
                                         group-hover:text-[var(--color-primary)] group-hover:translate-x-1 transition-all" />
                                 </div>
                             );
@@ -251,10 +251,10 @@ function FilterTab({ active, onClick, label, count, highlight, color }) {
                             ? "border-transparent hover:shadow-md"
                             : "bg-white text-[var(--color-text-muted)] border-[var(--color-border-light)] hover:border-[var(--color-border)] hover:shadow-md"
             )}
-            style={active 
+            style={active
                 ? { background: 'var(--gradient-aurora)', backgroundSize: '200% 200%' }
-                : !highlight && color 
-                    ? { backgroundColor: color + '12', color: color, borderColor: color + '30' } 
+                : !highlight && color
+                    ? { backgroundColor: color + '12', color: color, borderColor: color + '30' }
                     : {}
             }
         >

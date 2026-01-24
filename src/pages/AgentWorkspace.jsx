@@ -54,46 +54,51 @@ export default function AgentWorkspace() {
     const activeChat = selectedChatId ? chats.find(c => c.id === selectedChatId) : null;
 
     return (
-        <div className="flex h-full w-full bg-[var(--color-bg-app)]">
-            {/* Left Sidebar - Chat List for this Agent */}
+        <div className="flex h-full w-full bg-[var(--color-bg-app)] overflow-hidden">
+            {/* Left Sidebar - Chat List */}
             <div className={cn(
-                "flex flex-col border-r border-[var(--color-border)] bg-white transition-all duration-300",
+                "flex flex-col border-r border-[var(--color-border)] glass-strong transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]",
                 selectedChatId ? "hidden md:flex w-[320px]" : "w-full md:w-[320px]"
             )}>
                 {/* Header */}
-                <div className="p-4 border-b border-[var(--color-border-light)] bg-gray-50/50">
-                    <div className="flex items-center gap-3 mb-4">
-                        <button onClick={() => navigate('/agents')} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                <div className="p-4 border-b border-[var(--color-border-light)]">
+                    <div className="flex items-center gap-3 mb-6">
+                        <button onClick={() => navigate('/agents')}
+                            className="p-2 -ml-2 rounded-xl hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] transition-colors">
                             <ArrowLeft size={20} />
                         </button>
                         <div className="flex-1 min-w-0">
-                            <h1 className="font-bold text-lg truncate flex items-center gap-2">
-                                <span className={cn("w-2 h-2 rounded-full", agent.color?.split(' ')[0] || 'bg-gray-400')}></span>
+                            <h1 className="font-display font-bold text-lg truncate flex items-center gap-2 text-[var(--color-text-main)]">
+                                <span className={cn("w-2.5 h-2.5 rounded-full shadow-glow", agent.color?.split(' ')[0] || 'bg-gray-400')}></span>
                                 {displayName}
                             </h1>
-                            <p className="text-xs text-gray-500 truncate">{language === 'zh' ? '专属工作区' : 'Workspace'}</p>
+                            <p className="text-xs text-[var(--color-text-muted)] truncate font-medium">
+                                {language === 'zh' ? '专属工作区' : 'Workspace'}
+                            </p>
                         </div>
                     </div>
 
                     <button
                         onClick={handleNewChat}
-                        className="w-full py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white rounded-xl font-medium flex items-center justify-center gap-2 transition-all shadow-sm active:scale-95"
+                        className="w-full py-3 bg-[var(--gradient-aurora)] hover:shadow-glow-strong text-white rounded-[var(--radius-lg)] font-bold flex items-center justify-center gap-2 transition-all duration-300 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 text-[15px]"
                     >
-                        <Plus size={18} />
+                        <Plus size={20} />
                         {language === 'zh' ? '新建话题' : 'New Topic'}
                     </button>
                 </div>
 
                 {/* List */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
                     {agentChats.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-10 text-gray-400 text-sm p-4 text-center">
-                            <MessageSquare size={32} className="mb-2 opacity-20" />
-                            <p>{language === 'zh' ? '还没有对话记录' : 'No conversations yet'}</p>
-                            <p className="text-xs mt-1">{language === 'zh' ? '点击上方按钮开始新话题' : 'Click above to start a topic'}</p>
+                        <div className="flex flex-col items-center justify-center h-[60%] text-[var(--color-text-muted)] text-sm p-4 text-center animate-fade-slide-up">
+                            <div className="w-16 h-16 rounded-3xl bg-[var(--color-bg-hover)] flex items-center justify-center mb-4 animate-float">
+                                <MessageSquare size={24} className="opacity-40" />
+                            </div>
+                            <p className="font-medium mb-1">{language === 'zh' ? '还没有对话记录' : 'No conversations yet'}</p>
+                            <p className="text-xs opacity-70">{language === 'zh' ? '点击上方按钮开始新话题' : 'Click above to start a topic'}</p>
                         </div>
                     ) : (
-                        agentChats.map(chat => {
+                        agentChats.map((chat, index) => {
                             const lastMsg = chat.lastMessage;
                             const time = lastMsg ? formatChatListTime(lastMsg.timestamp, language) : '';
                             const isActive = chat.id === selectedChatId;
@@ -102,22 +107,31 @@ export default function AgentWorkspace() {
                                 <div
                                     key={chat.id}
                                     onClick={() => setSelectedChatId(chat.id)}
+                                    style={{ animationDelay: `${index * 50}ms` }}
                                     className={cn(
-                                        "p-3 rounded-xl cursor-pointer transition-all border border-transparent",
+                                        "group p-3.5 rounded-[var(--radius-lg)] cursor-pointer transition-all duration-300 border animate-fade-slide-up",
                                         isActive
-                                            ? "bg-[var(--color-primary-softer)] border-[var(--color-primary-light)]"
-                                            : "hover:bg-gray-50 hover:border-gray-200"
+                                            ? "glass-aurora border-[var(--color-border-aurora)] shadow-md translate-x-1"
+                                            : "border-transparent hover:bg-[var(--color-bg-hover)] hover:translate-x-1"
                                     )}
                                 >
-                                    <div className="flex justify-between items-start mb-1">
-                                        <h3 className={cn("font-medium text-sm truncate pr-2 flex-1", isActive ? "text-[var(--color-primary-dark)]" : "text-gray-700")}>
+                                    <div className="flex justify-between items-start mb-1.5">
+                                        <h3 className={cn(
+                                            "font-bold text-[15px] truncate pr-2 flex-1 transition-colors",
+                                            isActive ? "text-[var(--color-primary-active)]" : "text-[var(--color-text-main)] group-hover:text-[var(--color-primary)]"
+                                        )}>
                                             {chat.name || displayName}
                                         </h3>
-                                        <span className="text-[10px] text-gray-400 whitespace-nowrap pt-0.5">{time}</span>
+                                        <span className="text-[11px] text-[var(--color-text-light)] whitespace-nowrap pt-0.5 font-medium">{time}</span>
                                     </div>
-                                    <p className="text-xs text-gray-500 line-clamp-2 min-h-[1.5em]">
-                                        {lastMsg ? lastMsg.content : (language === 'zh' ? '(空对话)' : '(Empty)')}
-                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <p className={cn(
+                                            "text-xs line-clamp-1 min-h-[1.5em] flex-1",
+                                            isActive ? "text-[var(--color-text-secondary)]" : "text-[var(--color-text-muted)]"
+                                        )}>
+                                            {lastMsg ? lastMsg.content : (language === 'zh' ? '(空对话)' : '(Empty)')}
+                                        </p>
+                                    </div>
                                 </div>
                             );
                         })
@@ -128,38 +142,34 @@ export default function AgentWorkspace() {
             {/* Right Side - Chat Window */}
             {selectedChatId ? (
                 <div className={cn(
-                    "flex-1 bg-[var(--color-bg-chat)] relative flex flex-col h-full",
+                    "flex-1 relative flex flex-col h-full overflow-hidden bg-[var(--color-bg-chat)]",
                     selectedChatId ? "flex" : "hidden md:flex"
                 )}>
-                    {/* Mobile Back Button Overlay (if needed in header, but header handles navigation to root usually)
-                        We need to override ChatHeader's back behavior or handle it via layout?
-                        ChatWindow currently renders ChatHeader.
-                        We might need to wrap ChatWindow or modify ChatHeader to handle "Back to Workspace List" on mobile.
-                    */}
-                    <div className="relative flex-1 flex flex-col min-h-0">
-                        {/* We pass a key to force re-mount when switching chats if needed, though ID prop handling should suffice */}
+                    <div className="relative flex-1 flex flex-col min-h-0 animate-fade-in">
                         <ChatWindow key={selectedChatId} chatId={selectedChatId} />
-
-                        {/* Mobile Back Button Override: 
-                            ChatWindow's header has a "md:hidden" back button that goes to '/'. 
-                            We can't easily override it without modifying ChatHeader again.
-                            However, on mobile, if we are in this view, we want to go back to the LIST of this workspace.
-                            
-                            Quick fix: We can overlay a back button or modify ChatHeader prop.
-                            Let's assume for now user on mobile uses the header back button which goes to Home.
-                            This is sub-optimal for "Workspace".
-                            Ideally ChatHeader should accept an onBack prop.
-                            For now, let's stick to desktop focus based on user persona, but if mobile, 
-                            hitting "Back" (Browser) is standard.
-                        */}
                     </div>
                 </div>
             ) : (
-                <div className="hidden md:flex flex-1 items-center justify-center bg-gray-50 text-gray-400 flex-col gap-4">
-                    <div className={cn("w-20 h-20 rounded-3xl flex items-center justify-center shadow-sm", agent.color?.split(' ')[0] || 'bg-gray-200')}>
-                        <img src={agent.avatar} alt="Agent" className="w-16 h-16 object-contain opacity-80" />
+                <div className="hidden md:flex flex-1 items-center justify-center bg-[var(--color-bg-app)] relative overflow-hidden">
+                    {/* Background blob animation */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[var(--color-primary)]/5 rounded-full blur-[100px] animate-pulse" />
+
+                    <div className="flex flex-col items-center gap-6 relative z-10 animate-scale-spring">
+                        <div className={cn(
+                            "w-24 h-24 rounded-[var(--radius-2xl)] flex items-center justify-center shadow-floating glass-crystal",
+                            !agent.avatar && (agent.color?.split(' ')[0] || 'bg-gray-200')
+                        )}>
+                            <img src={agent.avatar} alt="Agent" className="w-20 h-20 object-contain drop-shadow-md" />
+                        </div>
+                        <div className="text-center">
+                            <h2 className="text-2xl font-display font-bold text-[var(--color-text-main)] mb-2">
+                                {language === 'zh' ? `与 ${displayName} 开始对话` : `Start chatting with ${displayName}`}
+                            </h2>
+                            <p className="text-[var(--color-text-muted)]">
+                                {language === 'zh' ? '选择一个话题或创建新话题' : 'Select a topic or create a new one'}
+                            </p>
+                        </div>
                     </div>
-                    <p>{language === 'zh' ? '选择一个话题开始' : 'Select a topic to start'}</p>
                 </div>
             )}
         </div>

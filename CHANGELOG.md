@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.2] - 2026-01-24
+
+### Added
+- **Character Theme System (Immersive Chat)**
+  - 8 unique color palettes for anime characters:
+    - Rem (Ice Blue `#7DBED8`), Zero Two (Coral Red `#FF6B8A`)
+    - Hatsune Miku (Teal `#39C5BB`), Gojo Satoru (Royal Blue `#4169E1`)
+    - Rin Tohsaka (Crimson `#DC143C`), Naruto (Orange `#FF8C00`)
+    - L (Dark Gray `#2F4F4F`), Asuna (Coral `#FF6347`)
+  - New `CharacterTheme.jsx` module for dynamic theme management
+  - CSS variables for all character colors (`--character-rem-primary`, etc.)
+
+- **Enhanced Message Animations**
+  - Bouncy `bubbleIn` animation for message entrance
+  - Wave-style typing indicator (`typingWave`)
+  - Avatar pulse effect on new messages
+  - Message bubble hover lift effect
+  - Staggered animation delays for consecutive messages
+
+- **Character Glow Effects**
+  - AI message bubbles display subtle ambient glow in character's theme color
+  - Glow intensifies on hover
+  - Dark mode glow visibility enhanced (35% → 45% opacity)
+
+- **Bento Grid Layout System**
+  - New `BentoGrid.jsx` and `BentoCard` components
+  - 7 size presets: `sm`, `md`, `lg`, `xl`, `tall`, `wide`, `full`
+  - Skeleton loading states
+  - Responsive grid with automatic column adjustment
+
+- **Dashboard Page** (`/dashboard`)
+  - Modular Bento Grid homepage with 8 widget types:
+    - Recent Chats (2×2), Daily Check-in (1×1), AI Agents (1×1)
+    - Moments Preview (2×1), Friends (1×1), Achievements (1×1)
+    - Today's Recommended Character (2×1), Stats (1×2)
+  - Dynamic greeting based on time of day
+  - Quick navigation to all app sections
+
+### Changed
+- **Dark Mode Refinement**
+  - Improved text contrast ratios for WCAG AA compliance
+  - Enhanced shadow depth for better visual hierarchy
+  - Optimized `.glass`, `.glass-strong`, `.glass-crystal` for dark backgrounds
+  - New `.glass-aurora` dark mode variant
+  - Refined scrollbar, selection, and input styles for dark mode
+
+- **OLED Pure Black Mode**
+  - New `.dark.oled` variant with `#000000` backgrounds
+  - Maximum battery savings on OLED displays
+  - Subtle border adjustments for element separation
+
+### Fixed
+- Message bubble overflow issue with character glow effects (`overflow-visible`)
+- Animation performance with `prefers-reduced-motion` support
+
+---
+
 ## [Unreleased]
 
 ### Added
@@ -321,7 +378,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.5...v0.3.0
 [0.2.5]: https://github.com/Luckycat133/Chat_Buddy/compare/v0.2.4...v0.2.5
