@@ -46,10 +46,10 @@ export default function Settings() {
                     </div>
                     <div>
                         <h1 className="text-2xl font-display font-bold text-[var(--color-text-main)]">
-                            {language === 'zh' ? '控制中心' : 'Control Center'}
+                            {t('settings_control_center')}
                         </h1>
                         <p className="text-[var(--color-text-muted)] text-sm">
-                            {language === 'zh' ? '管理你的 AI 伙伴和偏好设置' : 'Manage your AI companions and preferences'}
+                            {t('settings_control_center_desc')}
                         </p>
                     </div>
                 </div>
@@ -60,7 +60,7 @@ export default function Settings() {
                         <section className="animate-fade-slide-up" style={{ animationDelay: '100ms' }}>
                             <div className="flex items-center gap-2 mb-3 px-1">
                                 <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                    {language === 'zh' ? '驾驶舱' : 'Pilot House'}
+                                    {t('settings_pilot_house')}
                                 </span>
                             </div>
 
@@ -93,7 +93,7 @@ export default function Settings() {
                                     <div className="grid grid-cols-2 gap-3 w-full">
                                         <div className="bg-[var(--color-bg-white)]/50 p-3 rounded-xl border border-[var(--color-border-light)] hover:bg-[var(--color-bg-white)] transition-colors"
                                             onClick={(e) => { e.stopPropagation(); setShowCheckIn(true); }}>
-                                            <div className="text-xs text-[var(--color-text-muted)] mb-1">{language === 'zh' ? '连续签到' : 'Streak'}</div>
+                                            <div className="text-xs text-[var(--color-text-muted)] mb-1">{t('streak_stat')}</div>
                                             <div className="font-display font-bold text-lg text-[#FF9800] flex items-center justify-center gap-1">
                                                 <Calendar size={14} />
                                                 {streakDays}
@@ -101,7 +101,7 @@ export default function Settings() {
                                         </div>
                                         <div className="bg-[var(--color-bg-white)]/50 p-3 rounded-xl border border-[var(--color-border-light)] hover:bg-[var(--color-bg-white)] transition-colors"
                                             onClick={(e) => { e.stopPropagation(); navigate('/achievements'); }}>
-                                            <div className="text-xs text-[var(--color-text-muted)] mb-1">{language === 'zh' ? '积分' : 'Points'}</div>
+                                            <div className="text-xs text-[var(--color-text-muted)] mb-1">{t('total_points')}</div>
                                             <div className="font-display font-bold text-lg text-[#FFD700] flex items-center justify-center gap-1">
                                                 <Trophy size={14} />
                                                 {points}
@@ -115,7 +115,7 @@ export default function Settings() {
                         <section className="animate-fade-slide-up" style={{ animationDelay: '200ms' }}>
                             <div className="flex items-center gap-2 mb-3 px-1">
                                 <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                    {language === 'zh' ? '通用' : 'General'}
+                                    {t('preferences')}
                                 </span>
                             </div>
                             <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-[var(--radius-xl)] overflow-hidden shadow-sm">
@@ -125,7 +125,7 @@ export default function Settings() {
                                     label={t('interface_language')}
                                     rightContent={
                                         <span className="font-medium text-[var(--color-text-main)] bg-[var(--color-bg-app)] px-3 py-1 rounded-lg text-sm border border-[var(--color-border-light)]">
-                                            {language === 'en' ? 'English' : '简体中文'}
+                                            {t(language === 'en' ? 'lang_english' : 'lang_chinese')}
                                         </span>
                                     }
                                     onClick={toggleLanguage}
@@ -158,7 +158,7 @@ export default function Settings() {
                         <section className="animate-fade-slide-up" style={{ animationDelay: '150ms' }}>
                             <div className="flex items-center gap-2 mb-3 px-1">
                                 <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                    {language === 'zh' ? '系统偏好' : 'System Preferences'}
+                                    {t('appearance')}
                                 </span>
                             </div>
 
@@ -166,32 +166,32 @@ export default function Settings() {
                                 <ControlCard
                                     icon={<Moon size={24} />}
                                     color="bg-[#3F51B5]"
-                                    label={language === 'zh' ? '深色模式' : 'Dark Mode'}
-                                    subLabel={isDarkMode ? 'On' : 'Off'}
+                                    label={t('dark_mode')}
+                                    subLabel={isDarkMode ? t('toggle_on') : t('toggle_off')}
                                     active={isDarkMode}
                                     onClick={toggleDarkMode}
                                 />
                                 <ControlCard
                                     icon={<Image size={24} />}
                                     color="bg-[#00BCD4]"
-                                    label={language === 'zh' ? '个性化背景' : 'Backgrounds'}
-                                    subLabel={language === 'zh' ? '自定义外观' : 'Customize Look'}
+                                    label={t('backgrounds')}
+                                    subLabel={t('customize_look')}
                                     active={true}
                                     onClick={() => setShowBackgroundModal(true)}
                                 />
                                 <ControlCard
                                     icon={settings.soundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
                                     color="bg-[#E91E63]"
-                                    label={language === 'zh' ? '提示音' : 'Sound'}
-                                    subLabel={settings.soundEnabled ? 'Enabled' : 'Muted'}
+                                    label={t('sound')}
+                                    subLabel={settings.soundEnabled ? t('sound_enabled') : t('sound_muted')}
                                     active={settings.soundEnabled}
                                     onClick={toggleSound}
                                 />
                                 <ControlCard
                                     icon={<BellOff size={24} />}
                                     color="bg-[#607D8B]"
-                                    label={language === 'zh' ? '免打扰' : 'Do Not Disturb'}
-                                    subLabel={settings.doNotDisturb ? 'Active' : 'Off'}
+                                    label={t('do_not_disturb')}
+                                    subLabel={settings.doNotDisturb ? t('dnd_active') : t('dnd_off')}
                                     active={settings.doNotDisturb}
                                     onClick={toggleDoNotDisturb}
                                 />
@@ -201,29 +201,29 @@ export default function Settings() {
                         <section className="animate-fade-slide-up" style={{ animationDelay: '250ms' }}>
                             <div className="flex items-center gap-2 mb-3 px-1">
                                 <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                    {language === 'zh' ? '高级工具' : 'Advanced Tools'}
+                                    {t('advanced_tools')}
                                 </span>
                             </div>
                             <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-[var(--radius-xl)] overflow-hidden shadow-sm">
                                 <SettingItem
                                     icon={<Search size={18} />}
                                     color="bg-[#795548]"
-                                    label={language === 'zh' ? '全局搜索' : 'Global Search'}
-                                    subLabel={language === 'zh' ? '搜索所有聊天记录' : 'Search across all chats'}
+                                    label={t('global_search')}
+                                    subLabel={t('search_all_chats')}
                                     onClick={() => setShowSearch(true)}
                                 />
                                 <SettingItem
                                     icon={<Shield size={18} />}
                                     color="bg-[#607D8B]"
-                                    label={language === 'zh' ? '数据导出' : 'Export Data'}
-                                    subLabel={language === 'zh' ? '备份你的回忆' : 'Backup your memories'}
+                                    label={t('export_data')}
+                                    subLabel={t('backup_memories')}
                                     onClick={() => { }}
                                 />
                                 <SettingItem
                                     icon={<Laptop size={18} />}
                                     color="bg-[#FF5722]"
-                                    label={language === 'zh' ? '设备管理' : 'Device Management'}
-                                    rightContent={<span className="text-xs font-bold text-[var(--color-text-muted)]">3 Active</span>}
+                                    label={t('device_management')}
+                                    rightContent={<span className="text-xs font-bold text-[var(--color-text-muted)]">{t('devices_active', { count: 3 })}</span>}
                                     onClick={() => { }}
                                 />
                             </div>

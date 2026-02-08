@@ -86,13 +86,13 @@ export default function ChatWindow({ chatId: propChatId }) {
         // For now, duplicate simple string construction or move to helper
         sendMessage(chat.id, `[GIFT:${gift.emoji}:${gift.name}:${gift.name_en}]`);
         setShowGiftPanel(false);
-        showToast(language === 'zh' ? '礼物已赠送' : 'Gift sent');
+        showToast(t('gift_sent'));
     };
 
     const handleRedPacketSent = ({ amount, message }) => {
         sendMessage(chat.id, `[RED_PACKET:${amount}:${message}]`);
         setShowRedPacketPanel(false);
-        showToast(language === 'zh' ? '红包已发送' : 'Red packet sent');
+        showToast(t('red_packet_sent'));
     };
 
     const handleGameResult = ({ result, score }) => {
@@ -166,7 +166,7 @@ export default function ChatWindow({ chatId: propChatId }) {
                     onForward={(msg) => { setMessageToForward(msg); setShowForwardModal(true); }}
                     onPin={(msgId, pin) => {
                         pinMessage(chat.id, msgId, pin);
-                        showToast(pin ? (language === 'zh' ? '消息已置顶' : 'Message pinned') : (language === 'zh' ? '已取消置顶' : 'Unpinned'));
+                        showToast(pin ? t('message_pinned') : t('message_unpinned'));
                     }}
                 />
             )}

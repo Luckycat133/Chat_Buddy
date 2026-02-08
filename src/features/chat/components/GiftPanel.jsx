@@ -6,7 +6,7 @@ import { cn } from '../../../utils/cn';
 
 export default function GiftPanel({ recipientId, recipientName, onClose, onGiftSent }) {
     const { gifts, sendGift, points, getIntimacy, getIntimacyLevel } = useSocial();
-    const { language } = useLanguage();
+    const { t, language } = useLanguage();
     const [selectedGift, setSelectedGift] = useState(null);
     const [sending, setSending] = useState(false);
     const [result, setResult] = useState(null);
@@ -56,10 +56,10 @@ export default function GiftPanel({ recipientId, recipientName, onClose, onGiftS
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                     <div>
                         <h3 className="font-medium text-[17px]">
-                            {language === 'zh' ? `送礼物给 ${recipientName}` : `Send gift to ${recipientName}`}
+                            {t('send_gift_to', { name: recipientName })}
                         </h3>
                         <p className="text-sm text-[var(--color-text-muted)]">
-                            {language === 'zh' ? '积分' : 'Points'}: {points}
+                            {t('points')}: {points}
                         </p>
                     </div>
                     <button onClick={onClose} className="text-[var(--color-text-muted)]">
@@ -128,8 +128,8 @@ export default function GiftPanel({ recipientId, recipientName, onClose, onGiftS
                         result.success ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50"
                     )}>
                         {result.success
-                            ? (language === 'zh' ? '🎉 礼物发送成功!' : '🎉 Gift sent successfully!')
-                            : (language === 'zh' ? '❌ 积分不足' : '❌ Insufficient points')
+                            ? `🎉 ${t('gift_sent_success')}`
+                            : `❌ ${t('insufficient_points')}`
                         }
                     </div>
                 )}
@@ -149,14 +149,14 @@ export default function GiftPanel({ recipientId, recipientName, onClose, onGiftS
                         {sending ? (
                             <>
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                {language === 'zh' ? '发送中...' : 'Sending...'}
+                                {t('sending_ellipsis')}
                             </>
                         ) : (
                             <>
                                 <Gift size={20} />
                                 {selectedGift
-                                    ? (language === 'zh' ? `发送 ${selectedGift.emoji} (${selectedGift.cost}积分)` : `Send ${selectedGift.emoji} (${selectedGift.cost} pts)`)
-                                    : (language === 'zh' ? '选择礼物' : 'Select a gift')
+                                    ? t('send_gift_cost', { emoji: selectedGift.emoji, cost: selectedGift.cost })
+                                    : t('select_gift')
                                 }
                             </>
                         )}

@@ -9,7 +9,7 @@ const AMOUNTS = [10, 20, 50, 100, 200, 520];
 
 export default function RedPacketPanel({ recipientName, onClose, onSend }) {
     const { points } = useSocial();
-    const { language } = useLanguage();
+    const { t, language } = useLanguage();
     const [amount, setAmount] = useState(null);
     const [message, setMessage] = useState('');
     const [sending, setSending] = useState(false);
@@ -49,12 +49,12 @@ export default function RedPacketPanel({ recipientName, onClose, onSend }) {
                         </div>
 
                         <h3 className="text-xl font-bold text-yellow-400">
-                            {language === 'zh' ? '发红包' : 'Send Red Packet'}
+                            {t('send_red_packet')}
                         </h3>
                         <p className="text-sm mt-1 text-yellow-200/80">
-                            {recipientName ?
-                                (language === 'zh' ? `发给 ${recipientName}` : `To ${recipientName}`)
-                                : (language === 'zh' ? '选择金额' : 'Select amount')
+                            {recipientName
+                                ? t('send_to', { name: recipientName })
+                                : t('select_amount')
                             }
                         </p>
                     </div>
@@ -82,7 +82,7 @@ export default function RedPacketPanel({ recipientName, onClose, onSend }) {
                         </div>
 
                         <p className="text-center text-yellow-200/60 text-xs mt-3">
-                            {language === 'zh' ? '当前积分' : 'Current points'}: {points}
+                            {t('current_points')}: {points}
                         </p>
                     </div>
 
@@ -92,7 +92,7 @@ export default function RedPacketPanel({ recipientName, onClose, onSend }) {
                             type="text"
                             value={message}
                             onChange={(e) => setMessage(e.target.value)}
-                            placeholder={language === 'zh' ? '恭喜发财，大吉大利' : 'Best wishes!'}
+                            placeholder={t('red_packet_wish_placeholder')}
                             maxLength={30}
                             className="w-full px-4 py-2 bg-white/20 rounded-lg text-white placeholder:text-white/40 text-center outline-none"
                         />
@@ -123,8 +123,8 @@ export default function RedPacketPanel({ recipientName, onClose, onSend }) {
                                 <>
                                     <Gift size={20} />
                                     {amount
-                                        ? (language === 'zh' ? `塞入 ${amount} 积分` : `Send ${amount} points`)
-                                        : (language === 'zh' ? '选择金额' : 'Select amount')
+                                        ? t('send_x_points', { amount })
+                                        : t('select_amount')
                                     }
                                 </>
                             )}

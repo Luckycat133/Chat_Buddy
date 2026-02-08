@@ -6,7 +6,7 @@ import { cn } from '../utils/cn';
 
 export default function CheckInPanel({ onClose }) {
     const { checkIn, hasCheckedInToday, streakDays, points, getAchievements } = useSocial();
-    const { language } = useLanguage();
+    const { t, language } = useLanguage();
     const [checkInResult, setCheckInResult] = useState(null);
     const [showAnimation, setShowAnimation] = useState(false);
     const [recentAchievements, setRecentAchievements] = useState([]);
@@ -75,7 +75,7 @@ export default function CheckInPanel({ onClose }) {
                     <div className="relative p-4 text-white">
                         <div className="flex items-center justify-between">
                             <h3 className="font-bold text-lg">
-                                {language === 'zh' ? '每日签到' : 'Daily Check-in'}
+                                {t('daily_checkin')}
                             </h3>
                             <button onClick={onClose} className="text-white/80 hover:text-white">
                                 <X size={24} />
@@ -86,13 +86,13 @@ export default function CheckInPanel({ onClose }) {
                         <div className="flex items-center gap-2 mt-4">
                             <Flame className="text-yellow-300" size={24} />
                             <span className="text-xl font-bold">{streakDays}</span>
-                            <span>{language === 'zh' ? '天连续签到' : 'day streak'}</span>
+                            <span>{t('streak_checkin_label')}</span>
                         </div>
 
                         {/* Points */}
                         <div className="flex items-center gap-2 mt-2">
                             <Trophy className="text-yellow-300" size={20} />
-                            <span>{language === 'zh' ? '总积分' : 'Total Points'}:</span>
+                            <span>{t('total_points')}:</span>
                             <span className="font-bold">{points}</span>
                         </div>
                     </div>
@@ -126,13 +126,13 @@ export default function CheckInPanel({ onClose }) {
                 {checkInResult?.success && (
                     <div className="px-4 py-3 bg-green-50 text-green-700 text-center">
                         <p className="font-medium">
-                            🎉 {language === 'zh' ? '签到成功!' : 'Check-in successful!'}
+                            🎉 {t('checkin_success')}
                         </p>
                         <p className="text-sm">
-                            +{checkInResult.points} {language === 'zh' ? '积分' : 'points'}
+                            {t('plus_points', { points: checkInResult.points })}
                             {checkInResult.streak > 1 && (
                                 <span className="ml-2">
-                                    🔥 {checkInResult.streak} {language === 'zh' ? '天连续' : 'day streak'}
+                                    🔥 {checkInResult.streak} {t('streak_label')}
                                 </span>
                             )}
                         </p>
@@ -143,7 +143,7 @@ export default function CheckInPanel({ onClose }) {
                 {recentAchievements.length > 0 && (
                     <div className="px-4 py-3 border-t border-[var(--color-border)]">
                         <p className="text-sm font-medium mb-2">
-                            {language === 'zh' ? '🏆 今日成就' : '🏆 Today\'s Achievements'}
+                            🏆 {t('today_achievements')}
                         </p>
                         {recentAchievements.map(a => (
                             <div key={a.id} className="text-sm text-[var(--color-primary)]">
@@ -166,10 +166,7 @@ export default function CheckInPanel({ onClose }) {
                         )}
                     >
                         <Calendar size={20} />
-                        {hasChecked
-                            ? (language === 'zh' ? '今日已签到' : 'Already checked in')
-                            : (language === 'zh' ? '立即签到' : 'Check in now')
-                        }
+                        {hasChecked ? t('already_checked_in') : t('check_in_now')}
                     </button>
                 </div>
             </div>

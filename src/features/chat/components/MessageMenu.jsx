@@ -63,7 +63,7 @@ export default function MessageMenu({
         { icon: Copy, label: t('copy'), action: handleCopy, show: true },
         { icon: Quote, label: t('quote'), action: handleQuote, show: true },
         { icon: Forward, label: t('forward'), action: handleForward, show: true },
-        { icon: Pin, label: isPinned ? (language === 'zh' ? '取消置顶' : 'Unpin') : (language === 'zh' ? '置顶' : 'Pin'), action: handlePin, show: true },
+        { icon: Pin, label: isPinned ? t('unpin_message') : t('pin_message'), action: handlePin, show: true },
         { icon: Trash2, label: canRecall ? t('recall') : t('delete'), action: handleDelete, show: isOwnMessage, danger: true }
     ].filter(item => item.show);
 

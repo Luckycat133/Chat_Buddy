@@ -71,7 +71,7 @@ export default function FriendsPage() {
                             {t('friends') || 'Friends'}
                         </h1>
                         <p className="text-xs text-[var(--color-text-muted)]">
-                            {personas.length} {language === 'zh' ? '位AI伙伴' : 'AI companions'}
+                            {t('ai_companions_count', { count: personas.length })}
                         </p>
                     </div>
                 </div>
