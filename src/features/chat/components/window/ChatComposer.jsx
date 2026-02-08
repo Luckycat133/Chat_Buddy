@@ -120,16 +120,16 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
 
     // Features
     const onOpenGift = () => {
-        alert(language === 'zh' ? '送礼物功能开发中...' : 'Gift feature coming soon...');
+        alert(t('gift_coming_soon'));
     };
     const onOpenRedPacket = () => {
-        alert(language === 'zh' ? '红包功能开发中...' : 'Red Packet feature coming soon...');
+        alert(t('red_packet_coming_soon'));
     };
     const onOpenGame = () => {
-        alert(language === 'zh' ? '互动游戏开发中...' : 'Game feature coming soon...');
+        alert(t('game_coming_soon'));
     };
     const onOpenPoll = () => {
-        alert(language === 'zh' ? '投票功能开发中...' : 'Poll feature coming soon...');
+        alert(t('poll_coming_soon'));
     };
 
     return (
@@ -199,8 +199,8 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                             style={isRecording ? { background: 'var(--gradient-aurora)', backgroundSize: '150% 150%' } : {}}
                         >
                             {isRecording
-                                ? (language === 'zh' ? '🎙️ 松开发送' : '🎙️ Release to Send')
-                                : (language === 'zh' ? '按住说话' : 'Hold to Talk')}
+                                ? `🎙️ ${t('release_to_send_voice')}`
+                                : t('hold_to_talk')}
                         </button>
                     ) : (
                         <div className="flex-1 relative min-h-[48px] flex items-center bg-[var(--color-bg-white)]/50 rounded-[var(--radius-lg)] transition-all hover:bg-[var(--color-bg-white)]/70 focus-within:bg-[var(--color-bg-white)] focus-within:shadow-sm ring-1 ring-transparent focus-within:ring-[var(--color-primary)]/20 px-4">
@@ -303,15 +303,15 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                     border border-[var(--color-border)] p-4 min-w-[280px] grid grid-cols-4 gap-3 z-30 animate-scale-spring">
                     <MenuButton icon={Paperclip} label={t('file')} onClick={() => setShowFileUploader(true)}
                         color="text-[var(--color-accent-sky)]" bg="bg-sky-50" />
-                    <MenuButton icon={Heart} label={language === 'zh' ? '贴纸' : 'Sticker'} onClick={() => setShowStickerPicker(true)}
+                    <MenuButton icon={Heart} label={t('sticker')} onClick={() => setShowStickerPicker(true)}
                         color="text-[var(--color-accent-coral)]" bg="bg-pink-50" />
-                    <MenuButton icon={Gift} label={language === 'zh' ? '礼物' : 'Gift'} onClick={onOpenGift}
+                    <MenuButton icon={Gift} label={t('gift')} onClick={onOpenGift}
                         color="text-[var(--color-accent-coral)]" bg="bg-pink-50" />
-                    <MenuButton icon={Coins} label={language === 'zh' ? '红包' : 'Packet'} onClick={onOpenRedPacket}
+                    <MenuButton icon={Coins} label={t('red_packet')} onClick={onOpenRedPacket}
                         color="text-red-500" bg="bg-red-50" />
-                    <MenuButton icon={Gamepad2} label={language === 'zh' ? '游戏' : 'Game'} onClick={onOpenGame}
+                    <MenuButton icon={Gamepad2} label={t('game')} onClick={onOpenGame}
                         color="text-[var(--color-accent-lavender)]" bg="bg-purple-50" />
-                    <MenuButton icon={BarChart3} label={language === 'zh' ? '投票' : 'Poll'} onClick={onOpenPoll}
+                    <MenuButton icon={BarChart3} label={t('poll')} onClick={onOpenPoll}
                         color="text-[var(--color-primary)]" bg="bg-orange-50" />
                 </div>
             )}

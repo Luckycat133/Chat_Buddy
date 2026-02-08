@@ -45,7 +45,7 @@ export default function GroupDetails() {
     const handleSaveAnnouncement = (announcementData) => {
         updateChat(id, { announcement: announcementData });
         // Optionally send a system message
-        sendMessage(id, language === 'zh' ? `[公告] ${announcementData.content}` : `[Announcement] ${announcementData.content}`);
+        sendMessage(id, `${t('announcement_prefix')} ${announcementData.content}`);
     };
 
     const handleDeleteAnnouncement = () => {
@@ -61,7 +61,7 @@ export default function GroupDetails() {
         let content = `${chat.name} - Chat History\nExported: ${new Date().toLocaleString()}\n\n`;
 
         chat.messages.forEach(msg => {
-            const sender = msg.senderId === 'user-me' ? (language === 'zh' ? '我' : 'Me') : personas.find(p => p.id === msg.senderId)?.name || 'Unknown';
+            const sender = msg.senderId === 'user-me' ? t('me') : personas.find(p => p.id === msg.senderId)?.name || 'Unknown';
             const time = new Date(msg.timestamp).toLocaleString();
             content += `[${time}] ${sender}: ${msg.content}\n`;
         });
@@ -105,7 +105,7 @@ export default function GroupDetails() {
                         return (
                             <div key={pid} className="flex flex-col items-center w-14 cursor-pointer" onClick={() => {
                                 const currentNickname = chat.nicknames?.[pid] || pName;
-                                const newNickname = window.prompt(language === 'zh' ? '设置群昵称' : 'Set group nickname', currentNickname);
+                                const newNickname = window.prompt(t('set_group_nickname'), currentNickname);
                                 if (newNickname !== null) {
                                     const currentNicknames = chat.nicknames || {};
                                     updateChat(id, { nicknames: { ...currentNicknames, [pid]: newNickname } });
@@ -152,7 +152,7 @@ export default function GroupDetails() {
                 >
                     <Megaphone size={20} className="text-[var(--color-primary)] mr-3" />
                     <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
-                        {language === 'zh' ? '群公告' : 'Group Announcement'}
+                        {t('group_announcement')}
                     </span>
                     {chat.announcement && (
                         <span className="text-xs text-[var(--color-text-muted)] mr-2 truncate max-w-[100px]">
@@ -167,7 +167,7 @@ export default function GroupDetails() {
                 >
                     <BarChart3 size={20} className="text-[var(--color-primary)] mr-3" />
                     <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
-                        {language === 'zh' ? '群投票' : 'Group Poll'}
+                        {t('group_poll')}
                     </span>
                     <ChevronRight size={20} className="text-[#C7C7CC]" />
                 </div>
@@ -181,7 +181,7 @@ export default function GroupDetails() {
                 >
                     <Download size={20} className="text-[var(--color-text-main)] mr-3" />
                     <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
-                        {language === 'zh' ? '导出聊天记录' : 'Export Chat History'}
+                        {t('export_chat_history')}
                     </span>
                     <ChevronRight size={20} className="text-[#C7C7CC]" />
                 </div>
@@ -204,12 +204,12 @@ export default function GroupDetails() {
             {/* Group Admin Settings */}
             <div className="bg-white mb-2">
                 <ToggleItem
-                    label={language === 'zh' ? '消息免打扰' : 'Mute Notifications'}
+                    label={t('mute_notifications')}
                     checked={chat.isMuted || false}
                     onChange={(v) => updateChat(id, { isMuted: v })}
                 />
                 <ToggleItem
-                    label={language === 'zh' ? '仅管理员可发言' : 'Admin Only Chat'}
+                    label={t('admin_only_chat')}
                     checked={chat.adminOnly || false}
                     onChange={(v) => updateChat(id, { adminOnly: v })}
                 />
@@ -219,14 +219,14 @@ export default function GroupDetails() {
             <div className="bg-white mb-6">
                 <button
                     onClick={() => {
-                        if (window.confirm(language === 'zh' ? '确定要清空聊天记录吗？' : 'Are you sure you want to clear chat history?')) {
+                        if (window.confirm(t('confirm_clear_history'))) {
                             clearChatMessages(id);
-                            alert(language === 'zh' ? '聊天记录已清空' : 'Chat history cleared');
+                            alert(t('chat_history_cleared'));
                         }
                     }}
                     className="w-full px-4 py-3 text-center text-[var(--color-text-main)] text-[16px] border-b border-[var(--color-border-light)]"
                 >
-                    {language === 'zh' ? '清空聊天记录' : 'Clear Chat History'}
+                    {t('clear_chat_history')}
                 </button>
                 <button
                     onClick={handleDeleteChat}

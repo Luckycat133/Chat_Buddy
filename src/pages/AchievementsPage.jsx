@@ -8,17 +8,17 @@ import { cn } from '../utils/cn';
 export default function AchievementsPage() {
     const navigate = useNavigate();
     const { getAchievements, points, streakDays } = useSocial();
-    const { language } = useLanguage();
+    const { t, language } = useLanguage();
     const [selectedCategory, setSelectedCategory] = useState('all');
 
     const achievements = getAchievements();
     const unlockedCount = achievements.filter(a => a.unlocked).length;
 
     const categories = [
-        { id: 'all', name: '全部', name_en: 'All', icon: Trophy },
-        { id: 'social', name: '社交', name_en: 'Social', icon: MessageSquare },
-        { id: 'streak', name: '签到', name_en: 'Streak', icon: Flame },
-        { id: 'gift', name: '礼物', name_en: 'Gifts', icon: Gift },
+        { id: 'all', key: 'cat_all', icon: Trophy },
+        { id: 'social', key: 'cat_social', icon: MessageSquare },
+        { id: 'streak', key: 'cat_streak', icon: Flame },
+        { id: 'gift', key: 'cat_gifts', icon: Gift },
     ];
 
     const getCategoryForAchievement = (id) => {
@@ -51,7 +51,7 @@ export default function AchievementsPage() {
                             <ArrowLeft size={24} />
                         </button>
                         <h1 className="text-xl font-bold text-white">
-                            {language === 'zh' ? '成就系统' : 'Achievements'}
+                            {t('achievement_system')}
                         </h1>
                     </div>
 
@@ -60,17 +60,17 @@ export default function AchievementsPage() {
                         <div className="bg-white/20 rounded-xl p-3">
                             <Trophy className="mx-auto mb-1" size={24} />
                             <p className="text-2xl font-bold">{unlockedCount}/{achievements.length}</p>
-                            <p className="text-xs opacity-80">{language === 'zh' ? '已解锁' : 'Unlocked'}</p>
+                            <p className="text-xs opacity-80">{t('unlocked')}</p>
                         </div>
                         <div className="bg-white/20 rounded-xl p-3">
                             <Star className="mx-auto mb-1" size={24} />
                             <p className="text-2xl font-bold">{points}</p>
-                            <p className="text-xs opacity-80">{language === 'zh' ? '总积分' : 'Points'}</p>
+                            <p className="text-xs opacity-80">{t('total_points')}</p>
                         </div>
                         <div className="bg-white/20 rounded-xl p-3">
                             <Flame className="mx-auto mb-1" size={24} />
                             <p className="text-2xl font-bold">{streakDays}</p>
-                            <p className="text-xs opacity-80">{language === 'zh' ? '连续天数' : 'Streak'}</p>
+                            <p className="text-xs opacity-80">{t('streak_days')}</p>
                         </div>
                     </div>
                 </div>
@@ -92,7 +92,7 @@ export default function AchievementsPage() {
                             )}
                         >
                             <Icon size={16} />
-                            {language === 'zh' ? cat.name : cat.name_en}
+                            {t(cat.key)}
                         </button>
                     );
                 })}
@@ -151,7 +151,7 @@ export default function AchievementsPage() {
                                     achievement.unlocked ? "text-[var(--color-primary)]" : "text-gray-400"
                                 )}>
                                     <p className="text-lg font-bold">+{achievement.points}</p>
-                                    <p className="text-xs">{language === 'zh' ? '积分' : 'pts'}</p>
+                                    <p className="text-xs">{t('pts')}</p>
                                 </div>
                             </div>
                         );

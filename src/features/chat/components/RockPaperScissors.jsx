@@ -78,9 +78,9 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
 
     const getResultMessage = () => {
         if (!result) return '';
-        if (result === 'win') return language === 'zh' ? '你赢了! 🎉' : 'You win! 🎉';
-        if (result === 'lose') return language === 'zh' ? `${aiName} 赢了!` : `${aiName} wins!`;
-        return language === 'zh' ? '平局!' : 'Draw!';
+        if (result === 'win') return t('you_win');
+        if (result === 'lose') return t('ai_wins', { name: aiName });
+        return t('game_draw');
     };
 
     const getResultColor = () => {
@@ -99,7 +99,7 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)]">
                     <h3 className="font-bold text-white text-lg">
-                        {language === 'zh' ? '✊ 石头剪刀布 ✌️' : '✊ Rock Paper Scissors ✌️'}
+                        ✊ {t('rock_paper_scissors')} ✌️
                     </h3>
                     <button onClick={onClose} className="text-white/80 hover:text-white">
                         <X size={24} />
@@ -113,7 +113,7 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
                         <p className="text-2xl font-bold text-[var(--color-primary)]">{score.player}</p>
                     </div>
                     <div className="text-center">
-                        <p className="text-sm text-[var(--color-text-muted)]">{language === 'zh' ? '第' : 'Round'} {round} {language === 'zh' ? '轮' : ''}</p>
+                        <p className="text-sm text-[var(--color-text-muted)]">{t('round_label', { round })}</p>
                         <p className="text-lg font-medium">VS</p>
                     </div>
                     <div className="text-center">
@@ -162,7 +162,7 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
                     {!playerChoice && (
                         <div>
                             <p className="text-center text-sm text-[var(--color-text-muted)] mb-4">
-                                {language === 'zh' ? '选择你的出招' : 'Make your choice'}
+                                {t('make_your_choice')}
                             </p>
                             <div className="flex justify-center gap-4">
                                 {CHOICES.map(choice => (
@@ -186,13 +186,13 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
                                 className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-[var(--color-primary-hover)] transition-colors"
                             >
                                 <RotateCcw size={18} />
-                                {language === 'zh' ? '再来一局' : 'Play Again'}
+                                {t('play_again')}
                             </button>
                             <button
                                 onClick={handleFinish}
                                 className="flex-1 py-3 bg-[var(--color-bg-app)] text-[var(--color-text-main)] rounded-lg font-medium hover:bg-gray-200 transition-colors"
                             >
-                                {language === 'zh' ? '结束' : 'Finish'}
+                                {t('finish')}
                             </button>
                         </div>
                     )}

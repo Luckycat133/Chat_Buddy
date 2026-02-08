@@ -49,10 +49,10 @@ export default function Dashboard() {
     // Get greeting based on time
     const getGreeting = () => {
         const hour = currentTime.getHours();
-        if (hour < 6) return language === 'zh' ? '夜深了' : 'Late Night';
-        if (hour < 12) return language === 'zh' ? '早上好' : 'Good Morning';
-        if (hour < 18) return language === 'zh' ? '下午好' : 'Good Afternoon';
-        return language === 'zh' ? '晚上好' : 'Good Evening';
+        if (hour < 6) return t('greeting_late_night');
+        if (hour < 12) return t('greeting_morning');
+        if (hour < 18) return t('greeting_afternoon');
+        return t('greeting_evening');
     };
 
     // Get persona for chat display
@@ -83,8 +83,8 @@ export default function Dashboard() {
                 {/* Recent Chats - Large Card */}
                 <BentoCard
                     size="lg"
-                    title={language === 'zh' ? '最近聊天' : 'Recent Chats'}
-                    subtitle={`${recentChats.length} ${language === 'zh' ? '个对话' : 'conversations'}`}
+                    title={t('recent_chats')}
+                    subtitle={t('conversations_count', { count: recentChats.length })}
                     icon={MessageSquare}
                     onClick={() => navigate('/')}
                     glowColor="var(--color-primary-glow)"
@@ -127,7 +127,7 @@ export default function Dashboard() {
                 {/* Daily Check-in Card */}
                 <BentoCard
                     size="sm"
-                    title={language === 'zh' ? '每日签到' : 'Daily Check-in'}
+                    title={t('daily_checkin')}
                     icon={CalendarCheck}
                     gradient="linear-gradient(135deg, #FF9B7A 0%, #FF7E9D 100%)"
                     onClick={() => navigate('/achievements')}
@@ -135,7 +135,7 @@ export default function Dashboard() {
                     <div className="text-center mt-2">
                         <div className="text-3xl mb-1">🎁</div>
                         <p className="text-xs text-[var(--color-text-muted)]">
-                            {language === 'zh' ? '点击签到' : 'Tap to check in'}
+                            {t('tap_to_checkin')}
                         </p>
                     </div>
                 </BentoCard>
@@ -143,7 +143,7 @@ export default function Dashboard() {
                 {/* AI Agents Quick Access */}
                 <BentoCard
                     size="sm"
-                    title={language === 'zh' ? 'AI 助手' : 'AI Agents'}
+                    title={t('ai_agents')}
                     icon={Bot}
                     onClick={() => navigate('/agents')}
                     glowColor="var(--color-accent-lavender)"
@@ -151,7 +151,7 @@ export default function Dashboard() {
                     <div className="text-center mt-2">
                         <div className="text-3xl mb-1">🤖</div>
                         <p className="text-xs text-[var(--color-text-muted)]">
-                            {language === 'zh' ? '智能任务' : 'Smart Tasks'}
+                            {t('smart_tasks')}
                         </p>
                     </div>
                 </BentoCard>
@@ -159,8 +159,8 @@ export default function Dashboard() {
                 {/* Moments Preview - Medium Card */}
                 <BentoCard
                     size="md"
-                    title={language === 'zh' ? '朋友圈' : 'Moments'}
-                    subtitle={language === 'zh' ? '查看最新动态' : 'View latest updates'}
+                    title={t('moments')}
+                    subtitle={t('view_latest')}
                     icon={Camera}
                     onClick={() => navigate('/moments')}
                 >
@@ -181,7 +181,7 @@ export default function Dashboard() {
                             </div>
                         ))}
                         <span className="text-xs text-[var(--color-text-muted)] ml-2">
-                            {language === 'zh' ? '新动态' : 'new posts'}
+                            {t('new_posts_count', { count: '' })}
                         </span>
                     </div>
                 </BentoCard>
@@ -189,8 +189,8 @@ export default function Dashboard() {
                 {/* Friends Card */}
                 <BentoCard
                     size="sm"
-                    title={language === 'zh' ? '好友' : 'Friends'}
-                    subtitle={`${personas.length} ${language === 'zh' ? '位' : 'friends'}`}
+                    title={t('friends')}
+                    subtitle={t('ai_companions_count', { count: personas.length })}
                     icon={Users}
                     onClick={() => navigate('/friends')}
                 >
@@ -210,7 +210,7 @@ export default function Dashboard() {
                 {/* Achievements Progress */}
                 <BentoCard
                     size="sm"
-                    title={language === 'zh' ? '成就' : 'Achievements'}
+                    title={t('achievements')}
                     icon={Trophy}
                     onClick={() => navigate('/achievements')}
                     gradient="linear-gradient(135deg, #FFD666 0%, #FF9B7A 100%)"
@@ -218,7 +218,7 @@ export default function Dashboard() {
                     <div className="mt-2">
                         <div className="flex items-center justify-between text-xs mb-1">
                             <span className="text-[var(--color-text-muted)]">
-                                {language === 'zh' ? '进度' : 'Progress'}
+                                {t('progress')}
                             </span>
                             <span className="font-medium text-[var(--color-primary)]">
                                 45%
@@ -236,8 +236,8 @@ export default function Dashboard() {
                 {/* Today's Recommended Character - Medium Card */}
                 <BentoCard
                     size="md"
-                    title={language === 'zh' ? '今日推荐' : "Today's Pick"}
-                    subtitle={language === 'zh' ? '与TA聊聊' : 'Chat with them'}
+                    title={t('todays_pick')}
+                    subtitle={t('chat_with_them')}
                     icon={Sparkles}
                     gradient="linear-gradient(135deg, var(--color-accent-mint) 0%, var(--color-accent-sky) 100%)"
                 >
@@ -258,7 +258,7 @@ export default function Dashboard() {
                                     {language === 'zh' ? (personas[0].name_zh || personas[0].name) : personas[0].name}
                                 </p>
                                 <p className="text-xs text-[var(--color-text-muted)]">
-                                    {personas[0].tagline || (language === 'zh' ? '点击开始对话' : 'Tap to chat')}
+                                    {personas[0].tagline || t('tap_to_chat')}
                                 </p>
                             </div>
                         </Link>
@@ -268,24 +268,24 @@ export default function Dashboard() {
                 {/* Quick Stats */}
                 <BentoCard
                     size="tall"
-                    title={language === 'zh' ? '统计' : 'Stats'}
+                    title={t('stats')}
                     icon={TrendingUp}
                 >
                     <div className="space-y-4 mt-2">
                         <StatItem
-                            label={language === 'zh' ? '总消息' : 'Messages'}
+                            label={t('messages_stat')}
                             value={chats.reduce((acc, c) => acc + (c.messages?.length || 0), 0)}
                             icon={MessageSquare}
                         />
                         <StatItem
-                            label={language === 'zh' ? '聊天数' : 'Chats'}
+                            label={t('chats_stat')}
                             value={chats.length}
                             icon={Users}
                         />
                         <StatItem
-                            label={language === 'zh' ? '连续天数' : 'Streak'}
+                            label={t('streak_stat')}
                             value="7"
-                            suffix={language === 'zh' ? '天' : 'days'}
+                            suffix={t('days_unit')}
                             icon={Clock}
                         />
                     </div>

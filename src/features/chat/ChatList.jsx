@@ -84,7 +84,7 @@ const ChatListItem = memo(function ChatListItem({
                 )}>
                     {isTyping ? (
                         <span className="flex items-center gap-1">
-                            {language === 'zh' ? '正在输入...' : 'Typing...'}
+                            {t('is_typing')}
                         </span>
                     ) : (chat.lastMessage ? chat.lastMessage.content : t('no_messages'))}
                 </p>
@@ -94,7 +94,8 @@ const ChatListItem = memo(function ChatListItem({
 });
 
 // ========== Empty State Component ==========
-function EmptyState({ language, onCreateChat }) {
+function EmptyState({ onCreateChat }) {
+    const { t } = useLanguage();
     return (
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 animate-fade-slide-up">
             {/* Floating animated icon */}
@@ -111,12 +112,10 @@ function EmptyState({ language, onCreateChat }) {
             </div>
 
             <h3 className="text-xl font-bold text-[var(--color-text-main)] mb-2 text-center font-display">
-                {language === 'zh' ? '开始你的AI伙伴之旅' : 'Start Your AI Adventure'}
+                {t('start_ai_adventure')}
             </h3>
             <p className="text-sm text-[var(--color-text-muted)] text-center max-w-xs mb-8 leading-relaxed">
-                {language === 'zh'
-                    ? '与独特的AI角色成为朋友，享受有趣的对话体验！'
-                    : 'Make friends with unique AI characters and enjoy fun conversations!'}
+                {t('start_ai_adventure_desc')}
             </p>
 
             <button
@@ -124,7 +123,7 @@ function EmptyState({ language, onCreateChat }) {
                 className="btn-primary flex items-center gap-2 px-6 py-3 text-[15px]"
             >
                 <MessageSquarePlus size={20} />
-                {language === 'zh' ? '开始聊天' : 'Start Chatting'}
+                {t('start_chatting')}
             </button>
         </div>
     );
@@ -308,7 +307,7 @@ export default function ChatList() {
             {/* Chat List - Floating Cards Container */}
             <div className="flex-1 overflow-y-auto px-2 space-y-3 pb-32 md:pb-4 custom-scrollbar">
                 {filteredChats.length === 0 ? (
-                    <EmptyState language={language} onCreateChat={handleCreateChat} />
+                    <EmptyState onCreateChat={handleCreateChat} />
                 ) : (
                     filteredChats.map(({ chat, meta }, index) => {
                         const lastMsg = chat.lastMessage;
