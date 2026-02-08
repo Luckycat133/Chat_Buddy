@@ -4,7 +4,9 @@
 
 ![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
+![React](https://img.shields.io/badge/React-19+-61DAFB.svg)
+![Tests](https://img.shields.io/badge/tests-143%20passing-success.svg)
+![Coverage](https://img.shields.io/badge/coverage-4.75%25-yellow.svg)
 
 **AI Chat Companion**
 
