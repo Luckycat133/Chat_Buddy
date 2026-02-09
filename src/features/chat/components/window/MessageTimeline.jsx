@@ -12,6 +12,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { GeneratedFileMessage } from '../FileMessage';
 import { getCharacterGlowClass, getCharacterThemeStyle } from '../CharacterTheme';
+import { useTheme } from '../../../../context/ThemeContext';
 
 export default function MessageTimeline({
     chat,
@@ -21,6 +22,7 @@ export default function MessageTimeline({
     onVotePoll
 }) {
     const { language } = useLanguage();
+    const { bubbleStyle } = useTheme();
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
@@ -44,7 +46,7 @@ export default function MessageTimeline({
     };
 
     return (
-        <div className="flex-1 overflow-y-auto p-3 pb-20 md:pb-4">
+        <div className="flex-1 overflow-y-auto p-3 pb-20 md:pb-4" data-bubble-style={bubbleStyle}>
             {chat.messages.map((msg, index) => {
                 const isMe = msg.senderId === 'user-me';
                 const sender = isMe ? currentUser : personas.find(p => p.id === msg.senderId);
@@ -145,9 +147,9 @@ export default function MessageTimeline({
                                         "relative transition-all duration-200 message-bubble-hover",
                                         (type === 'text' || type === 'file')
                                             ? (isMe
-                                                ? "px-4.5 py-3 bg-[var(--gradient-aurora)] text-white rounded-[20px] rounded-tr-sm shadow-md"
+                                                ? "bubble-msg-me px-4.5 py-3 bg-[var(--gradient-aurora)] text-white rounded-[20px] rounded-tr-sm shadow-md"
                                                 : cn(
-                                                    "px-4.5 py-3 bg-[var(--color-bg-white)] text-[var(--color-text-main)] rounded-[20px] rounded-tl-sm border border-[var(--color-border-light)] shadow-sm",
+                                                    "bubble-msg px-4.5 py-3 bg-[var(--color-bg-white)] text-[var(--color-text-main)] rounded-[20px] rounded-tl-sm border border-[var(--color-border-light)] shadow-sm",
                                                     "message-bubble-ai",
                                                     getCharacterGlowClass(msg.senderId)
                                                 ))

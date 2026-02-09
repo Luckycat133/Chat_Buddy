@@ -34,7 +34,7 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 | T01 | Internationalization & Localization | v0.1.1 | P0 | ✅ Done |
 | T02 | Core Architecture & API Compatibility | v0.1.2 | P0 | ✅ Done |
 | T03 | Modern UI Design System | v0.1.3 | P0 | 🔧 Phase 1-3 done, Phase 4 pending |
-| T04 | Character Visuals & Interaction Design | v0.2.0 | P1 | Needs refinement |
+| T04 | Character Visuals & Interaction Design | v0.2.0 | P1 | ✅ Done |
 | T05 | AI Behavior Humanization | v0.2.1 | P1 | Needs new features |
 | T06 | AI Characters & Avatar System | v0.2.2 | P1 | Needs affinity/status |
 | T07 | Message Feature Enhancement | v0.2.3 | P1 | Needs completion |
@@ -190,7 +190,7 @@ src/config/
 
 ## T04 — Character Visuals & Interaction Design
 
-**Version**: v0.2.0 | **Priority**: P1 | **Status**: Needs refinement
+**Version**: v0.2.0 | **Priority**: P1 | **Status**: ✅ Done
 
 ### Design References
 - Character.AI: Character card design, personality indicators
@@ -205,25 +205,27 @@ src/config/
 - [x] Character glow effects
 - [x] iOS 26 style refinement
 - [x] prefers-reduced-motion support
+- [x] Character theme extends to full chat UI:
+  - Header bar gradient tint + avatar ring color
+  - Input box focus ring + quote accent line
+  - Send button & record button use character gradient
+  - CSS vars cascade from ChatWindow container
+- [x] Animation intensity setting (none / subtle / standard / intense) with Settings UI
+- [x] Message bubble style options (rounded / square / tail / minimal) with Settings UI
+- [x] Character intro animation (`characterIntro` + `introGlow` keyframes)
 
-### What's Planned
-- [ ] Character theme extends to full chat UI:
-  - Header bar gradient tint
-  - Input box border/focus color
-  - Send button accent
-  - Scrollbar thumb color
-- [ ] Animation intensity setting (none / subtle / standard / intense)
-- [ ] Message bubble style options:
-  - Rounded (current)
-  - Square with slight radius
-  - With tail/arrow
-  - Minimal (no bubble, just text with accent line)
-- [ ] Character intro animation (first time meeting a character)
+### Future Improvements
 - [ ] Custom character color override per user preference
+- [ ] Character-themed scrollbar colors (limited browser support)
 
 ### Key Files
-- `src/features/chat/components/CharacterTheme.jsx`
-- `src/index.css` — Animation keyframes, character CSS variables
+- `src/features/chat/components/CharacterTheme.jsx` — Theme definitions + style export
+- `src/features/chat/ChatWindow.jsx` — Applies character CSS vars to container
+- `src/features/chat/components/window/ChatHeader.jsx` — Character-themed header
+- `src/features/chat/components/window/ChatComposer.jsx` — Character-themed input
+- `src/features/chat/components/window/MessageTimeline.jsx` — Bubble style support
+- `src/context/ThemeContext.jsx` — animationIntensity & bubbleStyle state
+- `src/index.css` — Animation intensity levels, bubble style variants, intro animations
 
 ### Dependencies
 - T03 (design token system)
