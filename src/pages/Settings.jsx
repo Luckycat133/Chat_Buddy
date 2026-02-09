@@ -9,13 +9,16 @@ import { useSocial } from '../context/SocialContext';
 import {
     ChevronRight, Bell, Lock, Globe, Info, Moon, HelpCircle,
     Volume2, VolumeX, BellOff, Trophy, Calendar, Search, Image,
-    Settings as SettingsIcon, Shield, Laptop, LogOut
+    Settings as SettingsIcon, Shield, Laptop, LogOut,
+    Server, Download, Upload
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import CheckInPanel from '../components/CheckInPanel';
 import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
+import { exportAllData, importData } from '../config/apiConfig';
 
 const BackgroundSettingsModal = React.lazy(() => import('../features/background/BackgroundSettingsModal'));
+const ApiConfigPanel = React.lazy(() => import('../components/ApiConfigPanel'));
 
 export default function Settings() {
     const { language, toggleLanguage, t } = useLanguage();
@@ -28,6 +31,25 @@ export default function Settings() {
     const [showCheckIn, setShowCheckIn] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [showBackgroundModal, setShowBackgroundModal] = useState(false);
+    const [showApiConfig, setShowApiConfig] = useState(false);
+    const [importMsg, setImportMsg] = useState(null);
+    const fileInputRef = React.useRef(null);
+
+    const handleExport = () => {
+        exportAllData();
+    };
+
+    const handleImport = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            const count = await importData(file);
+            setImportMsg({ type: 'success', text: t('import_success', { count }) });
+        } catch (err) {
+            setImportMsg({ type: 'error', text: t('import_failed', { error: err.message }) });
+        }
+        e.target.value = '';
+    };
 
     return (
         <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto custom-scrollbar relative">
@@ -206,6 +228,13 @@ export default function Settings() {
                             </div>
                             <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-[var(--radius-xl)] overflow-hidden shadow-sm">
                                 <SettingItem
+                                    icon={<Server size={18} />}
+                                    color="bg-[#2196F3]"
+                                    label={t('api_config')}
+                                    subLabel={t('api_config_desc')}
+                                    onClick={() => setShowApiConfig(true)}
+                                />
+                                <SettingItem
                                     icon={<Search size={18} />}
                                     color="bg-[#795548]"
                                     label={t('global_search')}
@@ -213,20 +242,45 @@ export default function Settings() {
                                     onClick={() => setShowSearch(true)}
                                 />
                                 <SettingItem
-                                    icon={<Shield size={18} />}
+                                    icon={<Download size={18} />}
                                     color="bg-[#607D8B]"
-                                    label={t('export_data')}
-                                    subLabel={t('backup_memories')}
-                                    onClick={() => { }}
+                                    label={t('export_data_title')}
+                                    subLabel={t('export_data_desc')}
+                                    onClick={handleExport}
                                 />
                                 <SettingItem
-                                    icon={<Laptop size={18} />}
-                                    color="bg-[#FF5722]"
-                                    label={t('device_management')}
-                                    rightContent={<span className="text-xs font-bold text-[var(--color-text-muted)]">{t('devices_active', { count: 3 })}</span>}
-                                    onClick={() => { }}
+                                    icon={<Upload size={18} />}
+                                    color="bg-[#FF9800]"
+                                    label={t('import_data')}
+                                    subLabel={t('import_data_desc')}
+                                    onClick={() => fileInputRef.current?.click()}
+                                />
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".json"
+                                    onChange={handleImport}
+                                    className="hidden"
                                 />
                             </div>
+                            {importMsg && (
+                                <div className={cn(
+                                    "mt-3 px-4 py-3 rounded-xl text-sm flex items-center justify-between",
+                                    importMsg.type === 'success'
+                                        ? "bg-green-50 text-green-700 border border-green-200"
+                                        : "bg-red-50 text-red-700 border border-red-200"
+                                )}>
+                                    <span>{importMsg.text}</span>
+                                    {importMsg.type === 'success' && (
+                                        <button
+                                            onClick={() => window.location.reload()}
+                                            className="ml-2 px-3 py-1 rounded-lg bg-green-600 text-white text-xs font-medium"
+                                        >
+                                            {t('reload_now')}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </section>
 
                         <section className="animate-fade-slide-up" style={{ animationDelay: '300ms' }}>
@@ -243,6 +297,11 @@ export default function Settings() {
             {/* Modals */}
             {showCheckIn && <CheckInPanel onClose={() => setShowCheckIn(false)} />}
             {showSearch && <MessageSearchPanel onClose={() => setShowSearch(false)} />}
+            {showApiConfig && (
+                <Suspense fallback={null}>
+                    <ApiConfigPanel onClose={() => setShowApiConfig(false)} />
+                </Suspense>
+            )}
             {showBackgroundModal && (
                 <Suspense fallback={null}>
                     <BackgroundSettingsModal isOpen={true} onClose={() => setShowBackgroundModal(false)} />
