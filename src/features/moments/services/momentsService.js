@@ -18,45 +18,11 @@ export const AI_LOCATIONS = {
 
 export const DEFAULT_LOCATIONS = ['Home', '家里', 'Somewhere nice ✨', '某个美好的地方 ✨'];
 
-// API Call
-export async function callMomentsAI(messages, maxTokens = 200, apiKeyOverride = null, apiUrlOverride = null) {
-    const apiUrl = apiUrlOverride || import.meta.env.VITE_AI_API_URL || 'https://api.perplexity.ai';
-    const apiKey = apiKeyOverride || import.meta.env.VITE_AI_API_KEY;
-    const model = import.meta.env.VITE_AI_MODEL || 'llama-3.1-sonar-small-128k-chat';
+// API Call — delegates to shared chatService for unified config / retry / timeout
+import { callAI } from '../../chat/services/chatService';
 
-    if (!apiKey) {
-        console.warn('[MomentsAI] No API key configured');
-        return null;
-    }
-
-    try {
-        const response = await fetch(`${apiUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model,
-                messages,
-                temperature: 0.9,
-                max_tokens: maxTokens
-            })
-        });
-
-        const data = await response.json();
-        if (data.error) {
-            console.error('[MomentsAI] API Error:', data.error);
-            return null;
-        }
-        if (data.choices && data.choices.length > 0) {
-            return data.choices[0].message.content.trim();
-        }
-        return null;
-    } catch (error) {
-        console.error('[MomentsAI] API Call Failed:', error);
-        return null;
-    }
+export async function callMomentsAI(messages, maxTokens = 200) {
+    return callAI(messages, { temperature: 0.9, maxTokens, agentId: 'moments' });
 }
 
 // Helpers
