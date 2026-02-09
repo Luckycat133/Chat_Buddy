@@ -140,7 +140,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                     flex items-center justify-between animate-fade-slide-up ring-1 ring-[var(--color-border)]">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                         <div className="w-1 h-10 rounded-full animate-aurora"
-                            style={{ background: 'var(--gradient-aurora)' }} />
+                            style={{ background: 'var(--character-gradient, var(--gradient-aurora))' }} />
                         <div className="min-w-0">
                             <p className="text-xs font-bold text-[var(--color-primary)]">
                                 {t('reply_to')} {getSenderName(quotedMessage.senderId)}
@@ -196,14 +196,14 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                     ? "text-white scale-[0.98] shadow-inner animate-aurora"
                                     : "bg-[var(--color-bg-white)]/50 hover:bg-[var(--color-bg-white)]/80 text-[var(--color-text-main)]"
                             )}
-                            style={isRecording ? { background: 'var(--gradient-aurora)', backgroundSize: '150% 150%' } : {}}
+                            style={isRecording ? { background: 'var(--character-gradient, var(--gradient-aurora))', backgroundSize: '150% 150%' } : {}}
                         >
                             {isRecording
                                 ? `🎙️ ${t('release_to_send_voice')}`
                                 : t('hold_to_talk')}
                         </button>
                     ) : (
-                        <div className="flex-1 relative min-h-[48px] flex items-center bg-[var(--color-bg-white)]/50 rounded-[var(--radius-lg)] transition-all hover:bg-[var(--color-bg-white)]/70 focus-within:bg-[var(--color-bg-white)] focus-within:shadow-sm ring-1 ring-transparent focus-within:ring-[var(--color-primary)]/20 px-4">
+                        <div className="flex-1 relative min-h-[48px] flex items-center bg-[var(--color-bg-white)]/50 rounded-[var(--radius-lg)] transition-all hover:bg-[var(--color-bg-white)]/70 focus-within:bg-[var(--color-bg-white)] focus-within:shadow-sm ring-1 ring-transparent focus-within:ring-[var(--character-primary,var(--color-primary))]/20 px-4">
                             <input
                                 ref={inputRef}
                                 type="text"
@@ -264,7 +264,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                 className="ml-1 p-3 rounded-full text-white shadow-lg
                                     hover:scale-105 active:scale-95
                                     transition-all duration-300 animate-aurora"
-                                style={{ background: 'var(--gradient-aurora)', backgroundSize: '150% 150%' }}
+                                style={{ background: 'var(--character-gradient, var(--gradient-aurora))', backgroundSize: '150% 150%' }}
                             >
                                 <Send size={22} className="ml-0.5" />
                             </button>
@@ -277,7 +277,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                         ? "text-white rotate-45 shadow-md"
                                         : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)]"
                                 )}
-                                style={showPlusMenu ? { background: 'var(--gradient-aurora)' } : {}}
+                                style={showPlusMenu ? { background: 'var(--character-gradient, var(--gradient-aurora))' } : {}}
                                 onClick={() => { closeAll(); setShowPlusMenu(!showPlusMenu); }}
                             >
                                 <Plus size={24} />

@@ -10,6 +10,7 @@ import ChatHeader from './components/window/ChatHeader';
 import MessageTimeline from './components/window/MessageTimeline';
 import ChatComposer from './components/window/ChatComposer';
 import MessageMenu from './components/MessageMenu';
+import { getCharacterThemeStyle } from './components/CharacterTheme';
 
 // Lazy-loaded modals/panels (loaded on demand)
 const ForwardModal = lazy(() => import('./components/ForwardModal'));
@@ -64,6 +65,11 @@ export default function ChatWindow({ chatId: propChatId }) {
 
     if (!chat) return <div className="flex items-center justify-center h-full bg-[var(--color-bg-app)] text-[var(--color-text-muted)]">{t('select_chat')}</div>;
 
+    // Determine character for theming (DM only)
+    const isDM = chat.participants.length === 2;
+    const otherParticipantId = isDM ? chat.participants.find(p => p !== 'user-me') : null;
+    const characterStyle = otherParticipantId ? getCharacterThemeStyle(otherParticipantId) : {};
+
     // --- Handlers ---
 
     const showToast = (msg) => setToast(msg);
@@ -116,7 +122,7 @@ export default function ChatWindow({ chatId: propChatId }) {
     };
 
     return (
-        <div className="flex flex-col h-full bg-[var(--color-bg-chat)] relative flex-1">
+        <div className="flex flex-col h-full bg-[var(--color-bg-chat)] relative flex-1" style={characterStyle}>
             <Suspense fallback={null}>
                 <BackgroundLayer chatId={chat.id} />
             </Suspense>
