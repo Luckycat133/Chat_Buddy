@@ -24,7 +24,7 @@ export default function Settings() {
     const { language, toggleLanguage, t } = useLanguage();
     const { userProfile, getDisplayName } = useUser();
     const { settings, toggleSound, toggleDoNotDisturb, toggleBrowserPush } = useNotification();
-    const { isDarkMode, toggleDarkMode } = useTheme();
+    const { isDarkMode, themeMode, toggleDarkMode } = useTheme();
     const { points, streakDays, hasCheckedInToday } = useSocial();
     const navigate = useNavigate();
 
@@ -188,8 +188,8 @@ export default function Settings() {
                                 <ControlCard
                                     icon={<Moon size={24} />}
                                     color="bg-[#3F51B5]"
-                                    label={t('dark_mode')}
-                                    subLabel={isDarkMode ? t('toggle_on') : t('toggle_off')}
+                                    label={t('theme_mode')}
+                                    subLabel={t(`theme_${themeMode}`)}
                                     active={isDarkMode}
                                     onClick={toggleDarkMode}
                                 />

@@ -97,6 +97,102 @@
   --radius-full: 9999px;
 
   /* ========================================
+     TYPOGRAPHY SCALE (modular, 1.25 ratio)
+     ======================================== */
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.8125rem;  /* 13px */
+  --font-size-base: 0.9375rem;/* 15px — body default */
+  --font-size-md: 1rem;       /* 16px */
+  --font-size-lg: 1.125rem;   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
+  --font-size-2xl: 1.5rem;    /* 24px */
+  --font-size-3xl: 1.875rem;  /* 30px */
+  --font-size-4xl: 2.25rem;   /* 36px */
+
+  --line-height-tight: 1.25;
+  --line-height-snug: 1.375;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.625;
+  --line-height-loose: 1.8;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: -0.01em;
+  --letter-spacing-wide: 0.02em;
+
+  /* ========================================
+     SPACING SCALE (4px base grid)
+     ======================================== */
+  --space-0: 0;
+  --space-px: 1px;
+  --space-0_5: 0.125rem;  /* 2px */
+  --space-1: 0.25rem;     /* 4px */
+  --space-1_5: 0.375rem;  /* 6px */
+  --space-2: 0.5rem;      /* 8px */
+  --space-3: 0.75rem;     /* 12px */
+  --space-4: 1rem;        /* 16px */
+  --space-5: 1.25rem;     /* 20px */
+  --space-6: 1.5rem;      /* 24px */
+  --space-8: 2rem;        /* 32px */
+  --space-10: 2.5rem;     /* 40px */
+  --space-12: 3rem;       /* 48px */
+  --space-16: 4rem;       /* 64px */
+  --space-20: 5rem;       /* 80px */
+  --space-24: 6rem;       /* 96px */
+
+  /* ========================================
+     ANIMATION TOKENS
+     ======================================== */
+  --duration-instant: 100ms;
+  --duration-fast: 200ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+  --duration-slower: 700ms;
+
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.27, 1.55);
+
+  /* ========================================
+     Z-INDEX SCALE
+     ======================================== */
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-overlay: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+  --z-tooltip: 60;
+  --z-max: 9999;
+
+  /* ========================================
+     ADDITIONAL SEMANTIC COLORS
+     ======================================== */
+  --color-info: #60A5FA;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #FAFBFE;
+  --color-surface-sunken: #F0F2F8;
+  --color-on-primary: #FFFFFF;
+
+  /* ========================================
+     BLUR TOKENS (Liquid Glass levels)
+     ======================================== */
+  --blur-none: 0;
+  --blur-light: 8px;
+  --blur-medium: 16px;
+  --blur-heavy: 24px;
+  --blur-crystal: 32px;
+  --blur-ultra: 48px;
+
+  /* ========================================
      CHARACTER THEME COLORS (Immersive Mode)
      Each AI character has a unique color palette
      ======================================== */
@@ -658,6 +754,12 @@ textarea,
   --color-border-light: rgba(255, 255, 255, 0.05);
   --color-border-aurora: rgba(255, 155, 122, 0.15);
 
+  /* Semantic surfaces for dark */
+  --color-info: #93C5FD;
+  --color-surface: #1A1A22;
+  --color-surface-elevated: #222230;
+  --color-surface-sunken: #13131A;
+
   /* Shadows - Enhanced depth for dark mode */
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
   --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.5);
@@ -686,6 +788,9 @@ textarea,
   --color-bg-chat: #000000;
   --color-bg-glass: rgba(0, 0, 0, 0.85);
   --color-bg-glass-strong: rgba(0, 0, 0, 0.95);
+  --color-surface: #0A0A0A;
+  --color-surface-elevated: #141414;
+  --color-surface-sunken: #000000;
 
   /* Subtle borders for element separation */
   --color-border: rgba(255, 255, 255, 0.1);
@@ -970,6 +1075,47 @@ textarea,
 }
 
 /* ========================================
+   THEME TRANSITION
+   Smooth cross-fade when switching light ↔ dark
+   ======================================== */
+
+/* Base transition on theme-sensitive properties */
+.theme-transitioning,
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition: background-color var(--duration-slow) var(--ease-default),
+              color var(--duration-slow) var(--ease-default),
+              border-color var(--duration-slow) var(--ease-default),
+              box-shadow var(--duration-slow) var(--ease-default),
+              fill var(--duration-slow) var(--ease-default),
+              stroke var(--duration-slow) var(--ease-default) !important;
+}
+
+/* View Transitions API — progressive enhancement */
+@supports (view-transition-name: none) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: var(--duration-slow);
+    animation-timing-function: var(--ease-smooth);
+  }
+
+  ::view-transition-old(root) {
+    animation-name: fadeOut;
+  }
+
+  ::view-transition-new(root) {
+    animation-name: fadeIn;
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}
+
+/* ========================================
    ACCESSIBILITY: Reduced Motion
    ======================================== */
 
@@ -990,5 +1136,13 @@ textarea,
   .character-glow::before,
   .message-bubble-ai::after {
     display: none;
+  }
+
+  /* Disable theme transition animation */
+  .theme-transitioning,
+  .theme-transitioning *,
+  .theme-transitioning *::before,
+  .theme-transitioning *::after {
+    transition: none !important;
   }
 }
