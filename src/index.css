@@ -1387,6 +1387,187 @@ textarea,
 }
 
 /* ========================================
+   ANIMATION INTENSITY LEVELS
+   Applied via .anim-none / .anim-subtle / .anim-standard / .anim-intense
+   ======================================== */
+
+/* None — disable all decorative animations */
+.anim-none .bubble-enter,
+.anim-none .animate-message-in,
+.anim-none .animate-fade-slide-up,
+.anim-none .animate-fade-slide-down,
+.anim-none .animate-scale-spring,
+.anim-none .animate-float,
+.anim-none .animate-aurora,
+.anim-none .typing-dot,
+.anim-none .typing-wave-dot {
+  animation: none !important;
+}
+
+.anim-none .hover-lift:hover,
+.anim-none .hover-scale:hover,
+.anim-none .message-bubble-hover:hover {
+  transform: none !important;
+}
+
+.anim-none .character-glow::before,
+.anim-none .message-bubble-ai::after {
+  display: none;
+}
+
+/* Subtle — reduced durations, no glow */
+.anim-subtle .bubble-enter,
+.anim-subtle .animate-message-in {
+  animation-duration: var(--duration-fast) !important;
+}
+
+.anim-subtle .animate-fade-slide-up,
+.anim-subtle .animate-fade-slide-down {
+  animation-duration: var(--duration-normal) !important;
+}
+
+.anim-subtle .hover-lift:hover {
+  transform: translateY(-2px) !important;
+}
+
+.anim-subtle .message-bubble-ai::after {
+  opacity: 0.2;
+}
+
+.anim-subtle .character-glow::before {
+  opacity: 0 !important;
+}
+
+/* Standard — default, no overrides needed */
+
+/* Intense — amplified effects */
+.anim-intense .bubble-enter {
+  animation-duration: var(--duration-slower) !important;
+}
+
+.anim-intense .hover-lift:hover {
+  transform: translateY(-6px) scale(1.02) !important;
+}
+
+.anim-intense .message-bubble-ai::after {
+  opacity: 0.7;
+  filter: blur(var(--blur-crystal));
+}
+
+.anim-intense .character-glow:hover::before,
+.anim-intense .character-glow.glow-active::before {
+  opacity: 1;
+  filter: blur(var(--blur-heavy));
+}
+
+.anim-intense .message-bubble-hover:hover {
+  transform: translateY(-3px) scale(1.01) !important;
+}
+
+/* ========================================
+   MESSAGE BUBBLE STYLE VARIANTS
+   Applied via data-bubble-style attribute on message containers
+   ======================================== */
+
+/* Square — minimal radius */
+[data-bubble-style="square"] .bubble-msg {
+  border-radius: var(--radius-sm) !important;
+}
+
+[data-bubble-style="square"] .bubble-msg-me {
+  border-radius: var(--radius-sm) !important;
+}
+
+/* Tail — speech bubble with tail arrow */
+[data-bubble-style="tail"] .bubble-msg {
+  border-radius: 20px 20px 20px 4px !important;
+  position: relative;
+}
+
+[data-bubble-style="tail"] .bubble-msg-me {
+  border-radius: 20px 20px 4px 20px !important;
+}
+
+/* Minimal — no bubble background, accent left border only */
+[data-bubble-style="minimal"] .bubble-msg {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-left: 3px solid var(--character-primary, var(--color-primary)) !important;
+  border-radius: 0 !important;
+  padding-left: var(--space-4) !important;
+}
+
+[data-bubble-style="minimal"] .bubble-msg-me {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-right: 3px solid var(--color-primary) !important;
+  border-radius: 0 !important;
+  padding-right: var(--space-4) !important;
+  color: var(--color-text-main) !important;
+}
+
+[data-bubble-style="minimal"] .message-bubble-ai::after {
+  display: none;
+}
+
+/* ========================================
+   CHARACTER INTRO ANIMATION
+   Played when first meeting a character
+   ======================================== */
+
+@keyframes characterIntro {
+  0% {
+    opacity: 0;
+    transform: scale(0.8) translateY(20px);
+    filter: blur(8px);
+  }
+
+  40% {
+    opacity: 1;
+    filter: blur(0);
+  }
+
+  60% {
+    transform: scale(1.05) translateY(-4px);
+  }
+
+  80% {
+    transform: scale(0.98) translateY(1px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+}
+
+.character-intro {
+  animation: characterIntro var(--duration-slower) var(--ease-smooth) forwards;
+}
+
+/* Character intro glow pulse */
+@keyframes introGlow {
+  0% {
+    box-shadow: 0 0 0 0 var(--character-glow, var(--color-primary-glow));
+  }
+
+  50% {
+    box-shadow: 0 0 30px 10px var(--character-glow, var(--color-primary-glow));
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.character-intro-glow {
+  animation: introGlow 1.2s var(--ease-smooth) forwards;
+}
+
+/* ========================================
    ACCESSIBILITY: Reduced Motion
    ======================================== */
 

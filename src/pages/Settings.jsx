@@ -10,7 +10,7 @@ import {
     ChevronRight, Bell, Lock, Globe, Info, Moon, HelpCircle,
     Volume2, VolumeX, BellOff, Trophy, Calendar, Search, Image,
     Settings as SettingsIcon, Shield, Laptop, LogOut,
-    Server, Download, Upload
+    Server, Download, Upload, Sparkles, MessageSquare
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import CheckInPanel from '../components/CheckInPanel';
@@ -24,7 +24,7 @@ export default function Settings() {
     const { language, toggleLanguage, t } = useLanguage();
     const { userProfile, getDisplayName } = useUser();
     const { settings, toggleSound, toggleDoNotDisturb, toggleBrowserPush } = useNotification();
-    const { isDarkMode, themeMode, toggleDarkMode } = useTheme();
+    const { isDarkMode, themeMode, toggleDarkMode, animationIntensity, setAnimationIntensity, bubbleStyle, setBubbleStyle } = useTheme();
     const { points, streakDays, hasCheckedInToday } = useSocial();
     const navigate = useNavigate();
 
@@ -200,6 +200,30 @@ export default function Settings() {
                                     subLabel={t('customize_look')}
                                     active={true}
                                     onClick={() => setShowBackgroundModal(true)}
+                                />
+                                <ControlCard
+                                    icon={<Sparkles size={24} />}
+                                    color="bg-[#FF9800]"
+                                    label={t('animation_intensity')}
+                                    subLabel={t(`anim_${animationIntensity}`)}
+                                    active={animationIntensity !== 'none'}
+                                    onClick={() => {
+                                        const cycle = ['none', 'subtle', 'standard', 'intense'];
+                                        const idx = cycle.indexOf(animationIntensity);
+                                        setAnimationIntensity(cycle[(idx + 1) % cycle.length]);
+                                    }}
+                                />
+                                <ControlCard
+                                    icon={<MessageSquare size={24} />}
+                                    color="bg-[#9C27B0]"
+                                    label={t('bubble_style')}
+                                    subLabel={t(`bubble_${bubbleStyle}`)}
+                                    active={true}
+                                    onClick={() => {
+                                        const cycle = ['rounded', 'square', 'tail', 'minimal'];
+                                        const idx = cycle.indexOf(bubbleStyle);
+                                        setBubbleStyle(cycle[(idx + 1) % cycle.length]);
+                                    }}
                                 />
                                 <ControlCard
                                     icon={settings.soundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
