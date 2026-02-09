@@ -319,9 +319,8 @@ input,
 textarea,
 .transition-all {
   transition-property: all;
-  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
-  /* Spongy spring */
-  transition-duration: 300ms;
+  transition-timing-function: var(--ease-spring);
+  transition-duration: var(--duration-normal);
 }
 
 /* ========================================
@@ -329,7 +328,7 @@ textarea,
    ======================================== */
 
 .hover-lift {
-  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease;
+  transition: transform var(--duration-slow) var(--ease-spring), box-shadow var(--duration-slow) ease;
 }
 
 .hover-lift:hover {
@@ -356,16 +355,16 @@ textarea,
 /* Base glass */
 .glass {
   background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(var(--blur-medium)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--blur-medium)) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 /* Strong glass for panels */
 .glass-strong {
   background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(var(--blur-heavy)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-heavy)) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
@@ -378,8 +377,8 @@ textarea,
 /* Crystal - The Signature Material */
 .glass-crystal {
   background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  backdrop-filter: blur(var(--blur-crystal)) saturate(200%);
+  -webkit-backdrop-filter: blur(var(--blur-crystal)) saturate(200%);
   border: 1.5px solid rgba(255, 255, 255, 0.65);
   box-shadow:
     var(--shadow-floating),
@@ -397,8 +396,8 @@ textarea,
 
 .glass-aurora {
   background: linear-gradient(135deg, rgba(255, 155, 122, 0.1) 0%, rgba(255, 126, 157, 0.08) 50%, rgba(184, 164, 227, 0.06) 100%);
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(var(--blur-heavy)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-heavy)) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
@@ -413,18 +412,16 @@ textarea,
 
 .btn-primary {
   background: var(--gradient-aurora);
-  color: white;
+  color: var(--color-on-primary);
   border: none;
-  padding: 0.75rem 1.75rem;
-  /* Larger pill */
-  border-radius: 9999px;
-  /* Pill */
-  font-weight: 600;
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-semibold);
   font-family: 'Outfit', sans-serif;
-  letter-spacing: -0.01em;
+  letter-spacing: var(--letter-spacing-normal);
   cursor: pointer;
   box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+  transition: transform var(--duration-slow) var(--ease-spring), box-shadow var(--duration-normal);
   position: relative;
   overflow: hidden;
 }
@@ -435,19 +432,18 @@ textarea,
 }
 
 .btn-primary:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
 .input-modern {
   background: rgba(255, 255, 255, 0.8);
   border: 0;
   border-radius: var(--radius-xl);
-  /* Pill input */
-  padding: 0.85rem 1.4rem;
-  font-size: 15px;
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--font-size-base);
   color: var(--color-text-main);
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.03);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all var(--duration-normal) var(--ease-spring);
 }
 
 .dark .input-modern {
@@ -473,7 +469,7 @@ textarea,
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   border: 1px solid rgba(255, 255, 255, 0.6);
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all var(--duration-slow) var(--ease-spring);
 }
 
 .card:hover {
@@ -577,15 +573,15 @@ textarea,
 }
 
 .animate-fade-slide-up {
-  animation: fadeSlideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: fadeSlideUp var(--duration-slower) var(--ease-smooth) forwards;
 }
 
 .animate-fade-slide-down {
-  animation: fadeSlideDown 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: fadeSlideDown var(--duration-slower) var(--ease-smooth) forwards;
 }
 
 .animate-scale-spring {
-  animation: scaleSpring 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: scaleSpring var(--duration-slow) var(--ease-spring) forwards;
 }
 
 .animate-float {
@@ -612,7 +608,7 @@ textarea,
 }
 
 .animate-message-in {
-  animation: messageIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: messageIn var(--duration-slow) var(--ease-smooth) forwards;
 }
 
 /* Typing Dots */
@@ -669,7 +665,7 @@ textarea,
 .empty-state-icon {
   width: 140px;
   height: 140px;
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-8);
   background: var(--gradient-aurora-soft);
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.8);
@@ -800,22 +796,22 @@ textarea,
 /* Dark mode glass component refinements */
 .dark .glass {
   background: rgba(18, 18, 26, 0.75);
-  backdrop-filter: blur(20px) saturate(150%);
-  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(var(--blur-medium)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--blur-medium)) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .dark .glass-strong {
   background: rgba(22, 22, 32, 0.9);
-  backdrop-filter: blur(28px) saturate(160%);
-  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(var(--blur-heavy)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--blur-heavy)) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .dark .glass-crystal {
   background: rgba(18, 18, 28, 0.85);
-  backdrop-filter: blur(36px) saturate(180%);
-  -webkit-backdrop-filter: blur(36px) saturate(180%);
+  backdrop-filter: blur(var(--blur-crystal)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--blur-crystal)) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow:
     var(--shadow-floating),
@@ -898,7 +894,7 @@ textarea,
 }
 
 .bubble-enter {
-  animation: bubbleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: bubbleIn var(--duration-slow) var(--ease-spring) forwards;
 }
 
 /* Staggered message entries */
@@ -974,9 +970,9 @@ textarea,
   inset: -8px;
   border-radius: inherit;
   background: var(--character-glow, var(--character-default-glow));
-  filter: blur(20px);
+  filter: blur(var(--blur-medium));
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity var(--duration-slow) ease;
   pointer-events: none;
   z-index: -1;
 }
@@ -1030,11 +1026,11 @@ textarea,
   inset: 0;
   border-radius: inherit;
   background: var(--character-glow, var(--character-default-glow));
-  filter: blur(24px);
+  filter: blur(var(--blur-heavy));
   opacity: 0.5;
   z-index: -1;
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  transition: opacity var(--duration-normal) ease;
 }
 
 .message-bubble-ai:hover::after {
@@ -1046,8 +1042,8 @@ textarea,
    ======================================== */
 
 .message-bubble-hover {
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.25s ease;
+  transition: transform var(--duration-normal) var(--ease-spring),
+    box-shadow var(--duration-normal) ease;
 }
 
 .message-bubble-hover:hover {
