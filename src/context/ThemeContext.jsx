@@ -1,7 +1,22 @@
-import React, { createContext, useContext, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useState, useRef } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const ThemeContext = createContext();
+
+// Trigger smooth theme transition with fallback
+function withThemeTransition(applyFn) {
+    const doc = document.documentElement;
+    // Use View Transitions API if available
+    if (document.startViewTransition) {
+        document.startViewTransition(() => applyFn());
+        return;
+    }
+    // Fallback: CSS class-based transition
+    doc.classList.add('theme-transitioning');
+    applyFn();
+    const tid = setTimeout(() => doc.classList.remove('theme-transitioning'), 600);
+    return () => clearTimeout(tid);
+}
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
@@ -23,7 +38,7 @@ const CHAT_BACKGROUNDS = [
 ];
 
 const DEFAULT_THEME = {
-    mode: 'light', // 'light' | 'dark'
+    mode: 'system', // 'light' | 'dark' | 'system'
     chatBackground: 'default',
     customBackground: null, // base64 image
     accentColor: null // custom primary color
@@ -32,14 +47,42 @@ const DEFAULT_THEME = {
 export const ThemeProvider = ({ children }) => {
     const [theme, setTheme] = useLocalStorage('chat-buddy-theme', DEFAULT_THEME);
 
-    // Apply dark mode class to document
+    // Track OS color scheme preference
+    const [systemPrefersDark, setSystemPrefersDark] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    });
+
     useEffect(() => {
-        if (theme.mode === 'dark') {
-            document.documentElement.classList.add('dark');
+        const mql = window.matchMedia('(prefers-color-scheme: dark)');
+        const handler = (e) => setSystemPrefersDark(e.matches);
+        mql.addEventListener('change', handler);
+        return () => mql.removeEventListener('change', handler);
+    }, []);
+
+    // Resolve effective mode: system → actual light/dark
+    const resolvedMode = theme.mode === 'system'
+        ? (systemPrefersDark ? 'dark' : 'light')
+        : theme.mode;
+
+    // Apply dark mode class to document with transition
+    const prevMode = useRef(resolvedMode);
+    useEffect(() => {
+        const apply = () => {
+            if (resolvedMode === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        };
+        // Only animate if mode actually changed (not on initial mount)
+        if (prevMode.current !== resolvedMode) {
+            withThemeTransition(apply);
         } else {
-            document.documentElement.classList.remove('dark');
+            apply();
         }
-    }, [theme.mode]);
+        prevMode.current = resolvedMode;
+    }, [resolvedMode]);
 
     // Apply custom accent color
     useEffect(() => {
@@ -52,15 +95,22 @@ export const ThemeProvider = ({ children }) => {
 
     // ========== Theme Mode ==========
 
+    // Cycle: system → light → dark → system
     const toggleDarkMode = useCallback(() => {
-        setTheme(prev => ({
-            ...prev,
-            mode: prev.mode === 'dark' ? 'light' : 'dark'
-        }));
+        setTheme(prev => {
+            const next = prev.mode === 'system' ? 'light'
+                : prev.mode === 'light' ? 'dark' : 'system';
+            return { ...prev, mode: next };
+        });
     }, [setTheme]);
 
     const setDarkMode = useCallback((isDark) => {
         setTheme(prev => ({ ...prev, mode: isDark ? 'dark' : 'light' }));
+    }, [setTheme]);
+
+    // Set explicit mode: 'light' | 'dark' | 'system'
+    const setThemeMode = useCallback((mode) => {
+        setTheme(prev => ({ ...prev, mode }));
     }, [setTheme]);
 
     // ========== Chat Background ==========
@@ -104,11 +154,14 @@ export const ThemeProvider = ({ children }) => {
     const value = {
         // Current theme
         theme,
-        isDarkMode: theme.mode === 'dark',
+        isDarkMode: resolvedMode === 'dark',
+        themeMode: theme.mode, // raw: 'light' | 'dark' | 'system'
+        resolvedMode,          // effective: 'light' | 'dark'
 
         // Theme mode
         toggleDarkMode,
         setDarkMode,
+        setThemeMode,
 
         // Backgrounds
         chatBackgrounds: CHAT_BACKGROUNDS,
