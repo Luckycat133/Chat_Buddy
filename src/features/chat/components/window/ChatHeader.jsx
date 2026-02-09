@@ -39,9 +39,9 @@ export default function ChatHeader({ chat, personas, typingIndicators, onOpenBac
         <div className="px-4 py-3 glass-strong flex items-center justify-between 
             border-b border-[var(--color-border-light)] sticky top-0 z-30 
             animate-fade-slide-down">
-            {/* Aurora accent line */}
+            {/* Character accent line — falls back to aurora gradient */}
             <div className="absolute bottom-0 left-0 right-0 h-[1px] opacity-50"
-                style={{ background: 'var(--gradient-aurora)' }} />
+                style={{ background: 'var(--character-gradient, var(--gradient-aurora))' }} />
 
             <div className="flex items-center gap-3">
                 {/* Back Button - Mobile */}
@@ -56,8 +56,8 @@ export default function ChatHeader({ chat, personas, typingIndicators, onOpenBac
                 {/* Avatar - Premium style */}
                 {headerInfo.avatar && (
                     <div className="relative hidden md:block">
-                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm 
-                            ring-2 ring-[var(--color-border)] transition-all duration-300 hover:shadow-md hover:scale-105">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden shadow-sm
+                            ring-2 ring-[var(--character-primary,var(--color-border))] transition-all duration-300 hover:shadow-md hover:scale-105">
                             <img
                                 src={headerInfo.avatar}
                                 alt={headerInfo.name}
@@ -89,8 +89,9 @@ export default function ChatHeader({ chat, personas, typingIndicators, onOpenBac
                         )}
                     </h2>
                     {typingNames.length > 0 ? (
-                        <div className="text-xs text-[var(--color-primary)] font-medium 
-                            flex items-center gap-1.5 animate-fade-in mt-0.5">
+                        <div className="text-xs font-medium
+                            flex items-center gap-1.5 animate-fade-in mt-0.5"
+                            style={{ color: 'var(--character-primary, var(--color-primary))' }}>
                             <span className="flex items-center gap-0.5">
                                 <span className="typing-dot" style={{ width: '4px', height: '4px' }}></span>
                                 <span className="typing-dot" style={{ width: '4px', height: '4px', animationDelay: '0.15s' }}></span>

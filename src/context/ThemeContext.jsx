@@ -41,7 +41,9 @@ const DEFAULT_THEME = {
     mode: 'system', // 'light' | 'dark' | 'system'
     chatBackground: 'default',
     customBackground: null, // base64 image
-    accentColor: null // custom primary color
+    accentColor: null, // custom primary color
+    animationIntensity: 'standard', // 'none' | 'subtle' | 'standard' | 'intense'
+    bubbleStyle: 'rounded', // 'rounded' | 'square' | 'tail' | 'minimal'
 };
 
 export const ThemeProvider = ({ children }) => {
@@ -92,6 +94,13 @@ export const ThemeProvider = ({ children }) => {
             document.documentElement.style.removeProperty('--color-primary');
         }
     }, [theme.accentColor]);
+
+    // Apply animation intensity class
+    useEffect(() => {
+        const doc = document.documentElement;
+        doc.classList.remove('anim-none', 'anim-subtle', 'anim-standard', 'anim-intense');
+        doc.classList.add(`anim-${theme.animationIntensity || 'standard'}`);
+    }, [theme.animationIntensity]);
 
     // ========== Theme Mode ==========
 
@@ -151,6 +160,16 @@ export const ThemeProvider = ({ children }) => {
         setTheme(prev => ({ ...prev, accentColor: null }));
     }, [setTheme]);
 
+    // ========== Animation & Bubble Style ==========
+
+    const setAnimationIntensity = useCallback((intensity) => {
+        setTheme(prev => ({ ...prev, animationIntensity: intensity }));
+    }, [setTheme]);
+
+    const setBubbleStyle = useCallback((style) => {
+        setTheme(prev => ({ ...prev, bubbleStyle: style }));
+    }, [setTheme]);
+
     const value = {
         // Current theme
         theme,
@@ -171,7 +190,13 @@ export const ThemeProvider = ({ children }) => {
 
         // Accent color
         setAccentColor,
-        resetAccentColor
+        resetAccentColor,
+
+        // Animation & bubble
+        animationIntensity: theme.animationIntensity || 'standard',
+        setAnimationIntensity,
+        bubbleStyle: theme.bubbleStyle || 'rounded',
+        setBubbleStyle,
     };
 
     return (
