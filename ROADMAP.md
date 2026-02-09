@@ -31,9 +31,9 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 
 | # | Theme | Version | Priority | Status |
 |---|-------|---------|----------|--------|
-| T01 | Internationalization & Localization | v0.1.1 | P0 | Needs completion |
-| T02 | Core Architecture & API Compatibility | v0.1.2 | P0 | Needs new config system |
-| T03 | Modern UI Design System | v0.1.3 | P0 | Needs major redesign |
+| T01 | Internationalization & Localization | v0.1.1 | P0 | ✅ Done |
+| T02 | Core Architecture & API Compatibility | v0.1.2 | P0 | ✅ Done |
+| T03 | Modern UI Design System | v0.1.3 | P0 | 🔧 Phase 1-3 done, Phase 4 pending |
 | T04 | Character Visuals & Interaction Design | v0.2.0 | P1 | Needs refinement |
 | T05 | AI Behavior Humanization | v0.2.1 | P1 | Needs new features |
 | T06 | AI Characters & Avatar System | v0.2.2 | P1 | Needs affinity/status |
@@ -51,7 +51,7 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 
 ## T01 — Internationalization & Localization
 
-**Version**: v0.1.1 | **Priority**: P0 Foundation | **Status**: Needs completion
+**Version**: v0.1.1 | **Priority**: P0 Foundation | **Status**: ✅ Done
 
 ### What's Done
 - [x] English/Chinese bilingual support with seamless switching
@@ -60,13 +60,15 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 - [x] Settings page language toggle
 - [x] Chat list search
 - [x] Localization consistency fixes
+- [x] Browser language auto-detection (`navigator.language`)
+- [x] Translation key completeness audit — 120+ keys added, 15 components refactored
+- [x] AI conversation language setting independent from UI language
+- [x] Parameter interpolation support: `t('key', { param: value })`
 
-### What's Planned
-- [ ] Browser language auto-detection (`navigator.language`)
-- [ ] Translation key completeness audit (scan all components for hardcoded strings)
-- [ ] AI conversation language setting independent from UI language
+### Future Improvements
 - [ ] Architecture for adding new languages (modular locale file structure)
 - [ ] RTL layout considerations for future Arabic/Hebrew support
+- [ ] Remaining ~50 `language === 'zh'` patterns in lower-priority files
 
 ### Key Files
 - `src/context/LanguageContext.jsx` — Language provider & hook
@@ -79,7 +81,7 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 
 ## T02 — Core Architecture & API Compatibility
 
-**Version**: v0.1.2 | **Priority**: P0 Foundation | **Status**: Needs new config system
+**Version**: v0.1.2 | **Priority**: P0 Foundation | **Status**: ✅ Done
 
 ### What's Done
 - [x] DeepSeek API integration
@@ -87,21 +89,18 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 - [x] `aiClient.js` singleton (Perplexity/DeepSeek/OpenAI-compatible)
 - [x] `StorageService.js` with namespace
 - [x] localStorage persistence
+- [x] Unified config system (`apiConfig.js`) — priority: localStorage > .env > defaults
+- [x] Multi-provider profiles (save/switch/delete named API configs)
+- [x] Data export/import (JSON backup with `_meta` validation)
+- [x] Config validation (test API connectivity with latency display)
+- [x] `ApiConfigPanel.jsx` — full settings UI (lazy-loaded)
+- [x] `momentsService.js` unified to use shared `callAI()`
 
-### What's Planned
-- [ ] **Unified config file** — developers can configure:
-  - Custom API base URL
-  - API Key
-  - Model name (e.g., `gpt-4o`, `deepseek-chat`, `claude-3.5-sonnet`)
-  - Optional: temperature, max_tokens, etc.
+### Future Improvements
 - [ ] Full OpenAI Chat Completions format:
-  - `messages` array with `role`/`content`
   - `tools` / `tool_choice` support
   - Streaming (`stream: true`) with SSE parsing
-- [ ] Multi-provider profiles (save/switch between API configs in Settings)
-- [ ] Data export/import (JSON backup of all chats, settings, profiles)
 - [ ] IndexedDB migration for large data (chat history, documents)
-- [ ] Config validation (verify API key works before saving)
 
 ### Key Files
 - `src/services/api/aiClient.js` — API client singleton
@@ -124,7 +123,7 @@ src/config/
 
 ## T03 — Modern UI Design System
 
-**Version**: v0.1.3 | **Priority**: P0 Foundation | **Status**: Needs major redesign
+**Version**: v0.1.3 | **Priority**: P0 Foundation | **Status**: 🔧 Phase 1-3 done
 
 ### Design Direction
 - **iOS 26 Liquid Glass**: Multi-layer blur, refraction effects, dynamic transparency, depth
@@ -139,38 +138,39 @@ src/config/
 - [x] Responsive sidebar + bottom bar layout
 - [x] Design tokens (shadows, colors)
 
-### Phase 1 — Design Tokens & Foundation
-- [ ] Define comprehensive design token system:
-  - Colors (semantic: `--surface`, `--surface-elevated`, `--text-primary`, `--text-secondary`)
-  - Spacing scale (4px base grid)
-  - Typography scale (font sizes, line heights, weights)
-  - Border radius scale (sm/md/lg/xl)
-  - Shadow scale (subtle/medium/elevated/floating)
-  - Animation durations and easings
-  - Blur levels for liquid glass (light/medium/heavy)
-- [ ] Create CSS custom property system supporting light/dark/OLED
-- [ ] Auto `prefers-color-scheme` detection
-- [ ] Theme transition animation (CSS `view-transition` API)
+### Phase 1 — Design Tokens & Foundation ✅
+- [x] Comprehensive design token system:
+  - Typography scale (`--font-size-xs` → `--font-size-4xl`, line-height, weight, letter-spacing)
+  - Spacing scale (`--space-0` → `--space-24`, 4px grid)
+  - Animation tokens (`--duration-instant/fast/normal/slow/slower`, `--ease-spring/smooth/bounce`)
+  - Z-index scale (`--z-base/dropdown/sticky/overlay/modal/toast/tooltip/max`)
+  - Semantic surface colors (`--color-surface/elevated/sunken`, `--color-info`, `--color-on-primary`)
+  - Blur level tokens (`--blur-none/light/medium/heavy/crystal/ultra`)
+- [x] CSS custom property system supporting light/dark/OLED
+- [x] Auto `prefers-color-scheme` detection with system/light/dark cycle
+- [x] Theme transition animation (CSS class fallback + View Transitions API)
+- [x] `prefers-reduced-motion` disables theme transitions
 
-### Phase 2 — Base Components
-- [ ] Liquid glass card component (configurable blur, tint, border)
-- [ ] Conversation-centered chat layout (reference ChatGPT)
-- [ ] Modern input component (floating label, glass background)
-- [ ] Button system (primary/secondary/ghost/danger)
-- [ ] Modal/Sheet system (bottom sheet for mobile, centered modal for desktop)
-- [ ] Navigation redesign (cleaner sidebar, minimal bottom bar)
+### Phase 2 — Token Migration ✅
+- [x] Glass utilities migrated to blur tokens
+- [x] All animation utilities use duration/easing tokens
+- [x] Component styles (btn, input, card) use spacing/typography tokens
+- [x] Character glow and message bubble transitions tokenized
 
-### Phase 3 — Page Migration
+### Phase 3 — CSS Component Library ✅
+- [x] Button system: `.btn` base + `primary/secondary/ghost/danger` + `sm/lg/icon`
+- [x] Input system: `.input-modern` + `.input-compact` + `.input-glass`
+- [x] Card system: `.card` (hover) + `.card-static` + `.card-glass`
+- [x] Modal/Sheet: `.modal-overlay/panel` + `.sheet-overlay/panel/handle`
+- [x] Layout helpers: `.modal-header/body/footer`
+- [x] Dark mode refinements for all new component classes
+
+### Phase 4 — Page Migration & Polish (Pending)
+- [ ] Migrate existing inline button styles to component classes
 - [ ] Chat view redesign (clean message list, minimal chrome)
 - [ ] Settings page redesign (grouped sections, modern toggles)
 - [ ] Dashboard redesign (refined Bento Grid, draggable widgets)
-- [ ] Profile page redesign
-- [ ] Friends/Social pages redesign
-
-### Phase 4 — Polish
 - [ ] Custom accent color picker (multiple preset palettes + custom)
-- [ ] Scheduled theme switching (sunrise/sunset based on location)
-- [ ] In-app notification center
 - [ ] Keyboard shortcuts (desktop)
 - [ ] Onboarding tutorial for first-time users
 - [ ] Accessibility audit (screen reader, focus management, ARIA)
