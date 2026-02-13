@@ -128,7 +128,7 @@ export default function PostComposer({ isOpen, onClose }) {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+        <div className="fixed inset-0 z-50 bg-[var(--color-bg-white)] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                 <button
@@ -191,7 +191,7 @@ export default function PostComposer({ isOpen, onClose }) {
                             }}
                             className={cn(
                                 "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
-                                visibility === opt.value ? "bg-[var(--color-primary)]/10" : "hover:bg-white"
+                                visibility === opt.value ? "bg-[var(--color-primary)]/10" : "hover:bg-[var(--color-bg-hover)]"
                             )}
                         >
                             <span className="text-[18px]">{opt.icon}</span>
@@ -259,7 +259,7 @@ export default function PostComposer({ isOpen, onClose }) {
 
             {/* Location Picker Modal */}
             {showLocationPicker && (
-                <div className="absolute inset-0 bg-white z-10 flex flex-col">
+                <div className="absolute inset-0 bg-[var(--color-bg-white)] z-10 flex flex-col">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                         <button onClick={() => setShowLocationPicker(false)} className="text-[var(--color-text-muted)]">
                             <X size={24} />

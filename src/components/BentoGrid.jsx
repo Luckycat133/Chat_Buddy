@@ -72,11 +72,8 @@ export function BentoCard({
     return (
         <Wrapper
             className={cn(
-                // Base styles
-                "relative overflow-hidden rounded-[var(--radius-xl)] p-5",
-                "bg-[var(--color-bg-white)] border border-[var(--color-border-light)]",
-                "shadow-[var(--shadow-card)]",
-                "transition-all duration-400 ease-out",
+                // Base styles from CSS component class
+                "bento-card",
 
                 // Size
                 sizeClasses[size] || sizeClasses.md,
@@ -84,14 +81,8 @@ export function BentoCard({
                 // Interactive states
                 isInteractive && [
                     "cursor-pointer",
-                    "hover:shadow-[var(--shadow-card-hover)]",
-                    "hover:translate-y-[-4px]",
-                    "hover:border-[var(--color-border-aurora)]",
                     "active:scale-[0.98]",
                 ],
-
-                // Dark mode
-                "dark:bg-[var(--color-bg-white)] dark:border-[var(--color-border)]",
 
                 className
             )}
@@ -156,9 +147,7 @@ export function BentoCardSkeleton({ size = 'md', className = '' }) {
     return (
         <div
             className={cn(
-                "rounded-[var(--radius-xl)] p-5",
-                "bg-[var(--color-bg-white)] border border-[var(--color-border-light)]",
-                "animate-pulse",
+                "bento-card animate-pulse",
                 sizeClasses[size] || sizeClasses.md,
                 className
             )}

@@ -12,15 +12,15 @@ import StickerPicker from '../../../../components/StickerPicker';
 import FileUploader from '../../../../components/FileUploader';
 
 // Menu Button Helper
-const MenuButton = ({ icon: IconComponent, label, onClick, color = "text-gray-600", bg = "bg-gray-50" }) => (
+const MenuButton = ({ icon: IconComponent, label, onClick, color = "text-[var(--color-text-secondary)]", bg = "bg-[var(--color-bg-hover)]" }) => (
     <button
         onClick={onClick}
-        className="flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-gray-50 transition-colors group"
+        className="flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-[var(--color-bg-hover)] transition-colors group"
     >
         <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", bg)}>
             <IconComponent size={24} className={color} />
         </div>
-        <span className="text-xs font-medium text-gray-600">{label}</span>
+        <span className="text-xs font-medium text-[var(--color-text-secondary)]">{label}</span>
     </button>
 );
 
@@ -40,7 +40,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
     // Mention state
     const [showMentionDropdown, setShowMentionDropdown] = useState(false);
     const [mentionCandidates, setMentionCandidates] = useState([]);
-    const [mentionQuery, setMentionQuery] = useState('');
+    const [_mentionQuery, setMentionQuery] = useState('');
 
     const headerInfo = (() => {
         if (!chat) return {};

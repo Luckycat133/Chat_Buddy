@@ -54,7 +54,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
     return (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
             <div
-                className="bg-white rounded-xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden animate-scale-in"
+                className="bg-[var(--color-bg-white)] rounded-xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}

@@ -96,7 +96,7 @@ export default function GroupDetails() {
             </div>
 
             {/* Members Grid */}
-            <div className="bg-white p-4 mb-2">
+            <div className="bg-[var(--color-bg-white)] p-4 mb-2">
                 <div className="flex flex-wrap gap-4">
                     {aiParticipants.map(pid => {
                         const persona = personas.find(p => p.id === pid);
@@ -130,7 +130,7 @@ export default function GroupDetails() {
             </div>
 
             {/* Group Name */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mb-2">
                 <div className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)]">
                     <span className="text-[16px] text-[var(--color-text-main)] mr-4">{t('group_name_label')}</span>
                     <input
@@ -145,9 +145,9 @@ export default function GroupDetails() {
             </div>
 
             {/* Group Features */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mb-2">
                 <div
-                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-gray-50"
+                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-[var(--color-bg-hover)]"
                     onClick={() => setShowAnnouncement(true)}
                 >
                     <Megaphone size={20} className="text-[var(--color-primary)] mr-3" />
@@ -162,7 +162,7 @@ export default function GroupDetails() {
                     <ChevronRight size={20} className="text-[#C7C7CC]" />
                 </div>
                 <div
-                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-gray-50"
+                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-[var(--color-bg-hover)]"
                     onClick={() => setShowPoll(true)}
                 >
                     <BarChart3 size={20} className="text-[var(--color-primary)] mr-3" />
@@ -174,9 +174,9 @@ export default function GroupDetails() {
             </div>
 
             {/* Export */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mb-2">
                 <div
-                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-gray-50"
+                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-[var(--color-bg-hover)]"
                     onClick={handleExportChat}
                 >
                     <Download size={20} className="text-[var(--color-text-main)] mr-3" />
@@ -188,7 +188,7 @@ export default function GroupDetails() {
             </div>
 
             {/* AI Permissions */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mb-2">
                 <ToggleItem
                     label={t('allow_reactions')}
                     checked={permissions.allowReactions}
@@ -202,7 +202,7 @@ export default function GroupDetails() {
             </div>
 
             {/* Group Admin Settings */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mb-2">
                 <ToggleItem
                     label={t('mute_notifications')}
                     checked={chat.isMuted || false}
@@ -216,7 +216,7 @@ export default function GroupDetails() {
             </div>
 
             {/* Danger Zone */}
-            <div className="bg-white mb-6">
+            <div className="bg-[var(--color-bg-white)] mb-6">
                 <button
                     onClick={() => {
                         if (window.confirm(t('confirm_clear_history'))) {

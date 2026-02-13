@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Camera, Upload, Check } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
@@ -47,9 +47,8 @@ export default function AvatarSelector({ isOpen, onClose, currentAvatar, onSelec
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef(null);
 
-    useEffect(() => {
-        setSelectedAvatar(currentAvatar);
-    }, [currentAvatar, isOpen]);
+    // No effect needed: when !isOpen the component returns null (unmounts),
+    // so when isOpen becomes true it remounts with fresh useState(currentAvatar).
 
     if (!isOpen) return null;
 
@@ -133,7 +132,7 @@ export default function AvatarSelector({ isOpen, onClose, currentAvatar, onSelec
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-xl w-[90%] max-w-md max-h-[80vh] overflow-hidden animate-scale-in">
+            <div className="bg-[var(--color-bg-white)] rounded-xl w-[90%] max-w-md max-h-[80vh] overflow-hidden animate-scale-in">
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                     <button onClick={handleCancel} className="text-[var(--color-text-muted)]">

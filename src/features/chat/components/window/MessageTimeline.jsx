@@ -187,12 +187,12 @@ export default function MessageTimeline({
                                                 </div>
                                             </div>
                                         ) : type === 'game' ? (
-                                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-2">
+                                            <div className="bg-[var(--color-bg-white)] p-4 rounded-2xl shadow-sm border border-[var(--color-border-light)] flex flex-col items-center gap-2">
                                                 <Gamepad2 size={24} className="text-[var(--color-primary)]" />
                                                 <p className="font-medium text-center text-sm">{content}</p>
                                             </div>
                                         ) : type === 'poll' && meta?.poll ? (
-                                            <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 p-1">
+                                            <div className="bg-[var(--color-bg-white)] rounded-2xl overflow-hidden shadow-sm border border-[var(--color-border-light)] p-1">
                                                 <PollMessage
                                                     poll={meta.poll}
                                                     onVote={(pollId, optionId) => onVotePoll(pollId, optionId)}
@@ -233,12 +233,12 @@ export default function MessageTimeline({
                                                             );
                                                         },
                                                         table: ({ ...props }) => (
-                                                            <div className="overflow-x-auto my-4 border border-gray-200 rounded-lg shadow-sm">
-                                                                <table className="min-w-full divide-y divide-gray-200" {...props} />
+                                                            <div className="overflow-x-auto my-4 border border-[var(--color-border)] rounded-lg shadow-sm">
+                                                                <table className="min-w-full divide-y divide-[var(--color-border)]" {...props} />
                                                             </div>
                                                         ),
-                                                        th: ({ ...props }) => <th className="px-3 py-2 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider" {...props} />,
-                                                        td: ({ ...props }) => <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700 border-t border-gray-100" {...props} />
+                                                        th: ({ ...props }) => <th className="px-3 py-2 bg-[var(--color-bg-active)] text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider" {...props} />,
+                                                        td: ({ ...props }) => <td className="px-3 py-2 whitespace-nowrap text-sm text-[var(--color-text-main)] border-t border-[var(--color-border-light)]" {...props} />
                                                     }}
                                                 >
                                                     {content}
@@ -247,7 +247,7 @@ export default function MessageTimeline({
                                         )}
 
                                         {reaction && (
-                                            <span className="absolute -bottom-2 -right-2 bg-white rounded-full p-0.5 shadow-sm text-xs border border-gray-100 z-10 scale-110">
+                                            <span className="absolute -bottom-2 -right-2 bg-[var(--color-bg-white)] rounded-full p-0.5 shadow-sm text-xs border border-[var(--color-border-light)] z-10 scale-110">
                                                 {reaction}
                                             </span>
                                         )}

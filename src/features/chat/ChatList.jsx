@@ -26,8 +26,8 @@ const ChatListItem = memo(function ChatListItem({
                 "flex items-center gap-4 p-3 rounded-[var(--radius-lg)] transition-all duration-400 group relative",
                 "border border-transparent",
                 isActive
-                    ? "bg-white shadow-glow scale-[1.02] ring-2 ring-[var(--color-primary)]/10"
-                    : "bg-white/40 hover:bg-white/80 hover:shadow-md hover:scale-[1.01]"
+                    ? "bg-[var(--color-bg-white)] shadow-glow scale-[1.02] ring-2 ring-[var(--color-primary)]/10"
+                    : "bg-[var(--color-bg-white)]/40 hover:bg-[var(--color-bg-white)]/80 hover:shadow-md hover:scale-[1.01]"
             )}
             style={{ animationDelay: `${index * 50}ms` }}
         >
@@ -139,7 +139,7 @@ function ContextMenuItem({ icon, label, onClick, active, colorClass = "text-[var
         >
             <div className={cn(
                 "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
-                active ? "bg-[var(--color-bg-active)]" : "bg-gray-50 group-hover:bg-white"
+                active ? "bg-[var(--color-bg-active)]" : "bg-[var(--color-bg-app)] group-hover:bg-[var(--color-bg-white)]"
             )}>
                 <span className={cn(active ? colorClass : "text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]")}>
                     {icon}

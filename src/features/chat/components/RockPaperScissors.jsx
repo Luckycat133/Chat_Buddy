@@ -17,7 +17,7 @@ const OUTCOMES = {
 };
 
 export default function RockPaperScissors({ aiName, onClose, onResult }) {
-    const { t, language } = useLanguage();
+    const { t } = useLanguage();
     const [playerChoice, setPlayerChoice] = useState(null);
     const [aiChoice, setAiChoice] = useState(null);
     const [result, setResult] = useState(null);
@@ -25,41 +25,42 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
     const [score, setScore] = useState({ player: 0, ai: 0 });
     const [round, setRound] = useState(1);
 
-    // AI makes its choice after player
+    // Countdown and game resolution effect - only runs the timer
+    // Initial countdown is set by handleChoice (event handler)
     useEffect(() => {
-        if (playerChoice && !aiChoice) {
-            setCountdown(3);
-        }
-    }, [playerChoice, aiChoice]);
+        if (countdown === null || countdown <= 0) return;
 
-    // Countdown and reveal
-    useEffect(() => {
-        if (countdown === null) return;
+        const timer = setTimeout(() => {
+            const nextCount = countdown - 1;
+            if (nextCount > 0) {
+                setCountdown(nextCount);
+            } else {
+                setCountdown(0);
 
-        if (countdown > 0) {
-            const timer = setTimeout(() => setCountdown(countdown - 1), 500);
-            return () => clearTimeout(timer);
-        } else {
-            // AI picks randomly
-            const randomChoice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
-            setAiChoice(randomChoice);
+                // AI picks randomly
+                const randomChoice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
+                setAiChoice(randomChoice);
 
-            // Determine result
-            const outcome = OUTCOMES[playerChoice.id][randomChoice.id];
-            setResult(outcome);
+                // Determine result
+                const outcome = OUTCOMES[playerChoice.id][randomChoice.id];
+                setResult(outcome);
 
-            // Update score
-            if (outcome === 'win') {
-                setScore(prev => ({ ...prev, player: prev.player + 1 }));
-            } else if (outcome === 'lose') {
-                setScore(prev => ({ ...prev, ai: prev.ai + 1 }));
+                // Update score
+                if (outcome === 'win') {
+                    setScore(prev => ({ ...prev, player: prev.player + 1 }));
+                } else if (outcome === 'lose') {
+                    setScore(prev => ({ ...prev, ai: prev.ai + 1 }));
+                }
             }
-        }
+        }, 500);
+
+        return () => clearTimeout(timer);
     }, [countdown, playerChoice]);
 
     const handleChoice = (choice) => {
         if (playerChoice) return; // Already chose
         setPlayerChoice(choice);
+        setCountdown(3); // Start countdown from event handler (pure)
     };
 
     const handlePlayAgain = () => {
@@ -93,7 +94,7 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
     return (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
             <div
-                className="bg-white rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
+                className="bg-[var(--color-bg-white)] rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -190,7 +191,7 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
                             </button>
                             <button
                                 onClick={handleFinish}
-                                className="flex-1 py-3 bg-[var(--color-bg-app)] text-[var(--color-text-main)] rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                                className="flex-1 py-3 bg-[var(--color-bg-app)] text-[var(--color-text-main)] rounded-lg font-medium hover:bg-[var(--color-bg-active)] transition-colors"
                             >
                                 {t('finish')}
                             </button>

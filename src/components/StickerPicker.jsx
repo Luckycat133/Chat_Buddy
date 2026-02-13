@@ -53,7 +53,7 @@ export default function StickerPicker({ aiId, onSelect }) {
 
     return (
         <div
-            className="bg-white rounded-xl shadow-xl border border-[var(--color-border)] overflow-hidden w-80"
+            className="bg-[var(--color-bg-white)] rounded-xl shadow-xl border border-[var(--color-border)] overflow-hidden w-80"
             onClick={e => e.stopPropagation()}
         >
             {/* Tabs */}
@@ -108,7 +108,7 @@ export default function StickerPicker({ aiId, onSelect }) {
             {/* Long Press Menu */}
             {longPressSticker && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center" onClick={() => setLongPressSticker(null)}>
-                    <div className="bg-white rounded-lg shadow-xl p-4 text-center" onClick={e => e.stopPropagation()}>
+                    <div className="bg-[var(--color-bg-white)] rounded-lg shadow-xl p-4 text-center" onClick={e => e.stopPropagation()}>
                         <div className="text-4xl mb-2">{longPressSticker.sticker.emoji}</div>
                         <button
                             onClick={handleToggleFavorite}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Camera, User, Edit2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
@@ -11,15 +11,11 @@ export default function ProfileEditor() {
     const { t, language } = useLanguage();
     const { userProfile, updateNickname, updateAvatar, updateSignature, getDisplayName } = useUser();
 
-    const [nickname, setNickname] = useState('');
-    const [signature, setSignature] = useState('');
+    // Initialize directly from userProfile (available on mount)
+    const [nickname, setNickname] = useState(userProfile.nickname || '');
+    const [signature, setSignature] = useState(userProfile.signature || '');
     const [showAvatarSelector, setShowAvatarSelector] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-
-    useEffect(() => {
-        setNickname(userProfile.nickname || '');
-        setSignature(userProfile.signature || '');
-    }, [userProfile]);
 
     const handleSave = () => {
         setIsSaving(true);
@@ -39,7 +35,7 @@ export default function ProfileEditor() {
     return (
         <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto">
             {/* Header */}
-            <div className="bg-white sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
+            <div className="bg-[var(--color-bg-white)] sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                 <button onClick={() => navigate(-1)} className="flex items-center text-[var(--color-primary)]">
                     <ChevronLeft size={24} />
                     <span>{t('cancel') || 'Cancel'}</span>
@@ -58,7 +54,7 @@ export default function ProfileEditor() {
             </div>
 
             {/* Avatar Section */}
-            <div className="bg-white mt-2 py-6">
+            <div className="bg-[var(--color-bg-white)] mt-2 py-6">
                 <div className="flex flex-col items-center">
                     <button
                         onClick={() => setShowAvatarSelector(true)}
@@ -88,7 +84,7 @@ export default function ProfileEditor() {
             </div>
 
             {/* Nickname Section */}
-            <div className="bg-white mt-2">
+            <div className="bg-[var(--color-bg-white)] mt-2">
                 <div className="px-4 py-3 border-b border-[var(--color-border-light)]">
                     <label className="block text-[var(--color-text-muted)] text-sm mb-2">
                         {t('nickname') || 'Nickname'}
@@ -113,7 +109,7 @@ export default function ProfileEditor() {
             </div>
 
             {/* Signature Section */}
-            <div className="bg-white mt-2">
+            <div className="bg-[var(--color-bg-white)] mt-2">
                 <div className="px-4 py-3">
                     <label className="block text-[var(--color-text-muted)] text-sm mb-2">
                         {t('signature') || 'Signature / Status'}
@@ -138,7 +134,7 @@ export default function ProfileEditor() {
             </div>
 
             {/* User ID (Read Only) */}
-            <div className="bg-white mt-2">
+            <div className="bg-[var(--color-bg-white)] mt-2">
                 <div className="px-4 py-3 flex items-center justify-between">
                     <span className="text-[var(--color-text-muted)]">{t('user_id') || 'User ID'}</span>
                     <span className="text-[var(--color-text-main)]">{userProfile.id}</span>
@@ -146,12 +142,14 @@ export default function ProfileEditor() {
             </div>
 
             {/* Avatar Selector Modal */}
-            <AvatarSelector
-                isOpen={showAvatarSelector}
-                onClose={() => setShowAvatarSelector(false)}
-                currentAvatar={userProfile.avatar}
-                onSelect={handleAvatarSelect}
-            />
+            {showAvatarSelector && (
+                <AvatarSelector
+                    isOpen={showAvatarSelector}
+                    onClose={() => setShowAvatarSelector(false)}
+                    currentAvatar={userProfile.avatar}
+                    onSelect={handleAvatarSelect}
+                />
+            )}
         </div>
     );
 }

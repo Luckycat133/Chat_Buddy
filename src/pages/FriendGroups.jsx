@@ -83,7 +83,7 @@ export default function FriendGroups() {
     return (
         <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto pb-16 md:pb-0">
             {/* Header */}
-            <div className="bg-white sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
+            <div className="bg-[var(--color-bg-white)] sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                 <button onClick={() => navigate(-1)} className="flex items-center text-[var(--color-primary)]">
                     <ChevronLeft size={24} />
                 </button>
@@ -95,7 +95,7 @@ export default function FriendGroups() {
 
             {/* Add/Edit Form */}
             {(isAdding || editingGroup) && (
-                <div className="bg-white m-4 rounded-xl shadow-lg overflow-hidden animate-scale-in">
+                <div className="bg-[var(--color-bg-white)] m-4 rounded-xl shadow-lg overflow-hidden animate-scale-in">
                     <div className="p-4 border-b border-[var(--color-border)]">
                         <h3 className="font-medium text-[15px] mb-4">
                             {editingGroup ? (t('edit_group') || 'Edit Group') : (t('add_group') || 'Add Group')}
@@ -199,7 +199,7 @@ export default function FriendGroups() {
             )}
 
             {/* Groups List */}
-            <div className="bg-white mt-2">
+            <div className="bg-[var(--color-bg-white)] mt-2">
                 {groups.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-[var(--color-text-muted)]">
                         <Users size={48} className="mb-4 opacity-50" />

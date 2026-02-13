@@ -13,10 +13,14 @@ export default function MessageMenu({
     onQuote,
     onDelete,
     onForward,
-    onPin
+    onPin,
+    canRecall: canRecallProp
 }) {
-    const { t, language } = useLanguage();
+    const { t } = useLanguage();
     const menuRef = useRef(null);
+
+    // canRecall is provided by the parent who captures Date.now() in an event handler
+    const canRecall = isOwnMessage && (canRecallProp ?? false);
 
     // Close on outside click
     useEffect(() => {
@@ -28,10 +32,6 @@ export default function MessageMenu({
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [onClose]);
-
-    // Check if message can be recalled (within 2 minutes)
-    const canRecall = isOwnMessage && message?.timestamp &&
-        (Date.now() - new Date(message.timestamp).getTime()) < 2 * 60 * 1000;
 
     const handleCopy = () => {
         navigator.clipboard.writeText(message.content);
@@ -70,7 +70,7 @@ export default function MessageMenu({
     return (
         <div
             ref={menuRef}
-            className="fixed z-50 bg-white rounded-lg shadow-xl border border-gray-200 py-1 min-w-[120px] animate-scale-in"
+            className="fixed z-50 bg-[var(--color-bg-white)] rounded-lg shadow-xl border border-[var(--color-border)] py-1 min-w-[120px] animate-scale-in"
             style={{
                 left: position.x,
                 top: position.y,
@@ -87,7 +87,7 @@ export default function MessageMenu({
                             "w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors",
                             item.danger
                                 ? "text-red-500 hover:bg-red-50"
-                                : "text-gray-700 hover:bg-gray-50"
+                                : "text-[var(--color-text-main)] hover:bg-[var(--color-bg-hover)]"
                         )}
                     >
                         <Icon size={16} />

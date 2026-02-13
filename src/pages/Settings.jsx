@@ -4,7 +4,6 @@ import { useLanguage } from '../context/LanguageContext';
 import { useUser } from '../context/UserContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { useBackground } from '../features/background/BackgroundContext';
 import { useSocial } from '../context/SocialContext';
 import {
     ChevronRight, Bell, Lock, Globe, Info, Moon, HelpCircle,
@@ -23,9 +22,9 @@ const ApiConfigPanel = React.lazy(() => import('../components/ApiConfigPanel'));
 export default function Settings() {
     const { language, toggleLanguage, t } = useLanguage();
     const { userProfile, getDisplayName } = useUser();
-    const { settings, toggleSound, toggleDoNotDisturb, toggleBrowserPush } = useNotification();
+    const { settings, toggleSound, toggleDoNotDisturb } = useNotification();
     const { isDarkMode, themeMode, toggleDarkMode, animationIntensity, setAnimationIntensity, bubbleStyle, setBubbleStyle } = useTheme();
-    const { points, streakDays, hasCheckedInToday } = useSocial();
+    const { points, streakDays } = useSocial();
     const navigate = useNavigate();
 
     const [showCheckIn, setShowCheckIn] = useState(false);
@@ -52,25 +51,21 @@ export default function Settings() {
     };
 
     return (
-        <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto custom-scrollbar relative">
+        <div className="page-container custom-scrollbar">
             {/* Ambient Background Glow */}
-            <div className="fixed inset-0 pointer-events-none opacity-20"
-                style={{
-                    background: 'radial-gradient(circle at 10% 20%, var(--color-primary-glow) 0%, transparent 40%), radial-gradient(circle at 90% 80%, var(--color-accent-blue-glow) 0%, transparent 40%)'
-                }}
-            />
+            <div className="page-ambient-glow" />
 
-            <div className="max-w-5xl mx-auto px-6 py-8 relative z-10 space-y-8 pb-24">
+            <div className="page-content space-y-8">
                 {/* Header */}
-                <div className="flex items-center gap-3 animate-fade-slide-down">
-                    <div className="p-3 bg-[var(--color-bg-white)] rounded-2xl shadow-sm border border-[var(--color-border)]">
-                        <SettingsIcon size={24} className="text-[var(--color-primary)]" />
+                <div className="page-header animate-fade-slide-down">
+                    <div className="page-header-icon">
+                        <SettingsIcon size={24} />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-display font-bold text-[var(--color-text-main)]">
+                        <h1 className="page-header-title">
                             {t('settings_control_center')}
                         </h1>
-                        <p className="text-[var(--color-text-muted)] text-sm">
+                        <p className="page-header-desc">
                             {t('settings_control_center_desc')}
                         </p>
                     </div>
@@ -80,21 +75,19 @@ export default function Settings() {
                     {/* Left Column: Pilot House (Profile) */}
                     <div className="space-y-6">
                         <section className="animate-fade-slide-up" style={{ animationDelay: '100ms' }}>
-                            <div className="flex items-center gap-2 mb-3 px-1">
-                                <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                    {t('settings_pilot_house')}
-                                </span>
+                            <div className="section-title">
+                                {t('settings_pilot_house')}
                             </div>
 
                             <div
-                                className="glass-crystal rounded-[var(--radius-2xl)] p-6 shadow-floating relative overflow-hidden group cursor-pointer transition-all hover:scale-[1.02]"
+                                className="glass-crystal profile-card rounded-[var(--radius-2xl)] p-6 shadow-floating"
                                 onClick={() => navigate('/profile')}
                             >
                                 {/* Active Status Ring Animation */}
-                                <div className="absolute top-4 right-4 w-3 h-3 bg-[var(--color-success)] rounded-full shadow-[0_0_10px_var(--color-success)] animate-pulse" />
+                                <div className="absolute top-4 right-4 status-dot animate-pulse" />
 
                                 <div className="flex flex-col items-center text-center">
-                                    <div className="w-24 h-24 rounded-[var(--radius-xl)] bg-[var(--color-bg-active)] mb-4 relative shadow-lg group-hover:shadow-glow transition-all">
+                                    <div className="profile-avatar mb-4">
                                         {userProfile.avatar ? (
                                             <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover rounded-[var(--radius-xl)]" />
                                         ) : (
@@ -102,29 +95,29 @@ export default function Settings() {
                                                 {getDisplayName(language).charAt(0).toUpperCase()}
                                             </div>
                                         )}
-                                        <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-[var(--radius-xl)]" />
+                                        <div className="profile-avatar-ring" />
                                     </div>
 
-                                    <h2 className="text-xl font-bold text-[var(--color-text-main)] mb-1">
+                                    <h2 className="profile-name mb-1">
                                         {getDisplayName(language)}
                                     </h2>
-                                    <p className="text-sm text-[var(--color-text-muted)] bg-[var(--color-bg-white)] px-3 py-1 rounded-full border border-[var(--color-border)] mb-4">
+                                    <p className="profile-id mb-4">
                                         ID: {userProfile.id}
                                     </p>
 
                                     <div className="grid grid-cols-2 gap-3 w-full">
-                                        <div className="bg-[var(--color-bg-white)]/50 p-3 rounded-xl border border-[var(--color-border-light)] hover:bg-[var(--color-bg-white)] transition-colors"
+                                        <div className="stat-card"
                                             onClick={(e) => { e.stopPropagation(); setShowCheckIn(true); }}>
-                                            <div className="text-xs text-[var(--color-text-muted)] mb-1">{t('streak_stat')}</div>
-                                            <div className="font-display font-bold text-lg text-[#FF9800] flex items-center justify-center gap-1">
+                                            <div className="stat-card-label">{t('streak_stat')}</div>
+                                            <div className="stat-card-value" style={{ color: '#FF9800' }}>
                                                 <Calendar size={14} />
                                                 {streakDays}
                                             </div>
                                         </div>
-                                        <div className="bg-[var(--color-bg-white)]/50 p-3 rounded-xl border border-[var(--color-border-light)] hover:bg-[var(--color-bg-white)] transition-colors"
+                                        <div className="stat-card"
                                             onClick={(e) => { e.stopPropagation(); navigate('/achievements'); }}>
-                                            <div className="text-xs text-[var(--color-text-muted)] mb-1">{t('total_points')}</div>
-                                            <div className="font-display font-bold text-lg text-[#FFD700] flex items-center justify-center gap-1">
+                                            <div className="stat-card-label">{t('total_points')}</div>
+                                            <div className="stat-card-value" style={{ color: '#FFD700' }}>
                                                 <Trophy size={14} />
                                                 {points}
                                             </div>
@@ -135,18 +128,16 @@ export default function Settings() {
                         </section>
 
                         <section className="animate-fade-slide-up" style={{ animationDelay: '200ms' }}>
-                            <div className="flex items-center gap-2 mb-3 px-1">
-                                <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                    {t('preferences')}
-                                </span>
+                            <div className="section-title">
+                                {t('preferences')}
                             </div>
-                            <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-[var(--radius-xl)] overflow-hidden shadow-sm">
+                            <div className="settings-group">
                                 <SettingItem
                                     icon={<Globe size={18} />}
                                     color="bg-[#2196F3]"
                                     label={t('interface_language')}
                                     rightContent={
-                                        <span className="font-medium text-[var(--color-text-main)] bg-[var(--color-bg-app)] px-3 py-1 rounded-lg text-sm border border-[var(--color-border-light)]">
+                                        <span className="lang-badge">
                                             {t(language === 'en' ? 'lang_english' : 'lang_chinese')}
                                         </span>
                                     }
@@ -168,7 +159,7 @@ export default function Settings() {
                                     icon={<LogOut size={18} />}
                                     color="bg-[var(--color-danger)]"
                                     label={t('logout') || 'Log Out'}
-                                    className="text-[var(--color-danger)]"
+                                    labelClassName="text-[var(--color-danger)]"
                                     onClick={() => { }} // Handle logout
                                 />
                             </div>
@@ -178,10 +169,8 @@ export default function Settings() {
                     {/* Right Column: System Controls */}
                     <div className="lg:col-span-2 space-y-6">
                         <section className="animate-fade-slide-up" style={{ animationDelay: '150ms' }}>
-                            <div className="flex items-center gap-2 mb-3 px-1">
-                                <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                    {t('appearance')}
-                                </span>
+                            <div className="section-title">
+                                {t('appearance')}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -245,12 +234,10 @@ export default function Settings() {
                         </section>
 
                         <section className="animate-fade-slide-up" style={{ animationDelay: '250ms' }}>
-                            <div className="flex items-center gap-2 mb-3 px-1">
-                                <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                    {t('advanced_tools')}
-                                </span>
+                            <div className="section-title">
+                                {t('advanced_tools')}
                             </div>
-                            <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-[var(--radius-xl)] overflow-hidden shadow-sm">
+                            <div className="settings-group">
                                 <SettingItem
                                     icon={<Server size={18} />}
                                     color="bg-[#2196F3]"
@@ -289,16 +276,14 @@ export default function Settings() {
                             </div>
                             {importMsg && (
                                 <div className={cn(
-                                    "mt-3 px-4 py-3 rounded-xl text-sm flex items-center justify-between",
-                                    importMsg.type === 'success'
-                                        ? "bg-green-50 text-green-700 border border-green-200"
-                                        : "bg-red-50 text-red-700 border border-red-200"
+                                    "import-msg",
+                                    importMsg.type === 'success' ? "import-msg-success" : "import-msg-error"
                                 )}>
                                     <span>{importMsg.text}</span>
                                     {importMsg.type === 'success' && (
                                         <button
                                             onClick={() => window.location.reload()}
-                                            className="ml-2 px-3 py-1 rounded-lg bg-green-600 text-white text-xs font-medium"
+                                            className="btn-primary ml-2 px-3 py-1 text-xs"
                                         >
                                             {t('reload_now')}
                                         </button>
@@ -308,8 +293,8 @@ export default function Settings() {
                         </section>
 
                         <section className="animate-fade-slide-up" style={{ animationDelay: '300ms' }}>
-                            <div className="p-4 rounded-xl border border-[var(--color-border-light)] text-center">
-                                <p className="text-xs text-[var(--color-text-muted)]">
+                            <div className="version-footer">
+                                <p>
                                     Chat Buddy v0.2.3 • Built with ❤️ by Agent Coder
                                 </p>
                             </div>
@@ -341,30 +326,19 @@ function ControlCard({ icon, color, label, subLabel, active, onClick }) {
     return (
         <div
             onClick={onClick}
-            className={cn(
-                "p-5 rounded-[var(--radius-xl)] border cursor-pointer transition-all duration-300 relative overflow-hidden group hover:scale-[1.02]",
-                active
-                    ? "bg-[var(--color-bg-white)] border-[var(--color-border-aurora)] shadow-md"
-                    : "bg-[var(--color-bg-app)] border-transparent opacity-80 hover:opacity-100"
-            )}
+            className={cn("control-card", active && "active")}
         >
-            <div className="flex items-start justify-between mb-3">
-                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm", color)}>
+            <div className="control-card-header">
+                <div className={cn("control-card-icon", color)}>
                     {icon}
                 </div>
-                <div className={cn(
-                    "w-12 h-7 rounded-full transition-all relative",
-                    active ? "bg-[var(--color-success)]" : "bg-[var(--color-border)]"
-                )}>
-                    <div className={cn(
-                        "absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all",
-                        active ? "left-6" : "left-1"
-                    )} />
+                <div className={cn("toggle", active && "active")}>
+                    <div className="toggle-thumb" />
                 </div>
             </div>
             <div>
-                <h3 className="font-bold text-[var(--color-text-main)] text-lg">{label}</h3>
-                <p className="text-sm text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)] transition-colors">
+                <h3 className="control-card-label">{label}</h3>
+                <p className="control-card-sublabel">
                     {subLabel}
                 </p>
             </div>
@@ -372,20 +346,20 @@ function ControlCard({ icon, color, label, subLabel, active, onClick }) {
     );
 }
 
-function SettingItem({ icon, color, label, subLabel, rightContent, onClick, className }) {
+function SettingItem({ icon, color, label, subLabel, rightContent, onClick, labelClassName }) {
     return (
         <div
             onClick={onClick}
-            className="flex items-center p-4 hover:bg-[var(--color-bg-hover)] cursor-pointer transition-colors border-b border-[var(--color-border-light)] last:border-0"
+            className="setting-item"
         >
-            <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-sm mr-4", color)}>
+            <div className={cn("setting-item-icon", color)}>
                 {icon}
             </div>
-            <div className="flex-1">
-                <h4 className={cn("font-bold text-[15px] text-[var(--color-text-main)]", className)}>{label}</h4>
-                {subLabel && <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{subLabel}</p>}
+            <div className="setting-item-content">
+                <h4 className={cn("setting-item-label", labelClassName)}>{label}</h4>
+                {subLabel && <p className="setting-item-sublabel">{subLabel}</p>}
             </div>
-            {rightContent || <ChevronRight size={18} className="text-[var(--color-text-light)]" />}
+            {rightContent || <ChevronRight size={18} className="setting-item-chevron" />}
         </div>
     );
 }
