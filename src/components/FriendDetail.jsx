@@ -49,7 +49,7 @@ export default function FriendDetail({ friend, onClose }) {
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
             <div
-                className="bg-white rounded-t-2xl w-full max-w-lg max-h-[85vh] overflow-hidden animate-slide-up"
+                className="bg-[var(--color-bg-white)] rounded-t-2xl w-full max-w-lg max-h-[85vh] overflow-hidden animate-slide-up"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -104,7 +104,7 @@ export default function FriendDetail({ friend, onClose }) {
                                 onBlur={handleSaveRemark}
                                 placeholder={t('remark_placeholder') || 'Set a remark name'}
                                 maxLength={20}
-                                className="flex-1 bg-white px-3 py-2 rounded-lg text-[15px] outline-none border border-[var(--color-border)]"
+                                className="flex-1 bg-[var(--color-bg-white)] px-3 py-2 rounded-lg text-[15px] outline-none border border-[var(--color-border)]"
                             />
                             <span className="text-[var(--color-text-light)] text-sm">{remarkInput.length}/20</span>
                         </div>
@@ -117,7 +117,7 @@ export default function FriendDetail({ friend, onClose }) {
                         </label>
                         <button
                             onClick={() => setShowGroupPicker(!showGroupPicker)}
-                            className="w-full bg-white px-3 py-2 rounded-lg flex items-center justify-between border border-[var(--color-border)]"
+                            className="w-full bg-[var(--color-bg-white)] px-3 py-2 rounded-lg flex items-center justify-between border border-[var(--color-border)]"
                         >
                             <span className="flex items-center gap-2">
                                 {currentGroup ? (
@@ -134,7 +134,7 @@ export default function FriendDetail({ friend, onClose }) {
 
                         {/* Group Picker Dropdown */}
                         {showGroupPicker && (
-                            <div className="mt-2 bg-white rounded-lg border border-[var(--color-border)] overflow-hidden">
+                            <div className="mt-2 bg-[var(--color-bg-white)] rounded-lg border border-[var(--color-border)] overflow-hidden">
                                 <button
                                     onClick={() => handleGroupSelect(null)}
                                     className={cn(

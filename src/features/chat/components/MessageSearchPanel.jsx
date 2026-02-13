@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { X, Search, MessageSquare, ChevronRight } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useLanguage } from '../../../context/LanguageContext';
@@ -18,6 +18,13 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
         }, 300);
         return () => clearTimeout(timer);
     }, [searchTerm]);
+
+    const getChatName = useCallback((chat) => {
+        if (!chat || !chat.participants) return 'Chat';
+        const otherId = chat.participants.find(p => p !== 'user-me');
+        const persona = personas?.find(p => p.id === otherId);
+        return persona ? (language === 'zh' ? persona.name_zh || persona.name : persona.name) : 'Chat';
+    }, [personas, language]);
 
     // Search through all messages
     const searchResults = useMemo(() => {
@@ -51,9 +58,6 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
 
                 if (!matchesType) return;
 
-                // For specialized types, we might want to match generic terms or just show all if search is generic
-                // But typically search matches content.
-                // If it's a file, we search filename.
                 let contentToMatch = content;
                 if (content.includes('[FILE]')) {
                     contentToMatch = content.replace('[FILE]', '').trim();
@@ -80,14 +84,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
 
         // Sort by timestamp, newest first
         return results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 50);
-    }, [debouncedTerm, chats, personas, language, searchScope, currentChatId, fileType]);
-
-    const getChatName = (chat) => {
-        if (!chat || !chat.participants) return 'Chat';
-        const otherId = chat.participants.find(p => p !== 'user-me');
-        const persona = personas?.find(p => p.id === otherId);
-        return persona ? (language === 'zh' ? persona.name_zh || persona.name : persona.name) : 'Chat';
-    };
+    }, [debouncedTerm, chats, personas, language, searchScope, currentChatId, fileType, getChatName]);
 
     const highlightMatch = (text, term) => {
         if (!term || !text) return text;
@@ -137,7 +134,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+        <div className="fixed inset-0 z-50 bg-[var(--color-bg-white)] flex flex-col">
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
                 <button onClick={onClose} className="text-[var(--color-text-muted)]">
@@ -158,14 +155,14 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
             </div>
 
             {/* Filters */}
-            <div className="px-4 py-2 bg-white border-b border-[var(--color-border-light)] flex flex-wrap gap-2">
+            <div className="px-4 py-2 bg-[var(--color-bg-white)] border-b border-[var(--color-border-light)] flex flex-wrap gap-2">
                 {currentChatId && (
                     <div className="flex bg-[var(--color-bg-app)] rounded-lg p-0.5">
                         <button
                             onClick={() => setSearchScope('current')}
                             className={cn(
                                 "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                                searchScope === 'current' ? "bg-white shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                                searchScope === 'current' ? "bg-[var(--color-bg-white)] shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
                             )}
                         >
                             {language === 'zh' ? '当前聊天' : 'Current Chat'}
@@ -174,7 +171,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                             onClick={() => setSearchScope('all')}
                             className={cn(
                                 "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                                searchScope === 'all' ? "bg-white shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                                searchScope === 'all' ? "bg-[var(--color-bg-white)] shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
                             )}
                         >
                             {language === 'zh' ? '所有聊天' : 'All Chats'}
@@ -189,7 +186,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                             onClick={() => setFileType(type)}
                             className={cn(
                                 "px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap",
-                                fileType === type ? "bg-white shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                                fileType === type ? "bg-[var(--color-bg-white)] shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
                             )}
                         >
                             {type === 'all' ? (language === 'zh' ? '全部' : 'All') :

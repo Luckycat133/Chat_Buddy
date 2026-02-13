@@ -120,7 +120,7 @@ export default function MomentCard({ post, onCommentClick }) {
     };
 
     return (
-        <div className="bg-white border-b border-[var(--color-border-light)] px-4 py-4">
+        <div className="bg-[var(--color-bg-white)] border-b border-[var(--color-border-light)] px-4 py-4">
             {/* Header */}
             <div className="flex items-start gap-3">
                 {/* Avatar */}
@@ -152,7 +152,7 @@ export default function MomentCard({ post, onCommentClick }) {
                                 {showMenu && (
                                     <>
                                         <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                                        <div className="absolute right-0 top-6 bg-white rounded-lg shadow-lg border border-[var(--color-border)] z-20 overflow-hidden">
+                                        <div className="absolute right-0 top-6 bg-[var(--color-bg-white)] rounded-lg shadow-lg border border-[var(--color-border)] z-20 overflow-hidden">
                                             <button
                                                 onClick={() => {
                                                     deletePost(post.id);
@@ -171,7 +171,7 @@ export default function MomentCard({ post, onCommentClick }) {
                     </div>
 
                     {/* Post Content */}
-                    <p className="text-slate-700 text-[15px] mt-1 whitespace-pre-wrap">
+                    <p className="text-[var(--color-text-main)] text-[15px] mt-1 whitespace-pre-wrap">
                         {post.content}
                     </p>
 
@@ -196,7 +196,7 @@ export default function MomentCard({ post, onCommentClick }) {
 
                     {/* Location */}
                     {post.location && (
-                        <div className="flex items-center gap-1 mt-2 text-slate-500 text-[12px]">
+                        <div className="flex items-center gap-1 mt-2 text-[var(--color-text-muted)] text-[12px]">
                             <MapPin size={12} />
                             <span>{post.location}</span>
                         </div>
@@ -204,7 +204,7 @@ export default function MomentCard({ post, onCommentClick }) {
 
                     {/* Time and Actions */}
                     <div className="flex items-center justify-between mt-3">
-                        <span className="text-slate-500 text-[12px]">
+                        <span className="text-[var(--color-text-muted)] text-[12px]">
                             {formatTime(post.createdAt)}
                         </span>
 
@@ -220,7 +220,7 @@ export default function MomentCard({ post, onCommentClick }) {
                                 {showReactions && (
                                     <>
                                         <div className="fixed inset-0 z-10" onClick={() => setShowReactions(false)} />
-                                        <div className="absolute bottom-6 right-0 bg-white rounded-full shadow-lg border border-[var(--color-border)] z-20 flex gap-1 p-1">
+                                        <div className="absolute bottom-6 right-0 bg-[var(--color-bg-white)] rounded-full shadow-lg border border-[var(--color-border)] z-20 flex gap-1 p-1">
                                             {REACTION_EMOJIS.map(emoji => (
                                                 <button
                                                     key={emoji}

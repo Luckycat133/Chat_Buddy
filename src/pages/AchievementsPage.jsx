@@ -77,7 +77,7 @@ export default function AchievementsPage() {
             </div>
 
             {/* Categories */}
-            <div className="flex overflow-x-auto px-4 py-3 gap-2 border-b border-[var(--color-border)] bg-white">
+            <div className="flex overflow-x-auto px-4 py-3 gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg-white)]">
                 {categories.map(cat => {
                     const Icon = cat.icon;
                     return (
@@ -109,8 +109,8 @@ export default function AchievementsPage() {
                                 className={cn(
                                     "p-4 rounded-xl flex items-center gap-4 transition-all",
                                     achievement.unlocked
-                                        ? "bg-white shadow-sm"
-                                        : "bg-gray-100 opacity-60"
+                                        ? "bg-[var(--color-bg-white)] shadow-sm"
+                                        : "bg-[var(--color-bg-active)] opacity-60"
                                 )}
                             >
                                 {/* Icon */}
@@ -118,12 +118,12 @@ export default function AchievementsPage() {
                                     "w-14 h-14 rounded-xl flex items-center justify-center",
                                     achievement.unlocked
                                         ? "bg-gradient-to-br from-yellow-400 to-orange-500"
-                                        : "bg-gray-300"
+                                        : "bg-[var(--color-bg-active)]"
                                 )}>
                                     {achievement.unlocked ? (
                                         <Icon size={28} className="text-white" />
                                     ) : (
-                                        <Lock size={24} className="text-gray-500" />
+                                        <Lock size={24} className="text-[var(--color-text-muted)]" />
                                     )}
                                 </div>
 
@@ -131,7 +131,7 @@ export default function AchievementsPage() {
                                 <div className="flex-1">
                                     <h3 className={cn(
                                         "font-medium text-[15px]",
-                                        achievement.unlocked ? "text-[var(--color-text-main)]" : "text-gray-500"
+                                        achievement.unlocked ? "text-[var(--color-text-main)]" : "text-[var(--color-text-muted)]"
                                     )}>
                                         {language === 'zh' ? achievement.name : achievement.name_en}
                                     </h3>
@@ -148,7 +148,7 @@ export default function AchievementsPage() {
                                 {/* Points */}
                                 <div className={cn(
                                     "text-center",
-                                    achievement.unlocked ? "text-[var(--color-primary)]" : "text-gray-400"
+                                    achievement.unlocked ? "text-[var(--color-primary)]" : "text-[var(--color-text-light)]"
                                 )}>
                                     <p className="text-lg font-bold">+{achievement.points}</p>
                                     <p className="text-xs">{t('pts')}</p>

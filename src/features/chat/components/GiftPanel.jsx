@@ -49,7 +49,7 @@ export default function GiftPanel({ recipientId, recipientName, onClose, onGiftS
     return (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center" onClick={onClose}>
             <div
-                className="bg-white rounded-t-2xl w-full max-w-lg animate-slide-up"
+                className="bg-[var(--color-bg-white)] rounded-t-2xl w-full max-w-lg animate-slide-up"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}

@@ -76,14 +76,14 @@ export default function CreateChat() {
                         placeholder={t('search')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-white border-none rounded py-1.5 pl-8 pr-3 text-sm placeholder:text-[#B2B2B2] focus:outline-none"
+                        className="w-full bg-[var(--color-bg-white)] border-none rounded py-1.5 pl-8 pr-3 text-sm placeholder:text-[#B2B2B2] focus:outline-none"
                     />
                 </div>
             </div>
 
             {/* Group Name Input */}
             {selectedIds.length > 1 && (
-                <div className="bg-white px-4 py-3 mb-2 border-b border-[var(--color-border)]">
+                <div className="bg-[var(--color-bg-white)] px-4 py-3 mb-2 border-b border-[var(--color-border)]">
                     <input
                         type="text"
                         placeholder={t('group_name_placeholder')}
@@ -95,7 +95,7 @@ export default function CreateChat() {
             )}
 
             {/* Contact List */}
-            <div className="flex-1 overflow-y-auto bg-white">
+            <div className="flex-1 overflow-y-auto bg-[var(--color-bg-white)]">
                 {filteredPersonas.map((persona) => {
                     const isSelected = selectedIds.includes(persona.id);
                     const pName = language === 'zh' ? (persona.name_zh || persona.name) : persona.name;

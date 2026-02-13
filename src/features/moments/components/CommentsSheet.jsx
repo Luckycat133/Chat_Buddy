@@ -74,7 +74,7 @@ export default function CommentsSheet({ post, onClose }) {
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
             <div
-                className="bg-white rounded-t-2xl w-full max-w-lg max-h-[70vh] flex flex-col animate-slide-up"
+                className="bg-[var(--color-bg-white)] rounded-t-2xl w-full max-w-lg max-h-[70vh] flex flex-col animate-slide-up"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}

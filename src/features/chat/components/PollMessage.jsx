@@ -23,7 +23,7 @@ export default function PollMessage({ poll, onVote }) {
     };
 
     return (
-        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 min-w-[280px] max-w-[320px]">
+        <div className="bg-[var(--color-bg-white)] rounded-lg p-4 shadow-sm border border-[var(--color-border)] min-w-[280px] max-w-[320px]">
             <div className="mb-3">
                 <h3 className="font-medium text-[16px] text-[var(--color-text-main)] mb-1">{poll.question}</h3>
                 <p className="text-xs text-[var(--color-text-muted)]">
@@ -48,7 +48,7 @@ export default function PollMessage({ poll, onVote }) {
                                 "w-full relative overflow-hidden rounded-md border transition-all",
                                 isSelected
                                     ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5"
-                                    : "border-gray-200 hover:bg-gray-50"
+                                    : "border-[var(--color-border)] hover:bg-[var(--color-bg-hover)]"
                             )}
                         >
                             {/* Progress Bar Background */}
@@ -62,7 +62,7 @@ export default function PollMessage({ poll, onVote }) {
                                     {isSelected ? (
                                         <CheckCircle2 size={18} className="text-[var(--color-primary)] flex-shrink-0" />
                                     ) : (
-                                        <Circle size={18} className="text-gray-300 flex-shrink-0" />
+                                        <Circle size={18} className="text-[var(--color-text-light)] flex-shrink-0" />
                                     )}
                                     <span className={cn(
                                         "text-sm font-medium z-10",
@@ -80,7 +80,7 @@ export default function PollMessage({ poll, onVote }) {
                 })}
             </div>
 
-            <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center">
+            <div className="mt-3 pt-3 border-t border-[var(--color-border-light)] flex justify-between items-center">
                 <span className="text-xs text-[var(--color-text-muted)]">
                     {totalVotes} {language === 'zh' ? '人已参与' : 'votes'}
                 </span>

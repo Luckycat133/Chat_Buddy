@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { ChevronDown, ChevronUp, MessageCircle, Users, Settings, Sparkles, HelpCircle } from 'lucide-react';
+import { cn } from '../utils/cn';
 
 export default function Help() {
     const { t } = useLanguage();
@@ -44,95 +45,142 @@ export default function Help() {
     };
 
     return (
-        <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto pb-16 md:pb-0">
-            {/* Header */}
-            <div className="bg-white px-4 py-5 mb-2">
-                <h1 className="text-xl font-semibold text-[var(--color-text-main)]">
-                    {t('help_title')}
-                </h1>
-                <p className="text-[var(--color-text-muted)] text-sm mt-1">
-                    {t('help_subtitle')}
-                </p>
-            </div>
+        <div className="page-container custom-scrollbar">
+            {/* Ambient Background Glow */}
+            <div className="page-ambient-glow" />
 
-            {/* Quick Tips */}
-            <div className="bg-white px-4 py-4 mb-2">
-                <h2 className="font-medium text-[var(--color-text-main)] mb-3">
-                    {t('quick_tips')}
-                </h2>
-                <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-[var(--color-primary-light)] rounded-full flex items-center justify-center text-[var(--color-primary)]">
-                            <MessageCircle size={16} />
-                        </div>
-                        <div>
-                            <p className="text-sm text-[var(--color-text-main)]">{t('tip_1')}</p>
-                        </div>
+            <div className="page-content space-y-6">
+                {/* Header */}
+                <div className="page-header animate-fade-slide-down">
+                    <div className="page-header-icon">
+                        <HelpCircle size={24} />
                     </div>
-                    <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-[var(--color-primary-light)] rounded-full flex items-center justify-center text-[var(--color-primary)]">
-                            <Users size={16} />
-                        </div>
-                        <div>
-                            <p className="text-sm text-[var(--color-text-main)]">{t('tip_2')}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 bg-[var(--color-primary-light)] rounded-full flex items-center justify-center text-[var(--color-primary)]">
-                            <Sparkles size={16} />
-                        </div>
-                        <div>
-                            <p className="text-sm text-[var(--color-text-main)]">{t('tip_3')}</p>
-                        </div>
+                    <div>
+                        <h1 className="page-header-title">
+                            {t('help_title')}
+                        </h1>
+                        <p className="page-header-desc">
+                            {t('help_subtitle')}
+                        </p>
                     </div>
                 </div>
-            </div>
 
-            {/* FAQ Section */}
-            <div className="bg-white px-4 py-4 mb-2">
-                <h2 className="font-medium text-[var(--color-text-main)] mb-3">
-                    {t('faq_title')}
-                </h2>
-                <div className="space-y-2">
-                    {faqs.map((faq) => (
-                        <div
-                            key={faq.id}
-                            className="border border-[var(--color-border-light)] rounded-lg overflow-hidden"
-                        >
-                            <button
-                                className="w-full flex items-center gap-3 px-4 py-3 text-left bg-white hover:bg-gray-50 transition-colors"
-                                onClick={() => toggleFaq(faq.id)}
-                            >
-                                <span className="text-[var(--color-primary)]">{faq.icon}</span>
-                                <span className="flex-1 text-sm font-medium text-[var(--color-text-main)]">
-                                    {faq.question}
-                                </span>
-                                {expandedFaq === faq.id ? (
-                                    <ChevronUp size={18} className="text-[var(--color-text-muted)]" />
-                                ) : (
-                                    <ChevronDown size={18} className="text-[var(--color-text-muted)]" />
-                                )}
-                            </button>
-                            {expandedFaq === faq.id && (
-                                <div className="px-4 py-3 bg-gray-50 border-t border-[var(--color-border-light)]">
-                                    <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-                                        {faq.answer}
-                                    </p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Quick Tips */}
+                    <aside className="card p-6 h-fit animate-fade-slide-up" style={{ animationDelay: '100ms' }}>
+                        <h2 className="text-lg font-bold text-[var(--color-text-main)] mb-5 flex items-center gap-2">
+                            <Sparkles size={20} className="text-[var(--color-accent-gold)]" />
+                            {t('quick_tips')}
+                        </h2>
+                        <div className="space-y-5">
+                            <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 bg-[var(--color-primary-light)] rounded-xl flex items-center justify-center text-[var(--color-primary)] flex-shrink-0 shadow-sm">
+                                    <MessageCircle size={20} />
                                 </div>
-                            )}
+                                <p className="text-sm font-medium text-[var(--color-text-secondary)] leading-snug">
+                                    {t('tip_1')}
+                                </p>
+                            </div>
+                            <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 bg-[var(--color-accent-blue-glow)] rounded-xl flex items-center justify-center text-[var(--color-accent-sky)] flex-shrink-0 shadow-sm">
+                                    <Users size={20} />
+                                </div>
+                                <p className="text-sm font-medium text-[var(--color-text-secondary)] leading-snug">
+                                    {t('tip_2')}
+                                </p>
+                            </div>
+                            <div className="flex items-start gap-4">
+                                <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-400 flex-shrink-0 shadow-sm">
+                                    <Sparkles size={20} />
+                                </div>
+                                <p className="text-sm font-medium text-[var(--color-text-secondary)] leading-snug">
+                                    {t('tip_3')}
+                                </p>
+                            </div>
                         </div>
-                    ))}
-                </div>
-            </div>
 
-            {/* Contact Section */}
-            <div className="bg-white px-4 py-4 mb-2">
-                <h2 className="font-medium text-[var(--color-text-main)] mb-2">
-                    {t('need_more_help')}
-                </h2>
-                <p className="text-sm text-[var(--color-text-muted)]">
-                    {t('contact_info')}
-                </p>
+                        <div className="mt-8 pt-6 border-t border-[var(--color-border-light)]">
+                            <h3 className="text-sm font-bold text-[var(--color-text-main)] mb-2">
+                                {t('need_more_help')}
+                            </h3>
+                            <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+                                {t('contact_info')}
+                            </p>
+                            <button className="btn btn-secondary btn-sm w-full mt-4">
+                                {t('contact_support') || 'Contact Support'}
+                            </button>
+                        </div>
+                    </aside>
+
+                    {/* FAQ Section */}
+                    <main className="lg:col-span-2 space-y-4 animate-fade-slide-up" style={{ animationDelay: '200ms' }}>
+                        <div className="flex items-center justify-between mb-2 px-2">
+                            <h2 className="text-lg font-bold text-[var(--color-text-main)]">
+                                {t('faq_title')}
+                            </h2>
+                            <span className="badge">
+                                {faqs.length} {t('questions') || 'Items'}
+                            </span>
+                        </div>
+                        <div className="space-y-3">
+                            {faqs.map((faq) => {
+                                const isExpanded = expandedFaq === faq.id;
+                                return (
+                                    <div
+                                        key={faq.id}
+                                        className={cn(
+                                            "card overflow-hidden transition-all duration-300",
+                                            isExpanded ? "ring-2 ring-[var(--color-primary)]/20 shadow-lg" : "hover:border-[var(--color-primary)]/30"
+                                        )}
+                                    >
+                                        <button
+                                            className={cn(
+                                                "w-full flex items-center gap-4 px-5 py-4 text-left transition-colors",
+                                                isExpanded ? "bg-[var(--color-primary-light)]/30" : "bg-[var(--color-bg-white)]"
+                                            )}
+                                            onClick={() => toggleFaq(faq.id)}
+                                        >
+                                            <div className={cn(
+                                                "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                                                isExpanded ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-bg-hover)] text-[var(--color-primary)]"
+                                            )}>
+                                                {faq.icon}
+                                            </div>
+                                            <span className="flex-1 text-base font-semibold text-[var(--color-text-main)]">
+                                                {faq.question}
+                                            </span>
+                                            {isExpanded ? (
+                                                <ChevronUp size={20} className="text-[var(--color-primary)]" />
+                                            ) : (
+                                                <ChevronDown size={20} className="text-[var(--color-text-light)]" />
+                                            )}
+                                        </button>
+                                        <div className={cn(
+                                            "grid transition-all duration-300 ease-in-out",
+                                            isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                                        )}>
+                                            <div className="overflow-hidden">
+                                                <div className="px-6 py-5 bg-[var(--color-bg-white)] border-t border-[var(--color-border-light)]">
+                                                    <p className="text-[var(--color-text-secondary)] leading-relaxed">
+                                                        {faq.answer}
+                                                    </p>
+                                                    <div className="mt-4 flex gap-2">
+                                                        <button className="btn btn-ghost btn-sm">
+                                                            {t('helpful') || 'Helpful'}
+                                                        </button>
+                                                        <button className="btn btn-ghost btn-sm">
+                                                            {t('share') || 'Share'}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </main>
+                </div>
             </div>
         </div>
     );

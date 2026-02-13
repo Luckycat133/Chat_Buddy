@@ -47,7 +47,7 @@ export default function AgentWorkspace() {
     };
 
     if (!agent) {
-        return <div className="flex items-center justify-center h-full text-gray-500">Agent not found</div>;
+        return <div className="flex items-center justify-center h-full text-[var(--color-text-muted)]">Agent not found</div>;
     }
 
     const displayName = language === 'zh' ? (agent.name_zh || agent.name) : agent.name;
@@ -69,7 +69,7 @@ export default function AgentWorkspace() {
                         </button>
                         <div className="flex-1 min-w-0">
                             <h1 className="font-display font-bold text-lg truncate flex items-center gap-2 text-[var(--color-text-main)]">
-                                <span className={cn("w-2.5 h-2.5 rounded-full shadow-glow", agent.color?.split(' ')[0] || 'bg-gray-400')}></span>
+                                <span className={cn("w-2.5 h-2.5 rounded-full shadow-glow", agent.color?.split(' ')[0] || 'bg-[var(--color-bg-active)]')}></span>
                                 {displayName}
                             </h1>
                             <p className="text-xs text-[var(--color-text-muted)] truncate font-medium">
@@ -157,7 +157,7 @@ export default function AgentWorkspace() {
                     <div className="flex flex-col items-center gap-6 relative z-10 animate-scale-spring">
                         <div className={cn(
                             "w-24 h-24 rounded-[var(--radius-2xl)] flex items-center justify-center shadow-floating glass-crystal",
-                            !agent.avatar && (agent.color?.split(' ')[0] || 'bg-gray-200')
+                            !agent.avatar && (agent.color?.split(' ')[0] || 'bg-[var(--color-bg-active)]')
                         )}>
                             <img src={agent.avatar} alt="Agent" className="w-20 h-20 object-contain drop-shadow-md" />
                         </div>

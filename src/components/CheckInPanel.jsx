@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Gift, Calendar, Flame, Trophy } from 'lucide-react';
 import { useSocial } from '../context/SocialContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -9,18 +9,16 @@ export default function CheckInPanel({ onClose }) {
     const { t, language } = useLanguage();
     const [checkInResult, setCheckInResult] = useState(null);
     const [showAnimation, setShowAnimation] = useState(false);
-    const [recentAchievements, setRecentAchievements] = useState([]);
 
     const hasChecked = hasCheckedInToday();
 
-    // Get recently unlocked achievements
-    useEffect(() => {
+    // Compute recently unlocked achievements directly (avoids setState in useEffect)
+    const recentAchievements = useMemo(() => {
         const achievements = getAchievements().filter(a => a.unlocked);
         const today = new Date().toISOString().split('T')[0];
-        const recent = achievements.filter(a =>
+        return achievements.filter(a =>
             a.unlockedAt && a.unlockedAt.startsWith(today)
         );
-        setRecentAchievements(recent);
     }, [getAchievements]);
 
     const handleCheckIn = () => {
@@ -61,7 +59,7 @@ export default function CheckInPanel({ onClose }) {
     return (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
             <div
-                className="bg-white rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
+                className="bg-[var(--color-bg-white)] rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -112,8 +110,8 @@ export default function CheckInPanel({ onClose }) {
                                     day.checked
                                         ? "bg-[var(--color-primary)] text-white"
                                         : day.isPast
-                                            ? "bg-gray-200 text-gray-400"
-                                            : "bg-white text-[var(--color-text-main)]"
+                                            ? "bg-[var(--color-bg-active)] text-[var(--color-text-light)]"
+                                            : "bg-[var(--color-bg-white)] text-[var(--color-text-main)]"
                                 )}>
                                     {day.checked ? '✓' : day.date}
                                 </div>
@@ -161,7 +159,7 @@ export default function CheckInPanel({ onClose }) {
                         className={cn(
                             "w-full py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2",
                             hasChecked
-                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                ? "bg-[var(--color-bg-active)] text-[var(--color-text-light)] cursor-not-allowed"
                                 : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]"
                         )}
                     >

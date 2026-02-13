@@ -34,7 +34,7 @@ export default function ChatWindow({ chatId: propChatId }) {
     const { id: paramChatId } = useParams();
     const id = propChatId || paramChatId;
     const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, deleteMessage, pinMessage, votePoll } = useChat();
-    const { t, language } = useLanguage();
+    const { t } = useLanguage();
     const { addDocument } = useDocuments();
 
     // Feature modals state
@@ -50,6 +50,7 @@ export default function ChatWindow({ chatId: propChatId }) {
     // Interaction states
     const [selectedMessage, setSelectedMessage] = useState(null);
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+    const [canRecallMessage, setCanRecallMessage] = useState(false);
     const [quotedMessage, setQuotedMessage] = useState(null);
     const [toast, setToast] = useState(null);
 
@@ -78,6 +79,9 @@ export default function ChatWindow({ chatId: propChatId }) {
         e.preventDefault();
         setSelectedMessage(msg);
         setMenuPosition({ x: e.clientX, y: e.clientY });
+        // Compute canRecall in event handler where Date.now() is allowed
+        const elapsed = msg?.timestamp ? Date.now() - new Date(msg.timestamp).getTime() : Infinity;
+        setCanRecallMessage(elapsed < 2 * 60 * 1000);
     };
 
     const handleFileSelect = (fileData) => {
@@ -165,6 +169,7 @@ export default function ChatWindow({ chatId: propChatId }) {
                     isOwnMessage={selectedMessage.senderId === 'user-me'}
                     isPinned={chat?.pinnedMessages?.includes(selectedMessage.id)}
                     position={menuPosition}
+                    canRecall={canRecallMessage}
                     onClose={() => setSelectedMessage(null)}
                     onCopy={() => showToast(t('message_copied'))}
                     onQuote={setQuotedMessage}
@@ -250,7 +255,7 @@ export default function ChatWindow({ chatId: propChatId }) {
             )}
 
             {toast && (
-                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/70 text-white text-sm rounded-lg z-50 animate-fade-in">
+                <div className="toast">
                     {toast}
                 </div>
             )}
