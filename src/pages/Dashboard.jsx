@@ -59,15 +59,21 @@ export default function Dashboard() {
     const getPersona = (id) => personas.find(p => p.id === id);
 
     return (
-        <div className="flex-1 overflow-y-auto p-4 md:p-6">
-            {/* Header */}
-            <header className="mb-6">
-                <div className="flex items-center justify-between">
+        <div className="page-container custom-scrollbar">
+            {/* Ambient Background Glow */}
+            <div className="page-ambient-glow" />
+
+            <div className="page-content space-y-6">
+                {/* Header */}
+                <header className="page-header animate-fade-slide-down">
+                    <div className="page-header-icon">
+                        <Sparkles size={24} />
+                    </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-[var(--color-text-main)]">
+                        <h1 className="page-header-title">
                             {getGreeting()} ✨
                         </h1>
-                        <p className="text-sm text-[var(--color-text-muted)] mt-1">
+                        <p className="page-header-desc">
                             {currentTime.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', {
                                 weekday: 'long',
                                 month: 'long',
@@ -75,8 +81,7 @@ export default function Dashboard() {
                             })}
                         </p>
                     </div>
-                </div>
-            </header>
+                </header>
 
             {/* Bento Grid Layout */}
             <ResponsiveBentoGrid>
@@ -291,6 +296,7 @@ export default function Dashboard() {
                     </div>
                 </BentoCard>
             </ResponsiveBentoGrid>
+            </div>
         </div>
     );
 }
@@ -299,15 +305,15 @@ export default function Dashboard() {
 // eslint-disable-next-line no-unused-vars
 function StatItem({ label, value, suffix = '', icon: Icon }) {
     return (
-        <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-active)] flex items-center justify-center">
-                <Icon size={16} className="text-[var(--color-text-muted)]" />
+        <div className="dashboard-stat">
+            <div className="dashboard-stat-icon">
+                <Icon size={16} />
             </div>
             <div>
-                <p className="text-lg font-bold text-[var(--color-text-main)]">
-                    {value}{suffix && <span className="text-xs font-normal ml-1">{suffix}</span>}
+                <p className="dashboard-stat-value">
+                    {value}{suffix && <span>{suffix}</span>}
                 </p>
-                <p className="text-xs text-[var(--color-text-muted)]">{label}</p>
+                <p className="dashboard-stat-label">{label}</p>
             </div>
         </div>
     );

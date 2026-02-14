@@ -134,7 +134,7 @@ export default function Settings() {
                             <div className="settings-group">
                                 <SettingItem
                                     icon={<Globe size={18} />}
-                                    color="bg-[#2196F3]"
+                                    color="bg-[var(--color-icon-blue)]"
                                     label={t('interface_language')}
                                     rightContent={
                                         <span className="lang-badge">
@@ -145,13 +145,13 @@ export default function Settings() {
                                 />
                                 <SettingItem
                                     icon={<Lock size={18} />}
-                                    color="bg-[#4CAF50]"
+                                    color="bg-[var(--color-icon-green)]"
                                     label={t('privacy') || 'Privacy & Security'}
                                     onClick={() => { }}
                                 />
                                 <SettingItem
                                     icon={<HelpCircle size={18} />}
-                                    color="bg-[#9C27B0]"
+                                    color="bg-[var(--color-icon-purple)]"
                                     label={t('help') || 'Help Center'}
                                     onClick={() => navigate('/help')}
                                 />
@@ -176,7 +176,7 @@ export default function Settings() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <ControlCard
                                     icon={<Moon size={24} />}
-                                    color="bg-[#3F51B5]"
+                                    color="bg-[var(--color-icon-indigo)]"
                                     label={t('theme_mode')}
                                     subLabel={t(`theme_${themeMode}`)}
                                     active={isDarkMode}
@@ -184,7 +184,7 @@ export default function Settings() {
                                 />
                                 <ControlCard
                                     icon={<Image size={24} />}
-                                    color="bg-[#00BCD4]"
+                                    color="bg-[var(--color-icon-teal)]"
                                     label={t('backgrounds')}
                                     subLabel={t('customize_look')}
                                     active={true}
@@ -192,7 +192,7 @@ export default function Settings() {
                                 />
                                 <ControlCard
                                     icon={<Sparkles size={24} />}
-                                    color="bg-[#FF9800]"
+                                    color="bg-[var(--color-icon-orange)]"
                                     label={t('animation_intensity')}
                                     subLabel={t(`anim_${animationIntensity}`)}
                                     active={animationIntensity !== 'none'}
@@ -204,7 +204,7 @@ export default function Settings() {
                                 />
                                 <ControlCard
                                     icon={<MessageSquare size={24} />}
-                                    color="bg-[#9C27B0]"
+                                    color="bg-[var(--color-icon-purple)]"
                                     label={t('bubble_style')}
                                     subLabel={t(`bubble_${bubbleStyle}`)}
                                     active={true}
@@ -216,7 +216,7 @@ export default function Settings() {
                                 />
                                 <ControlCard
                                     icon={settings.soundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
-                                    color="bg-[#E91E63]"
+                                    color="bg-[var(--color-icon-pink)]"
                                     label={t('sound')}
                                     subLabel={settings.soundEnabled ? t('sound_enabled') : t('sound_muted')}
                                     active={settings.soundEnabled}
@@ -224,7 +224,7 @@ export default function Settings() {
                                 />
                                 <ControlCard
                                     icon={<BellOff size={24} />}
-                                    color="bg-[#607D8B]"
+                                    color="bg-[var(--color-icon-gray)]"
                                     label={t('do_not_disturb')}
                                     subLabel={settings.doNotDisturb ? t('dnd_active') : t('dnd_off')}
                                     active={settings.doNotDisturb}
@@ -240,28 +240,28 @@ export default function Settings() {
                             <div className="settings-group">
                                 <SettingItem
                                     icon={<Server size={18} />}
-                                    color="bg-[#2196F3]"
+                                    color="bg-[var(--color-icon-blue)]"
                                     label={t('api_config')}
                                     subLabel={t('api_config_desc')}
                                     onClick={() => setShowApiConfig(true)}
                                 />
                                 <SettingItem
                                     icon={<Search size={18} />}
-                                    color="bg-[#795548]"
+                                    color="bg-[var(--color-icon-brown)]"
                                     label={t('global_search')}
                                     subLabel={t('search_all_chats')}
                                     onClick={() => setShowSearch(true)}
                                 />
                                 <SettingItem
                                     icon={<Download size={18} />}
-                                    color="bg-[#607D8B]"
+                                    color="bg-[var(--color-icon-gray)]"
                                     label={t('export_data_title')}
                                     subLabel={t('export_data_desc')}
                                     onClick={handleExport}
                                 />
                                 <SettingItem
                                     icon={<Upload size={18} />}
-                                    color="bg-[#FF9800]"
+                                    color="bg-[var(--color-icon-orange)]"
                                     label={t('import_data')}
                                     subLabel={t('import_data_desc')}
                                     onClick={() => fileInputRef.current?.click()}
@@ -295,7 +295,7 @@ export default function Settings() {
                         <section className="animate-fade-slide-up" style={{ animationDelay: '300ms' }}>
                             <div className="version-footer">
                                 <p>
-                                    Chat Buddy v0.2.3 • Built with ❤️ by Agent Coder
+                                    Chat Buddy v0.3.2 • Built with ❤️ by Agent Coder
                                 </p>
                             </div>
                         </section>

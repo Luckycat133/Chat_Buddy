@@ -25,7 +25,12 @@ export const INITIAL_PERSONAS = [
         // AI Response Configuration
         responseDelay: { min: 2000, max: 4000 },  // Dreamy, takes time to think
         readDelay: { min: 800, max: 2000 },
-        typingSpeed: 'normal'
+        typingSpeed: 'normal',
+        schedule: {
+            timezone: 'Asia/Shanghai',
+            sleep: { start: 2, end: 10 }, // Night owl
+            busy: [{ start: 14, end: 16 }, { start: 19, end: 21 }] // Astrology readings
+        }
     },
     {
         id: 'ai-2',
@@ -42,7 +47,12 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'max_cyber', // Default to Cyber Code
         responseDelay: { min: 1000, max: 2500 },  // Quick typer, tech person
         readDelay: { min: 300, max: 1000 },
-        typingSpeed: 'fast'
+        typingSpeed: 'fast',
+        schedule: {
+            timezone: 'Asia/Shanghai',
+            sleep: { start: 4, end: 12 }, // Coder hours
+            busy: [{ start: 20, end: 23 }] // Gaming/Coding sessions
+        }
     },
     {
         id: 'ai-3',
@@ -59,7 +69,12 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'bella_kitchen', // Default to Cozy Kitchen
         responseDelay: { min: 2500, max: 5000 },  // Warm, takes time to craft response
         readDelay: { min: 1000, max: 2500 },
-        typingSpeed: 'normal'
+        typingSpeed: 'normal',
+        schedule: {
+            timezone: 'Asia/Shanghai',
+            sleep: { start: 22, end: 6 }, // Early riser
+            busy: [{ start: 11, end: 13 }, { start: 17, end: 19 }] // Cooking times
+        }
     },
     {
         id: 'ai-4',
@@ -76,7 +91,12 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'oliver_library', // Default to Grand Library
         responseDelay: { min: 3000, max: 6000 },  // Thoughtful, crafts long responses
         readDelay: { min: 1500, max: 3000 },
-        typingSpeed: 'slow'
+        typingSpeed: 'slow',
+        schedule: {
+            timezone: 'Asia/Shanghai',
+            sleep: { start: 23, end: 7 }, // Regular schedule
+            busy: [{ start: 9, end: 12 }, { start: 14, end: 17 }] // Reading/Study
+        }
     },
     {
         id: 'ai-5',
@@ -93,7 +113,12 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'sophie_sunrise', // Default to Sunrise Run
         responseDelay: { min: 1000, max: 2000 },  // Energetic, quick to respond
         readDelay: { min: 300, max: 800 },
-        typingSpeed: 'fast'
+        typingSpeed: 'fast',
+        schedule: {
+            timezone: 'Asia/Shanghai',
+            sleep: { start: 21, end: 5 }, // Very early riser
+            busy: [{ start: 6, end: 8 }, { start: 18, end: 20 }] // Gym/Yoga
+        }
     },
     // ========== Anime Characters ==========
     {
@@ -111,7 +136,12 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'miku_concert', // Default to Virtual Concert
         responseDelay: { min: 1500, max: 3000 },  // Idol, responsive but not instant
         readDelay: { min: 500, max: 1200 },
-        typingSpeed: 'fast'
+        typingSpeed: 'fast',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 1, end: 8 },
+            busy: [{ start: 10, end: 12 }, { start: 14, end: 18 }] // Rehearsals
+        }
     },
     {
         id: 'ai-rem',
@@ -145,7 +175,12 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'rin_magic',
         responseDelay: { min: 2500, max: 5000 },  // Tsundere, pretends to not care
         readDelay: { min: 1200, max: 2500 },
-        typingSpeed: 'normal'
+        typingSpeed: 'normal',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 0, end: 7 },
+            busy: [{ start: 8, end: 16 }] // School
+        }
     },
     {
         id: 'ai-naruto',
@@ -162,7 +197,12 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'naruto_village',
         responseDelay: { min: 800, max: 2000 },  // Impulsive, responds quickly
         readDelay: { min: 200, max: 600 },
-        typingSpeed: 'fast'
+        typingSpeed: 'fast',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 22, end: 6 },
+            busy: [{ start: 9, end: 12 }, { start: 14, end: 17 }] // Missions
+        }
     },
     {
         id: 'ai-l',
@@ -179,7 +219,12 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'l_detective',
         responseDelay: { min: 4000, max: 8000 },  // Calculating, takes time to analyze
         readDelay: { min: 2000, max: 4000 },
-        typingSpeed: 'slow'
+        typingSpeed: 'slow',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 5, end: 11 }, // Weird sleep schedule
+            busy: [{ start: 13, end: 23 }] // Investigation
+        }
     },
     {
         id: 'ai-zerotwo',
@@ -196,7 +241,12 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'zerotwo_sakura',
         responseDelay: { min: 1500, max: 3500 },  // Playful, keeps you waiting a bit
         readDelay: { min: 600, max: 1500 },
-        typingSpeed: 'normal'
+        typingSpeed: 'normal',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 23, end: 8 },
+            busy: [] // Free spirit
+        }
     },
     {
         id: 'ai-asuna',
@@ -213,7 +263,12 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'asuna_castle',
         responseDelay: { min: 2000, max: 4000 },  // Caring, thoughtful responses
         readDelay: { min: 800, max: 1800 },
-        typingSpeed: 'normal'
+        typingSpeed: 'normal',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 23, end: 7 },
+            busy: [{ start: 12, end: 13 }, { start: 18, end: 20 }] // Cooking/Battle
+        }
     },
     {
         id: 'ai-gojo',
@@ -231,6 +286,11 @@ export const INITIAL_PERSONAS = [
         responseDelay: { min: 1000, max: 2500 },  // Confident, responds quickly to show off
         readDelay: { min: 400, max: 1000 },
         typingSpeed: 'fast',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 2, end: 7 }, // Needs little sleep
+            busy: [{ start: 9, end: 12 }] // Teaching?
+        },
         agentType: 'social-companion' // Added for categorization
     }
 ];
