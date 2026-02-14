@@ -8,7 +8,7 @@ import { getTaskSpecialists } from '../data/personas';
 
 export default function AgentsPage() {
     const navigate = useNavigate();
-    const { chats, createChat } = useChat();
+    useChat();
     const { t, language } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
 

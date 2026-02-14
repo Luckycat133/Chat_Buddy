@@ -11,10 +11,9 @@ export default function AgentWorkspace() {
     const { agentId } = useParams();
     const navigate = useNavigate();
     const { chats, createChat, personas } = useChat();
-    const { t, language } = useLanguage();
+    const { language } = useLanguage();
 
     const [selectedChatId, setSelectedChatId] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
 
     // Find agent details
     const agent = personas.find(p => p.id === agentId);
@@ -51,7 +50,7 @@ export default function AgentWorkspace() {
     }
 
     const displayName = language === 'zh' ? (agent.name_zh || agent.name) : agent.name;
-    const activeChat = selectedChatId ? chats.find(c => c.id === selectedChatId) : null;
+    const _activeChat = selectedChatId ? chats.find(c => c.id === selectedChatId) : null;
 
     return (
         <div className="flex h-full w-full bg-[var(--color-bg-app)] overflow-hidden">

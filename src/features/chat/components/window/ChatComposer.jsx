@@ -12,6 +12,7 @@ import StickerPicker from '../../../../components/StickerPicker';
 import FileUploader from '../../../../components/FileUploader';
 
 // Menu Button Helper
+// eslint-disable-next-line no-unused-vars
 const MenuButton = ({ icon: IconComponent, label, onClick, color = "text-[var(--color-text-secondary)]", bg = "bg-[var(--color-bg-hover)]" }) => (
     <button
         onClick={onClick}

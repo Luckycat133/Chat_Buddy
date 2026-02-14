@@ -9,7 +9,7 @@ const AMOUNTS = [10, 20, 50, 100, 200, 520];
 
 export default function RedPacketPanel({ recipientName, onClose, onSend }) {
     const { points } = useSocial();
-    const { t, language } = useLanguage();
+    const { t } = useLanguage();
     const [amount, setAmount] = useState(null);
     const [message, setMessage] = useState('');
     const [sending, setSending] = useState(false);

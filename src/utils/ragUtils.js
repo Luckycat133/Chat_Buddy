@@ -162,7 +162,7 @@ export function buildRAGContext(query, indexedChunks) {
         return null;
     }
 
-    const context = relevantChunks.map((chunk, index) =>
+    const context = relevantChunks.map((chunk, _index) =>
         `[Document: ${chunk.documentName}]\n${chunk.content}`
     ).join('\n\n---\n\n');
 

@@ -33,6 +33,7 @@ export const NotificationProvider = ({ children }) => {
         if (settings.browserPush && 'Notification' in window) {
             Notification.requestPermission();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Update audio volume when settings change

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const FriendContext = createContext();
@@ -24,9 +24,9 @@ const DEFAULT_FRIEND_DATA = {
 export const FriendProvider = ({ children }) => {
     const [friendData, setFriendData] = useLocalStorage('chat-buddy-friend-data', DEFAULT_FRIEND_DATA);
 
-    // Ensure groups and friendMeta exist
+    // Ensure groups and friendMeta exist (memoized to prevent dependency churn)
     const groups = friendData.groups || DEFAULT_GROUPS;
-    const friendMeta = friendData.friendMeta || {};
+    const friendMeta = useMemo(() => friendData.friendMeta || {}, [friendData.friendMeta]);
 
     // ========== Group Management ==========
 

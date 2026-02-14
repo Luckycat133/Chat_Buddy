@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useEffect, useRef, useCallback } from 'react';
 import { INITIAL_PERSONAS } from '../../../data/personas';
 import { MomentsStateProvider, useMomentsState } from './MomentsState';
 import { MomentsActionProvider, useMomentsActions } from './MomentsActions';
@@ -120,7 +120,7 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
     }, []);
 
     // Trigger AI interactions on a specific post
-    const triggerAIInteractions = useCallback(async (postId, currentPosts) => {
+    const _triggerAIInteractions = useCallback(async (postId, currentPosts) => {
         const post = currentPosts.find(p => p.id === postId);
         if (!post) return;
 
@@ -286,5 +286,6 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
                 setTimeout(() => generateDynamicAIPost(persona.id), index * 2000);
             });
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Run once 
 }
