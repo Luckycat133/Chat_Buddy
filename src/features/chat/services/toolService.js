@@ -7,7 +7,6 @@ import { callAI } from './chatService';
 import {
     KNOWLEDGE_NODES,
     QUIZ_BANK,
-    getPrerequisites,
     findTopicByKeyword,
     checkMissingPrerequisites
 } from '../../../data/knowledgeGraph';
@@ -15,13 +14,11 @@ import {
     getLearnerProfile,
     markAsMastered,
     markAsInProgress,
-    recordStruggle,
-    recordQuizAttempt,
-    getLearningSummary
+    recordStruggle
 } from '../../../data/learnerProfile';
 
 // Import math.js for symbolic math
-import { evaluate, derivative, simplify, parse } from 'mathjs';
+import { evaluate, derivative, simplify } from 'mathjs';
 
 // Import immersive translation service
 import { translateWithReflection, detectDomain } from '../../../services/ai/translationService';
@@ -166,7 +163,7 @@ function executeMathTool(expression) {
             try {
                 const deriv = derivative(expression, 'x').toString();
                 output += `\nDerivative: ${deriv}`;
-            } catch (e) {
+            } catch (_e) {
                 // Derivative not applicable
             }
         }
@@ -177,7 +174,7 @@ function executeMathTool(expression) {
             if (simplified !== expression) {
                 output += `\nSimplified: ${simplified}`;
             }
-        } catch (e) {
+        } catch (_e) {
             // Simplification not applicable
         }
 
@@ -323,7 +320,7 @@ function mockSearchDocs(query) {
 2. API Reference: Method signatures for ${query}`;
 }
 
-function mockAnalyzeCode(code) {
+function mockAnalyzeCode(_code) {
     return `[Static Analysis]
 - Complexity: Low
 - Maintainability: High

@@ -13,9 +13,12 @@ export default function Layout() {
 
     // Simple page transition effect
     useEffect(() => {
-        setPageTransition(true);
+        const raf = requestAnimationFrame(() => setPageTransition(true));
         const timer = setTimeout(() => setPageTransition(false), 350);
-        return () => clearTimeout(timer);
+        return () => {
+            cancelAnimationFrame(raf);
+            clearTimeout(timer);
+        };
     }, [location.pathname]);
 
     return (

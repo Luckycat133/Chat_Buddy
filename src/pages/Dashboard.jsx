@@ -21,7 +21,7 @@ import {
     Clock
 } from 'lucide-react';
 import { ResponsiveBentoGrid, BentoCard } from '../components/BentoGrid';
-import { cn } from '../utils/cn';
+
 import { useChat } from '../features/chat/context/ChatContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -296,6 +296,7 @@ export default function Dashboard() {
 }
 
 // Helper component for stats display
+// eslint-disable-next-line no-unused-vars
 function StatItem({ label, value, suffix = '', icon: Icon }) {
     return (
         <div className="flex items-center gap-3">

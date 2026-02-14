@@ -45,7 +45,7 @@ export function useChatService() {
         createChat: (name, pIds, avatar) => chatEngine.createChat(name, pIds, avatar),
 
         // Legacy Parity
-        setChats: (newValue) => console.warn('setChats deprecated'),
+        setChats: () => console.warn('setChats deprecated'),
         updateChat: (chatId, updates) => chatEngine.updateChat(chatId, updates),
         pinMessage: (chatId, msgId, isPinned) => chatEngine.pinMessage(chatId, msgId, isPinned),
         votePoll: (chatId, pollId, optionId) => chatEngine.votePoll(chatId, pollId, optionId),

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import { X, Image, Upload, Sliders, Check } from 'lucide-react';
 import { useBackground } from './BackgroundContext';
 import { BACKGROUND_THEMES } from './themes';

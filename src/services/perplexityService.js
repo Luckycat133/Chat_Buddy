@@ -274,7 +274,7 @@ Do NOT include your own opinions. Base verdict ONLY on search results.`;
         if (jsonMatch) {
             try {
                 parsed = JSON.parse(jsonMatch[0]);
-            } catch (e) {
+            } catch (_e) {
                 // JSON parsing failed, use raw answer
             }
         }
@@ -347,7 +347,7 @@ function parsePerplexityResponse(data, model) {
  */
 function extractCitationIndices(text) {
     const matches = text.match(/\[(\d+)\]/g) || [];
-    return [...new Set(matches.map(m => parseInt(m.replace(/[\[\]]/g, ''), 10) - 1))];
+    return [...new Set(matches.map(m => parseInt(m.replace(/[[\]]/g, ''), 10) - 1))];
 }
 
 /**
@@ -374,7 +374,7 @@ function extractTitleFromUrl(url) {
 /**
  * Re-index citation markers in text to match a new source array
  */
-function reindexCitations(text, sources) {
+function reindexCitations(text, _sources) {
     // This is a simple implementation - in production you'd want
     // to track which sources came from which hop and remap properly
     return text;

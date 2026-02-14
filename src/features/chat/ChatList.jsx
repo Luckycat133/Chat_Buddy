@@ -13,7 +13,6 @@ const ChatListItem = memo(function ChatListItem({
     isActive,
     isTyping,
     time,
-    language,
     t,
     onContextMenu,
     index
@@ -324,7 +323,6 @@ export default function ChatList() {
                                 isActive={isActive}
                                 isTyping={isTyping}
                                 time={time}
-                                language={language}
                                 t={t}
                                 onContextMenu={handleContextMenu}
                                 index={index}

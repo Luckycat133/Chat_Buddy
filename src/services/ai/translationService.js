@@ -11,7 +11,7 @@
 
 import { callAI } from '../../features/chat/services/chatService';
 import { buildExpertPrompt } from '../../data/translationExperts';
-import { buildTermsPrompt, findMatchingTerms, getCombinedGlossary } from '../../data/glossary';
+import { buildTermsPrompt, findMatchingTerms } from '../../data/glossary';
 
 // ========== Domain Detection ==========
 
@@ -23,7 +23,7 @@ import { buildTermsPrompt, findMatchingTerms, getCombinedGlossary } from '../../
 export function detectDomain(text) {
     if (!text || typeof text !== 'string') return 'general';
 
-    const textLower = text.toLowerCase();
+
 
     // Technical indicators
     const technicalPatterns = [

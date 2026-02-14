@@ -4,7 +4,6 @@ import {
     callMomentsAI,
     getTimeContext,
     getRandomLocation,
-    evaluateInterestMatch,
     generatePostSystemPrompt,
     generateCommentSystemPrompt
 } from '../services/momentsService';
@@ -18,7 +17,7 @@ export const useMomentsActions = () => {
     return context;
 };
 
-export const MomentsActionProvider = ({ children, setMomentsData, momentsData }) => {
+export const MomentsActionProvider = ({ children, setMomentsData, momentsData: _momentsData }) => {
     // We need to read current posts from momentsData prop or ref?
     // Using functional state updates is safer for simple things, but for AI logic that needs to read *other* data, 
     // we might need the latest state. 
