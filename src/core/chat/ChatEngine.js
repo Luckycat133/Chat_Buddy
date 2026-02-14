@@ -1,6 +1,8 @@
 import { storage } from '../../services/storage/StorageService';
 import { AIPipeline } from './AIPipeline';
 import { cleanMessageContent } from '../../features/chat/services/chatService';
+import { getPresenceMap } from '../presence/PresenceService';
+import { checkReEngagement } from '../presence/GreetingService';
 
 /**
  * Domain Layer: Chat Engine
@@ -20,6 +22,7 @@ export class ChatEngine {
 
         // Ephemeral state
         this.typingIndicators = {}; // { chatId: [aiId, ...] }
+        this.presenceMap = {};      // { personaId: 'online'|'offline'|'busy' }
 
         // Sub-systems
         this.aiPipeline = new AIPipeline({
@@ -37,6 +40,11 @@ export class ChatEngine {
         this.personas = personas;
         this.chats = storage.get(this.storageKey, []);
         console.log('[ChatEngine] Initialized with', this.chats.length, 'chats');
+
+        // T05: Start presence tracking & greeting checker
+        this._startPresenceUpdates(personas);
+        this._startGreetingChecker();
+
         this._notify();
     }
 
@@ -52,7 +60,8 @@ export class ChatEngine {
         // Emit a snapshot of the current state
         const state = {
             chats: this.chats,
-            typingIndicators: { ...this.typingIndicators }
+            typingIndicators: { ...this.typingIndicators },
+            presenceMap: { ...this.presenceMap }
         };
         this.listeners.forEach(cb => cb(state));
     }
@@ -306,6 +315,51 @@ Title:`;
                 }
             }).catch(err => console.error('[ChatEngine] Auto-naming failed:', err));
         });
+    }
+    // =========================================================================
+    // T05: Presence & Greeting
+    // =========================================================================
+
+    _startPresenceUpdates(personas) {
+        this._updatePresence(personas);
+        this._presenceInterval = setInterval(() => {
+            this._updatePresence(personas);
+        }, 60_000); // Refresh every 60s
+    }
+
+    _updatePresence(personas) {
+        this.presenceMap = getPresenceMap(personas);
+        this._notify();
+    }
+
+    _startGreetingChecker() {
+        // Check for re-engagement every 30 minutes
+        this._greetingInterval = setInterval(() => {
+            this._checkReEngagement();
+        }, 30 * 60 * 1000);
+    }
+
+    _checkReEngagement() {
+        const result = checkReEngagement(this.chats, this.personas);
+        if (result) {
+            console.log(`[ChatEngine] Re-engagement greeting: ${result.personaId} → chat ${result.chatId}`);
+            this.sendMessage(result.chatId, result.message, result.personaId);
+        }
+    }
+
+    /**
+     * Trigger a window-open greeting (called from UI layer)
+     */
+    triggerGreeting(chatId, message, personaId) {
+        this.sendMessage(chatId, message, personaId);
+    }
+
+    /**
+     * Cleanup intervals (for unmount)
+     */
+    destroy() {
+        if (this._presenceInterval) clearInterval(this._presenceInterval);
+        if (this._greetingInterval) clearInterval(this._greetingInterval);
     }
 }
 

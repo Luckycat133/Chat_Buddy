@@ -12,9 +12,9 @@ export const useChatState = () => {
     return context;
 };
 
-export const ChatStateProvider = ({ children, chats, personas, currentUser, typingIndicators }) => {
+export const ChatStateProvider = ({ children, chats, personas, currentUser, typingIndicators, presenceMap }) => {
     return (
-        <ChatStateContext.Provider value={{ chats, personas, currentUser, typingIndicators }}>
+        <ChatStateContext.Provider value={{ chats, personas, currentUser, typingIndicators, presenceMap }}>
             {children}
         </ChatStateContext.Provider>
     );

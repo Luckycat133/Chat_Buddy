@@ -727,6 +727,39 @@ textarea,
   animation: scaleSpring var(--duration-slow) var(--ease-spring) forwards;
 }
 
+/* T05: Typing Bubble & Presence */
+.typing-bubble {
+  background: var(--color-bg-white);
+  border-radius: 20px;
+  border-top-left-radius: 4px; /* rounded-tl-sm */
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 46px;
+  padding: var(--space-4);
+}
+
+.typing-dot {
+  width: 6px; /* w-1.5 */
+  height: 6px; /* h-1.5 */
+  background: var(--color-text-muted);
+  border-radius: 9999px; /* rounded-full */
+  animation: beat 1.4s infinite; /* animate-bounce */
+}
+
+.presence-dot {
+  width: 14px; /* w-3.5 */
+  height: 14px; /* h-3.5 */
+  border-radius: 9999px; /* rounded-full */
+  border: 2px solid var(--color-bg-white);
+  box-shadow: var(--shadow-sm);
+}
+.presence-dot--online { background: var(--color-success); }
+.presence-dot--busy { background: orange; } /* bg-orange-400 */
+.presence-dot--offline { background: #64748b; } /* bg-slate-400 */
+
 .dark .modal-panel {
   background: var(--color-surface-elevated);
   border: 1px solid rgba(255, 255, 255, 0.1);

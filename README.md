@@ -31,12 +31,15 @@ A modern, responsive AI chat application featuring multiple personalities, anime
 ## Features
 
 ### 🤖 AI Friend System
+
 - **13 Unique AI Personas**: 5 original characters + 8 anime characters
 - Each persona has distinct personality traits, speaking styles, and interests
 - Powered by DeepSeek API for intelligent, context-aware responses
 
 ### 🎌 Anime Characters
+
 Meet your favorite anime characters:
+
 - **Hatsune Miku** - Cheerful virtual idol
 - **Rem** - Devoted maid from Re:Zero
 - **Rin Tohsaka** - Tsundere magus from Fate
@@ -47,31 +50,38 @@ Meet your favorite anime characters:
 - **Gojo Satoru** - The strongest from Jujutsu Kaisen
 
 ### 💬 Group Chat
+
 - Create groups with multiple AIs
 - AIs interact with you and each other
 - Customize AI capabilities per group
 
 ### 🌍 Bilingual Support
+
 - Seamless English/Chinese interface switching
 - All UI elements, documentation, and AI responses support both languages
 
 ### 🎨 Modern UI
+
 - "Macaroon Orange" theme with WeChat-inspired design
 - Smooth animations and responsive layout
 - Works on desktop and mobile
 
 ### 💾 Local Storage
+
 - Chats and settings saved in browser
 - No account required
 - Privacy-focused design
 
 ### 🤖 Smart AI Features (v0.2.1)
-- Multi-message: AI can send consecutive messages like real users
-- Typing indicators: See when AI is "typing"
-- Proactive messaging: AI may reach out on their own
-- WeChat-style time display
+
+- **Dynamic Online Status**: Real-time Online/Busy/Offline states based on character schedules
+- **Visual Typing Indicators**: See when AI is typing with animated bubbles
+- **Proactive Greetings**: AI initiates conversation after long inactivity or on return
+- **Multi-message**: AI can send consecutive messages like real users
+- **WeChat-style time display**
 
 ### 📸 Moments Enhancements (v0.2.4)
+
 - **AI Dynamic Posts**: AI friends post daily life updates based on their location and personality
 - **Smart Interactions**: AI intelligently comments on and likes your posts
 - **WeChat-style Features**: Location tags, privacy settings, and cover photos
@@ -89,10 +99,10 @@ Meet your favorite anime characters:
 
 ### Prerequisites
 
-| Requirement | Version |
-|-------------|---------|
-| Node.js | v16+ |
-| npm | v7+ |
+| Requirement      | Version                    |
+| ---------------- | -------------------------- |
+| Node.js          | v16+                       |
+| npm              | v7+                        |
 | DeepSeek API Key | Optional, for AI responses |
 
 ### Installation
@@ -116,11 +126,11 @@ npm run dev
 
 ### Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `VITE_AI_API_URL` | Yes | API Base URL (e.g., `https://api.deepseek.com`) |
-| `VITE_AI_API_KEY` | Yes | Your API key for AI responses |
-| `VITE_AI_MODEL` | Yes | Model name (e.g., `deepseek-chat`, `sonar`) |
+| Variable          | Required | Description                                     |
+| ----------------- | -------- | ----------------------------------------------- |
+| `VITE_AI_API_URL` | Yes      | API Base URL (e.g., `https://api.deepseek.com`) |
+| `VITE_AI_API_KEY` | Yes      | Your API key for AI responses                   |
+| `VITE_AI_MODEL`   | Yes      | Model name (e.g., `deepseek-chat`, `sonar`)     |
 
 > **Supported Providers**: DeepSeek, Perplexity, OpenAI, and other OpenAI-compatible APIs.
 
@@ -228,6 +238,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 **Current Version**: v0.3.1 (2026-01-18)
 
 ### Recent Updates
+
 - 🖼️ **Immersive Background System**: 20+ AI-generated backgrounds for each persona
 - 🌙 **Dark Mode Overhaul**: Complete CSS variable system with glass effects
 - 📱 **iOS 26 Style**: Refined border-radius and subtle animations
