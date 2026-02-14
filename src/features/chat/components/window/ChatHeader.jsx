@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, MoreHorizontal, Sparkles, Image } from 'lucide-react';
 import { useLanguage } from '../../../../context/LanguageContext';
 
-export default function ChatHeader({ chat, personas, typingIndicators, onOpenBackground }) {
+export default function ChatHeader({ chat, personas, typingIndicators, presenceMap, onOpenBackground }) {
     const navigate = useNavigate();
     const { t, language } = useLanguage();
 
@@ -65,8 +65,12 @@ export default function ChatHeader({ chat, personas, typingIndicators, onOpenBac
                             />
                         </div>
                         {/* Online indicator */}
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 
-                            bg-[var(--color-success)] rounded-full border-2 border-[var(--color-bg-white)] shadow-sm" />
+                        {presenceMap && headerInfo.id && (
+                            <div className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 
+                                rounded-full border-2 border-[var(--color-bg-white)] shadow-sm
+                                presence-dot presence-dot--${presenceMap[headerInfo.id] || 'offline'}`}
+                            />
+                        )}
                     </div>
                 )}
 
@@ -107,7 +111,17 @@ export default function ChatHeader({ chat, personas, typingIndicators, onOpenBac
                     ) : (
                         <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-1 mt-0.5">
                             <Sparkles size={12} className="text-[var(--color-accent-gold)]" />
-                            {language === 'zh' ? 'AI 伙伴在线' : 'AI companion online'}
+                            {(() => {
+                                const status = headerInfo.id ? (presenceMap?.[headerInfo.id] || 'offline') : 'online';
+                                if (language === 'zh') {
+                                    if (status === 'busy') return '忙碌中';
+                                    if (status === 'offline') return '休息中';
+                                    return 'AI 伙伴在线';
+                                }
+                                if (status === 'busy') return 'Busy';
+                                if (status === 'offline') return 'Resting';
+                                return 'AI companion online';
+                            })()}
                         </p>
                     )}
                 </div>

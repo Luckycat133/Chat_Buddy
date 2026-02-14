@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 **Version Architecture:**
+
 - `v0.1.x` — Foundation Layer (i18n, API, UI Design System)
 - `v0.2.x` — Basic Role-Play (Characters, Chat, Social)
 - `v0.3.x` — Basic Agent (Memory, Agents, RAG, Professional Skills)
@@ -16,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > Planned features not yet assigned to a specific version.
 
+## [Unreleased]
+
+### Added
+
+- **AI Humanization (T05)**
+  - Dynamic **Online/Busy/Offline** status system based on character schedules.
+  - Visual **Typing Bubble** animation in chat timeline.
+  - **Proactive Greetings** when opening chat or after long inactivity.
+  - **Presence Indicators**: Colored dots and status text in Chat List and Header.
+
 ---
 
 ## Foundation Layer — v0.1.x
@@ -25,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Design language: iOS 26 Liquid Glass + ChatGPT Fluid Minimalism
 
 #### Added
+
 - **Dark Mode & OLED**
   - Full `.dark` mode CSS variable overrides across all components
   - OLED Pure Black variant (`.dark.oled`, `#000000` backgrounds)
@@ -44,10 +56,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Notification settings (sound, DnD, browser push)
 
 #### Changed
+
 - Component theming refactor: replaced hardcoded `bg-white` in Settings, Layout, ChatWindow, ChatHeader, ChatComposer with CSS variables
 - Refined scrollbar, selection, and input styles for dark mode
 
 #### Planned
+
 - Liquid glass design language overhaul (blur layers, refraction, dynamic transparency)
 - Conversation-centered minimal layout (reference ChatGPT)
 - Auto system `prefers-color-scheme` detection
@@ -66,6 +80,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Any OpenAI-format API should plug in and work.
 
 #### Added
+
 - DeepSeek API integration for AI responses
 - `APIClient.js` base HTTP client with retry/timeout
 - `aiClient.js` singleton (Perplexity/DeepSeek/OpenAI-compatible)
@@ -73,6 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LocalStorage persistence for chat history and settings
 
 #### Planned
+
 - **Unified config file** (`config.yaml` or `.env`) for custom URL, API Key, and model name
 - Full OpenAI Chat Completions format compatibility (messages/tools/streaming)
 - Multi-provider switching in Settings UI
@@ -86,6 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Bilingual foundation for all UI text.
 
 #### Added
+
 - English/Chinese bilingual support with seamless language switching
 - `LanguageContext.jsx` with `useLanguage()` hook
 - `locales.js` with 500+ translation keys covering all UI
@@ -94,10 +111,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AI capability settings in group details
 
 #### Fixed
+
 - Localization consistency across all UI components
 - Language switching for Settings, ChatList, and GroupDetails
 
 #### Planned
+
 - Browser language auto-detection
 - Translation key completeness audit (eliminate gaps)
 - AI conversation language independent from UI language
@@ -110,6 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Minimum viable chat application.
 
 #### Added
+
 - Initial release of Chat Buddy
 - 5 AI personas with unique personalities (Luna, Max, Bella, Oliver, Sophie)
 - One-on-one and group chat functionality
@@ -125,6 +145,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > AI-driven social feed — the top layer of social experience.
 
 #### Added
+
 - **Moments/Timeline**
   - Posts with text, images, likes, and comments
   - AI auto-posting based on character personality
@@ -143,11 +164,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Image generation API placeholder
 
 #### Changed
+
 - Rewrote `MomentsContext.jsx` with AI orchestration capabilities
 - Enhanced `MomentCard.jsx` with reactions and location display
 - Updated `PostComposer.jsx` with location picker and visibility selector
 
 #### Planned
+
 - Moments repost/share
 - Hashtag topics + topic aggregation page
 - Special story events (holiday/birthday posts)
@@ -162,6 +185,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Social infrastructure — built before Moments, designed with restraint.
 
 #### Added
+
 - **User Profile** (avatar, nickname, signature)
 - **Friends Management** (groups, starring, remark names, search)
 - **Friend Detail Panel** with quick actions
@@ -172,9 +196,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Rock-Paper-Scissors** mini game
 
 #### Design Principle
+
 > All social features are **passively discoverable** (sidebar entries, long-press triggers). No forced pop-ups or badge bombing. Points and tasks are "icing on the cake", not mandatory.
 
 #### Planned
+
 - More mini games (number guessing, idiom chain, AI quiz)
 - **Points spending** (unlock themes/avatars/effects)
 - Friend interaction log (milestone records)
@@ -189,6 +215,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Unique atmosphere for every character and conversation.
 
 #### Added
+
 - **Background Management**
   - `BackgroundContext` for global and per-chat background control
   - `BackgroundLayer` with parallax effects and smooth transitions
@@ -202,6 +229,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Persistent via localStorage
 
 #### Planned
+
 - Dynamic backgrounds (CSS animations, particles, rain/snow effects)
 - Blur & transparency sliders
 - Video background support
@@ -216,17 +244,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Pure rendering layer — how message content is displayed.
 
 #### Added
+
 - Integrated `react-markdown` + `remark-gfm` for GFM syntax
 - Integrated `react-syntax-highlighter` (VS Code Dark theme)
 - Added `@tailwindcss/typography` plugin for prose styling
 - Support for tables, code blocks, headings, lists, and more
 
 #### Fixed
+
 - `cleanMessageContent()` regex: `\s{2,}` → `[^\S\n]{2,}` to preserve line breaks
 - Disabled `\s*\|\s*` replacement to preserve table delimiters
 - Message bubble overflow: `min-w-0`, `overflow-hidden`, `overflow-x-auto`
 
 #### Planned
+
 - Code block copy button
 - Code highlighting theme switching (light/dark adaptive)
 - LaTeX math formula rendering
@@ -240,6 +271,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Rich messaging interactions approaching WeChat experience.
 
 #### Added
+
 - **Emoji & Stickers**
   - Emoji picker with 8 categories and recent tracking
   - Sticker picker
@@ -255,16 +287,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Group polls
 
 #### Changed
+
 - Rewrote `ChatWindow.jsx` with all new features
 - Added 60+ translation keys for bilingual support
 - Added `deleteMessage` to ChatContext
 - Scale-in animation for popup menus
 
 #### Fixed
+
 - Language mixing from hardcoded strings
 - Typing indicator now uses translation keys
 
 #### Planned
+
 - Voice messages (record & play)
 - Image messages (placeholder — no vision API)
 - Message bookmarks/favorites
@@ -282,6 +317,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Character layer — personality, avatars, relationship evolution (no memory).
 
 #### Added
+
 - **Character Expansion**
   - 8 anime character AI personas (Hatsune Miku, Rem, Rin Tohsaka, Naruto, L, Zero Two, Asuna, Gojo Satoru)
   - Custom generated avatars for all anime characters
@@ -292,6 +328,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced Avatar Selector UI with clear categories
 
 #### Planned
+
 - **Affinity/Fondness system** (evolves with interaction, affects reply style)
 - **Character status/mood system** (affects tone and willingness to reply)
 - Custom user avatar upload & crop tool
@@ -304,6 +341,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > System-level simulation — making AI use the chat app like a real person.
 
 #### Added
+
 - **Response Simulation**
   - Personality-based response delays (`responseDelay`, `readDelay`, `typingSpeed`)
   - "Message seen" delay simulation
@@ -320,14 +358,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Bilingual time formatting
 
 #### Changed
+
 - Refactored `ChatContext.jsx` with new AI messaging architecture
 - Enhanced `personas.js` with `responseDelay`, `readDelay`, `typingSpeed` configs
 
 #### Fixed
+
 - AI tool markers (`[MULTI:]`, `[REACT:]`, `[1][2]`) now properly stripped
 - Case-insensitive MULTI tag parsing
 
 #### Planned
+
 - AI online/offline/busy status simulation
 - Time-based proactive messages (good morning/night greetings)
 - AI "editing" state (visual feedback for long reply revision)
@@ -340,6 +381,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Visual identity for each character — reference Character.AI / ChatGPT / Grok.
 
 #### Added
+
 - **Character Theme System**
   - 8 unique color palettes (Rem Ice Blue, Zero Two Coral Red, Miku Teal, Gojo Royal Blue, Rin Crimson, Naruto Orange, L Dark Gray, Asuna Coral)
   - `CharacterTheme.jsx` module for dynamic theme management
@@ -360,12 +402,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Subtler hover/active scale effects
 
 #### Fixed
+
 - Message bubble overflow with character glow (`overflow-visible`)
 - Animation performance with `prefers-reduced-motion` support
 - Mobile layout overflow (bottom nav hiding in chat, padding fixes)
 - Message text clipping from oversized border-radius
 
 #### Planned
+
 - Character theme color extended to full chat UI (header gradient, input highlight)
 - Animation intensity slider (none/subtle/standard/intense)
 - Message bubble style selector (rounded/square/tail variants)
@@ -381,6 +425,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Deep specialization for each agent type.
 
 #### Added
+
 - **Muse Immersive Translation**
   - Reflective workflow: Literal → Polished (two-step translation)
   - Domain detection: Technical / Literary / General
@@ -403,6 +448,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Fact-checking with confidence scores
 
 #### Planned
+
 - Translation source/target side-by-side view
 - Knowledge graph expansion + user-defined nodes
 - Learning report export (PDF/charts)
@@ -416,6 +462,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Document-augmented AI responses.
 
 #### Added
+
 - **RAG (Retrieval-Augmented Generation)**
   - TF-IDF document indexing
   - Text chunking algorithm
@@ -427,6 +474,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Code preview component
 
 #### Planned
+
 - True vector embedding search (local embedding API)
 - Knowledge base management UI (view/delete/edit documents)
 - Incremental document updates
@@ -438,6 +486,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > From character role-play to task execution.
 
 #### Added
+
 - **Task Agent System**
   - 6 specialized agents: Coder, Muse, Scholar, Sensei, Aurora, Pixel
   - Modular Agent Skills system (17+ reusable capabilities)
@@ -453,11 +502,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Separated from main chat list
 
 #### Changed
+
 - Updated `chatService.js` for dynamic system prompts
 - Refactored `ChatContext.js` for recursive tool execution loops
 - Upgraded localization for all agent types and skills
 
 #### Planned
+
 - Real code sandbox execution (WebAssembly/iframe)
 - Agent-to-agent collaboration chains
 - User-defined custom agents
@@ -471,11 +522,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > Core innovation — independent character memory + emergent information exchange.
 
 #### Added
+
 - **Context Compression**
   - Automatic summarization of long conversations
   - Token usage optimization
 
 #### Planned
+
 - **Long-term memory** (persistent key information across conversations)
 - **Independent character memory** (each character owns its own memory space)
 - **Group chat context sharing** (group content automatically becomes context for all participants; private chats can access group context)

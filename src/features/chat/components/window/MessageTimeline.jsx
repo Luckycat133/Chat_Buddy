@@ -10,14 +10,17 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
 import { GeneratedFileMessage } from '../FileMessage';
 import { getCharacterGlowClass, getCharacterThemeStyle } from '../CharacterTheme';
 import { useTheme } from '../../../../context/ThemeContext';
+import TypingBubble from './TypingBubble';
 
 export default function MessageTimeline({
     chat,
     currentUser,
     personas,
+    typingIndicators, // T05: New prop
     onContextMenu,
     onVotePoll
 }) {
@@ -278,6 +281,13 @@ export default function MessageTimeline({
                     </React.Fragment>
                 );
             })}
+
+            {/* T05: Typing Indicator Bubbles */}
+            {(typingIndicators?.[chat.id] || []).map(aiId => {
+                const ai = personas.find(p => p.id === aiId);
+                return ai ? <TypingBubble key={aiId} persona={ai} /> : null;
+            })}
+
             <div ref={messagesEndRef} />
         </div>
     );

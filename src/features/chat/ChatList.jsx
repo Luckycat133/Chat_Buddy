@@ -15,6 +15,7 @@ const ChatListItem = memo(function ChatListItem({
     time,
     t,
     onContextMenu,
+    presenceMap,
     index
 }) {
     return (
@@ -51,9 +52,11 @@ const ChatListItem = memo(function ChatListItem({
                     )}
                 </div>
                 {/* Online Dot (if social) */}
-                {meta.type === 'social' && (
-                    <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[var(--color-success)] rounded-full 
-                        border-2 border-white shadow-sm" />
+                {meta.type === 'social' && meta.id && (
+                    <div className={cn(
+                        "absolute top-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm presence-dot",
+                        `presence-dot--${presenceMap?.[meta.id] || 'offline'}`
+                    )} />
                 )}
             </div>
 
@@ -152,7 +155,7 @@ function ContextMenuItem({ icon, label, onClick, active, colorClass = "text-[var
 
 // ========== Main ChatList Component ==========
 export default function ChatList() {
-    const { chats, personas, typingIndicators, pinChat, markChatUnread, deleteChat } = useChat();
+    const { chats, personas, typingIndicators, presenceMap, pinChat, markChatUnread, deleteChat } = useChat();
     const { t, language } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
     const [searchFocused, setSearchFocused] = useState(false);
@@ -184,7 +187,12 @@ export default function ChatList() {
                 type = ai.agentType === 'task-specialist' ? 'task' : 'social';
             }
         }
-        return { name: displayName || t('unknown_chat'), avatar: displayAvatar, type };
+        return { 
+            name: displayName || t('unknown_chat'), 
+            avatar: displayAvatar, 
+            type,
+            id: chat.participants.find(p => p !== 'user-me')
+        };
     }, [personas, language, t]);
 
     // Memoize filtered and sorted chats
@@ -325,6 +333,7 @@ export default function ChatList() {
                                 time={time}
                                 t={t}
                                 onContextMenu={handleContextMenu}
+                                presenceMap={presenceMap}
                                 index={index}
                             />
                         );

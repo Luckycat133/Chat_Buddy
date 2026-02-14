@@ -11,6 +11,7 @@ import MessageTimeline from './components/window/MessageTimeline';
 import ChatComposer from './components/window/ChatComposer';
 import MessageMenu from './components/MessageMenu';
 import { getCharacterThemeStyle } from './components/CharacterTheme';
+import { checkWindowOpenGreeting } from '../../core/presence/GreetingService';
 
 // Lazy-loaded modals/panels (loaded on demand)
 const ForwardModal = lazy(() => import('./components/ForwardModal'));
@@ -33,8 +34,8 @@ const ModalLoadingFallback = () => (
 export default function ChatWindow({ chatId: propChatId }) {
     const { id: paramChatId } = useParams();
     const id = propChatId || paramChatId;
-    const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, deleteMessage, pinMessage, votePoll } = useChat();
-    const { t } = useLanguage();
+    const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, deleteMessage, pinMessage, votePoll, presenceMap, triggerGreeting } = useChat();
+    const { t, language } = useLanguage();
     const { addDocument } = useDocuments();
 
     // Feature modals state
@@ -55,6 +56,23 @@ export default function ChatWindow({ chatId: propChatId }) {
     const [toast, setToast] = useState(null);
 
     const chat = chats.find(c => c.id === id);
+
+    // T05: Window-open greeting check
+    useEffect(() => {
+        if (chat && chat.participants.length === 2) {
+            const otherId = chat.participants.find(p => p !== 'user-me');
+            const otherPersona = personas.find(p => p.id === otherId);
+            if (otherPersona) {
+                const greeting = checkWindowOpenGreeting(chat, otherPersona, language);
+                if (greeting) {
+                    // Slight delay to feel natural after opening
+                    setTimeout(() => {
+                        triggerGreeting(chat.id, greeting.message, greeting.personaId);
+                    }, 1000);
+                }
+            }
+        }
+    }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Auto-hide toast
     useEffect(() => {
@@ -134,6 +152,7 @@ export default function ChatWindow({ chatId: propChatId }) {
                 chat={chat}
                 personas={personas}
                 typingIndicators={typingIndicators}
+                presenceMap={presenceMap}
                 onOpenBackground={() => setShowBackgroundSettings(true)}
             // onOpenSearch={() => setShowSearchPanel(true)} // If we want to verify search works, we need to wire this or let it use URL
             />
@@ -142,6 +161,8 @@ export default function ChatWindow({ chatId: propChatId }) {
                 chat={chat}
                 currentUser={currentUser}
                 personas={personas}
+                typingIndicators={typingIndicators} 
+                presenceMap={presenceMap} // For potentially showing status in bubble?
                 onContextMenu={handleMessageContextMenu}
                 onVotePoll={(pollId, optId) => votePoll(chat.id, pollId, optId)}
             />
