@@ -205,6 +205,20 @@
   --color-on-primary: #ffffff;
 
   /* ========================================
+     ICON SEMANTIC COLORS
+     Used for icon backgrounds in settings/controls
+     ======================================== */
+  --color-icon-blue: #2196f3;
+  --color-icon-green: #4caf50;
+  --color-icon-purple: #9c27b0;
+  --color-icon-indigo: #3f51b5;
+  --color-icon-teal: #00bcd4;
+  --color-icon-orange: #ff9800;
+  --color-icon-pink: #e91e63;
+  --color-icon-gray: #607d8b;
+  --color-icon-brown: #795548;
+
+  /* ========================================
      BLUR TOKENS (Liquid Glass levels)
      ======================================== */
   --blur-none: 0;
@@ -1086,6 +1100,17 @@ textarea,
   --character-l-glow: rgba(100, 140, 140, 0.45);
   --character-asuna-glow: rgba(255, 99, 71, 0.45);
   --character-default-glow: rgba(255, 155, 122, 0.4);
+
+  /* Icon semantic colors - brighter for dark mode */
+  --color-icon-blue: #42a5f5;
+  --color-icon-green: #66bb6a;
+  --color-icon-purple: #ab47bc;
+  --color-icon-indigo: #5c6bc0;
+  --color-icon-teal: #26c6da;
+  --color-icon-orange: #ffa726;
+  --color-icon-pink: #ec407a;
+  --color-icon-gray: #78909c;
+  --color-icon-brown: #8d6e63;
 }
 
 /* OLED Pure Black Mode - Maximum battery saving */
@@ -2313,4 +2338,43 @@ textarea,
 
 .anim-intense .bento-card:hover {
   transform: translateY(-4px) scale(1.01) !important;
+}
+
+/* ========================================
+   DASHBOARD STAT ITEM
+   Stats display rows in Dashboard
+   ======================================== */
+
+.dashboard-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.dashboard-stat-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-active);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+
+.dashboard-stat-value {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-main);
+}
+
+.dashboard-stat-value span {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  margin-left: var(--space-1);
+}
+
+.dashboard-stat-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
 }
