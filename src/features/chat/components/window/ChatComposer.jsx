@@ -155,6 +155,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                         onClick={onCancelQuote}
                         className="p-2 hover:bg-[var(--color-bg-hover)] rounded-full text-[var(--color-text-muted)]
                             hover:text-[var(--color-danger)] transition-colors"
+                        aria-label={t('cancel')}
                     >
                         <X size={16} />
                     </button>
@@ -174,6 +175,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                 : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)]"
                         )}
                         onClick={() => setIsRecordingMode(!isRecordingMode)}
+                        aria-label={isRecordingMode ? t('keyboard') || 'Keyboard' : t('voice') || 'Voice'}
                     >
                         {isRecordingMode ? <Keyboard size={24} /> : <Mic size={24} />}
                     </button>
@@ -210,7 +212,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                 type="text"
                                 value={inputValue}
                                 onChange={handleInputChange}
-
+                                aria-label={t('type_message')}
                                 placeholder={t('type_message')}
                                 className="w-full bg-transparent border-none py-3 text-[16px] 
                                     text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)] 
@@ -255,6 +257,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                     : "text-[var(--color-text-muted)] hover:text-[var(--color-accent-gold)] hover:bg-[var(--color-bg-hover)]"
                             )}
                             onClick={() => { closeAll(); setShowEmojiPicker(!showEmojiPicker); }}
+                            aria-label={t('emoji') || 'Emoji'}
                         >
                             <Smile size={24} />
                         </button>
@@ -266,6 +269,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                     hover:scale-105 active:scale-95
                                     transition-all duration-300 animate-aurora"
                                 style={{ background: 'var(--character-gradient, var(--gradient-aurora))', backgroundSize: '150% 150%' }}
+                                aria-label={t('send') || 'Send'}
                             >
                                 <Send size={22} className="ml-0.5" />
                             </button>
@@ -280,6 +284,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                 )}
                                 style={showPlusMenu ? { background: 'var(--character-gradient, var(--gradient-aurora))' } : {}}
                                 onClick={() => { closeAll(); setShowPlusMenu(!showPlusMenu); }}
+                                aria-label={t('more') || 'More'}
                             >
                                 <Plus size={24} />
                             </button>

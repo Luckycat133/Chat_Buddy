@@ -36,7 +36,7 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 | T03 | Modern UI Design System                | v0.1.3  | P0       | 🔧 Phase 1-3 done, Phase 4 pending |
 | T04 | Character Visuals & Interaction Design | v0.2.0  | P1       | ✅ Done                            |
 | T05 | AI Behavior Humanization               | v0.2.1  | P1       | ✅ Done                            |
-| T06 | AI Characters & Avatar System          | v0.2.2  | P1       | Needs affinity/status              |
+| T06 | AI Characters & Avatar System          | v0.2.2  | P1       | ✅ Done                            |
 | T07 | Message Feature Enhancement            | v0.2.3  | P1       | Needs completion                   |
 | T08 | Markdown & Content Rendering           | v0.2.4  | P1       | Needs completion                   |
 | T09 | Immersive Background System            | v0.2.5  | P1       | Needs completion                   |
@@ -256,7 +256,7 @@ src/config/
 
 ## T05 — AI Behavior Humanization
 
-**Version**: v0.2.1 | **Priority**: P1 | **Status**: Needs new features
+**Version**: v0.2.1 | **Priority**: P1 | **Status**: ✅ Done
 
 ### What's Done
 
@@ -268,9 +268,6 @@ src/config/
 - [x] Auto chat naming
 - [x] Time display (WeChat-style)
 - [x] Tool marker cleanup
-
-### What's Planned
-
 - [x] **Online/Offline/Busy status simulation**
   - Each character has a daily schedule pattern
   - Status affects response speed (offline = much longer delay)
@@ -278,7 +275,10 @@ src/config/
 - [x] **Time-based proactive messages**
   - Good morning/evening greetings based on user's timezone
   - "Haven't talked in a while" reconnection messages
-  - Event-triggered messages (holidays, user milestones)
+  - Window-open greeting detection
+
+### Future Improvements
+
 - [ ] **AI "editing" state**
   - Show "editing..." for 1-2s before long responses
   - Visual difference from "typing..." (e.g., pencil icon vs dots)
@@ -301,7 +301,7 @@ src/config/
 
 ## T06 — AI Characters & Avatar System
 
-**Version**: v0.2.2 | **Priority**: P1 | **Status**: Needs affinity/status
+**Version**: v0.2.2 | **Priority**: P1 | **Status**: ✅ Done
 
 ### What's Done
 
@@ -309,23 +309,28 @@ src/config/
 - [x] Selfie-style avatars
 - [x] Character + user avatar collections
 - [x] Avatar selector UI with categories
+- [x] **Affinity/Fondness System**
+  - Intimacy score (0-100) per character, starts at 0
+  - Chat-based gain: +1 per message with 5-minute cooldown per persona
+  - Gift-based gain: variable boost (5-100 points) from gift system
+  - 5 intimacy levels with distinct AI behavior:
+    - Acquaintance (0-19): Brief, polite, formal tone
+    - Friend (20-39): Friendly, conversational
+    - Good Friend (40-59): Warm, personal anecdotes, casual language
+    - Close Friend (60-79): Intimate, nicknames, deeper thoughts
+    - Soulmate (80-100): Very intimate, affectionate, long detailed responses
+  - Visual indicator: Colored progress bar (0-100) in Friend Detail panel
+  - Affinity level badge displayed in Chat Header
+- [x] **Character Mood System**
+  - 5 moods: Happy (😊), Calm (😌), Tired (😴), Excited (🤩), Melancholy (😔)
+  - Mood computation: time-based (morning/afternoon/evening/night) + presence-based + personality-weighted
+  - Deterministic per persona+hour for stability
+  - Affects AI response style via mood-specific prompt hints
+  - Displayed in Chat Header as mood emoji next to character name
+  - Bilingual mood labels (EN/ZH)
 
-### What's Planned
+### Future Improvements
 
-- [ ] **Affinity/Fondness System**
-  - Affinity score (0-100) per character, starts at 50
-  - Increases: regular chatting, giving gifts, daily interaction
-  - Decreases: long absence, rude behavior (AI-judged)
-  - Effect on replies:
-    - Low (0-30): Formal, distant, shorter responses
-    - Medium (30-70): Friendly, normal personality
-    - High (70-100): Intimate, uses nicknames, longer messages, shares more
-  - Visual indicator: Heart meter in friend detail panel
-- [ ] **Character Status/Mood System**
-  - 5 moods: Happy, Calm, Tired, Excited, Melancholy
-  - Mood changes based on: time of day, conversation topic, interaction frequency
-  - Affects: emoji usage, response length, topic willingness
-  - Displayed in chat header (subtle mood icon)
 - [ ] **Custom User Avatar**
   - Upload from device
   - Crop/resize tool (circular crop)

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const SocialContext = createContext();
@@ -46,8 +46,13 @@ const GIFTS = [
     { id: 'crown', name: '皇冠', name_en: 'Crown', emoji: '👑', intimacyBoost: 100, cost: 200 },
 ];
 
+const CHAT_INTIMACY_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
 export const SocialProvider = ({ children }) => {
     const [socialData, setSocialData] = useLocalStorage('chat-buddy-social', DEFAULT_SOCIAL_DATA);
+
+    // T06: Cooldown map for chat-based intimacy gain
+    const chatIntimacyCooldowns = useRef(new Map());
 
     // ========== Intimacy System ==========
 
@@ -64,6 +69,15 @@ export const SocialProvider = ({ children }) => {
             }
         }));
     }, [setSocialData]);
+
+    // T06: Chat-based intimacy gain with cooldown
+    const addChatIntimacy = useCallback((personaId) => {
+        const now = Date.now();
+        const lastGain = chatIntimacyCooldowns.current.get(personaId) || 0;
+        if (now - lastGain < CHAT_INTIMACY_COOLDOWN_MS) return;
+        chatIntimacyCooldowns.current.set(personaId, now);
+        addIntimacy(personaId, 1);
+    }, [addIntimacy]);
 
     const getIntimacyLevel = useCallback((personaId) => {
         const intimacy = getIntimacy(personaId);
@@ -207,6 +221,7 @@ export const SocialProvider = ({ children }) => {
         // Intimacy
         getIntimacy,
         addIntimacy,
+        addChatIntimacy,
         getIntimacyLevel,
 
         // Achievements

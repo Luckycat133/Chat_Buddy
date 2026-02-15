@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Gift, Calendar, Flame, Trophy } from 'lucide-react';
 import { useSocial } from '../context/SocialContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { cn } from '../utils/cn';
 
 export default function CheckInPanel({ onClose }) {
@@ -10,6 +11,7 @@ export default function CheckInPanel({ onClose }) {
     const [checkInResult, setCheckInResult] = useState(null);
     const [showAnimation, setShowAnimation] = useState(false);
 
+    const trapRef = useFocusTrap(true);
     const hasChecked = hasCheckedInToday();
 
     // Compute recently unlocked achievements directly (avoids setState in useEffect)
@@ -57,8 +59,12 @@ export default function CheckInPanel({ onClose }) {
     const weekDays = getWeekDays();
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="presentation" onClick={onClose}>
             <div
+                ref={trapRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="checkin-panel-title"
                 className="bg-[var(--color-bg-white)] rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
@@ -72,10 +78,10 @@ export default function CheckInPanel({ onClose }) {
                     )}
                     <div className="relative p-4 text-white">
                         <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-lg">
+                            <h3 id="checkin-panel-title" className="font-bold text-lg">
                                 {t('daily_checkin')}
                             </h3>
-                            <button onClick={onClose} className="text-white/80 hover:text-white">
+                            <button onClick={onClose} className="text-white/80 hover:text-white" aria-label="Close">
                                 <X size={24} />
                             </button>
                         </div>

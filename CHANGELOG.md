@@ -17,16 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > Planned features not yet assigned to a specific version.
 
-## [Unreleased]
-
-### Added
-
-- **AI Humanization (T05)**
-  - Dynamic **Online/Busy/Offline** status system based on character schedules.
-  - Visual **Typing Bubble** animation in chat timeline.
-  - **Proactive Greetings** when opening chat or after long inactivity.
-  - **Presence Indicators**: Colored dots and status text in Chat List and Header.
-
 ---
 
 ## Foundation Layer — v0.1.x
@@ -326,11 +316,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 13 new high-quality character avatars
   - 10+ default user avatars (Watercolor, 3D Art, Pixel Art, Realistic, Minimalist)
   - Enhanced Avatar Selector UI with clear categories
+- **Affinity/Fondness System**
+  - Chat-based intimacy gain (+1 per message with 5-minute cooldown)
+  - 5 intimacy levels: Acquaintance (0-19), Friend (20-39), Good Friend (40-59), Close Friend (60-79), Soulmate (80-100)
+  - AI response tone adapts to intimacy level (formal → intimate)
+  - Affinity meter UI in Friend Detail panel with colored progress bar
+  - Affinity level badge displayed in Chat Header
+- **Character Mood System**
+  - 5 moods: Happy, Calm, Tired, Excited, Melancholy
+  - Mood computed based on time of day, presence status, and personality traits
+  - Mood-aware AI prompts affect response style
+  - Mood emoji displayed in Chat Header next to character name
+  - Deterministic mood per persona+hour for consistency
+
+#### Changed
+
+- `ChatEngine.js`: Added callback hooks for affinity gain and context provider for mood/intimacy
+- `AIPipeline.js`: System prompts now include relationship-level tone and mood behavior hints
+- `SocialContext.jsx`: Expanded with `addChatIntimacy` method and cooldown tracking
+- 16 new translation keys for affinity levels and moods (EN/ZH)
 
 #### Planned
 
-- **Affinity/Fondness system** (evolves with interaction, affects reply style)
-- **Character status/mood system** (affects tone and willingness to reply)
 - Custom user avatar upload & crop tool
 - Custom character creator (planned, not for immediate implementation)
 
@@ -356,11 +363,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - WeChat-style relative time formatting
   - Time separators between message groups
   - Bilingual time formatting
+- **Dynamic Presence System**
+  - Online/Busy/Offline status based on character schedules
+  - Timezone-aware scheduling (each persona has own timezone)
+  - Visual presence indicators (colored dots, status text)
+  - Real-time presence updates every 60s
+- **Proactive Greetings**
+  - Window-open greeting when reopening chat after inactivity
+  - Re-engagement greetings after long absence
+  - Character-specific greeting messages
 
 #### Changed
 
 - Refactored `ChatContext.jsx` with new AI messaging architecture
 - Enhanced `personas.js` with `responseDelay`, `readDelay`, `typingSpeed` configs
+- Created `PresenceService.js` and `GreetingService.js` for presence/greeting logic
+- `ChatEngine.js` integrated with presence and greeting systems
 
 #### Fixed
 
@@ -369,8 +387,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Planned
 
-- AI online/offline/busy status simulation
-- Time-based proactive messages (good morning/night greetings)
 - AI "editing" state (visual feedback for long reply revision)
 - Message recall simulation (occasional "unsend" for realism)
 

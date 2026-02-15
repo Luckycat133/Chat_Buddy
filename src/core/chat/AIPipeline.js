@@ -23,7 +23,7 @@ export class AIPipeline {
     /**
      * Main entry point to trigger AI response
      */
-    async processTurn(chat, personas, triggerAI) {
+    async processTurn(chat, personas, triggerAI, context = null) {
         const ai = personas.find(p => p.id === triggerAI.id);
         if (!ai) return;
 
@@ -46,11 +46,8 @@ export class AIPipeline {
             const messagesToProcess = compressed ? recentMessages : chat.messages;
             const history = this._prepareHistory(messagesToProcess, personas, compressed, summary, chat.polls);
 
-            // Allow AI to see the latest user message specifically? 
-            // The history builder handles this.
-
-            // 4. Generate System Prompt
-            const systemPrompt = this._generateSystemPrompt(ai);
+            // 4. Generate System Prompt (T06: with affinity/mood context)
+            const systemPrompt = this._generateSystemPrompt(ai, context);
 
             // 5. Run ReAct Loop
             await this._runReActLoop(chatId, ai, systemPrompt, history);
@@ -221,9 +218,9 @@ export class AIPipeline {
         return history;
     }
 
-    _generateSystemPrompt(ai) {
+    _generateSystemPrompt(ai, context = null) {
         // Reuse existing prompt generation logic
-        // For brevity in this refactor, condensing it. 
+        // For brevity in this refactor, condensing it.
         // Ideally imported from a PromptBuilder domain service.
         const base = `You are ${ai.name}.\nPersonality: ${ai.personality}\nStyle: ${ai.style}`;
         const tools = `
@@ -234,7 +231,30 @@ AVAILABLE TOOLS:
 4. SCHEDULE - [SCHEDULE:mins]
 ${ai.agentType === 'task-specialist' ? this._getSpecialistTools(ai) : ''}
 `;
-        return `${base}\n${tools}\nRULES: Keep it short. Respond to mentions.`;
+        // T06: Affinity-aware tone instructions
+        let affinityHint = '';
+        if (context?.intimacyLevel) {
+            const level = context.intimacyLevel;
+            if (level >= 5) {
+                affinityHint = '\nRELATIONSHIP: You are soulmates with the user. Be very intimate, use affectionate language, share deep thoughts, give long detailed responses.';
+            } else if (level >= 4) {
+                affinityHint = '\nRELATIONSHIP: You are close friends with the user. Be intimate, use nicknames occasionally, share deeper thoughts.';
+            } else if (level >= 3) {
+                affinityHint = '\nRELATIONSHIP: You are good friends with the user. Be warm, share personal anecdotes, use casual language.';
+            } else if (level >= 2) {
+                affinityHint = '\nRELATIONSHIP: You are friends with the user. Be friendly and conversational.';
+            } else {
+                affinityHint = '\nRELATIONSHIP: You are acquaintances with the user. Keep responses brief and polite. Use a somewhat formal tone.';
+            }
+        }
+
+        // T06: Mood-aware behavior hint
+        let moodHint = '';
+        if (context?.mood?.promptHint) {
+            moodHint = `\nCURRENT MOOD: ${context.mood.promptHint}`;
+        }
+
+        return `${base}\n${tools}${affinityHint}${moodHint}\nRULES: Keep it short. Respond to mentions.`;
     }
 
     _getSpecialistTools(ai) {

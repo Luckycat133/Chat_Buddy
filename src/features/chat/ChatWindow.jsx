@@ -34,7 +34,7 @@ const ModalLoadingFallback = () => (
 export default function ChatWindow({ chatId: propChatId }) {
     const { id: paramChatId } = useParams();
     const id = propChatId || paramChatId;
-    const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, deleteMessage, pinMessage, votePoll, presenceMap, triggerGreeting } = useChat();
+    const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, deleteMessage, pinMessage, votePoll, presenceMap, moodMap, triggerGreeting } = useChat();
     const { t, language } = useLanguage();
     const { addDocument } = useDocuments();
 
@@ -153,6 +153,7 @@ export default function ChatWindow({ chatId: propChatId }) {
                 personas={personas}
                 typingIndicators={typingIndicators}
                 presenceMap={presenceMap}
+                moodMap={moodMap}
                 onOpenBackground={() => setShowBackgroundSettings(true)}
             // onOpenSearch={() => setShowSearchPanel(true)} // If we want to verify search works, we need to wire this or let it use URL
             />

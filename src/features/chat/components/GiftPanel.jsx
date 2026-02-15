@@ -2,11 +2,13 @@ import React, { useState, useCallback } from 'react';
 import { X, Gift, Heart, Star, Diamond, Crown, Flower2 } from 'lucide-react';
 import { useSocial } from '../../../context/SocialContext';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { cn } from '../../../utils/cn';
 
 export default function GiftPanel({ recipientId, recipientName, onClose, onGiftSent }) {
     const { gifts, sendGift, points, getIntimacy, getIntimacyLevel } = useSocial();
     const { t, language } = useLanguage();
+    const trapRef = useFocusTrap(true);
     const [selectedGift, setSelectedGift] = useState(null);
     const [sending, setSending] = useState(false);
     const [result, setResult] = useState(null);
@@ -47,22 +49,26 @@ export default function GiftPanel({ recipientId, recipientName, onClose, onGiftS
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center" role="presentation" onClick={onClose}>
             <div
+                ref={trapRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="gift-panel-title"
                 className="bg-[var(--color-bg-white)] rounded-t-2xl w-full max-w-lg animate-slide-up"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                     <div>
-                        <h3 className="font-medium text-[17px]">
+                        <h3 id="gift-panel-title" className="font-medium text-[17px]">
                             {t('send_gift_to', { name: recipientName })}
                         </h3>
                         <p className="text-sm text-[var(--color-text-muted)]">
                             {t('points')}: {points}
                         </p>
                     </div>
-                    <button onClick={onClose} className="text-[var(--color-text-muted)]">
+                    <button onClick={onClose} className="text-[var(--color-text-muted)]" aria-label="Close">
                         <X size={24} />
                     </button>
                 </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Gift, Sparkles } from 'lucide-react';
 import { useSocial } from '../../../context/SocialContext';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { cn } from '../../../utils/cn';
 
 // Red packet amounts
@@ -10,6 +11,7 @@ const AMOUNTS = [10, 20, 50, 100, 200, 520];
 export default function RedPacketPanel({ recipientName, onClose, onSend }) {
     const { points } = useSocial();
     const { t } = useLanguage();
+    const trapRef = useFocusTrap(true);
     const [amount, setAmount] = useState(null);
     const [message, setMessage] = useState('');
     const [sending, setSending] = useState(false);
@@ -28,8 +30,12 @@ export default function RedPacketPanel({ recipientName, onClose, onSend }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="presentation" onClick={onClose}>
             <div
+                ref={trapRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="red-packet-title"
                 className="w-full max-w-xs overflow-hidden animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
@@ -40,6 +46,7 @@ export default function RedPacketPanel({ recipientName, onClose, onSend }) {
                         <button
                             onClick={onClose}
                             className="absolute top-3 right-3 text-white/60 hover:text-white"
+                            aria-label="Close"
                         >
                             <X size={24} />
                         </button>
@@ -48,7 +55,7 @@ export default function RedPacketPanel({ recipientName, onClose, onSend }) {
                             <Gift size={32} className="text-yellow-400" />
                         </div>
 
-                        <h3 className="text-xl font-bold text-yellow-400">
+                        <h3 id="red-packet-title" className="text-xl font-bold text-yellow-400">
                             {t('send_red_packet')}
                         </h3>
                         <p className="text-sm mt-1 text-yellow-200/80">

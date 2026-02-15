@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
 import { useChatService } from '../hooks/useChatService';
+import { useSocial } from '../../../context/SocialContext';
+import { chatEngine } from '../../../core/chat/ChatEngine';
 
 // Facade Context for backward compatibility
 const ChatContext = createContext();
@@ -26,6 +28,7 @@ export const useChatActions = () => useContext(ChatActionContext);
 export const ChatProvider = ({ children }) => {
     // Wiring the new Service
     const service = useChatService();
+    const { addChatIntimacy, getIntimacyLevel, getIntimacy } = useSocial();
 
     // Compatibility Refs (some old components might rely on refs for async closures)
     // We mock them or link them to current state if absolutely necessary
@@ -35,6 +38,38 @@ export const ChatProvider = ({ children }) => {
     useEffect(() => {
         chatsRef.current = service.chats;
     }, [service.chats]);
+
+    // T06: Bridge ChatEngine → SocialContext for chat-based affinity gain
+    useEffect(() => {
+        const unregister = chatEngine.registerOnUserMessage((_chatId, aiIds) => {
+            aiIds.forEach(id => addChatIntimacy(id));
+        });
+        return unregister;
+    }, [addChatIntimacy]);
+
+    // T06: Provide affinity/mood context to ChatEngine for AI prompts
+    // Use a ref to avoid stale closures
+    const getIntimacyLevelRef = useRef(getIntimacyLevel);
+    const getIntimacyRef = useRef(getIntimacy);
+    const moodMapRef = useRef(service.moodMap);
+    useEffect(() => {
+        getIntimacyLevelRef.current = getIntimacyLevel;
+        getIntimacyRef.current = getIntimacy;
+        moodMapRef.current = service.moodMap;
+    }, [getIntimacyLevel, getIntimacy, service.moodMap]);
+
+    const contextProviderFn = useCallback((personaId) => {
+        const levelData = getIntimacyLevelRef.current(personaId);
+        return {
+            intimacyLevel: levelData.level,
+            intimacyScore: getIntimacyRef.current(personaId),
+            mood: moodMapRef.current?.[personaId] || null
+        };
+    }, []);
+
+    useEffect(() => {
+        chatEngine.setContextProvider(contextProviderFn);
+    }, [contextProviderFn]);
 
     // Construct the "Legacy" context shape
     // The old context exposed: { ...state, ...actions } mixed together

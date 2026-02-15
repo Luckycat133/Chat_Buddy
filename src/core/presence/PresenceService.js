@@ -8,6 +8,8 @@
  *   'online'  — Available, normal response time
  *   'busy'    — In a busy slot, may respond slower
  *   'offline' — In sleep range, appears offline
+ *   'away'    — Away from keyboard, might be back soon
+ *   'do-not-disturb' — Focused, not accepting interruptions
  */
 
 /**
@@ -50,21 +52,24 @@ function isInRange(hour, range) {
 /**
  * Get the presence status of a single persona.
  * @param {Object} persona
- * @returns {'online' | 'offline' | 'busy'}
+ * @param {Object} userStatusOverride - User-set status override
+ * @returns {'online' | 'offline' | 'busy' | 'away' | 'do-not-disturb'}
  */
-export function getStatus(persona) {
+export function getStatus(persona, userStatusOverride = null) {
+    if (userStatusOverride && userStatusOverride !== 'auto') {
+        return userStatusOverride;
+    }
+
     const schedule = persona?.schedule;
-    if (!schedule) return 'online'; // No schedule → always online
+    if (!schedule) return 'online';
 
     const tz = schedule.timezone || 'Asia/Shanghai';
     const hour = getCurrentHour(tz);
 
-    // 1. Sleep check (highest priority)
     if (isInRange(hour, schedule.sleep)) {
         return 'offline';
     }
 
-    // 2. Busy check
     if (Array.isArray(schedule.busy)) {
         for (const slot of schedule.busy) {
             if (isInRange(hour, slot)) {
@@ -79,14 +84,71 @@ export function getStatus(persona) {
 /**
  * Compute presence map for all personas.
  * @param {Array} personas
- * @returns {Object} { personaId: 'online'|'offline'|'busy', ... }
+ * @param {Object} statusOverrides - User-set status overrides { personaId: status }
+ * @returns {Object} { personaId: 'online'|'offline'|'busy'|'away'|'do-not-disturb', ... }
  */
-export function getPresenceMap(personas) {
+export function getPresenceMap(personas, statusOverrides = {}) {
     const map = {};
     for (const p of personas) {
         if (p.id && p.id !== 'user-me') {
-            map[p.id] = getStatus(p);
+            map[p.id] = getStatus(p, statusOverrides[p.id]);
         }
     }
     return map;
+}
+
+/**
+ * Status display configuration
+ */
+export const STATUS_CONFIG = {
+    online: {
+        color: '#4ECDC4',
+        bgColor: 'bg-[var(--color-success)]',
+        label: { en: 'Online', zh: '在线' },
+        description: { en: 'Available for chat', zh: '可以聊天' },
+        icon: '●'
+    },
+    offline: {
+        color: '#94A3B8',
+        bgColor: 'bg-slate-400',
+        label: { en: 'Offline', zh: '离线' },
+        description: { en: 'Currently away', zh: '当前不在' },
+        icon: '○'
+    },
+    busy: {
+        color: '#FB923C',
+        bgColor: 'bg-orange-400',
+        label: { en: 'Busy', zh: '忙碌' },
+        description: { en: 'May respond slowly', zh: '可能回复较慢' },
+        icon: '◐'
+    },
+    away: {
+        color: '#FBBF24',
+        bgColor: 'bg-yellow-400',
+        label: { en: 'Away', zh: '离开' },
+        description: { en: 'Away from keyboard', zh: '暂时离开' },
+        icon: '◔'
+    },
+    'do-not-disturb': {
+        color: '#F87171',
+        bgColor: 'bg-red-400',
+        label: { en: 'Do Not Disturb', zh: '勿扰' },
+        description: { en: 'Focusing, no interruptions', zh: '专注中，请勿打扰' },
+        icon: '⊘'
+    }
+};
+
+/**
+ * Get status configuration for display
+ * @param {string} status - Status key
+ * @param {string} language - 'en' or 'zh'
+ * @returns {Object} Status display configuration
+ */
+export function getStatusConfig(status, language = 'en') {
+    const config = STATUS_CONFIG[status] || STATUS_CONFIG.online;
+    return {
+        ...config,
+        label: config.label[language] || config.label.en,
+        description: config.description[language] || config.description.en
+    };
 }

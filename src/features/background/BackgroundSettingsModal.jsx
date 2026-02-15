@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { X, Image, Upload, Sliders, Check } from 'lucide-react';
 import { useBackground } from './BackgroundContext';
 import { BACKGROUND_THEMES } from './themes';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const TABS = [
     { id: 'presets', label: '主题库', icon: Image },
@@ -12,8 +13,13 @@ const TABS = [
 
 const CATEGORIES = [
     { id: 'EXCLUSIVE', label: '✨ 精选' },
+    { id: 'DREAMY', label: '🌙 梦幻' },
+    { id: 'SURREAL', label: '🌌 超现实' },
     { id: 'IP', label: '🎬 热门IP' },
     { id: 'CHARACTERS', label: '👤 角色' },
+    { id: 'NATURE', label: '🍀 自然' },
+    { id: 'SPACE', label: '🚀 星空' },
+    { id: 'MINIMALIST', label: '🎨 简约' },
     { id: 'GAME', label: '游戏' },
     { id: 'MOVIE', label: '电影' },
     { id: 'NOVEL', label: '小说' },
@@ -22,6 +28,7 @@ const CATEGORIES = [
 
 export default function BackgroundSettingsModal({ isOpen, onClose, chatId, personaId }) {
     const { getBackgroundForChat, setBackgroundForChat, globalTheme, setGlobalTheme } = useBackground();
+    const trapRef = useFocusTrap(isOpen);
     const [activeTab, setActiveTab] = useState('presets');
     const [activeCategory, setActiveCategory] = useState('EXCLUSIVE');
 
@@ -76,8 +83,12 @@ export default function BackgroundSettingsModal({ isOpen, onClose, chatId, perso
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" role="presentation">
             <motion.div
+                ref={trapRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="bg-settings-title"
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -85,8 +96,8 @@ export default function BackgroundSettingsModal({ isOpen, onClose, chatId, perso
             >
                 {/* Header */}
                 <div className="p-4 border-b border-[var(--color-border-light)] flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-[var(--color-text-main)]">背景设置</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-[var(--color-bg-hover)] rounded-full transition-colors">
+                    <h2 id="bg-settings-title" className="text-xl font-bold text-[var(--color-text-main)]">背景设置</h2>
+                    <button onClick={onClose} className="p-2 hover:bg-[var(--color-bg-hover)] rounded-full transition-colors" aria-label="Close">
                         <X className="w-5 h-5 text-[var(--color-text-muted)]" />
                     </button>
                 </div>

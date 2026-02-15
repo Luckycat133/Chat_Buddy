@@ -2,10 +2,12 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, MoreHorizontal, Sparkles, Image } from 'lucide-react';
 import { useLanguage } from '../../../../context/LanguageContext';
+import { useSocial } from '../../../../context/SocialContext';
 
-export default function ChatHeader({ chat, personas, typingIndicators, presenceMap, onOpenBackground }) {
+export default function ChatHeader({ chat, personas, typingIndicators, presenceMap, moodMap, onOpenBackground }) {
     const navigate = useNavigate();
     const { t, language } = useLanguage();
+    const { getIntimacyLevel, getIntimacy } = useSocial();
 
     const getHeaderInfo = () => {
         if (!chat) return { name: '', avatar: null, id: null };
@@ -76,14 +78,29 @@ export default function ChatHeader({ chat, personas, typingIndicators, presenceM
 
                 <div>
                     <h2
-                        className="font-semibold text-[var(--color-text-main)] text-[17px] 
-                            cursor-pointer flex items-center gap-2 hover:text-[var(--color-primary)] 
+                        className="font-semibold text-[var(--color-text-main)] text-[17px]
+                            cursor-pointer flex items-center gap-2 hover:text-[var(--color-primary)]
                             transition-colors group"
                         onClick={() => navigate(`/chat/${chat.id}/details`)}
                     >
                         <span className="group-hover:underline decoration-2 decoration-[var(--color-primary)]/30 underline-offset-2">
                             {headerInfo.name}
                         </span>
+                        {/* T06: Mood emoji */}
+                        {headerInfo.id && moodMap?.[headerInfo.id] && (
+                            <span className="text-sm" title={language === 'zh' ? moodMap[headerInfo.id].label_zh : moodMap[headerInfo.id].label}>
+                                {moodMap[headerInfo.id].emoji}
+                            </span>
+                        )}
+                        {/* T06: Affinity badge */}
+                        {headerInfo.id && getIntimacy(headerInfo.id) > 0 && (
+                            <span
+                                className="px-2 py-0.5 text-[10px] rounded-full font-medium text-white leading-tight"
+                                style={{ backgroundColor: getIntimacyLevel(headerInfo.id).color }}
+                            >
+                                {language === 'zh' ? getIntimacyLevel(headerInfo.id).name : getIntimacyLevel(headerInfo.id).name_en}
+                            </span>
+                        )}
                         {headerInfo.memberCount && (
                             <span className="px-2.5 py-1 text-xs rounded-full font-medium
                                 shadow-inner border border-[var(--color-border-light)]"

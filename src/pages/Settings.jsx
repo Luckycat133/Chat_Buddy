@@ -9,10 +9,12 @@ import {
     ChevronRight, Bell, Lock, Globe, Info, Moon, HelpCircle,
     Volume2, VolumeX, BellOff, Trophy, Calendar, Search, Image,
     Settings as SettingsIcon, Shield, Laptop, LogOut,
-    Server, Download, Upload, Sparkles, MessageSquare
+    Server, Download, Upload, Sparkles, MessageSquare, RotateCcw
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import CheckInPanel from '../components/CheckInPanel';
+import { useOnboarding } from '../hooks/useOnboarding';
+import AccentColorPicker from '../components/AccentColorPicker';
 import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
 import { exportAllData, importData } from '../config/apiConfig';
 
@@ -25,6 +27,7 @@ export default function Settings() {
     const { settings, toggleSound, toggleDoNotDisturb } = useNotification();
     const { isDarkMode, themeMode, toggleDarkMode, animationIntensity, setAnimationIntensity, bubbleStyle, setBubbleStyle } = useTheme();
     const { points, streakDays } = useSocial();
+    const { reset: resetTutorial } = useOnboarding();
     const navigate = useNavigate();
 
     const [showCheckIn, setShowCheckIn] = useState(false);
@@ -156,6 +159,13 @@ export default function Settings() {
                                     onClick={() => navigate('/help')}
                                 />
                                 <SettingItem
+                                    icon={<RotateCcw size={18} />}
+                                    color="bg-[var(--color-icon-teal)]"
+                                    label={t('reset_tutorial')}
+                                    subLabel={t('reset_tutorial_desc')}
+                                    onClick={resetTutorial}
+                                />
+                                <SettingItem
                                     icon={<LogOut size={18} />}
                                     color="bg-[var(--color-danger)]"
                                     label={t('logout') || 'Log Out'}
@@ -230,6 +240,11 @@ export default function Settings() {
                                     active={settings.doNotDisturb}
                                     onClick={toggleDoNotDisturb}
                                 />
+                            </div>
+
+                            {/* Accent Color Picker */}
+                            <div className="mt-4">
+                                <AccentColorPicker />
                             </div>
                         </section>
 

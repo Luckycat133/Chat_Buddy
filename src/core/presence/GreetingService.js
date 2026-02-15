@@ -154,6 +154,8 @@ export function checkWindowOpenGreeting(chat, persona, language = 'zh') {
     const templates = GREETING_TEMPLATES[slot]?.[lang] || GREETING_TEMPLATES.morning[lang];
     const message = pickRandom(templates);
 
+    console.log(`[GreetingService] Window-open greeting triggered for ${persona.id}: "${message}"`);
+
     // Record cooldown
     markGreetingSent(cooldowns, persona.id, Date.now());
 

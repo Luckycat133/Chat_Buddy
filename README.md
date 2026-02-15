@@ -72,13 +72,15 @@ Meet your favorite anime characters:
 - No account required
 - Privacy-focused design
 
-### 🤖 Smart AI Features (v0.2.1)
+### 🤖 Smart AI Features
 
-- **Dynamic Online Status**: Real-time Online/Busy/Offline states based on character schedules
-- **Visual Typing Indicators**: See when AI is typing with animated bubbles
-- **Proactive Greetings**: AI initiates conversation after long inactivity or on return
-- **Multi-message**: AI can send consecutive messages like real users
-- **WeChat-style time display**
+- **Dynamic Online Status** (v0.2.1): Real-time Online/Busy/Offline states based on character schedules
+- **Visual Typing Indicators** (v0.2.1): See when AI is typing with animated bubbles
+- **Proactive Greetings** (v0.2.1): AI initiates conversation after long inactivity or on return
+- **Multi-message** (v0.2.1): AI can send consecutive messages like real users
+- **WeChat-style time display** (v0.2.1)
+- **Character Affinity System** (v0.2.2): Build intimacy through chatting and gifts; AI responses adapt from formal to intimate
+- **Character Mood System** (v0.2.2): 5 moods (Happy, Calm, Tired, Excited, Melancholy) affect AI tone and response style
 
 ### 📸 Moments Enhancements (v0.2.4)
 
@@ -235,10 +237,14 @@ We welcome contributions! Please follow these guidelines:
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-**Current Version**: v0.3.1 (2026-01-18)
+**Current Version**: v0.2.2 (2026-02-15)
 
 ### Recent Updates
 
+- 💕 **Affinity/Fondness System**: Build intimacy through chatting and gifts (0-100 scale, 5 levels)
+- 😊 **Character Mood System**: 5 moods affect AI response style (Happy, Calm, Tired, Excited, Melancholy)
+- 🌐 **Dynamic Presence**: Online/Busy/Offline status based on character schedules
+- 👋 **Proactive Greetings**: AI initiates conversation after inactivity
 - 🖼️ **Immersive Background System**: 20+ AI-generated backgrounds for each persona
 - 🌙 **Dark Mode Overhaul**: Complete CSS variable system with glass effects
 - 📱 **iOS 26 Style**: Refined border-radius and subtle animations
@@ -248,7 +254,6 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - 📸 Enhanced AI Moments with dynamic posting and smart comments
 - 📍 Location tags and visibility settings (Public/Private/etc.)
 - 💬 Reply threads and emoji reactions in Moments
-- 👥 Moments/Timeline with AI auto-posting
 - 👫 Friends management with groups
 - 🎯 Daily Check-in and Achievements
 - 🧧 Red Packet and Gift system
