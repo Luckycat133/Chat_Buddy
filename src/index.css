@@ -759,6 +759,43 @@ textarea,
 .presence-dot--online { background: var(--color-success); }
 .presence-dot--busy { background: orange; } /* bg-orange-400 */
 .presence-dot--offline { background: #64748b; } /* bg-slate-400 */
+.presence-dot--away { background: #fbbf24; } /* bg-yellow-400 */
+.presence-dot--do-not-disturb { background: #f87171; } /* bg-red-400 */
+
+.presence-status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.presence-status-indicator--online {
+  background: rgba(78, 205, 196, 0.15);
+  color: #2dd4bf;
+}
+
+.presence-status-indicator--offline {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.presence-status-indicator--busy {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+}
+
+.presence-status-indicator--away {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.presence-status-indicator--do-not-disturb {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
 
 .dark .modal-panel {
   background: var(--color-surface-elevated);
@@ -866,6 +903,30 @@ textarea,
   }
 }
 
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.998);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pageExit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.998);
+  }
+}
+
 @keyframes scaleSpring {
   from {
     transform: scale(0.96);
@@ -942,6 +1003,49 @@ textarea,
   background-size: 200% 200%;
   background-size: 200% 200%;
   animation: aurora-shift 10s ease infinite;
+}
+
+.animate-page-enter {
+  animation: pageEnter var(--duration-normal) var(--ease-smooth) forwards;
+}
+
+.animate-page-exit {
+  animation: pageExit var(--duration-normal) var(--ease-smooth) forwards;
+}
+
+.page-transitioning {
+  opacity: 0;
+  transform: translateY(4px) scale(0.998);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-gray-200) 25%,
+    var(--color-gray-100) 50%,
+    var(--color-gray-200) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.dark .animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-gray-800) 25%,
+    var(--color-gray-700) 50%,
+    var(--color-gray-800) 75%
+  );
+  background-size: 200% 100%;
 }
 
 @keyframes messageIn {

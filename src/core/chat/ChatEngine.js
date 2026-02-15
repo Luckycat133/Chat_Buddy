@@ -3,6 +3,7 @@ import { AIPipeline } from './AIPipeline';
 import { cleanMessageContent } from '../../features/chat/services/chatService';
 import { getPresenceMap } from '../presence/PresenceService';
 import { checkReEngagement } from '../presence/GreetingService';
+import { getMoodMap } from '../presence/MoodService';
 
 /**
  * Domain Layer: Chat Engine
@@ -23,6 +24,11 @@ export class ChatEngine {
         // Ephemeral state
         this.typingIndicators = {}; // { chatId: [aiId, ...] }
         this.presenceMap = {};      // { personaId: 'online'|'offline'|'busy' }
+        this.moodMap = {};          // { personaId: moodObject }
+
+        // T06: Callback hooks & context provider
+        this._onUserMessageCallbacks = [];
+        this._contextProvider = null;
 
         // Sub-systems
         this.aiPipeline = new AIPipeline({
@@ -56,12 +62,32 @@ export class ChatEngine {
         return () => this.listeners.delete(callback);
     }
 
+    /**
+     * T06: Register a callback for when the user sends a message.
+     * Callback signature: (chatId, aiParticipantIds) => void
+     */
+    registerOnUserMessage(callback) {
+        this._onUserMessageCallbacks.push(callback);
+        return () => {
+            this._onUserMessageCallbacks = this._onUserMessageCallbacks.filter(cb => cb !== callback);
+        };
+    }
+
+    /**
+     * T06: Set a context provider function for affinity/mood-aware AI prompts.
+     * Provider signature: (personaId) => { intimacyLevel, intimacyScore, mood }
+     */
+    setContextProvider(fn) {
+        this._contextProvider = fn;
+    }
+
     _notify() {
         // Emit a snapshot of the current state
         const state = {
             chats: this.chats,
             typingIndicators: { ...this.typingIndicators },
-            presenceMap: { ...this.presenceMap }
+            presenceMap: { ...this.presenceMap },
+            moodMap: { ...this.moodMap }
         };
         this.listeners.forEach(cb => cb(state));
     }
@@ -103,6 +129,10 @@ export class ChatEngine {
 
         // Trigger AI if user sent message
         if (senderId === 'user-me') {
+            // T06: Notify user-message callbacks (for chat-based affinity gain)
+            const aiIds = updatedChat.participants.filter(id => id !== 'user-me');
+            this._onUserMessageCallbacks.forEach(cb => cb(chatId, aiIds));
+
             this._checkAutoNaming(updatedChat);
             this._triggerAIResponse(updatedChat);
         }
@@ -269,7 +299,9 @@ export class ChatEngine {
 
             // Should respond?
             if (isDirect || isMentioned || Math.random() > 0.3) {
-                this.aiPipeline.processTurn(chat, this.personas, ai);
+                // T06: Get affinity/mood context for this AI
+                const context = this._contextProvider?.(ai.id) || null;
+                this.aiPipeline.processTurn(chat, this.personas, ai, context);
             }
         });
     }
@@ -329,6 +361,7 @@ Title:`;
 
     _updatePresence(personas) {
         this.presenceMap = getPresenceMap(personas);
+        this.moodMap = getMoodMap(personas, this.presenceMap);
         this._notify();
     }
 

@@ -15,7 +15,8 @@ export function useChatService() {
     const [state, setState] = useState({
         chats: [],
         typingIndicators: {},
-        presenceMap: {}
+        presenceMap: {},
+        moodMap: {}
     });
 
     // Use ALL personas for the full list
@@ -38,6 +39,7 @@ export function useChatService() {
         chats: state.chats,
         typingIndicators: state.typingIndicators,
         presenceMap: state?.presenceMap || {}, // T05: Expose presence
+        moodMap: state?.moodMap || {},          // T06: Expose moods
         personas: allPersonas, // Includes ALL personas
         currentUser: { id: 'user-me', name: 'You', avatar: null },
 

@@ -1,22 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Star, Users, ChevronRight, Settings, Sparkles, X } from 'lucide-react';
+import { Search, Star, Users, ChevronRight, Settings, Sparkles, X, Clock } from 'lucide-react';
 import { useChat } from '../features/chat/context/ChatContext';
 import { useFriend } from '../context/FriendContext';
 import { useLanguage } from '../context/LanguageContext';
 import FriendDetail from '../components/FriendDetail';
+import { SkeletonList, SkeletonFriendCard } from '../components/Skeleton';
+import HighlightText from '../components/HighlightText';
 import { cn } from '../utils/cn';
 
 export default function FriendsPage() {
     const navigate = useNavigate();
     const { personas } = useChat();
-    const { groups, getFriendMeta, getDisplayName, getStarredFriends, getFriendsInGroup } = useFriend();
+    const { groups, getFriendMeta, getDisplayName, getStarredFriends, getFriendsInGroup, getFriendSubtitle } = useFriend();
     const { t, language } = useLanguage();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [searchFocused, setSearchFocused] = useState(false);
     const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'starred', or group id
     const [selectedFriend, setSelectedFriend] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 300);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Filter friends based on search and active filter
     const getFilteredFriends = () => {
@@ -143,7 +151,9 @@ export default function FriendsPage() {
 
                 {/* Friend List - Card style */}
                 <div className="flex-1 px-1">
-                    {filteredFriends.length === 0 ? (
+                    {isLoading ? (
+                        <SkeletonList count={6} skeleton={SkeletonFriendCard} className="grid grid-cols-1 md:grid-cols-2 gap-3" />
+                    ) : filteredFriends.length === 0 ? (
                         <div className="card flex flex-col items-center justify-center py-24 animate-fade-slide-up">
                             <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 animate-float"
                                 style={{ background: 'var(--gradient-aurora-soft)' }}>
@@ -163,53 +173,66 @@ export default function FriendsPage() {
                                 const displayName = getDisplayName(friend, language);
                                 const originalName = language === 'zh' ? (friend.name_zh || friend.name) : friend.name;
                                 const friendGroup = groups.find(g => g.id === meta.groupId);
+                                const { signature, recentActivity } = getFriendSubtitle(friend.id, language);
 
                                 return (
                                     <div
                                         key={friend.id}
                                         onClick={() => setSelectedFriend(friend)}
                                         className="card p-4 hover:border-[var(--color-primary)]/40 hover:-translate-y-1
-                                            active:scale-[0.98] cursor-pointer group animate-fade-slide-up flex items-center"
+                                            active:scale-[0.98] cursor-pointer group animate-fade-slide-up"
                                         style={{ animationDelay: `${index * 30 + 200}ms` }}
                                     >
-                                        {/* Avatar with hover effect */}
-                                        <div className="relative w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 mr-4
-                                            shadow-glass-sm group-hover:shadow-glass group-hover:scale-105 transition-all duration-300">
-                                            <img src={friend.avatar} alt={displayName} className="w-full h-full object-cover" />
-                                            {/* Online indicator */}
-                                            <div className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-[var(--color-success)]
-                                                rounded-full border-2 border-white dark:border-slate-800 shadow-sm" />
+                                        <div className="flex items-center">
+                                            <div className="relative w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 mr-4
+                                                shadow-glass-sm group-hover:shadow-glass group-hover:scale-105 transition-all duration-300">
+                                                <img src={friend.avatar} alt={displayName} className="w-full h-full object-cover" />
+                                                <div className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-[var(--color-success)]
+                                                    rounded-full border-2 border-white dark:border-slate-800 shadow-sm" />
+                                            </div>
+
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-base font-bold text-[var(--color-text-main)] truncate
+                                                        group-hover:text-[var(--color-primary)] transition-colors font-display">
+                                                        <HighlightText text={displayName} highlight={searchTerm} />
+                                                    </span>
+                                                    {meta.starred && (
+                                                        <Star size={14} className="text-[var(--color-accent-gold)] fill-current flex-shrink-0" />
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    {meta.remark && displayName !== originalName && (
+                                                        <span className="text-xs text-[var(--color-text-muted)] truncate">
+                                                            {originalName}
+                                                        </span>
+                                                    )}
+                                                    {friendGroup && (
+                                                        <span
+                                                            className="badge"
+                                                            style={{ backgroundColor: friendGroup.color + '15', color: friendGroup.color, border: `1px solid ${friendGroup.color}20` }}
+                                                        >
+                                                            {friendGroup.icon} {language === 'zh' ? friendGroup.name : friendGroup.name_en}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <ChevronRight size={20} className="text-[var(--color-text-light)] group-hover:text-[var(--color-primary)] group-hover:translate-x-1 transition-all" />
                                         </div>
 
-                                        {/* Name and Info */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-base font-bold text-[var(--color-text-main)] truncate
-                                                    group-hover:text-[var(--color-primary)] transition-colors font-display">
-                                                    {displayName}
-                                                </span>
-                                                {meta.starred && (
-                                                    <Star size={14} className="text-[var(--color-accent-gold)] fill-current flex-shrink-0" />
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                {meta.remark && displayName !== originalName && (
-                                                    <span className="text-xs text-[var(--color-text-muted)] truncate">
-                                                        {originalName}
-                                                    </span>
-                                                )}
-                                                {friendGroup && (
-                                                    <span
-                                                        className="badge"
-                                                        style={{ backgroundColor: friendGroup.color + '15', color: friendGroup.color, border: `1px solid ${friendGroup.color}20` }}
-                                                    >
-                                                        {friendGroup.icon} {language === 'zh' ? friendGroup.name : friendGroup.name_en}
-                                                    </span>
-                                                )}
-                                            </div>
+                                        <div className="mt-3 pt-3 border-t border-[var(--color-border-light)]">
+                                            <p className="text-sm text-[var(--color-text-secondary)] truncate italic">
+                                                {signature}
+                                            </p>
+                                            {recentActivity && (
+                                                <div className="flex items-center gap-1.5 mt-1.5 text-xs text-[var(--color-text-muted)]">
+                                                    <Clock size={12} />
+                                                    <span>{recentActivity.timeAgo}</span>
+                                                    <span className="text-[var(--color-text-light)]">{recentActivity.text}</span>
+                                                </div>
+                                            )}
                                         </div>
-
-                                        <ChevronRight size={20} className="text-[var(--color-text-light)] group-hover:text-[var(--color-primary)] group-hover:translate-x-1 transition-all" />
                                     </div>
                                 );
                             })}

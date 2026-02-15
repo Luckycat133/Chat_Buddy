@@ -95,7 +95,7 @@ export async function callAI(messages, options = {}) {
     const maxTokens = options.maxTokens;
     const temperature = options.temperature ?? 0.8;
     // Allow overriding model (e.g. for Perplexity Sonar search)
-    const selectedModel = options.model || config.defaultModel;
+    const selectedModel = options.model || config.model;
 
     const requestBody = {
         model: selectedModel,

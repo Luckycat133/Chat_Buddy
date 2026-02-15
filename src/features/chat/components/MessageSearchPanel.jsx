@@ -2,11 +2,13 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { X, Search, MessageSquare, ChevronRight } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { cn } from '../../../utils/cn';
 
 export default function MessageSearchPanel({ onClose, onSelectMessage, currentChatId }) {
     const { chats, personas } = useChat();
     const { language } = useLanguage();
+    const trapRef = useFocusTrap(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedTerm, setDebouncedTerm] = useState('');
     const [searchScope, setSearchScope] = useState(currentChatId ? 'current' : 'all'); // 'all' or 'current'
@@ -134,10 +136,19 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-[var(--color-bg-white)] flex flex-col">
+        <div
+            ref={trapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="message-search-title"
+            className="fixed inset-0 z-50 bg-[var(--color-bg-white)] flex flex-col"
+        >
             {/* Header */}
+            <h2 id="message-search-title" className="sr-only">
+                {language === 'zh' ? '搜索聊天记录' : 'Search Messages'}
+            </h2>
             <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
-                <button onClick={onClose} className="text-[var(--color-text-muted)]">
+                <button onClick={onClose} className="text-[var(--color-text-muted)]" aria-label="Close">
                     <X size={24} />
                 </button>
 

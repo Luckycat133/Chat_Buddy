@@ -1,10 +1,12 @@
-import React, { useState, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Pin, Circle, Trash2, MessageSquarePlus, Sparkles, X } from 'lucide-react';
 import { useChat } from './context/ChatContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { cn } from '../../utils/cn';
 import { formatChatListTime } from '../../utils/formatTime';
+import { SkeletonList, SkeletonChatCard } from '../../components/Skeleton';
+import HighlightText from '../../components/HighlightText';
 
 // ========== Memoized Chat List Item (iOS 26 Card Style) ==========
 const ChatListItem = memo(function ChatListItem({
@@ -16,7 +18,8 @@ const ChatListItem = memo(function ChatListItem({
     t,
     onContextMenu,
     presenceMap,
-    index
+    index,
+    searchTerm
 }) {
     return (
         <Link
@@ -70,7 +73,9 @@ const ChatListItem = memo(function ChatListItem({
                         {chat.isPinned && (
                             <Pin size={12} className="text-[var(--color-primary)] fill-current rotate-45" />
                         )}
-                        <span className="truncate">{meta.name}</span>
+                        <span className="truncate">
+                            <HighlightText text={meta.name} highlight={searchTerm} />
+                        </span>
                     </h3>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         {chat.isUnread && (
@@ -159,6 +164,7 @@ export default function ChatList() {
     const { t, language } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
     const [searchFocused, setSearchFocused] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -166,6 +172,12 @@ export default function ChatList() {
 
     // Context menu state
     const [contextMenu, setContextMenu] = useState(null); // { chatId, x, y }
+
+    // Simulate initial loading for skeleton display
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 300);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Memoize getChatMetadata to avoid recalculation
     const getChatMetadata = useCallback((chat) => {
@@ -313,7 +325,9 @@ export default function ChatList() {
 
             {/* Chat List - Floating Cards Container */}
             <div className="flex-1 overflow-y-auto px-2 space-y-3 pb-32 md:pb-4 custom-scrollbar">
-                {filteredChats.length === 0 ? (
+                {isLoading ? (
+                    <SkeletonList count={4} skeleton={SkeletonChatCard} />
+                ) : filteredChats.length === 0 ? (
                     <EmptyState onCreateChat={handleCreateChat} />
                 ) : (
                     filteredChats.map(({ chat, meta }, index) => {
@@ -335,6 +349,7 @@ export default function ChatList() {
                                 onContextMenu={handleContextMenu}
                                 presenceMap={presenceMap}
                                 index={index}
+                                searchTerm={searchTerm}
                             />
                         );
                     })

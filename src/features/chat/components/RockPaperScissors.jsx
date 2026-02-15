@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { cn } from '../../../utils/cn';
 
 // Game choices
@@ -18,6 +19,7 @@ const OUTCOMES = {
 
 export default function RockPaperScissors({ aiName, onClose, onResult }) {
     const { t } = useLanguage();
+    const trapRef = useFocusTrap(true);
     const [playerChoice, setPlayerChoice] = useState(null);
     const [aiChoice, setAiChoice] = useState(null);
     const [result, setResult] = useState(null);
@@ -92,17 +94,21 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="presentation" onClick={onClose}>
             <div
+                ref={trapRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="rps-game-title"
                 className="bg-[var(--color-bg-white)] rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)]">
-                    <h3 className="font-bold text-white text-lg">
+                    <h3 id="rps-game-title" className="font-bold text-white text-lg">
                         ✊ {t('rock_paper_scissors')} ✌️
                     </h3>
-                    <button onClick={onClose} className="text-white/80 hover:text-white">
+                    <button onClick={onClose} className="text-white/80 hover:text-white" aria-label="Close">
                         <X size={24} />
                     </button>
                 </div>

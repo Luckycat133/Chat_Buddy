@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Camera, Sparkles, Image as ImageIcon, Video, Smile } from 'lucide-react';
 import { useMoments } from './context/MomentsContext';
 import { useUser } from '../../context/UserContext';
@@ -6,6 +6,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import MomentCard from './components/MomentCard';
 import PostComposer from './components/PostComposer';
 import CommentsSheet from './components/CommentsSheet';
+import { SkeletonList, SkeletonMomentCard } from '../../components/Skeleton';
 import { cn } from '../../utils/cn';
 
 export default function MomentsPage() {
@@ -16,6 +17,12 @@ export default function MomentsPage() {
     const [showComposer, setShowComposer] = useState(false);
     const [selectedPost, setSelectedPost] = useState(null);
     const [scrolled, setScrolled] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 400);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Sort posts by date, newest first
     const sortedPosts = [...posts].sort((a, b) =>
@@ -84,7 +91,9 @@ export default function MomentsPage() {
                     </div>
                 </div>
 
-                {sortedPosts.length === 0 ? (
+                {isLoading ? (
+                    <SkeletonList count={3} skeleton={SkeletonMomentCard} className="space-y-6" />
+                ) : sortedPosts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 animate-fade-in text-center">
                         <div className="w-20 h-20 rounded-[var(--radius-xl)] bg-[var(--color-bg-active)] flex items-center justify-center mb-4 shadow-inner">
                             <Camera size={32} className="text-[var(--color-text-muted)]" />

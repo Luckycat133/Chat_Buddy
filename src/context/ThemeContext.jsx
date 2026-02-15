@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useCallback, useEffect, useState, useRef } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { computeAccentPalette } from '../utils/colorUtils';
 
 const ThemeContext = createContext();
 
@@ -86,12 +87,24 @@ export const ThemeProvider = ({ children }) => {
         prevMode.current = resolvedMode;
     }, [resolvedMode]);
 
-    // Apply custom accent color
+    // Apply custom accent color (all 6 derived CSS vars)
     useEffect(() => {
+        const el = document.documentElement;
         if (theme.accentColor) {
-            document.documentElement.style.setProperty('--color-primary', theme.accentColor);
+            const palette = computeAccentPalette(theme.accentColor);
+            el.style.setProperty('--color-primary', palette.primary);
+            el.style.setProperty('--color-primary-hover', palette.hover);
+            el.style.setProperty('--color-primary-active', palette.active);
+            el.style.setProperty('--color-primary-light', palette.light);
+            el.style.setProperty('--color-primary-softer', palette.softer);
+            el.style.setProperty('--color-primary-glow', palette.glow);
         } else {
-            document.documentElement.style.removeProperty('--color-primary');
+            el.style.removeProperty('--color-primary');
+            el.style.removeProperty('--color-primary-hover');
+            el.style.removeProperty('--color-primary-active');
+            el.style.removeProperty('--color-primary-light');
+            el.style.removeProperty('--color-primary-softer');
+            el.style.removeProperty('--color-primary-glow');
         }
     }, [theme.accentColor]);
 

@@ -26,3 +26,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Test and development artifacts
+.pytest_cache
+reports/
+__pycache__/
+*.pyc
+.eslintcache
+.vite/
