@@ -37,8 +37,8 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 | T04 | Character Visuals & Interaction Design | v0.2.0  | P1       | ✅ Done                            |
 | T05 | AI Behavior Humanization               | v0.2.1  | P1       | ✅ Done                            |
 | T06 | AI Characters & Avatar System          | v0.2.2  | P1       | ✅ Done                            |
-| T07 | Message Feature Enhancement            | v0.2.3  | P1       | Needs completion                   |
-| T08 | Markdown & Content Rendering           | v0.2.4  | P1       | Needs completion                   |
+| T07 | Message Feature Enhancement            | v0.2.3  | P1       | ✅ Done                            |
+| T08 | Markdown & Content Rendering           | v0.2.4  | P1       | ✅ Done                            |
 | T09 | Immersive Background System            | v0.2.5  | P1       | Needs completion                   |
 | T10 | Social & Interaction Features          | v0.2.6  | P1       | Needs completion                   |
 | T11 | Moments & Feed System                  | v0.2.7  | P1       | Needs completion                   |
@@ -132,7 +132,7 @@ src/config/
 
 ## T03 — Modern UI Design System
 
-**Version**: v0.1.3 | **Priority**: P0 Foundation | **Status**: 🔧 Phase 1-3 done
+**Version**: v0.1.3 | **Priority**: P0 Foundation | **Status**: 🔧 Phase 1-3 done, Phase 4 partially done
 
 ### Design Direction
 
@@ -179,29 +179,37 @@ src/config/
 - [x] Layout helpers: `.modal-header/body/footer`
 - [x] Dark mode refinements for all new component classes
 
-### Phase 4 — Page Migration & Polish (Pending)
+### Phase 4 — Page Migration & Polish (Partially Done)
 
 - [ ] Migrate existing inline button styles to component classes
 - [ ] Chat view redesign (clean message list, minimal chrome)
 - [ ] Settings page redesign (grouped sections, modern toggles)
-- [ ] Dashboard redesign (refined Bento Grid, draggable widgets)
-- [ ] Custom accent color picker (multiple preset palettes + custom)
-- [ ] Keyboard shortcuts (desktop)
-- [ ] Onboarding tutorial for first-time users
-- [ ] Accessibility audit (screen reader, focus management, ARIA)
+- [x] Dashboard redesign (refined Bento Grid, **draggable widgets**)
+- [x] Custom accent color picker (8 preset palettes + custom)
+- [x] Keyboard shortcuts (**desktop shortcuts** with `Ctrl+1/2/3/4/5`, `Ctrl+K`, `Ctrl+/`)
+- [x] Onboarding tutorial (**5-step spotlight tour** for first-time users)
+- [x] Accessibility foundations (`useFocusTrap`, keyboard navigation, ARIA attributes)
+- [ ] Full accessibility audit (screen reader testing, comprehensive ARIA)
 
 ### Key Files
 
 - `src/index.css` — Global styles, CSS variables, utilities
-- `src/context/ThemeContext.jsx` — Theme state management
-- `src/components/Layout.jsx` — Main layout wrapper
-- `src/components/BentoGrid.jsx` — Dashboard grid
-- `src/pages/Dashboard.jsx` — Homepage
-- `src/pages/Settings.jsx` — Settings page
+- `src/context/ThemeContext.jsx` — Theme state management (accent color support)
+- `src/components/Layout.jsx` — Main layout wrapper (keyboard shortcuts, onboarding)
+- `src/components/BentoGrid.jsx` — Dashboard grid system
+- `src/components/AccentColorPicker.jsx` — Theme color selector
+- `src/components/KeyboardShortcutsModal.jsx` — Shortcuts help dialog
+- `src/components/OnboardingTutorial.jsx` — First-time user tour
+- `src/hooks/useKeyboardShortcuts.js` — Global keyboard shortcut handler
+- `src/hooks/useOnboarding.js` — Onboarding state management
+- `src/hooks/useFocusTrap.js` — Accessibility focus management
+- `src/config/shortcuts.js` — Shortcut definitions
+- `src/pages/Dashboard.jsx` — Homepage with draggable widgets
 
 ### Dependencies
 
 - T01 (translations for new UI elements)
+- `@dnd-kit/core`, `@dnd-kit/sortable` — Drag and drop for dashboard widgets
 
 ---
 
@@ -355,7 +363,7 @@ src/config/
 
 ## T07 — Message Feature Enhancement
 
-**Version**: v0.2.3 | **Priority**: P1 | **Status**: Needs completion
+**Version**: v0.2.3 | **Priority**: P1 | **Status**: ✅ Done
 
 ### What's Done
 
@@ -368,18 +376,36 @@ src/config/
 - [x] File upload (text files)
 - [x] Group announcements
 - [x] Group polls
+- [x] **Voice messages** — record via MediaRecorder API, play with waveform visualization (`VoicePlayer.jsx`)
+- [x] **Image messages** — inline display with click-to-expand lightbox (`ImageMessage.jsx`)
+- [x] **Message bookmarks** — star/save important messages, view saved list (`BookmarkService.js`, `BookmarkPanel.jsx`)
+- [x] **Message pinning** — pin messages to top of chat (already existed)
+- [x] **Read receipts** — show who has "read" with double checkmark indicator
+- [x] **@mention** — `@CharacterName` highlighted in message bubbles with clickable mentions
+- [x] **Draft auto-save** — save unfinished messages per chat with 7-day expiry (`useDraft.js`)
+- [x] **Chat history export** — export as TXT/JSON/HTML with styled HTML output (`ExportService.js`, `ExportModal.jsx`)
+- [x] **Enhanced polls** — anonymous voting, multi-choice, timer support in `votePoll()`
 
-### What's Planned
+### Implementation Details
 
-- [ ] **Voice messages** — record via MediaRecorder API, play with waveform visualization
-- [ ] **Image messages** — placeholder UI (no vision API), display sent images inline
-- [ ] **Message bookmarks** — star/save important messages, view saved list
-- [ ] **Message pinning** — pin messages to top of chat
-- [ ] **Read receipts (group)** — show who has "read" (simulated for AI)
-- [ ] **@mention** — `@CharacterName` to direct message at specific character in group
-- [ ] **Draft auto-save** — save unfinished messages per chat
-- [ ] **Chat history export** — export as TXT/JSON/HTML
-- [ ] **Enhanced polls** — anonymous voting, multi-choice, timer
+**New Files:**
+- `src/features/chat/services/BookmarkService.js` — Bookmark CRUD operations
+- `src/features/chat/components/BookmarkPanel.jsx` — Bookmark list slide-in panel
+- `src/features/chat/hooks/useDraft.js` — Draft auto-save hook with 500ms debounce
+- `src/features/chat/components/ImageMessage.jsx` — Image bubble with lightbox
+- `src/features/chat/services/ExportService.js` — TXT/JSON/HTML export logic
+- `src/features/chat/components/ExportModal.jsx` — Export format selection UI
+- `src/features/chat/components/VoicePlayer.jsx` — Voice message with waveform visualization
+
+**Modified Files:**
+- `src/core/chat/ChatEngine.js` — Added `bookmarkMessage`, `unbookmarkMessage`, `markMessagesAsRead`
+- `src/features/chat/hooks/useChatService.js` — Exposed bookmark and read receipt methods
+- `src/features/chat/components/MessageMenu.jsx` — Added bookmark/unbookmark menu item
+- `src/features/chat/ChatWindow.jsx` — Integrated bookmark panel, export modal, read receipts
+- `src/features/chat/components/window/ChatComposer.jsx` — Draft auto-save, image upload
+- `src/features/chat/components/window/MessageTimeline.jsx` — Image, voice, mention rendering, read status
+- `src/data/locales.js` — Added translations for all T07 features
+- `eslint.config.js` — Added e2e and test files to ignore patterns
 
 ### Key Files
 
@@ -396,32 +422,32 @@ src/config/
 
 ## T08 — Markdown & Content Rendering
 
-**Version**: v0.2.4 | **Priority**: P1 | **Status**: Needs completion
+**Version**: v0.2.4 | **Priority**: P1 | **Status**: ✅ Done
 
 ### What's Done
 
 - [x] react-markdown + remark-gfm
-- [x] react-syntax-highlighter (VS Code Dark)
+- [x] react-syntax-highlighter with theme switching (`vs` / `vscDarkPlus`)
 - [x] @tailwindcss/typography
 - [x] Tables, code blocks, headings, lists
 - [x] cleanMessageContent() regex fixes
 - [x] Bubble overflow fixes
-
-### What's Planned
-
-- [ ] **Code block copy button** — one-click copy with feedback toast
-- [ ] **Code theme switching** — auto light/dark matching system theme
-- [ ] **LaTeX rendering** — `react-katex` or `rehype-katex` for math formulas
-- [ ] **Mermaid diagrams** — flowcharts, sequence diagrams in messages
-- [ ] **Link preview cards** — fetch Open Graph data, show title/description/image
+- [x] **Code block copy button** — hover-to-reveal with "Copied!" toast feedback
+- [x] **Code theme switching** — auto light/dark matching system theme
+- [x] **LaTeX rendering** — `rehype-katex` for inline (`$...$`) and block (`$$...$$`) math
+- [x] **Mermaid diagrams** — `MermaidRenderer.jsx` for flowcharts, sequence, class, state, ER diagrams
+- [x] **Link preview cards** — hover preview with favicon and domain (MVP)
 
 ### Key Files
 
 - `src/features/chat/components/window/MessageTimeline.jsx` — Message rendering
+- `src/features/chat/components/MermaidRenderer.jsx` — Mermaid diagram component
+- `src/features/chat/components/LinkPreview.jsx` — Link preview card
 
 ### Dependencies
 
 - T03 (theme-aware code highlighting)
+- `rehype-katex`, `katex`, `mermaid`
 
 ---
 

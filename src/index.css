@@ -2515,3 +2515,41 @@ textarea,
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
 }
+
+/* ========================================
+   T08: KATEX MATH DARK MODE OVERRIDES
+   ======================================== */
+
+.dark .katex {
+  color: var(--color-text-main);
+}
+
+.dark .katex-display {
+  color: var(--color-text-main);
+}
+
+.dark .katex .katex-html {
+  color: var(--color-text-main);
+}
+
+/* Ensure math renders correctly in AI message bubbles */
+.message-bubble-ai .katex {
+  color: inherit;
+}
+
+/* ========================================
+   T08: MERMAID DIAGRAM CONTAINER
+   ======================================== */
+
+.mermaid-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ensure mermaid text uses correct colors in dark mode */
+.dark .mermaid-container .node rect,
+.dark .mermaid-container .node circle,
+.dark .mermaid-container .node ellipse,
+.dark .mermaid-container .node polygon {
+  stroke: var(--color-border);
+}

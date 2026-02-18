@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Check, BarChart3, Users } from 'lucide-react';
+import { X, Plus, Check, BarChart3, Users, Clock } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
 
@@ -9,6 +9,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
     const [options, setOptions] = useState(['', '']);
     const [isMultiChoice, setIsMultiChoice] = useState(false);
     const [isAnonymous, setIsAnonymous] = useState(false);
+    const [expiresIn, setExpiresIn] = useState(''); // Hours
 
     const addOption = () => {
         if (options.length < 10) {
@@ -43,6 +44,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
             })),
             isMultiChoice,
             isAnonymous,
+            expiresAt: expiresIn ? new Date(Date.now() + parseInt(expiresIn) * 60 * 60 * 1000).toISOString() : null,
             createdAt: new Date().toISOString(),
             chatId
         };
@@ -169,6 +171,33 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
                                 className="w-5 h-5 rounded accent-[var(--color-primary)]"
                             />
                         </label>
+
+                        {/* T07: Timer/Expiration */}
+                        <div className="p-3 bg-[var(--color-bg-app)] rounded-lg">
+                            <div className="flex items-center gap-3 mb-2">
+                                <Clock size={20} className="text-[var(--color-text-muted)]" />
+                                <span className="text-[14px]">
+                                    {language === 'zh' ? '倒计时（小时）' : 'Timer (hours)'}
+                                </span>
+                            </div>
+                            <input
+                                type="number"
+                                min="0"
+                                max="168"
+                                value={expiresIn}
+                                onChange={(e) => setExpiresIn(e.target.value)}
+                                placeholder={language === 'zh' ? '无限期' : 'No expiration'}
+                                className="w-full px-3 py-2 bg-[var(--color-bg-white)] rounded-lg text-[14px] outline-none focus:ring-2 ring-[var(--color-primary)]/30"
+                            />
+                            {expiresIn && (
+                                <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                                    {language === 'zh'
+                                        ? `投票将在 ${expiresIn} 小时后结束`
+                                        : `Poll ends in ${expiresIn} hour${expiresIn !== '1' ? 's' : ''}`
+                                    }
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

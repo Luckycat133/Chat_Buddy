@@ -53,7 +53,17 @@ export function useChatService() {
         setChats: () => console.warn('setChats deprecated'),
         updateChat: (chatId, updates) => chatEngine.updateChat(chatId, updates),
         pinMessage: (chatId, msgId, isPinned) => chatEngine.pinMessage(chatId, msgId, isPinned),
-        votePoll: (chatId, pollId, optionId) => chatEngine.votePoll(chatId, pollId, optionId),
+        votePoll: (chatId, pollId, optionId, action) => chatEngine.votePoll(chatId, pollId, optionId, action),
+
+        // T07: Message Bookmarks
+        bookmarkMessage: (chatId, msgId) => chatEngine.bookmarkMessage(chatId, msgId),
+        unbookmarkMessage: (msgId) => chatEngine.unbookmarkMessage(msgId),
+        getBookmarkedMessages: () => chatEngine.getBookmarkedMessages(),
+        isMessageBookmarked: (msgId) => chatEngine.isMessageBookmarked(msgId),
+
+        // T07: Read Receipts
+        markMessagesAsRead: (chatId, readerId) => chatEngine.markMessagesAsRead(chatId, readerId),
+        getMessageReadStatus: (msgId, chatId) => chatEngine.getMessageReadStatus(msgId, chatId),
 
         engine: chatEngine
     };

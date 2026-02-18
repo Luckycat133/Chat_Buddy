@@ -38,6 +38,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Skeleton loading states and responsive column adjustment
   - 8 widget types: Recent Chats, Daily Check-in, AI Agents, Moments Preview, Friends, Achievements, Recommended Character, Stats
   - Dynamic greeting based on time of day
+  - **Draggable widgets** — T03 Phase 4
+    - Drag-and-drop reordering with `@dnd-kit`
+    - Persist layout to localStorage
+    - Reset layout button
+- **Theme Customization** — T03 Phase 4
+  - **Accent Color Picker** (`AccentColorPicker.jsx`)
+  - 8 preset palettes (coral, lavender, mint, sky, gold, rose, indigo)
+  - Custom color picker with native color input
+  - Real-time theme updates
+- **Keyboard Shortcuts** — T03 Phase 4
+  - `useKeyboardShortcuts` hook for global shortcut handling
+  - Navigation: `Ctrl+1/2/3/4/5` for Chats/Agents/Friends/Moments/Settings
+  - Actions: `Ctrl+K` for search, `Ctrl+/` for help, `Esc` to close
+  - `KeyboardShortcutsModal` for shortcut reference
+- **Onboarding Tutorial** — T03 Phase 4
+  - 5-step spotlight tour for first-time users
+  - Highlights: Chats, Agents, Settings, Moments
+  - Persistent state with localStorage
+  - Reset tutorial option in Settings
+- **Accessibility Foundations** — T03 Phase 4
+  - `useFocusTrap` hook for modal focus management
+  - ARIA attributes on interactive components
+  - Keyboard navigation support
 - **Layout & Navigation**
   - Responsive sidebar + bottom bar layout
   - About page with version info
@@ -56,12 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Conversation-centered minimal layout (reference ChatGPT)
 - Auto system `prefers-color-scheme` detection
 - Scheduled theme switching (sunrise/sunset)
-- Custom accent color picker (beyond orange)
 - Theme switch transition animation
-- Draggable/hideable dashboard widgets
 - In-app notification center
-- Keyboard shortcuts (desktop)
-- Onboarding tutorial
 
 ---
 
@@ -77,12 +96,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `StorageService.js` with `chat-buddy:` namespace
 - LocalStorage persistence for chat history and settings
 
+#### Changed
+
+- Multi-provider switching in Settings UI with `ApiConfigPanel.jsx`
+- Data export/import (JSON backup with `_meta` validation)
+
 #### Planned
 
-- **Unified config file** (`config.yaml` or `.env`) for custom URL, API Key, and model name
 - Full OpenAI Chat Completions format compatibility (messages/tools/streaming)
-- Multi-provider switching in Settings UI
-- Data export/import (JSON backup & restore)
 - IndexedDB support for large data scenarios
 
 ---
@@ -99,6 +120,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced Settings page with WeChat-style UI
 - Chat list search functionality
 - AI capability settings in group details
+- Browser language auto-detection (`navigator.language`)
+- AI conversation language setting independent from UI language
+- Parameter interpolation support: `t('key', { param: value })`
 
 #### Fixed
 
@@ -107,9 +131,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Planned
 
-- Browser language auto-detection
-- Translation key completeness audit (eliminate gaps)
-- AI conversation language independent from UI language
 - Architecture for additional languages (JP/KR/ES)
 
 ---
@@ -235,10 +256,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Added
 
-- Integrated `react-markdown` + `remark-gfm` for GFM syntax
-- Integrated `react-syntax-highlighter` (VS Code Dark theme)
-- Added `@tailwindcss/typography` plugin for prose styling
-- Support for tables, code blocks, headings, lists, and more
+- **Core Markdown Support**
+  - Integrated `react-markdown` + `remark-gfm` for GFM syntax
+  - Integrated `react-syntax-highlighter` (VS Code Dark theme)
+  - Added `@tailwindcss/typography` plugin for prose styling
+  - Support for tables, code blocks, headings, lists, and more
+- **Code Block Enhancements**
+  - Copy button with hover reveal and "Copied!" toast feedback
+  - Theme switching: auto light/dark based on system preference (`vs` / `vscDarkPlus`)
+- **LaTeX Math Rendering** — Phase 3
+  - Inline math: `$E = mc^2$`
+  - Block math: `$$...$$`
+  - `rehype-katex` plugin integration
+  - Dark mode color overrides
+- **Mermaid Diagram Rendering** — Phase 4
+  - Flowcharts, sequence diagrams, class diagrams, state diagrams, ER diagrams
+  - `MermaidRenderer.jsx` component with async rendering
+  - Auto theme switching (default/dark)
+  - Error fallback with source code display
+- **Link Preview Cards** — Phase 5
+  - Hover to reveal preview card with favicon and domain
+  - `LinkPreview.jsx` component using Google's favicon service
+  - "Open Link" button for external URLs
 
 #### Fixed
 
@@ -246,13 +285,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Disabled `\s*\|\s*` replacement to preserve table delimiters
 - Message bubble overflow: `min-w-0`, `overflow-hidden`, `overflow-x-auto`
 
-#### Planned
+#### Technical
 
-- Code block copy button
-- Code highlighting theme switching (light/dark adaptive)
-- LaTeX math formula rendering
-- Mermaid diagram rendering
-- Link preview cards
+- New dependencies: `rehype-katex`, `katex`, `mermaid`
+- New components: `CodeBlock`, `MermaidRenderer`, `LinkWithPreview`
+- Added KaTeX CSS import and dark mode overrides in `index.css`
 
 ---
 
@@ -266,39 +303,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Emoji picker with 8 categories and recent tracking
   - Sticker picker
 - **Message Actions**
-  - Context menu (copy, quote, delete)
+  - Context menu (copy, quote, delete, bookmark)
   - Message quoting/reply
   - Message forwarding
   - Message search panel
+  - Message pinning (top of chat)
 - **File System**
   - File upload (TXT, JSON, MD, JS, PY, etc.)
 - **Group Features**
   - Group announcements
-  - Group polls
+  - Group polls with anonymous voting, multi-choice, and timer support
+- **Voice Messages** — T07 Phase 8
+  - Record via MediaRecorder API
+  - Waveform visualization with `VoicePlayer.jsx`
+  - Play/pause controls with progress tracking
+- **Image Messages** — T07 Phase 4
+  - Inline image display with `[IMG:url]` format
+  - Click-to-expand lightbox with `ImageMessage.jsx`
+- **Message Bookmarks** — T07 Phase 1
+  - Star/save important messages per chat
+  - Slide-in panel to view all bookmarks (`BookmarkPanel.jsx`)
+  - `BookmarkService.js` for CRUD operations
+- **Read Receipts** — T07 Phase 5
+  - Double checkmark indicator for read messages
+  - `markMessagesAsRead()` tracks who has read each message
+- **@Mention Highlighting** — T07 Phase 3
+  - `@CharacterName` highlighted in message bubbles
+  - Clickable mentions scroll to user's messages
+- **Draft Auto-Save** — T07 Phase 2
+  - Unfinished messages auto-saved per chat
+  - 500ms debounce, 7-day expiry
+  - `useDraft.js` hook for draft management
+- **Chat History Export** — T07 Phase 6
+  - Export as TXT, JSON, or styled HTML
+  - `ExportService.js` with `ExportModal.jsx` UI
+- **Enhanced Polls** — T07 Phase 7
+  - Anonymous voting (hides voter names)
+  - Multi-choice selection support
+  - Timer/expiration for polls
 
 #### Changed
 
 - Rewrote `ChatWindow.jsx` with all new features
 - Added 60+ translation keys for bilingual support
-- Added `deleteMessage` to ChatContext
+- Added `deleteMessage`, `bookmarkMessage`, `unbookmarkMessage`, `markMessagesAsRead` to ChatContext
 - Scale-in animation for popup menus
+- `MessageTimeline.jsx` enhanced with image, voice, and mention rendering
 
 #### Fixed
 
 - Language mixing from hardcoded strings
 - Typing indicator now uses translation keys
-
-#### Planned
-
-- Voice messages (record & play)
-- Image messages (placeholder — no vision API)
-- Message bookmarks/favorites
-- Message pinning
-- Read receipts in group chat (show who's read)
-- @mention specific characters
-- Draft auto-save
-- Chat history export
-- Anonymous / multi-choice polls
+- Lint errors in `useDraft.js`, `ChatComposer.jsx`, `VoicePlayer.jsx`
 
 ---
 
@@ -424,12 +480,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Mobile layout overflow (bottom nav hiding in chat, padding fixes)
 - Message text clipping from oversized border-radius
 
+#### Changed
+
+- Character theme color extended to full chat UI:
+  - Header gradient tint + avatar ring color
+  - Input box focus ring + quote accent line
+  - Send button & record button use character gradient
+
 #### Planned
 
-- Character theme color extended to full chat UI (header gradient, input highlight)
-- Animation intensity slider (none/subtle/standard/intense)
-- Message bubble style selector (rounded/square/tail variants)
-- Reference mainstream AI product conversation UI patterns
 - Custom character color override (user picks their own palette)
 
 ---

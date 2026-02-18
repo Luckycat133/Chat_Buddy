@@ -4,6 +4,7 @@ import { cleanMessageContent } from '../../features/chat/services/chatService';
 import { getPresenceMap } from '../presence/PresenceService';
 import { checkReEngagement } from '../presence/GreetingService';
 import { getMoodMap } from '../presence/MoodService';
+import { addBookmark, removeBookmark, getBookmarks, isBookmarked } from '../../features/chat/services/BookmarkService';
 
 /**
  * Domain Layer: Chat Engine
@@ -208,9 +209,7 @@ export class ChatEngine {
         this.save();
     }
 
-    votePoll(chatId, pollId, optionId) {
-        // Implement poll voting logic if needed widely
-        // For now, simple mutation
+    votePoll(chatId, pollId, optionId, action = 'switch') {
         const chatIndex = this.chats.findIndex(c => c.id === chatId);
         if (chatIndex === -1) return;
         const chat = this.chats[chatIndex];
@@ -220,17 +219,49 @@ export class ChatEngine {
         if (pollIndex === -1) return;
 
         const poll = { ...polls[pollIndex] };
-        // Assuming poll structure: { options: [{id, votes:[]}] }
-        // This logic is simplified; real logic might be complex. 
-        // Adapting from typical poll logic:
-        const updatedOptions = poll.options.map(opt => {
-            if (opt.id === optionId) {
-                // Toggle vote or add? Assuming add for now.
-                // Simple version: increment count or add userId
-                return { ...opt, votes: [...(opt.votes || []), 'user-me'] };
-            }
-            return opt;
-        });
+        const userId = 'user-me';
+
+        // Check if poll has expired
+        if (poll.expiresAt && new Date(poll.expiresAt).getTime() <= Date.now()) {
+            return { success: false, error: 'Poll has expired' };
+        }
+
+        let updatedOptions;
+
+        if (action === 'add') {
+            // Multi-choice: add vote to this option
+            updatedOptions = poll.options.map(opt => {
+                if (opt.id === optionId && !opt.votes?.includes(userId)) {
+                    return { ...opt, votes: [...(opt.votes || []), userId] };
+                }
+                return opt;
+            });
+        } else if (action === 'remove') {
+            // Multi-choice: remove vote from this option
+            updatedOptions = poll.options.map(opt => {
+                if (opt.id === optionId) {
+                    return { ...opt, votes: opt.votes?.filter(v => v !== userId) || [] };
+                }
+                return opt;
+            });
+        } else {
+            // Single choice (switch): remove from all other options, toggle this one
+            const currentlyVoted = poll.options.find(opt => opt.id === optionId && opt.votes?.includes(userId));
+
+            updatedOptions = poll.options.map(opt => {
+                if (opt.id === optionId) {
+                    // Toggle this option
+                    if (currentlyVoted) {
+                        return { ...opt, votes: opt.votes?.filter(v => v !== userId) || [] };
+                    } else {
+                        return { ...opt, votes: [...(opt.votes || []), userId] };
+                    }
+                } else {
+                    // Remove vote from other options (single choice behavior)
+                    return { ...opt, votes: opt.votes?.filter(v => v !== userId) || [] };
+                }
+            });
+        }
 
         poll.options = updatedOptions;
 
@@ -239,6 +270,103 @@ export class ChatEngine {
 
         this.chats[chatIndex] = { ...chat, polls: newPolls };
         this.save();
+        return { success: true };
+    }
+
+    // =========================================================================
+    // T07: Message Bookmarks
+    // =========================================================================
+
+    bookmarkMessage(chatId, messageId) {
+        const chat = this.chats.find(c => c.id === chatId);
+        if (!chat) return { success: false, error: 'Chat not found' };
+
+        const message = chat.messages.find(m => m.id === messageId);
+        if (!message) return { success: false, error: 'Message not found' };
+
+        const sender = this.personas.find(p => p.id === message.senderId);
+        const senderName = message.senderId === 'user-me'
+            ? 'You'
+            : (sender?.name || 'Unknown');
+
+        const result = addBookmark({
+            messageId,
+            chatId,
+            content: message.content,
+            senderId: message.senderId,
+            senderName,
+            chatName: chat.name
+        });
+
+        return { success: result, isBookmarked: true };
+    }
+
+    unbookmarkMessage(messageId) {
+        const result = removeBookmark(messageId);
+        return { success: result, isBookmarked: false };
+    }
+
+    getBookmarkedMessages() {
+        return getBookmarks();
+    }
+
+    isMessageBookmarked(messageId) {
+        return isBookmarked(messageId);
+    }
+
+    // =========================================================================
+    // T07: Read Receipts
+    // =========================================================================
+
+    /**
+     * Mark messages in a chat as read by a specific reader
+     * @param {string} chatId - Chat ID
+     * @param {string} readerId - ID of the reader (usually 'user-me')
+     */
+    markMessagesAsRead(chatId, readerId = 'user-me') {
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        if (chatIndex === -1) return;
+
+        const chat = this.chats[chatIndex];
+        let hasChanges = false;
+
+        // Mark all messages not from the reader as read by the reader
+        const updatedMessages = chat.messages.map(msg => {
+            if (msg.senderId !== readerId) {
+                const readBy = msg.readBy || [];
+                if (!readBy.includes(readerId)) {
+                    hasChanges = true;
+                    return { ...msg, readBy: [...readBy, readerId] };
+                }
+            }
+            return msg;
+        });
+
+        if (hasChanges) {
+            this.chats[chatIndex] = { ...chat, messages: updatedMessages };
+            this.save();
+        }
+    }
+
+    /**
+     * Get read status for a message
+     * @param {string} messageId - Message ID
+     * @param {string} chatId - Chat ID
+     * @returns {Object} Read status info
+     */
+    getMessageReadStatus(messageId, chatId) {
+        const chat = this.chats.find(c => c.id === chatId);
+        if (!chat) return { readBy: [], isRead: false };
+
+        const message = chat.messages.find(m => m.id === messageId);
+        if (!message) return { readBy: [], isRead: false };
+
+        const readBy = message.readBy || [];
+        return {
+            readBy,
+            isRead: readBy.length > 0,
+            readCount: readBy.length
+        };
     }
 
     // =========================================================================

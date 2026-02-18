@@ -321,6 +321,7 @@ export const LOCALES = {
         greeting_morning: 'Good Morning',
         greeting_afternoon: 'Good Afternoon',
         greeting_evening: 'Good Evening',
+        reset_layout: 'Reset Layout',
         recent_chats: 'Recent Chats',
         conversations_count: '{count} conversations',
         daily_checkin: 'Daily Check-in',
@@ -398,6 +399,65 @@ export const LOCALES = {
         // MessageMenu (additional)
         pin_message: 'Pin',
         unpin_message: 'Unpin',
+
+        // T07: Message Bookmarks
+        bookmark_message: 'Bookmark',
+        unbookmark_message: 'Remove Bookmark',
+        message_bookmarked: 'Message bookmarked',
+        bookmark_removed: 'Bookmark removed',
+        already_bookmarked: 'Already bookmarked',
+        bookmarks_title: 'Bookmarks',
+        bookmark_count: 'bookmark',
+        bookmarks_count: 'bookmarks',
+        no_bookmarks: 'No bookmarks yet',
+        bookmarks_hint: 'Long press a message to bookmark it',
+        view_bookmarks: 'View Bookmarks',
+        view_message: 'View Message',
+        remove: 'Remove',
+
+        // T07: Draft Auto-Save
+        draft_saved: 'Draft saved',
+        draft_restored: 'Draft restored',
+
+        // T07: Mention Rendering
+        mention_you: 'You were mentioned',
+
+        // T07: Image Messages
+        image: 'Image',
+        send_image: 'Send Image',
+        click_to_expand: 'Click to expand',
+        invalid_image_file: 'Invalid image file',
+        image_read_error: 'Failed to read image',
+
+        // T07: Chat History Export
+        export_chat: 'Export Chat',
+        export: 'Export',
+        exporting: 'Exporting...',
+        export_format_label: 'Select export format:',
+        export_txt: 'Text (TXT)',
+        export_txt_desc: 'Simple text format with timestamps',
+        export_json: 'JSON',
+        export_json_desc: 'Full structured data export',
+        export_html: 'HTML',
+        export_html_desc: 'Styled webpage with chat bubbles',
+        selected: 'Selected',
+        export_failed: 'Export failed. Please try again.',
+
+        // T07: Enhanced Polls
+        poll_expires_in: 'Ends in {hours}h',
+        poll_ended: 'Poll ended',
+        anonymous_poll: 'Anonymous Poll',
+        public_poll: 'Public Poll',
+        multi_choice: 'Multi-choice',
+        single_choice: 'Single choice',
+
+        // T08: Markdown Content Rendering
+        copy_code: 'Copy code',
+        copied: 'Copied!',
+        diagram: 'Diagram',
+        link_preview: 'Link Preview',
+        open_link: 'Open Link',
+
         // AchievementsPage categories
         cat_all: 'All',
         cat_social: 'Social',
@@ -863,6 +923,7 @@ export const LOCALES = {
         greeting_morning: '\u65E9\u4E0A\u597D',
         greeting_afternoon: '\u4E0B\u5348\u597D',
         greeting_evening: '\u665A\u4E0A\u597D',
+        reset_layout: '\u91CD\u7F6E\u5E03\u5C40',
         recent_chats: '\u6700\u8FD1\u804A\u5929',
         conversations_count: '{count} \u4E2A\u5BF9\u8BDD',
         daily_checkin: '\u6BCF\u65E5\u7B7E\u5230',
@@ -940,6 +1001,65 @@ export const LOCALES = {
         // \u6D88\u606F\u83DC\u5355\uFF08\u9644\u52A0\uFF09
         pin_message: '\u7F6E\u9876',
         unpin_message: '\u53D6\u6D88\u7F6E\u9876',
+
+        // T07: \u6D88\u606F\u6536\u85CF
+        bookmark_message: '\u6536\u85CF',
+        unbookmark_message: '\u53D6\u6D88\u6536\u85CF',
+        message_bookmarked: '\u6D88\u606F\u5DF2\u6536\u85CF',
+        bookmark_removed: '\u6536\u85CF\u5DF2\u79FB\u9664',
+        already_bookmarked: '\u5DF2\u7ECF\u6536\u85CF\u8FC7\u4E86',
+        bookmarks_title: '\u6536\u85CF\u5939',
+        bookmark_count: '\u6761\u6536\u85CF',
+        bookmarks_count: '\u6761\u6536\u85CF',
+        no_bookmarks: '\u6682\u65E0\u6536\u85CF',
+        bookmarks_hint: '\u957F\u6309\u6D88\u606F\u8FDB\u884C\u6536\u85CF',
+        view_bookmarks: '\u67E5\u770B\u6536\u85CF',
+        view_message: '\u67E5\u770B\u6D88\u606F',
+        remove: '\u79FB\u9664',
+
+        // T07: \u8349\u7A3F\u81EA\u52A8\u4FDD\u5B58
+        draft_saved: '\u8349\u7A3F\u5DF2\u4FDD\u5B58',
+        draft_restored: '\u8349\u7A3F\u5DF2\u6062\u590D',
+
+        // T07: @\u63D0\u53CA\u9AD8\u4EAE
+        mention_you: '\u6709\u4EBA@\u4F60',
+
+        // T07: 图片消息
+        image: '\u56FE\u7247',
+        send_image: '\u53D1\u9001\u56FE\u7247',
+        click_to_expand: '\u70B9\u51FB\u67E5\u770B',
+        invalid_image_file: '\u65E0\u6548\u7684\u56FE\u7247\u6587\u4EF6',
+        image_read_error: '\u8BFB\u53D6\u56FE\u7247\u5931\u8D25',
+
+        // T07: 聊天记录导出
+        export_chat: '\u5BFC\u51FA\u804A\u5929\u8BB0\u5F55',
+        export: '\u5BFC\u51FA',
+        exporting: '\u5BFC\u51FA\u4E2D...',
+        export_format_label: '\u9009\u62E9\u5BFC\u51FA\u683C\u5F0F\uFF1A',
+        export_txt: '\u6587\u672C (TXT)',
+        export_txt_desc: '\u7B80\u5355\u7684\u6587\u672C\u683C\u5F0F\uFF0C\u5305\u542B\u65F6\u95F4\u6233',
+        export_json: 'JSON',
+        export_json_desc: '\u5B8C\u6574\u7684\u7ED3\u6784\u5316\u6570\u636E\u5BFC\u51FA',
+        export_html: 'HTML',
+        export_html_desc: '\u5E26\u804A\u5929\u6C14\u6CE1\u6837\u5F0F\u7684\u7F51\u9875',
+        selected: '\u5DF2\u9009\u62E9',
+        export_failed: '\u5BFC\u51FA\u5931\u8D25\uFF0C\u8BF7\u91CD\u8BD5',
+
+        // T07: 增强投票
+        poll_expires_in: '{hours}\u5C0F\u65F6\u540E\u7ED3\u675F',
+        poll_ended: '\u6295\u7968\u5DF2\u7ED3\u675F',
+        anonymous_poll: '\u533F\u540D\u6295\u7968',
+        public_poll: '\u516C\u5F00\u6295\u7968',
+        multi_choice: '\u591A\u9009',
+        single_choice: '\u5355\u9009',
+
+        // T08: Markdown 内容渲染
+        copy_code: '\u590D\u5236\u4EE3\u7801',
+        copied: '\u5DF2\u590D\u5236\uFF01',
+        diagram: '\u56FE\u8868',
+        link_preview: '\u94FE\u63A5\u9884\u89C8',
+        open_link: '\u6253\u5F00\u94FE\u63A5',
+
         // 成就页分类
         cat_all: '全部',
         cat_social: '社交',
