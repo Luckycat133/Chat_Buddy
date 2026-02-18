@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     Smile, Paperclip, Mic, Send, MoreVertical, X,
     Image as ImageIcon, FileText, Gift, Heart,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useChat } from '../../context/ChatContext';
 import { useLanguage } from '../../../../context/LanguageContext';
+import { useDraft } from '../../hooks/useDraft';
 import { cn } from '../../../../utils/cn';
 import EmojiPicker from '../../../../components/EmojiPicker';
 import StickerPicker from '../../../../components/StickerPicker';
@@ -25,10 +26,19 @@ const MenuButton = ({ icon: IconComponent, label, onClick, color = "text-[var(--
     </button>
 );
 
-export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSticker, quotedMessage, onCancelQuote }) {
+export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSticker, quotedMessage: externalQuotedMessage, onCancelQuote }) {
     const { t, language } = useLanguage();
     const { personas } = useChat();
-    const [inputValue, setInputValue] = useState('');
+
+    // T07: Draft auto-save
+    const {
+        draftContent,
+        updateDraftContent,
+        clearDraft
+    } = useDraft(chat?.id);
+
+    const [inputValue, setInputValue] = useState(() => draftContent || '');
+    const [internalQuotedMessage, setInternalQuotedMessage] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showStickerPicker, setShowStickerPicker] = useState(false);
@@ -37,11 +47,26 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
     const inputRef = useRef(null);
     const [recordingStart, setRecordingStart] = useState(0);
     const [isRecordingMode, setIsRecordingMode] = useState(false);
+    const prevDraftContentRef = useRef(draftContent);
 
     // Mention state
     const [showMentionDropdown, setShowMentionDropdown] = useState(false);
     const [mentionCandidates, setMentionCandidates] = useState([]);
     const [_mentionQuery, setMentionQuery] = useState('');
+
+    // T07: Sync input with draft when chat changes
+    useEffect(() => {
+        if (draftContent !== prevDraftContentRef.current) {
+            // Defer setState to avoid cascading renders
+            requestAnimationFrame(() => {
+                setInputValue(draftContent || '');
+                prevDraftContentRef.current = draftContent;
+            });
+        }
+    }, [draftContent]);
+
+    // Combine external and internal quoted message
+    const quotedMessage = externalQuotedMessage || internalQuotedMessage;
 
     const headerInfo = (() => {
         if (!chat) return {};
@@ -65,6 +90,9 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
     const handleInputChange = (e) => {
         const val = e.target.value;
         setInputValue(val);
+
+        // T07: Auto-save draft
+        updateDraftContent(val, quotedMessage?.id || null);
 
         // Detect mention trigger '@'
         const lastChar = val.slice(-1);
@@ -94,8 +122,14 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
     const handleSend = (e) => {
         e.preventDefault();
         if (!inputValue.trim()) return;
-        onSendMessage(inputValue);
+        onSendMessage(inputValue, quotedMessage?.id || null);
         setInputValue('');
+        // T07: Clear draft on send
+        clearDraft();
+        // Clear internal quoted message
+        setInternalQuotedMessage(null);
+        // Call external cancel quote if exists
+        onCancelQuote?.();
         closeAll();
     };
 
@@ -108,6 +142,40 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
     const onFileSelect = (file) => {
         onSendFile(file);
         // Logic handled by parent or hook
+    };
+
+    // T07: Image upload handler
+    const imageInputRef = useRef(null);
+
+    const handleImageSelect = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Check if file is an image
+        if (!file.type.startsWith('image/')) {
+            alert(t('invalid_image_file'));
+            return;
+        }
+
+        // Convert to data URL
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const dataUrl = event.target.result;
+            // Send as [IMG:url] format
+            onSendMessage(`[IMG:${dataUrl}]`);
+            closeAll();
+        };
+        reader.onerror = () => {
+            alert(t('image_read_error'));
+        };
+        reader.readAsDataURL(file);
+
+        // Reset input so same file can be selected again
+        e.target.value = '';
+    };
+
+    const onOpenImageUpload = () => {
+        imageInputRef.current?.click();
     };
 
     const handleEmojiSelect = (emoji) => {
@@ -152,7 +220,12 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                         </div>
                     </div>
                     <button
-                        onClick={onCancelQuote}
+                        onClick={() => {
+                            setInternalQuotedMessage(null);
+                            onCancelQuote?.();
+                            // T07: Update draft to remove quoted message
+                            updateDraftContent(inputValue, null);
+                        }}
                         className="p-2 hover:bg-[var(--color-bg-hover)] rounded-full text-[var(--color-text-muted)]
                             hover:text-[var(--color-danger)] transition-colors"
                         aria-label={t('cancel')}
@@ -305,8 +378,10 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                 </div>
             )}
             {showPlusMenu && (
-                <div className="absolute bottom-full right-4 mb-3 glass-crystal rounded-[var(--radius-xl)] shadow-floating 
+                <div className="absolute bottom-full right-4 mb-3 glass-crystal rounded-[var(--radius-xl)] shadow-floating
                     border border-[var(--color-border)] p-4 min-w-[280px] grid grid-cols-4 gap-3 z-30 animate-scale-spring">
+                    <MenuButton icon={ImageIcon} label={t('image')} onClick={onOpenImageUpload}
+                        color="text-[var(--color-accent-lavender)]" bg="bg-purple-50" />
                     <MenuButton icon={Paperclip} label={t('file')} onClick={() => setShowFileUploader(true)}
                         color="text-[var(--color-accent-sky)]" bg="bg-sky-50" />
                     <MenuButton icon={Heart} label={t('sticker')} onClick={() => setShowStickerPicker(true)}
@@ -330,6 +405,16 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                     />
                 </div>
             )}
+
+            {/* T07: Hidden image file input */}
+            <input
+                ref={imageInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+                aria-hidden="true"
+            />
         </div>
     );
 }

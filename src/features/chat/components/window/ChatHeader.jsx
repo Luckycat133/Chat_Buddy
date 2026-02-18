@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, MoreHorizontal, Sparkles, Image } from 'lucide-react';
+import { ArrowLeft, Search, MoreHorizontal, Sparkles, Image, Download } from 'lucide-react';
 import { useLanguage } from '../../../../context/LanguageContext';
 import { useSocial } from '../../../../context/SocialContext';
 
-export default function ChatHeader({ chat, personas, typingIndicators, presenceMap, moodMap, onOpenBackground }) {
+export default function ChatHeader({ chat, personas, typingIndicators, presenceMap, moodMap, onOpenBackground, onOpenExport }) {
     const navigate = useNavigate();
     const { t, language } = useLanguage();
     const { getIntimacyLevel, getIntimacy } = useSocial();
@@ -156,7 +156,16 @@ export default function ChatHeader({ chat, personas, typingIndicators, presenceM
                     <Image size={20} />
                 </button>
                 <button
-                    className="p-2.5 rounded-xl hover:bg-[var(--color-bg-hover)] 
+                    className="p-2.5 rounded-xl hover:bg-[var(--color-bg-hover)]
+                        text-[var(--color-text-muted)] hover:text-[var(--color-primary)]
+                        transition-all duration-200 active:scale-95"
+                    onClick={onOpenExport}
+                    title={language === 'zh' ? '导出聊天记录' : 'Export Chat'}
+                >
+                    <Download size={20} />
+                </button>
+                <button
+                    className="p-2.5 rounded-xl hover:bg-[var(--color-bg-hover)]
                         text-[var(--color-text-muted)] hover:text-[var(--color-primary)]
                         transition-all duration-200 active:scale-95"
                     onClick={() => navigate(`/chat/${chat.id}/search`)}

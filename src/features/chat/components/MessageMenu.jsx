@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Copy, Forward, Quote, Trash2, RotateCcw, Pin } from 'lucide-react';
+import { Copy, Forward, Quote, Trash2, RotateCcw, Pin, Bookmark } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
 
@@ -7,6 +7,7 @@ export default function MessageMenu({
     message,
     isOwnMessage,
     isPinned,
+    isBookmarked,
     position,
     onClose,
     onCopy,
@@ -14,6 +15,7 @@ export default function MessageMenu({
     onDelete,
     onForward,
     onPin,
+    onBookmark,
     canRecall: canRecallProp
 }) {
     const { t } = useLanguage();
@@ -59,11 +61,17 @@ export default function MessageMenu({
         onClose?.();
     };
 
+    const handleBookmark = () => {
+        onBookmark?.(message.id, !isBookmarked);
+        onClose?.();
+    };
+
     const menuItems = [
         { icon: Copy, label: t('copy'), action: handleCopy, show: true },
         { icon: Quote, label: t('quote'), action: handleQuote, show: true },
         { icon: Forward, label: t('forward'), action: handleForward, show: true },
         { icon: Pin, label: isPinned ? t('unpin_message') : t('pin_message'), action: handlePin, show: true },
+        { icon: Bookmark, label: isBookmarked ? t('unbookmark_message') : t('bookmark_message'), action: handleBookmark, show: true },
         { icon: Trash2, label: canRecall ? t('recall') : t('delete'), action: handleDelete, show: isOwnMessage, danger: true }
     ].filter(item => item.show);
 
