@@ -4,7 +4,7 @@
 
 ![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
+![React](https://img.shields.io/badge/React-19-61DAFB.svg)
 
 **AI 聊天伴侣**
 
@@ -71,6 +71,18 @@
 - 聊天记录和设置保存在浏览器中
 - 无需账号
 - 注重隐私保护
+
+### 🖼️ 沉浸式背景系统
+
+- **100+ 预设背景**，12 个分类：AI 精选、热门 IP（进击的巨人、原神、女神异闻录 5…）、角色、自然、星空等
+- **动态动画背景**：浮动粒子、北极光、倾盆雨、流动渐变——纯 CSS 实现，无 Canvas 开销
+- **单聊自定义**：每个对话独立背景，自动回落（单聊 → 角色默认 → 全局主题）
+- **视差效果**：鼠标跟踪图片背景的深度位移（可调强度）
+- **视频背景**：输入 MP4/WebM 链接作为循环背景
+- **时间自动切换**：白天（6:00–18:00）和夜晚使用不同背景
+- **自定义上传**：Canvas 自动压缩（最大 1920×1080，JPEG 85%）
+- **IndexedDB 存储**：自定义图片存入 IndexedDB，不占用 localStorage 5MB 配额
+- **导出/导入**：将背景配置导出为便携式 `.json` 文件分享
 
 ### 🤖 智能 AI 功能 (v0.2.1)
 

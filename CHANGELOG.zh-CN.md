@@ -17,8 +17,6 @@ Chat Buddy 的所有重要变更都将记录在此文件中。
 
 > 尚未分配到具体版本的计划功能。
 
-## [未发布]
-
 ### 新增
 
 - **AI 拟人化 (T05)**
@@ -217,25 +215,43 @@ Chat Buddy 的所有重要变更都将记录在此文件中。
 #### 新增
 
 - **背景管理**
-  - `BackgroundContext` 全局和单聊背景控制
-  - `BackgroundLayer` 视差效果与平滑过渡
-  - `BackgroundSettingsModal` 预设主题与图片上传
+  - `BackgroundContext` 全局和单聊背景控制，自动回落链：单聊 → 角色默认 → 全局主题
+  - `BackgroundLayer` 平滑动画切换
+  - `BackgroundSettingsModal` 四个标签页：主题库、动态、上传、调节
+  - 存储键迁移至 `StorageService` 命名空间（`background:global-theme`、`background:chat-backgrounds`）
 - **内容库**
-  - 20+ AI 生成背景图，为每个 AI 角色量身定制
-  - 3 大全局主题预设（赛博朋克雨夜、吉卜力风景、温馨图书馆）
-- **单聊自定义**
-  - 每个对话独立背景
-  - 自动回落：单聊 → 角色默认 → 全局主题
-  - 通过 localStorage 持久化
-
-#### 计划
-
-- 动态背景（CSS 动画、粒子、雨/雪效果）
-- 模糊度和透明度滑块
-- 视频背景支持
-- 基于时间自动切换（白天/夜晚变体）
-- 背景图片压缩（解决 base64 存储膨胀）
-- 背景配置分享（导出/导入）
+  - 100+ 预设背景，12 个分类（精选、梦幻、超现实、热门IP、角色、自然、星空、简约、游戏、电影、小说、艺术）
+  - 6 种动态动画预设：星尘粒子、北极光、城市雨夜、渐变流动、粉紫极光、萤火虫
+- **动态背景**
+  - `DynamicBackground` 组件，支持 4 种动画类型：
+    - `particles` — 浮动粒子场
+    - `aurora` — 渐变极光动画
+    - `rain` — 雨滴下落动画
+    - `gradient` — 流动网格渐变
+  - 新增 `rainFall` 和 `gradientFlow` CSS keyframes
+- **视差效果**
+  - 图片背景支持鼠标跟踪视差（强度滑块 0–100）
+  - 通过 `window` 的 `mousemove` 事件平滑驱动 `transform`
+- **视频背景**
+  - 支持输入 MP4/WebM 视频 URL 作为背景
+  - 通过 `<video autoPlay muted loop playsInline>` 渲染
+- **时间自动切换**
+  - 可选的白天（6:00–18:00）/ 夜晚（18:00–6:00）背景自动切换
+  - 每 60 秒检查一次时间，可独立配置
+- **图片上传压缩**
+  - Canvas 压缩：缩放至最大 1920×1080，JPEG 质量 85%
+  - 文件大小验证：超过 10MB 拒绝并显示错误提示
+  - 上传期间显示压缩进度提示
+- **IndexedDB 图片存储**（`ImageStorageService`）
+  - 自定义图片存储于 `chat-buddy-images` IndexedDB 数据库，不再占用 localStorage
+  - 配置中只存储图片 ID（UUID），数据层在渲染时将 ID 解析为 base64
+  - 首次启动时一次性迁移旧 localStorage 中的 base64 数据
+- **背景配置导出/导入**（`BackgroundShareService`）
+  - 当前配置导出为 `.json` 文件（去除 base64 以控制文件大小）
+  - 导入时验证 `_type: "chat-buddy-background"` 魔法字段
+- **完整国际化**
+  - 所有硬编码字符串替换为 `t()` 调用
+  - 在 `locales.js` 中新增 28 个 `background.*` 翻译键（中英双语）
 
 ---
 

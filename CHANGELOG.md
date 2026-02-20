@@ -228,25 +228,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Added
 
 - **Background Management**
-  - `BackgroundContext` for global and per-chat background control
-  - `BackgroundLayer` with parallax effects and smooth transitions
-  - `BackgroundSettingsModal` with preset themes and image upload
+  - `BackgroundContext` for global and per-chat background control with automatic fallback chain: per-chat → character default → global theme
+  - `BackgroundLayer` component with smooth animated transitions
+  - `BackgroundSettingsModal` with four tabs: Theme Library, Dynamic, Upload, Adjust
+  - Migrated storage keys to `StorageService` namespace (`background:global-theme`, `background:chat-backgrounds`)
 - **Content Library**
-  - 20+ AI-generated backgrounds tailored per AI persona
-  - 3 global theme presets (Cyberpunk Rain, Ghibli Landscape, Cozy Library)
-- **Per-Chat Customization**
-  - Independent background per conversation
-  - Automatic fallback: per-chat → character default → global theme
-  - Persistent via localStorage
-
-#### Planned
-
-- Dynamic backgrounds (CSS animations, particles, rain/snow effects)
-- Blur & transparency sliders
-- Video background support
-- Time-based auto-switching (day/night variants)
-- Background image compression (solve base64 storage bloat)
-- Background sharing (export/import config)
+  - 100+ preset backgrounds across 12 categories (Exclusive, Dreamy, Surreal, IP, Characters, Nature, Space, Minimalist, Game, Movie, Novel, Art)
+  - 6 animated dynamic presets: Star Particles, Aurora Borealis, Rainy City, Gradient Flow, Pink Aurora, Fireflies
+- **Dynamic Backgrounds**
+  - `DynamicBackground` component with 4 animation types:
+    - `particles` — floating particle field
+    - `aurora` — animated gradient aurora
+    - `rain` — cascading raindrops
+    - `gradient` — flowing mesh gradient
+  - CSS keyframes `rainFall` and `gradientFlow` added to `index.css`
+- **Parallax Effect**
+  - Mouse-tracking parallax on image backgrounds (0–100 intensity slider)
+  - Smooth `transform` applied via `mousemove` listener on `window`
+- **Video Backgrounds**
+  - URL input for MP4/WebM video backgrounds
+  - Rendered via `<video autoPlay muted loop playsInline>`
+- **Time-Based Auto-Switch**
+  - Optional day (6:00–18:00) / night (18:00–6:00) background switching
+  - Configurable per background with toggle and separate URL inputs
+  - Interval check runs every 60 seconds
+- **Image Upload with Compression**
+  - Canvas-based compression: scales to max 1920×1080, JPEG quality 85%
+  - File size validation: rejects uploads over 10 MB with error feedback
+  - Compressing progress indicator during upload
+- **IndexedDB Image Storage** (`ImageStorageService`)
+  - Custom images stored in `chat-buddy-images` IndexedDB database instead of localStorage
+  - Config stores only the image ID (UUID); data layer resolves ID → base64 at render time
+  - One-time migration from legacy localStorage base64 blobs on first launch
+- **Background Config Export / Import** (`BackgroundShareService`)
+  - Export current config as a `.json` file (strips base64 for file size)
+  - Import validates `_type: "chat-buddy-background"` magic field before applying
+- **Full i18n**
+  - All hardcoded strings replaced with `t()` calls
+  - 28 new `background.*` translation keys added to `locales.js` (English + Chinese)
 
 ---
 
