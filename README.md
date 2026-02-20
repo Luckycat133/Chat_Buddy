@@ -4,7 +4,7 @@
 
 ![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![React](https://img.shields.io/badge/React-18+-61DAFB.svg)
+![React](https://img.shields.io/badge/React-19-61DAFB.svg)
 
 **AI Chat Companion**
 
@@ -71,6 +71,18 @@ Meet your favorite anime characters:
 - Chats and settings saved in browser
 - No account required
 - Privacy-focused design
+
+### 🖼️ Immersive Background System
+
+- **100+ Preset Backgrounds** across 12 categories: Exclusive AI-generated, IP (Attack on Titan, Genshin, Persona 5…), Characters, Nature, Space, and more
+- **Dynamic Animated Backgrounds**: Floating particles, aurora borealis, cascading rain, and flowing gradients — all CSS-native, no canvas overhead
+- **Per-Chat Customization**: Independent background per conversation with automatic fallback (chat → character default → global theme)
+- **Parallax Effect**: Mouse-tracking depth effect on image backgrounds (adjustable intensity)
+- **Video Backgrounds**: Stream any MP4/WebM URL as a looping background
+- **Time-Based Auto-Switch**: Different backgrounds for day (6:00–18:00) and night
+- **Custom Upload**: Drag-and-drop with automatic canvas compression (max 1920×1080, JPEG 85%)
+- **IndexedDB Storage**: Custom images stored in IndexedDB — not localStorage — eliminating 5 MB quota pressure
+- **Export / Import**: Share background configs as portable `.json` files
 
 ### 🤖 Smart AI Features
 
@@ -169,23 +181,28 @@ npm run dev
 
 ### Tech Stack
 
-- Frontend: React 19, Vite
-- Styling: TailwindCSS
+- Frontend: React 19, Vite 7
+- Styling: TailwindCSS 4 (CSS-first, no config file)
+- Animations: Framer Motion
 - State: Clean Architecture (ChatEngine + Context)
-- AI: DeepSeek / Perplexity API
-- Storage: LocalStorage
+- AI: DeepSeek / Perplexity / OpenAI-compatible API
+- Storage: LocalStorage (settings, chats) + IndexedDB (custom background images)
 
 ### Project Structure
 
 ```
 src/
 ├── core/               # Domain logic (pure JS)
-│   └── chat/
+│   ├── chat/           # ChatEngine, AIPipeline
+│   └── presence/       # PresenceService, GreetingService
 ├── services/           # Infrastructure (API, Storage)
+│   ├── api/
+│   └── storage/        # StorageService (localStorage) + ImageStorageService (IndexedDB)
 ├── features/           # Feature modules
 │   ├── chat/
-│   └── moments/
-├── providers/          # Context composition
+│   ├── moments/
+│   └── background/     # BackgroundContext, BackgroundLayer, themes, DynamicBackground
+├── context/            # Global contexts
 ├── components/         # Shared UI
 └── pages/              # Routes
 ```
