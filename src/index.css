@@ -982,6 +982,27 @@ textarea,
   }
 }
 
+@keyframes rainFall {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+@keyframes gradientFlow {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
 .animate-fade-slide-up {
   animation: fadeSlideUp var(--duration-slower) var(--ease-smooth) forwards;
 }

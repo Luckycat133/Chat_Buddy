@@ -1121,6 +1121,65 @@ export const BACKGROUND_THEMES = {
   ],
 };
 
+export const BACKGROUND_THEMES_ANIMATED = {
+  ANIMATED: [
+    {
+      id: 'anim_particles_star',
+      name: '星尘粒子',
+      type: 'animated',
+      animationType: 'particles',
+      colors: ['#1a1a2e', '#e0e0ff'],
+      preview: null,
+      description: '漂浮的星尘粒子，营造梦幻夜空',
+    },
+    {
+      id: 'anim_aurora_green',
+      name: '北极光',
+      type: 'animated',
+      animationType: 'aurora',
+      colors: ['#0d1117', '#1a472a', '#0ea5e9'],
+      preview: null,
+      description: '壮观的北极光渐变流动',
+    },
+    {
+      id: 'anim_rain_city',
+      name: '城市雨夜',
+      type: 'animated',
+      animationType: 'rain',
+      colors: ['#1a1a2e', '#2d3561'],
+      preview: null,
+      description: '细密的雨丝落下，充满城市夜晚的宁静',
+    },
+    {
+      id: 'anim_gradient_ocean',
+      name: '渐变流动',
+      type: 'animated',
+      animationType: 'gradient',
+      colors: ['#667eea', '#764ba2'],
+      preview: null,
+      description: '柔美的渐变色彩流动变幻',
+    },
+    {
+      id: 'anim_aurora_pink',
+      name: '粉紫极光',
+      type: 'animated',
+      animationType: 'aurora',
+      colors: ['#1a0a2e', '#6b21a8', '#ec4899'],
+      preview: null,
+      description: '梦幻粉紫色极光飘动',
+    },
+    {
+      id: 'anim_particles_firefly',
+      name: '萤火虫',
+      type: 'animated',
+      animationType: 'particles',
+      colors: ['#0a1628', '#fbbf24'],
+      preview: null,
+      description: '夏夜中飘忽的金色萤火虫',
+    },
+  ],
+};
+
 export const DEFAULT_BACKGROUND = {
   type: "none",
   value: null,
