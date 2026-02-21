@@ -37,16 +37,37 @@ npm run lint
 The codebase follows **Clean Architecture** principles with clear layer separation:
 
 ```
-┌─────────────────────────────────────┐
-│   Presentation (Components/Pages)  │
-├─────────────────────────────────────┤
-│   Application (Hooks/Contexts)     │
-├─────────────────────────────────────┤
-│   Domain (ChatEngine/AIPipeline)   │  ← Pure JS, no React
-├─────────────────────────────────────┤
-│   Infrastructure (API/Storage)     │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────┐
+│              PRESENTATION LAYER                     │
+│  React Components, Pages, UI Elements               │
+│  Location: src/pages/, src/features/*/components/   │
+├─────────────────────────────────────────────────────┤
+│              APPLICATION LAYER                      │
+│  Hooks (useChatService), Context Providers          │
+│  Location: src/features/*/hooks/, src/context/      │
+├─────────────────────────────────────────────────────┤
+│              DOMAIN LAYER (Pure JS)                 │
+│  ChatEngine, AIPipeline                            │
+│  Location: src/core/                                │
+│  ⚠️ NO React dependencies allowed here              │
+├─────────────────────────────────────────────────────┤
+│           INFRASTRUCTURE LAYER                      │
+│  APIClient, StorageService, External APIs           │
+│  Location: src/services/                            │
+└─────────────────────────────────────────────────────┘
 ```
+
+### Design Patterns
+
+| Pattern | Location | Purpose |
+|---------|----------|---------|
+| **Singleton** | ChatEngine | Single source of truth for chat state |
+| **Observer** | ChatEngine.subscribe() | Notify components of state changes |
+| **Dependency Injection** | AIPipeline constructor | Inject callbacks for events |
+| **Facade** | ChatContext | Hide complexity, provide simple API |
+| **Strategy** | AI personas | Different behavior implementations |
+| **Pipeline** | AIPipeline | Multi-step AI processing |
+| **Repository** | StorageService | Abstract storage mechanism |
 
 ### Directory Structure
 
@@ -56,7 +77,7 @@ src/
 │   ├── chat/          # ChatEngine, AIPipeline
 │   └── presence/      # PresenceService, GreetingService
 ├── services/          # Infrastructure
-│   ├── api/           # APIClient (HTTP client)
+│   ├── api/           # APIClient (HTTP client), aiClient (AI API singleton)
 │   └── storage/       # StorageService (localStorage wrapper)
 ├── features/          # Feature modules
 │   ├── chat/          # Chat components, hooks, services
@@ -81,17 +102,87 @@ Located in `src/core/chat/ChatEngine.js`. The central state machine that manages
 
 **Key Methods:**
 - `init(personas)`: Initialize with persona list
+- `createChat(name, participantIds, avatar)`: Create new chat
 - `sendMessage(chatId, content, senderId, quotedMessageId)`: Send a message
-- `subscribe(callback)`: Subscribe to state changes
+- `deleteMessage(chatId, messageId)`: Delete message
+- `updateChat(chatId, updates)`: Update chat properties
+- `pinMessage(chatId, messageId, isPinned)`: Pin/unpin message
+- `subscribe(callback)`: Subscribe to state changes (returns unsubscribe fn)
 - `save()`: Persist to localStorage and notify listeners
+
+**State Structure:**
+```js
+{
+    chats: [
+        {
+            id: 'uuid',
+            name: string,
+            avatar: string | null,
+            participants: ['user-me', 'ai-1', 'ai-2'],
+            admins: ['user-me'],
+            messages: [
+                {
+                    id: 'uuid',
+                    senderId: 'user-me' | 'ai-X',
+                    content: string,
+                    timestamp: ISO8601,
+                    status: 'sent' | 'delivered' | 'read',
+                    quotedMessageId?: string,
+                    readBy: ['ai-1', ...],
+                    reactions?: { '😀': ['user-me'], '❤️': ['ai-1'] }
+                }
+            ],
+            theme: string,
+            settings: { muteValues: { 'ai-1': true } },
+            polls: [],
+            pinnedMessages: [],
+            backgroundId: string,
+            lastMessage: MessageObject,
+            updatedAt: ISO8601,
+            createdAt: ISO8601
+        }
+    ],
+    typingIndicators: { 'chat-id': ['ai-1', 'ai-2'] }
+}
+```
+
+**Internal Workflow:**
+```
+User sends message
+    → ChatEngine.sendMessage() adds to chat.messages
+    → Auto-triggers _triggerAIResponse()
+    → Determines which AIs should respond (mentions, last speaker, activity, randomness)
+    → For each candidate AI: aiPipeline.processTurn(chat, personas, ai)
+    → AIPipeline runs ReAct loop
+    → Response via _handleAIMessage() callback
+    → ChatEngine adds AI message, notifies all subscribers
+    → UI re-renders
+```
 
 ### 2. AIPipeline
 
 Located in `src/core/chat/AIPipeline.js`. Handles AI reasoning with:
-- ReAct loop for tool calling
+- ReAct loop for tool calling (max depth: 3)
 - Multi-message responses (AI can send consecutive messages)
 - Typing simulation based on persona typing speed
+- Context compression for long conversations
 - API integration via `aiClient`
+
+**Processing Flow:**
+1. Calculate delays (read delay + thinking delay)
+2. Signal typing to UI
+3. Prepare context (compress old messages, extract last 12, merge consecutive)
+4. Generate system prompt (persona info, tools, instructions)
+5. Run ReAct loop: call LLM → check for `[TOOL_CALL]` → execute → recurse
+6. Parse final response for special markers → deliver messages
+
+**Special Response Markers:**
+```js
+"[SILENCE]"                              // Don't send message
+"[MULTI:First msg|Second msg|Third msg]" // Send multiple messages sequentially
+"[SCHEDULE:15]I'll check back later!"    // Schedule proactive message in N minutes
+"[TOOL_CALL: execute_code {\"code\": \"2 + 2\"}]"  // Execute tool and continue reasoning
+```
 
 ### 3. Presence System
 
@@ -122,6 +213,16 @@ Located in `src/context/FriendContext.jsx`. Manages:
 - **Groups**: Organize friends (Anime, Study Buddies, etc.)
 - **Metadata**: Starred, pinned, remarks, custom signatures
 - **Interaction tracking**: Recent activity (viewed moment, sent gift, chatted)
+
+### 6. Context Hierarchy
+
+All contexts are composed in `src/providers/AppProviders.jsx`:
+
+```
+LanguageProvider → ThemeProvider → NotificationProvider → SocialProvider
+  → StickerProvider → DocumentProvider → UserProvider → FriendProvider
+    → MomentsProvider → ChatProvider → BackgroundProvider → {children}
+```
 
 ## Data Flow
 
@@ -159,6 +260,22 @@ All AI characters are defined in `src/data/personas.js` with:
   typingSpeed: 'normal',                     // 'fast' | 'normal' | 'slow'
   schedule: { timezone, sleep, busy },
   defaultBackgroundId: 'luna_starry'
+}
+```
+
+**Task Agent Structure:**
+```js
+{
+  id: 'agent-coder',
+  name: 'Coder',
+  agentType: 'task-specialist',
+  category: 'productivity',              // 'productivity' | 'education' | 'creative'
+  systemPrompt: 'You are a programming assistant...',
+  skills: ['programming', 'debugging'],
+  tools: [{ name: 'execute_code', description: 'Execute JavaScript code' }],
+  toolsEnabled: true,
+  responseDelay: { min: 800, max: 2000 },
+  typingSpeed: 'fast'
 }
 ```
 
@@ -266,6 +383,59 @@ Version updates follow [Keep a Changelog](https://keepachangelog.com/) format in
 4. **Presence timing**: Schedule uses 24-hour format (0-23)
 5. **LocalStorage limits**: ~5-10MB per domain, consider data size
 6. **API compatibility**: Ensure OpenAI format (messages array, role/content structure)
+
+## Debugging Guide
+
+### Console Logging Prefixes
+
+All major systems log with prefixes: `[ChatEngine]`, `[AIPipeline]`, `[APIClient]`, `[ToolService]`, `[StorageService]`.
+
+### Common Issues & Solutions
+
+| Issue | Symptoms | Solution |
+|-------|----------|----------|
+| **AI not responding** | Messages sent but no AI reply | Check `.env` has valid `VITE_AI_API_KEY`; check Network tab for API errors |
+| **Slow responses** | Long delay before AI replies | Reduce `responseDelay`/`readDelay` in persona config; use faster model |
+| **Tool calls failing** | Tools not executing | Check `toolsEnabled: true` in agent; verify `toolService.js` implementation |
+| **UI not updating** | Changes not reflected | Verify `ChatProvider` wraps components; check subscription cleanup |
+| **LocalStorage full** | Quota exceeded error | Clear old chats; implement data pruning |
+| **Translation missing** | Shows key instead of text | Add key to both `en` and `zh` in `locales.js` |
+
+### Browser DevTools
+
+- **Application → LocalStorage**: Check `chat-buddy-chats`, `chat-buddy-user`, `chat-buddy-social`, `chat-buddy-language`
+- **Network tab**: Monitor API calls, look for 401 (auth error), 429 (rate limit)
+- **Console**: Look for prefixed log messages and errors
+
+## Key Files Reference
+
+### Critical (do not break)
+
+| File | Purpose |
+|------|---------|
+| `src/core/chat/ChatEngine.js` | State machine, persistence, orchestration |
+| `src/core/chat/AIPipeline.js` | AI reasoning, tool calling, ReAct loop |
+| `src/features/chat/hooks/useChatService.js` | Bridge: Domain → React |
+
+### Important (modify carefully)
+
+| File | Purpose |
+|------|---------|
+| `src/features/chat/context/ChatContext.jsx` | State provider / facade |
+| `src/features/chat/services/chatService.js` | AI calling, context compression |
+| `src/features/chat/services/toolService.js` | Tool execution |
+| `src/services/api/APIClient.js` | HTTP client with retry/timeout |
+| `src/services/storage/StorageService.js` | localStorage abstraction |
+
+### Configuration (safe to modify)
+
+| File | Purpose |
+|------|---------|
+| `src/data/personas.js` | AI character definitions (`INITIAL_PERSONAS`) |
+| `src/data/taskAgents.js` | Task agent definitions (`TASK_AGENTS`) |
+| `src/data/locales.js` | Translations (`translations.en`, `translations.zh`) |
+| `vite.config.js` | Build configuration |
+| `eslint.config.js` | Linting rules |
 
 ## Testing
 
