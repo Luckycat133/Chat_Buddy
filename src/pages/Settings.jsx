@@ -112,7 +112,7 @@ export default function Settings() {
                                         <div className="stat-card"
                                             onClick={(e) => { e.stopPropagation(); setShowCheckIn(true); }}>
                                             <div className="stat-card-label">{t('streak_stat')}</div>
-                                            <div className="stat-card-value" style={{ color: '#FF9800' }}>
+                                            <div className="stat-card-value stat-value-streak">
                                                 <Calendar size={14} />
                                                 {streakDays}
                                             </div>
@@ -120,7 +120,7 @@ export default function Settings() {
                                         <div className="stat-card"
                                             onClick={(e) => { e.stopPropagation(); navigate('/achievements'); }}>
                                             <div className="stat-card-label">{t('total_points')}</div>
-                                            <div className="stat-card-value" style={{ color: '#FFD700' }}>
+                                            <div className="stat-card-value stat-value-points">
                                                 <Trophy size={14} />
                                                 {points}
                                             </div>
