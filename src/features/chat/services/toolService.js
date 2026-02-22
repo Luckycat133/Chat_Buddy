@@ -35,13 +35,16 @@ import {
     RECENCY_OPTIONS
 } from '../../../services/perplexityService';
 
+// T12: Memory Exchange for inter-character memory tool
+import { requestMemory } from '../../../core/memory/MemoryExchange';
+
 /**
  * Execute a named tool with provided arguments
  * @param {string} toolName 
  * @param {Object} args 
  * @returns {Promise<string>} Tool output
  */
-export async function executeTool(toolName, args) {
+export async function executeTool(toolName, args, extras = {}) {
     console.log(`[ToolService] Executing ${toolName} with args:`, args);
 
     // Simulate minimal network delay for UX
@@ -106,6 +109,10 @@ export async function executeTool(toolName, args) {
                 return "[Image Generation] - API request simulation";
             case 'color_palette':
                 return "Recommended Palette: #FF5733, #C70039, #900C3F, #581845";
+
+            // ========== T12: Memory Exchange Tool ==========
+            case 'MEMORY_REQUEST':
+                return executeMemoryRequest(args, extras.personas || [], extras.requesterId || '__unknown__');
 
             default:
                 return `Error: Tool '${toolName}' not found.`;
@@ -645,6 +652,19 @@ function executeCiteSources(sources, format = 'apa') {
     return output;
 }
 
+// ========== T12: Memory Exchange Implementation ==========
+
+/**
+ * Execute a MEMORY_REQUEST tool call.
+ * @param {Object} args - { target, topic }
+ * @param {Array} personas - All loaded personas
+ */
+async function executeMemoryRequest(args, personas, requesterId = '__unknown__') {
+    const { target, topic } = args;
+    if (!target || !topic) {
+        return '[MEMORY_REQUEST Error] Missing required fields: target and topic.';
+    }
+    return requestMemory(requesterId, target, topic, personas);
+}
+
 export default executeTool;
-
-

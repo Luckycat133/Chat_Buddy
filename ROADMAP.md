@@ -42,7 +42,7 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 | T09 | Immersive Background System            | v0.2.5  | P1       | Needs completion                   |
 | T10 | Social & Interaction Features          | v0.2.6  | P1       | ✅ Done                            |
 | T11 | Moments & Feed System                  | v0.2.7  | P1       | ✅ Done                            |
-| T12 | AI Memory & Cognitive System           | v0.3.0  | P2       | Mostly new development             |
+| T12 | AI Memory & Cognitive System           | v0.3.0  | P2       | ✅ Done                            |
 | T13 | AI Agent & Tool System                 | v0.3.1  | P2       | Needs de-mocking                   |
 | T14 | Knowledge Base & RAG System            | v0.3.2  | P2       | Needs search upgrade               |
 | T15 | Professional Agent Capabilities        | v0.3.3  | P2       | Needs deepening                    |
@@ -580,7 +580,7 @@ src/config/
 
 ## T12 — AI Memory & Cognitive System
 
-**Version**: v0.3.0 | **Priority**: P2 | **Status**: Mostly new development
+**Version**: v0.3.0 | **Priority**: P2 | **Status**: ✅ Done
 
 ### Vision
 
@@ -589,72 +589,26 @@ src/config/
 
 ### What's Done
 
-- [x] Context compression (long conversation summarization)
-- [x] Token usage optimization
+- [x] **Long-term memory storage** — Per-character IndexedDB store (`MemoryStore.js`), namespaced per character with importance scoring (1-10), category tagging, and timestamp tracking
+- [x] **Memory extraction** — `ContextCompressor.extractMemoriesAsync()` fires a background LLM call when context is compressed, extracting key-value facts about the user; rate-limited to once per character per hour
+- [x] **Memory injection** — `MemoryInjector.buildMemoryBlock()` injects Top 10 facts into System Prompt before every AI response
+- [x] **Independent character memory** — each character's IndexedDB namespace is fully isolated; no cross-character data sharing by default
+- [x] **Group chat context sharing** — `MemoryInjector.buildGroupContextBlock()` injects recent group-chat summaries into private chat prompts; `ChatEngine` collects and passes `recentGroupMessages` via context
+- [x] **Group chat memory extraction** — `extractGroupMemoriesAsync()` distills important user facts from group chats into each AI participant's long-term memory (triggered every 10 messages, rate-limited per hour per character per group)
+- [x] **Memory exchange tool** — `[MEMORY_REQUEST: target=Name, topic=...]` parsed in `AIPipeline._runReActLoop()`; `MemoryExchange.requestMemory()` runs a background LLM call in the target character's voice with their own memories loaded; target can share truthfully, deflect, or be protective
+- [x] **Real requester identity** — requesting character's real ID is passed through the tool chain, so the target character knows *who* is asking when deciding whether to share
+- [x] **Forgetting mechanism** — time-based decay using `importance × DAYS_PER_IMPORTANCE` formula; `applyDecay()` called on app startup via `useChatService`
+- [x] **Deduplication** — Jaccard word-similarity check (>85%) prevents saving near-identical facts
+- [x] **Memory UI** — Settings > Advanced Tools > **Character Memory** — character selector then `CharacterMemoryPanel` showing all facts with category, importance indicator, timestamps; supports single-fact forget and clear-all
+- [x] **ContextCompressor extracted** — `compressContext()` moved from `chatService.js` to `core/memory/ContextCompressor.js`, all references updated
 
-### Architecture Design
+### Key Files
 
-```
-Memory Architecture:
-┌─────────────────────────────────────────────┐
-│              Memory Layer                    │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │ Luna's   │  │ Max's    │  │ Rem's    │  │
-│  │ Memory   │  │ Memory   │  │ Memory   │  │
-│  │ Store    │  │ Store    │  │ Store    │  │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  │
-│       │              │              │        │
-│  ┌────┴──────────────┴──────────────┴────┐  │
-│  │        Memory Exchange Bus            │  │
-│  │  (Request → Decide → Share/Refuse)    │  │
-│  └───────────────────────────────────────┘  │
-├─────────────────────────────────────────────┤
-│              Context Layer                   │
-│  ┌──────────────┐  ┌──────────────────┐     │
-│  │ Group Chat   │  │ Private Chat     │     │
-│  │ Context      │→ │ Context (can     │     │
-│  │ (shared)     │  │ access group)    │     │
-│  └──────────────┘  └──────────────────┘     │
-├─────────────────────────────────────────────┤
-│              Compression Layer               │
-│  ┌──────────────────────────────────────┐   │
-│  │  Summarize → Extract Key Facts →     │   │
-│  │  Store to Long-term Memory           │   │
-│  └──────────────────────────────────────┘   │
-└─────────────────────────────────────────────┘
-```
-
-### What's Planned
-
-- [ ] **Long-term memory storage**
-  - Per-character key-value memory (facts, preferences, events)
-  - Stored in IndexedDB (namespaced per character)
-  - Injected into system prompt as "What you remember about this user"
-- [ ] **Independent character memory**
-  - Each character only remembers what they've been told
-  - No omniscient knowledge sharing by default
-- [ ] **Group chat context sharing**
-  - Group chat messages become context for all participants
-  - Characters can reference group conversations in private chats
-  - "I saw you mention X in the group chat..."
-- [ ] **Memory exchange tool**
-  - Characters can invoke: `[MEMORY_REQUEST: target=Luna, topic="user's birthday"]`
-  - Target character's AI decides response:
-    - Share truthfully
-    - Refuse ("That's between me and the user")
-    - Lie or deflect (emergent behavior)
-  - The requesting character incorporates the response into their context
-- [ ] **Forgetting mechanism**
-  - Old, unimportant memories fade (decay function)
-  - Important memories (high emotional weight) persist
-  - Memory capacity limits per character
-- [ ] **Memory UI** — view what each character remembers (Settings > Character > Memory)
-
-### Key Files (to be created)
-
-- `src/core/memory/MemoryStore.js` — Per-character memory CRUD
-- `src/core/memory/MemoryExchange.js` — Inter-character memory sharing
-- `src/core/memory/ContextCompressor.js` — Extracted from existing compression logic
+- `src/core/memory/MemoryStore.js` — Per-character IndexedDB CRUD + decay
+- `src/core/memory/ContextCompressor.js` — Context compression + async extraction (single & group)
+- `src/core/memory/MemoryInjector.js` — Prompt memory & group context injection
+- `src/core/memory/MemoryExchange.js` — [MEMORY_REQUEST] tool handler
+- `src/components/CharacterMemoryPanel.jsx` — Memory management UI
 
 ### Dependencies
 
