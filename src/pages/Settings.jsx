@@ -321,7 +321,7 @@ export default function Settings() {
                         <section className="animate-fade-slide-up" style={{ animationDelay: '300ms' }}>
                             <div className="version-footer">
                                 <p>
-                                    Chat Buddy v0.3.2 • Built with ❤️ by Agent Coder
+                                    Chat Buddy v0.2.6 • Built with ❤️ by Agent Coder
                                 </p>
                             </div>
                         </section>

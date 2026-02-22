@@ -195,29 +195,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > Social infrastructure — built before Moments, designed with restraint.
 
-#### Added
+#### Design Principle
+
+> All social features are **passively discoverable** (sidebar entries, long-press triggers). No forced pop-ups or badge bombing. Points and tasks are "icing on the cake", not mandatory.
+
+#### Added (Phase 1 — Foundation)
 
 - **User Profile** (avatar, nickname, signature)
 - **Friends Management** (groups, starring, remark names, search)
 - **Friend Detail Panel** with quick actions
 - **Daily Check-in** with streak tracking
-- **Achievement System** with points
-- **Red Packet** (virtual points)
-- **Gift System**
-- **Rock-Paper-Scissors** mini game
+- **Achievement System** with 11 milestones and point rewards
+- **Red Packet** (virtual points — UI complete)
+- **Gift System** (6 gifts with intimacy boosts, deducts points)
+- **Rock-Paper-Scissors** mini-game
 
-#### Design Principle
+#### Added (Phase 2 — Engagement Loop)
 
-> All social features are **passively discoverable** (sidebar entries, long-press triggers). No forced pop-ups or badge bombing. Points and tasks are "icing on the cake", not mandatory.
+- **Daily Task System** (`DailyTaskPanel.jsx`)
+  - 6 rotating daily tasks: Check-in, Send 5 messages, Play a game, Send a sticker, Send a gift, Chat with 3 characters
+  - Progress bars for multi-step tasks
+  - Auto-resets at midnight; point rewards on completion (up to 165 pts/day)
+  - Accessible from Settings profile card and AchievementsPage header
+- **Number Guess Mini-Game** (`NumberGuessGame.jsx`)
+  - AI picks a secret number 1–100; player has 7 attempts
+  - Directional feedback: "too high" / "too low"
+  - Win reward: **+30 points**; auto-completes "Play a game" daily task
+- **Game Selector** (`GameSelectorPanel.jsx`)
+  - Replaces direct-launch: clicking Game button shows a picker (RPS or Number Guess)
+- **RPS Point Rewards**
+  - Each round win now grants **+10 points** with inline toast
+- **Daily Task Integration Hooks**
+  - Sending a regular message → `task_messages` progress (+1 per send)
+  - Sending a sticker → `task_sticker` complete
+  - Sending a gift → `task_gift` complete
+  - Playing any game → `task_game` complete
+  - Checking in → `task_checkin` complete
+- **Bug Fix: ChatComposer ↔ ChatWindow props**
+  - Gift, Game, Poll, Red Packet buttons in the `+` menu were showing `alert()` stubs instead of opening the actual panels — now correctly wired to parent handlers
 
-#### Planned
+#### Changed
 
-- More mini games (number guessing, idiom chain, AI quiz)
-- **Points spending** (unlock themes/avatars/effects)
-- Friend interaction log (milestone records)
-- **Daily task system** (expand check-in with diverse daily tasks)
-- Leaderboards (points/check-in/achievements)
-- AI character birthday/holiday events
+- `SocialContext`: Added `getDailyTasks()`, `updateTaskProgress()`, `getDailyTaskProgress()` methods; `dailyTasks` field added to persisted social data
+- `AchievementsPage`: Added daily task progress banner above stats grid
+- `Settings`: Profile card stats row expanded to 3 columns (Streak / Points / Daily Tasks)
+- `ChatWindow`: Added `GameSelectorPanel`, `NumberGuessGame` lazy imports; message send handler tracks task progress
+- 50+ new translation keys added (`task_*`, `number_guess_*`, `select_game`, `rps_win_points`)
+
+#### Planned (Phase 3)
+
+- Idiom chain (成语接龙, CN mode)
+- AI trivia quiz (generates questions from chat context)
+- Friend interaction log (milestone timeline UI)
+- Leaderboards (opt-in point/streak/achievement rankings)
+- AI character birthday and holiday events
 
 ---
 
