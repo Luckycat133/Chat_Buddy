@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-    Smile, Paperclip, Mic, Send, MoreVertical, X,
-    Image as ImageIcon, FileText, Gift, Heart,
-    Gamepad2, BarChart3, Coins, Plus, Keyboard, MoreHorizontal
+    Smile, Paperclip, Mic, Send, X,
+    Image as ImageIcon, Gift, Heart,
+    Gamepad2, BarChart3, Coins, Plus, Keyboard
 } from 'lucide-react';
 import { useChat } from '../../context/ChatContext';
 import { useLanguage } from '../../../../context/LanguageContext';
@@ -27,7 +27,7 @@ const MenuButton = ({ icon: IconComponent, label, onClick, color = "text-[var(--
     </button>
 );
 
-export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSticker, quotedMessage: externalQuotedMessage, onCancelQuote, onOpenGift, onOpenRedPacket, onOpenGame, onOpenPoll }) {
+export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSticker, quotedMessage: externalQuotedMessage, onCancelQuote, onOpenGift, onOpenRedPacket, onOpenGame, onOpenPoll, onError }) {
     const { t, language } = useLanguage();
     const { personas } = useChat();
 
@@ -154,7 +154,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
 
         // Check if file is an image
         if (!file.type.startsWith('image/')) {
-            alert(t('invalid_image_file'));
+            onError?.(t('invalid_image_file'));
             return;
         }
 
@@ -167,7 +167,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
             closeAll();
         };
         reader.onerror = () => {
-            alert(t('image_read_error'));
+            onError?.(t('image_read_error'));
         };
         reader.readAsDataURL(file);
 
@@ -266,14 +266,27 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                         </button>
                     ) : (
                         <div className="composer-input-wrap flex-1">
-                            <input
+                            <textarea
                                 ref={inputRef}
-                                type="text"
                                 value={inputValue}
-                                onChange={handleInputChange}
+                                onChange={(e) => {
+                                    handleInputChange(e);
+                                    // Auto-resize
+                                    e.target.style.height = 'auto';
+                                    e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSend(e);
+                                        // Reset height
+                                        if (inputRef.current) inputRef.current.style.height = 'auto';
+                                    }
+                                }}
                                 aria-label={t('type_message')}
                                 placeholder={t('type_message')}
-                                className="composer-input"
+                                className="composer-input resize-none overflow-y-auto"
+                                rows={1}
                             />
                             {showMentionDropdown && mentionCandidates.length > 0 && (
                                 <div className="mention-dropdown glass-crystal animate-scale-spring">

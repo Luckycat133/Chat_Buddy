@@ -1304,6 +1304,53 @@ textarea,
   --color-icon-brown: #8d6e63;
 }
 
+/* ========================================
+   G-002 FIX: Light-mode sidebar icon contrast
+   The sidebar uses glass-crystal (semi-transparent white), so the
+   --color-text-muted (#6f7488) falls below WCAG AA at small icon sizes.
+   We override with a darker tone only inside the sidebar aside element.
+   ======================================== */
+
+html:not(.dark) aside nav a:not(.active) {
+  color: #4a4e6a;
+}
+
+html:not(.dark) aside nav a:not(.active):hover {
+  color: var(--color-primary);
+}
+
+/* ========================================
+   R-001 FIX: Tablet 800-900px sidebar layout
+   At this breakpoint the sidebar (88px) + content can cause overflow.
+   Collapse sidebar to icon-only 56px island with hidden tooltips.
+   ======================================== */
+
+@media (min-width: 768px) and (max-width: 900px) {
+  aside {
+    width: 3.5rem !important;
+    /* 56px, tighter than default 88px */
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
+  }
+
+  aside nav a {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 14px;
+  }
+
+  /* Hide hover tooltips at this breakpoint to prevent overflow */
+  aside nav a span.absolute {
+    display: none !important;
+  }
+
+  /* Logo shrinks proportionally */
+  aside>div:first-child div.relative>div.relative {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+}
+
 /* OLED Pure Black Mode - Maximum battery saving */
 .dark.oled {
   --color-bg-app: #000000;
@@ -2600,7 +2647,7 @@ html:not(.dark) .character-glow::before {
   position: relative;
   min-height: 48px;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   background: rgba(255, 255, 255, 0.5);
   border-radius: var(--radius-lg);
   transition: all var(--duration-fast) var(--ease-default);
@@ -2637,6 +2684,12 @@ html:not(.dark) .character-glow::before {
   font-size: 1rem;
   color: var(--color-text-main);
   font-weight: var(--font-weight-medium);
+  line-height: 1.5;
+  scrollbar-width: none;
+}
+
+.composer-input::-webkit-scrollbar {
+  display: none;
 }
 
 .composer-input::placeholder {

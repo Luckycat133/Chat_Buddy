@@ -5,7 +5,9 @@ import {
     getTimeContext,
     getRandomLocation,
     generatePostSystemPrompt,
-    generateCommentSystemPrompt
+    generateCommentSystemPrompt,
+    generateBirthdayPostSystemPrompt,
+    generateHolidayPostSystemPrompt,
 } from '../services/momentsService';
 
 const MomentsActionContext = createContext();
@@ -143,6 +145,14 @@ export const MomentsActionProvider = ({ children, setMomentsData, momentsData: _
         }));
     }, [setMomentsData]);
 
+    const saveDraft = useCallback((draft) => {
+        setMomentsData(prev => ({ ...prev, draft }));
+    }, [setMomentsData]);
+
+    const clearDraft = useCallback(() => {
+        setMomentsData(prev => ({ ...prev, draft: null }));
+    }, [setMomentsData]);
+
     // ========== AI ACTIONS ==========
 
     const generateDynamicAIPost = useCallback(async (aiId) => {
@@ -215,6 +225,32 @@ export const MomentsActionProvider = ({ children, setMomentsData, momentsData: _
         return null;
     }, [addComment]);
 
+    const generateStoryPost = useCallback(async (aiId, eventType, eventName) => {
+        const persona = INITIAL_PERSONAS.find(p => p.id === aiId);
+        if (!persona) return false;
+
+        const randomLocation = getRandomLocation(aiId);
+        const systemPrompt = eventType === 'birthday'
+            ? generateBirthdayPostSystemPrompt(persona)
+            : generateHolidayPostSystemPrompt(persona, eventName);
+
+        const response = await callMomentsAI([
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: 'Generate a post.' }
+        ], 150);
+
+        if (response) {
+            createPost(response, [], null, aiId, { location: randomLocation });
+            setMomentsData(prev => ({
+                ...prev,
+                lastAIPostTime: { ...prev.lastAIPostTime, [aiId]: Date.now() }
+            }));
+            console.log(`[MomentsAI] ${persona.name} posted ${eventType} story: ${response.substring(0, 50)}...`);
+            return true;
+        }
+        return false;
+    }, [createPost, setMomentsData]);
+
     // Export values
     const value = {
         createPost,
@@ -224,8 +260,11 @@ export const MomentsActionProvider = ({ children, setMomentsData, momentsData: _
         addComment,
         deleteComment,
         setImageApiConfig,
+        saveDraft,
+        clearDraft,
         generateDynamicAIPost,
-        generateAIComment
+        generateAIComment,
+        generateStoryPost,
     };
 
     return (

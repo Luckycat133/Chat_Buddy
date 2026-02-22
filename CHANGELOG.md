@@ -19,6 +19,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.7-patch] — Audit Remediation (2026-02-22)
+
+> Full quality audit pass based on v1.0 audit report — all P0/P1 blockers resolved, P2 visual defects patched.
+
+### Fixed
+
+- **L-002 (P0)** — `FriendDetail.jsx`: "Start Chat" button now correctly navigates to an existing DM or creates a new one via `createChat()` + `navigate()`; button label updates to "View Chat" when conversation already exists
+- **L-003 (P0)** — `ChatEngine.js`: Newly created sessions are persisted immediately on `createChat()` via `this.save()` → `StorageService.set()`; `_loadChatsWithMigration()` handles legacy key fallback for zero data-loss upgrades
+- **T08 / B-001 (P0→P1)** — `MessageTimeline.jsx`: Full Markdown rendering with `react-markdown` + `remark-gfm`; code blocks with syntax highlighting (VS Code themes), copy button; LaTeX with `rehype-katex`; Mermaid diagrams; table styling
+- **B-002 (P1)** — `GroupDetails.jsx`: "Group Announcement" and "Group Poll" menu items now gated behind `!isDirectChat` guard; 1-on-1 chat settings no longer show group-specific options
+- **B-003 (P1)** — `ProfileEditor.jsx`: Nickname field validates non-empty trimmed value; inline `nicknameError` state prevents saving blank display names
+- **B-004 (P1)** — `ChatList.jsx`: Search `filteredChats` useMemo correctly filters against `searchTerm` state across chat name and last message preview
+- **T02 (P1)** — `ApiConfigPanel.jsx`: Model name field now includes a `<datalist>` with 16 common model suggestions (GPT, Claude, Gemini, DeepSeek, Qwen, GLM, Moonshot); added 5 quick-fill provider preset buttons (OpenAI, Anthropic, Google, DeepSeek, Ollama) to auto-populate Base URL + model
+- **G-001 (P2)** — `index.css`: Light mode suppresses dark glow pseudo-elements — `html:not(.dark) .message-bubble-ai::after { opacity: 0 }` and `html:not(.dark) .character-glow::before { opacity: 0 }`
+- **G-002 (P2)** — `index.css`: Sidebar inactive nav links in light mode now use `#4a4e6a` (WCAG AA compliant) instead of the semi-transparent `--color-text-muted`; hover restores brand primary color
+- **R-001 (P2)** — `index.css`: Added `@media (min-width: 768px) and (max-width: 900px)` breakpoint — sidebar collapses from 88px to 56px, icons scale down, hover tooltips hidden to prevent layout overflow on tablet-width viewports
+- **R-002 (P2)** — `index.css`: Mobile `.page-content` has `padding-bottom: calc(6.5rem + env(safe-area-inset-bottom))` to prevent fixed bottom nav from obscuring list content
+- **T03 — OLED** — `ThemeContext.jsx`: `toggleOLEDMode()` and `.dark.oled` CSS class fully functional; Settings UI control verified
+- **T03 — Shortcuts** — `Layout.jsx` + `useKeyboardShortcuts.js`: Global `keydown` listener active; `Ctrl+1-5` navigation, `Ctrl+/` shortcut modal, `Esc` back/close all working
+
+
+## Basic Role-Play — v0.2.x
+
+### [0.2.7] — T11 Moments & Feed System (Phase 2)
+
+#### Added
+
+- **Draft Box** — `PostComposer` auto-saves in-progress posts (debounced 500ms); restores on reopen with "Draft restored" banner; explicit "Discard" button clears draft
+- **Hashtag Topics** — `#hashtag` tokens in moment content are rendered as clickable primary-colored spans; clicking sets an `activeHashtag` filter in `MomentsPage`; dismissible filter pill shown above feed
+- **Pagination / Load More** — Feed shows 10 posts by default; "Load more" button appends 10 more; pagination resets when hashtag filter changes
+- **Story Events** — On first mount each day, system checks for birthdays and seasonal holidays; matching personas auto-post themed content; birthdays defined for all 13 personas; 4 seasonal events (New Year, Valentine's Day, Halloween, Christmas); uses `lastStoryEventDate` in state to prevent duplicate runs
+- **Repost to Chat** — `RepostSheet` bottom-sheet lists all chats; selecting one sends a formatted `[Shared Moment · Author]\n{content}` message; shows checkmark confirmation before closing
+- **Birthday fields** — Added `birthday: 'MM-DD'` to all 13 social companion personas in `personas.js`
+- **New locale keys** — `discard_draft`, `load_more`, `repost`, `repost_success`, `select_chat_to_share`, `birthday_post_hint`, `happy_birthday` (EN + ZH)
+
+#### Technical
+
+- `MomentsState.jsx`: Added `draft` and `lastStoryEventDate` to `DEFAULT_MOMENTS_DATA`
+- `MomentsActions.jsx`: Added `saveDraft`, `clearDraft`, `generateStoryPost` actions
+- `MomentsContext.jsx`: Added `useStoryEvents` hook called from `MomentsAIOrchestrator`
+- `momentsService.js`: Added `generateBirthdayPostSystemPrompt`, `generateHolidayPostSystemPrompt`, `SEASONAL_EVENTS`, `getTodayEvents`
+- `RepostSheet.jsx`: New component using `useChatService` for chat list and `sendMessage`
+
+---
+
 ## Foundation Layer — v0.1.x
 
 ### [0.1.3] — T03 Modern UI Design System

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.2.6-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.7-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19-61DAFB.svg)
 
@@ -263,10 +263,15 @@ We welcome contributions! Please follow these guidelines:
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-**Current Version**: v0.2.6 (2026-02-22)
+**Current Version**: v0.2.7 (2026-02-22)
 
 ### Recent Updates
 
+- 📝 **Draft Box** (v0.2.7): Auto-save unfinished moments; restore on reopen with one-tap discard
+- #️⃣ **Hashtag Topics** (v0.2.7): Clickable `#tags` in posts filter the feed; dismissible filter pill
+- ⬇️ **Load More Pagination** (v0.2.7): Feed loads 10 posts at a time for better performance
+- 🎂 **Story Events** (v0.2.7): Birthday posts for all 13 personas + seasonal holiday specials
+- 📤 **Repost to Chat** (v0.2.7): Forward any moment to a chat as a formatted shared message
 - 📋 **Daily Task System** (v0.2.6): 6 rotating tasks per day, up to 165 pts/day reward
 - 🔢 **Number Guess Game** (v0.2.6): Guess the secret 1-100 number in 7 tries for 30 pts
 - 🎮 **Game Selector** (v0.2.6): Pick between RPS and Number Guess in-chat

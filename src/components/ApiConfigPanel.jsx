@@ -13,6 +13,7 @@ import {
   Check,
   AlertCircle,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 import {
@@ -27,6 +28,35 @@ import {
 } from "../config/apiConfig";
 import { resetAIClient } from "../services/api/aiClient";
 import { cn } from "../utils/cn";
+
+// Common model suggestions for the datalist
+const COMMON_MODELS = [
+  "gpt-4o",
+  "gpt-4o-mini",
+  "gpt-4-turbo",
+  "gpt-3.5-turbo",
+  "claude-3-5-sonnet-20241022",
+  "claude-3-5-haiku-20241022",
+  "claude-3-opus-20240229",
+  "gemini-2.0-flash",
+  "gemini-1.5-pro",
+  "gemini-1.5-flash",
+  "deepseek-chat",
+  "deepseek-reasoner",
+  "qwen-max",
+  "qwen-turbo",
+  "glm-4",
+  "moonshot-v1-8k",
+];
+
+// Quick-fill provider presets
+const PROVIDER_PRESETS = [
+  { label: "OpenAI", baseUrl: "https://api.openai.com/v1", model: "gpt-4o" },
+  { label: "Anthropic", baseUrl: "https://api.anthropic.com/v1", model: "claude-3-5-sonnet-20241022" },
+  { label: "Google", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.0-flash" },
+  { label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat" },
+  { label: "本地/Ollama", baseUrl: "http://localhost:11434/v1", model: "llama3" },
+];
 
 export default function ApiConfigPanel({ onClose }) {
   const { t } = useLanguage();
@@ -158,14 +188,46 @@ export default function ApiConfigPanel({ onClose }) {
 
           {/* Model */}
           <FieldGroup icon={<Cpu size={16} />} label={t("model_name")} required>
-            <input
-              type="text"
-              value={config.model}
-              onChange={(e) => updateField("model", e.target.value)}
-              placeholder={t("model_name_placeholder")}
-              className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-app)] border border-[var(--color-border)] text-[var(--color-text-main)] text-sm outline-none focus:border-[var(--color-primary)] transition-colors placeholder:text-[var(--color-text-light)]"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                list="model-suggestions"
+                value={config.model}
+                onChange={(e) => updateField("model", e.target.value)}
+                placeholder={t("model_name_placeholder") || "e.g. gpt-4o"}
+                className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-app)] border border-[var(--color-border)] text-[var(--color-text-main)] text-sm outline-none focus:border-[var(--color-primary)] transition-colors placeholder:text-[var(--color-text-light)] pr-8"
+              />
+              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-light)] pointer-events-none" />
+              <datalist id="model-suggestions">
+                {COMMON_MODELS.map((m) => (
+                  <option key={m} value={m} />
+                ))}
+              </datalist>
+            </div>
           </FieldGroup>
+
+          {/* Quick-fill Provider Presets */}
+          <div>
+            <p className="text-xs font-medium text-[var(--color-text-muted)] mb-2">
+              {t("quick_fill_provider") || "一键填入 / Quick Fill Provider"}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {PROVIDER_PRESETS.map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => {
+                    setConfig((prev) => ({ ...prev, baseUrl: p.baseUrl, model: p.model }));
+                    setSaved(false);
+                    setTestStatus(null);
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-xs font-medium bg-[var(--color-bg-app)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] transition-all"
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Temperature */}
           <FieldGroup
