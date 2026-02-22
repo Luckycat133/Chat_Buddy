@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useChat } from './context/ChatContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useDocuments } from '../../context/DocumentContext';
@@ -12,6 +12,8 @@ import MessageTimeline from './components/window/MessageTimeline';
 import ChatComposer from './components/window/ChatComposer';
 import MessageMenu from './components/MessageMenu';
 import BookmarkPanel from './components/BookmarkPanel';
+import GroupPoll from './components/GroupPoll';
+import MessageSearchPanel from './components/MessageSearchPanel';
 import { getCharacterThemeStyle } from './components/CharacterTheme';
 import { checkWindowOpenGreeting } from '../../core/presence/GreetingService';
 
@@ -22,8 +24,6 @@ const RedPacketPanel = lazy(() => import('./components/RedPacketPanel'));
 const RockPaperScissors = lazy(() => import('./components/RockPaperScissors'));
 const NumberGuessGame = lazy(() => import('./components/NumberGuessGame'));
 const GameSelectorPanel = lazy(() => import('./components/GameSelectorPanel'));
-const GroupPoll = lazy(() => import('./components/GroupPoll'));
-const MessageSearchPanel = lazy(() => import('./components/MessageSearchPanel'));
 const ExportModal = lazy(() => import('./components/ExportModal'));
 
 const BackgroundLayer = lazy(() => import('../background/BackgroundLayer'));
@@ -38,6 +38,8 @@ const ModalLoadingFallback = () => (
 
 export default function ChatWindow({ chatId: propChatId }) {
     const { id: paramChatId } = useParams();
+    const location = useLocation();
+    const navigate = useNavigate();
     const id = propChatId || paramChatId;
     const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, deleteMessage, pinMessage, votePoll, presenceMap, moodMap, triggerGreeting, bookmarkMessage, unbookmarkMessage, markMessagesAsRead } = useChat();
     const { t, language } = useLanguage();
@@ -70,6 +72,7 @@ export default function ChatWindow({ chatId: propChatId }) {
     const [showExportModal, setShowExportModal] = useState(false);
 
     const chat = chats.find(c => c.id === id);
+    const isSearchRoute = location.pathname === `/chat/${id}/search`;
 
     // T05: Window-open greeting check
     useEffect(() => {
@@ -102,6 +105,11 @@ export default function ChatWindow({ chatId: propChatId }) {
             markMessagesAsRead(chat.id, 'user-me');
         }
     }, [chat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Keep route state and panel visibility in sync.
+    useEffect(() => {
+        setShowSearchPanel(isSearchRoute);
+    }, [isSearchRoute]);
 
     if (!chat) return <div className="flex items-center justify-center h-full bg-[var(--color-bg-app)] text-[var(--color-text-muted)]">{t('select_chat')}</div>;
 
@@ -212,7 +220,7 @@ export default function ChatWindow({ chatId: propChatId }) {
                 moodMap={moodMap}
                 onOpenBackground={() => setShowBackgroundSettings(true)}
                 onOpenExport={() => setShowExportModal(true)}
-            // onOpenSearch={() => setShowSearchPanel(true)} // If we want to verify search works, we need to wire this or let it use URL
+                onOpenBookmarks={() => setShowBookmarkPanel(true)}
             />
 
             <MessageTimeline
@@ -335,24 +343,30 @@ export default function ChatWindow({ chatId: propChatId }) {
             )}
 
             {showPoll && (
-                <Suspense fallback={<ModalLoadingFallback />}>
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                        <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-lg w-full max-w-md mx-4 overflow-hidden shadow-2xl animate-scale-in">
-                            <GroupPoll onClose={() => setShowPoll(false)} onCreatePoll={handleCreatePoll} />
-                        </div>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-lg w-full max-w-md mx-4 overflow-hidden shadow-2xl animate-scale-in">
+                        <GroupPoll onClose={() => setShowPoll(false)} onCreatePoll={handleCreatePoll} />
                     </div>
-                </Suspense>
+                </div>
             )}
 
             {/* Search Panel */}
             {showSearchPanel && (
-                <Suspense fallback={<ModalLoadingFallback />}>
-                    <MessageSearchPanel
-                        currentChatId={chat.id}
-                        onClose={() => setShowSearchPanel(false)}
-                        onSelectMessage={() => setShowSearchPanel(false)}
-                    />
-                </Suspense>
+                <MessageSearchPanel
+                    currentChatId={chat.id}
+                    onClose={() => {
+                        setShowSearchPanel(false);
+                        if (isSearchRoute) {
+                            navigate(`/chat/${chat.id}`, { replace: true });
+                        }
+                    }}
+                    onSelectMessage={() => {
+                        setShowSearchPanel(false);
+                        if (isSearchRoute) {
+                            navigate(`/chat/${chat.id}`, { replace: true });
+                        }
+                    }}
+                />
             )}
 
             {showBackgroundSettings && (

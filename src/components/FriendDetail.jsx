@@ -62,7 +62,7 @@ export default function FriendDetail({ friend, onClose }) {
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="friend-detail-title"
-                className="bg-[var(--color-bg-white)] rounded-t-2xl w-full max-w-lg max-h-[85vh] overflow-hidden animate-slide-up"
+                className="bg-[var(--color-bg-white)] rounded-t-2xl w-full max-w-lg max-h-[85vh] overflow-hidden animate-slide-up flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
@@ -153,7 +153,7 @@ export default function FriendDetail({ friend, onClose }) {
                     })()}
                 </div>
 
-                <div className="p-4 space-y-3">
+                <div className="p-4 space-y-3 overflow-y-auto pb-[calc(1rem+env(safe-area-inset-bottom))]">
                     <div className="bg-[var(--color-bg-app)] rounded-lg p-3">
                         <label className="text-[var(--color-text-muted)] text-sm mb-2 block">
                             {t('remark') || 'Remark'}
@@ -222,13 +222,15 @@ export default function FriendDetail({ friend, onClose }) {
                         )}
                     </div>
 
-                    <button
-                        onClick={handleStartChat}
-                        className="w-full py-3 bg-[var(--color-primary)] text-white rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-[var(--color-primary-hover)] transition-all"
-                    >
-                        <MessageCircle size={20} />
-                        {existingChat ? (t('view_chat') || 'View Chat') : (t('start_chat') || 'Start Chat')}
-                    </button>
+                    <div className="sticky bottom-0 bg-[var(--color-bg-white)] pt-3">
+                        <button
+                            onClick={handleStartChat}
+                            className="w-full py-3 bg-[var(--color-primary)] text-white rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-[var(--color-primary-hover)] transition-all"
+                        >
+                            <MessageCircle size={20} />
+                            {existingChat ? (t('view_chat') || 'View Chat') : (t('start_chat') || 'Start Chat')}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

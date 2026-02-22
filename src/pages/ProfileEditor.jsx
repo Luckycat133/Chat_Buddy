@@ -16,10 +16,17 @@ export default function ProfileEditor() {
     const [signature, setSignature] = useState(userProfile.signature || '');
     const [showAvatarSelector, setShowAvatarSelector] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [nicknameError, setNicknameError] = useState('');
 
     const handleSave = () => {
+        const normalizedNickname = nickname.trim();
+        if (!normalizedNickname) {
+            setNicknameError(t('nickname_required') || (language === 'zh' ? '昵称不能为空' : 'Nickname is required'));
+            return;
+        }
+
         setIsSaving(true);
-        updateNickname(nickname);
+        updateNickname(normalizedNickname);
         updateSignature(signature);
 
         setTimeout(() => {
@@ -94,7 +101,10 @@ export default function ProfileEditor() {
                         <input
                             type="text"
                             value={nickname}
-                            onChange={(e) => setNickname(e.target.value)}
+                            onChange={(e) => {
+                                setNickname(e.target.value);
+                                if (e.target.value.trim()) setNicknameError('');
+                            }}
                             onBlur={(e) => setNickname(e.target.value)}
                             onInput={(e) => setNickname(e.target.value)}
                             placeholder={t('nickname_placeholder') || 'Enter your nickname'}
@@ -105,6 +115,9 @@ export default function ProfileEditor() {
                             {nickname.length}/20
                         </span>
                     </div>
+                    {nicknameError && (
+                        <p className="text-sm text-red-500 mt-2">{nicknameError}</p>
+                    )}
                 </div>
             </div>
 

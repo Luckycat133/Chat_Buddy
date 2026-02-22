@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Trash2, Megaphone, BarChart3, Download } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Megaphone, BarChart3, Download } from 'lucide-react';
 import { useChat } from './context/ChatContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { cn } from '../../utils/cn';
@@ -83,6 +83,7 @@ export default function GroupDetails() {
         sendMessage(id, `[POLL:${poll.id}]`);
     };
 
+    const isDirectChat = chat.participants.length === 2;
     const aiParticipants = chat.participants.filter(pid => pid !== 'user-me');
 
     return (
@@ -120,19 +121,24 @@ export default function GroupDetails() {
                             </div>
                         );
                     })}
-                    {/* Add button */}
-                    <div className="flex flex-col items-center w-14">
-                        <div className="w-12 h-12 rounded-[4px] border-2 border-dashed border-[#C7C7CC] flex items-center justify-center mb-1 cursor-pointer">
-                            <span className="text-[24px] text-[#C7C7CC]">+</span>
+                    {!isDirectChat && (
+                        <div className="flex flex-col items-center w-14">
+                            <div className="w-12 h-12 rounded-[4px] border-2 border-dashed border-[#C7C7CC] flex items-center justify-center mb-1 cursor-pointer">
+                                <span className="text-[24px] text-[#C7C7CC]">+</span>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
             {/* Group Name */}
             <div className="bg-[var(--color-bg-white)] mb-2">
                 <div className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)]">
-                    <span className="text-[16px] text-[var(--color-text-main)] mr-4">{t('group_name_label')}</span>
+                    <span className="text-[16px] text-[var(--color-text-main)] mr-4">
+                        {isDirectChat
+                            ? (t('chat_name_label') || (language === 'zh' ? '聊天名称' : 'Chat Name'))
+                            : t('group_name_label')}
+                    </span>
                     <input
                         type="text"
                         value={name}
@@ -145,33 +151,35 @@ export default function GroupDetails() {
             </div>
 
             {/* Group Features */}
-            <div className="bg-[var(--color-bg-white)] mb-2">
-                <div
-                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-[var(--color-bg-hover)]"
-                    onClick={() => setShowAnnouncement(true)}
-                >
-                    <Megaphone size={20} className="text-[var(--color-primary)] mr-3" />
-                    <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
-                        {t('group_announcement')}
-                    </span>
-                    {chat.announcement && (
-                        <span className="text-xs text-[var(--color-text-muted)] mr-2 truncate max-w-[100px]">
-                            {chat.announcement.content}
+            {!isDirectChat && (
+                <div className="bg-[var(--color-bg-white)] mb-2">
+                    <div
+                        className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-[var(--color-bg-hover)]"
+                        onClick={() => setShowAnnouncement(true)}
+                    >
+                        <Megaphone size={20} className="text-[var(--color-primary)] mr-3" />
+                        <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
+                            {t('group_announcement')}
                         </span>
-                    )}
-                    <ChevronRight size={20} className="text-[#C7C7CC]" />
+                        {chat.announcement && (
+                            <span className="text-xs text-[var(--color-text-muted)] mr-2 truncate max-w-[100px]">
+                                {chat.announcement.content}
+                            </span>
+                        )}
+                        <ChevronRight size={20} className="text-[#C7C7CC]" />
+                    </div>
+                    <div
+                        className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-[var(--color-bg-hover)]"
+                        onClick={() => setShowPoll(true)}
+                    >
+                        <BarChart3 size={20} className="text-[var(--color-primary)] mr-3" />
+                        <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
+                            {t('group_poll')}
+                        </span>
+                        <ChevronRight size={20} className="text-[#C7C7CC]" />
+                    </div>
                 </div>
-                <div
-                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-[var(--color-bg-hover)]"
-                    onClick={() => setShowPoll(true)}
-                >
-                    <BarChart3 size={20} className="text-[var(--color-primary)] mr-3" />
-                    <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
-                        {t('group_poll')}
-                    </span>
-                    <ChevronRight size={20} className="text-[#C7C7CC]" />
-                </div>
-            </div>
+            )}
 
             {/* Export */}
             <div className="bg-[var(--color-bg-white)] mb-2">
@@ -208,11 +216,13 @@ export default function GroupDetails() {
                     checked={chat.isMuted || false}
                     onChange={(v) => updateChat(id, { isMuted: v })}
                 />
-                <ToggleItem
-                    label={t('admin_only_chat')}
-                    checked={chat.adminOnly || false}
-                    onChange={(v) => updateChat(id, { adminOnly: v })}
-                />
+                {!isDirectChat && (
+                    <ToggleItem
+                        label={t('admin_only_chat')}
+                        checked={chat.adminOnly || false}
+                        onChange={(v) => updateChat(id, { adminOnly: v })}
+                    />
+                )}
             </div>
 
             {/* Danger Zone */}
@@ -238,7 +248,7 @@ export default function GroupDetails() {
 
             {/* Modals */}
             {
-                showAnnouncement && (
+                !isDirectChat && showAnnouncement && (
                     <GroupAnnouncement
                         announcement={chat.announcement}
                         isAdmin={true} // Assuming current user is admin for now
@@ -250,7 +260,7 @@ export default function GroupDetails() {
             }
 
             {
-                showPoll && (
+                !isDirectChat && showPoll && (
                     <GroupPoll
                         chatId={id}
                         onClose={() => setShowPoll(false)}

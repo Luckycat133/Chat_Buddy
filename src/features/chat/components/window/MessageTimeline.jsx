@@ -10,6 +10,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import renderMathInElement from 'katex/contrib/auto-render';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
@@ -196,12 +197,33 @@ export default function MessageTimeline({
     const { t, language } = useLanguage();
     const { bubbleStyle } = useTheme();
     const messagesEndRef = useRef(null);
+    const timelineRef = useRef(null);
 
     // T07: Lightbox state for images
     const [lightboxImage, setLightboxImage] = useState(null);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    }, [chat?.messages]);
+
+    // T08 fallback: parse LaTeX delimiters without external remark-math dependency.
+    useEffect(() => {
+        if (!timelineRef.current) return;
+
+        const markdownBlocks = timelineRef.current.querySelectorAll('.markdown-body');
+        markdownBlocks.forEach((element) => {
+            try {
+                renderMathInElement(element, {
+                    delimiters: [
+                        { left: '$$', right: '$$', display: true },
+                        { left: '$', right: '$', display: false }
+                    ],
+                    throwOnError: false
+                });
+            } catch (error) {
+                console.error('[MessageTimeline] Failed to auto-render math:', error);
+            }
+        });
     }, [chat?.messages]);
 
     const getSenderName = (senderId) => {
@@ -221,7 +243,7 @@ export default function MessageTimeline({
     };
 
     return (
-        <div className="flex-1 overflow-y-auto p-3 pb-20 md:pb-4" data-bubble-style={bubbleStyle}>
+        <div ref={timelineRef} className="flex-1 overflow-y-auto p-3 pb-20 md:pb-4" data-bubble-style={bubbleStyle}>
             {chat.messages.map((msg, index) => {
                 const isMe = msg.senderId === 'user-me';
                 const sender = isMe ? currentUser : personas.find(p => p.id === msg.senderId);

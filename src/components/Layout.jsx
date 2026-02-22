@@ -127,7 +127,8 @@ export default function Layout() {
             {/* Mobile Bottom Tab Bar - Floating Dock (Hidden in Chat and Agent Workspace) */}
             {!location.pathname.startsWith('/chat/') && !location.pathname.match(/^\/agents\/[^/]+$/) && (
                 <nav aria-label="Mobile" className="md:hidden fixed bottom-6 left-6 right-6 glass-crystal rounded-[var(--radius-xl)] shadow-floating
-                    flex justify-around items-center px-4 py-3 z-50 animate-fade-slide-up border border-white/50">
+                    flex justify-around items-center px-4 py-3 z-50 animate-fade-slide-up border border-white/50"
+                    style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
 
                     <MobileNavItem to="/" icon={<MessageSquare size={24} />} label={t('nav_chats')} />
                     <MobileNavItem to="/agents" icon={<Bot size={24} />} label={t('nav_agents') || 'Agents'} />

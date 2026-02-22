@@ -26,7 +26,7 @@ export default function Settings() {
     const { language, toggleLanguage, t } = useLanguage();
     const { userProfile, getDisplayName } = useUser();
     const { settings, toggleSound, toggleDoNotDisturb } = useNotification();
-    const { isDarkMode, themeMode, toggleDarkMode, animationIntensity, setAnimationIntensity, bubbleStyle, setBubbleStyle } = useTheme();
+    const { isDarkMode, themeMode, toggleDarkMode, oledEnabled, toggleOLEDMode, animationIntensity, setAnimationIntensity, bubbleStyle, setBubbleStyle } = useTheme();
     const { points, streakDays, getDailyTaskProgress } = useSocial();
     const taskProgress = getDailyTaskProgress();
     const { reset: resetTutorial } = useOnboarding();
@@ -204,6 +204,16 @@ export default function Settings() {
                                     onClick={toggleDarkMode}
                                 />
                                 <ControlCard
+                                    icon={<Laptop size={24} />}
+                                    color="bg-[var(--color-icon-gray)]"
+                                    label={t('oled_mode') || 'OLED Pure Black'}
+                                    subLabel={oledEnabled
+                                        ? (t('oled_mode_on') || 'Enabled')
+                                        : (t('oled_mode_off') || 'Disabled')}
+                                    active={oledEnabled}
+                                    onClick={toggleOLEDMode}
+                                />
+                                <ControlCard
                                     icon={<Image size={24} />}
                                     color="bg-[var(--color-icon-teal)]"
                                     label={t('backgrounds')}
@@ -321,7 +331,7 @@ export default function Settings() {
                         <section className="animate-fade-slide-up" style={{ animationDelay: '300ms' }}>
                             <div className="version-footer">
                                 <p>
-                                    Chat Buddy v0.2.6 • Built with ❤️ by Agent Coder
+                                    Chat Buddy v0.2.7 • Built with ❤️ by Agent Coder
                                 </p>
                             </div>
                         </section>

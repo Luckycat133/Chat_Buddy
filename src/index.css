@@ -41,7 +41,7 @@
   /* Semantic Colors */
   --color-text-main: #1a1a2e;
   --color-text-secondary: #4a4a68;
-  --color-text-muted: #8e8ea9;
+  --color-text-muted: #6f7488;
   --color-text-light: #c4c4d4;
   --color-danger: #ff6b6b;
   --color-success: #4ecdc4;
@@ -1589,6 +1589,15 @@ textarea,
   opacity: 0.7;
 }
 
+/* In light mode, suppress dark-ish glow artifacts for readability */
+html:not(.dark) .message-bubble-ai::after {
+  opacity: 0;
+}
+
+html:not(.dark) .character-glow::before {
+  opacity: 0;
+}
+
 /* ========================================
    MESSAGE BUBBLE HOVER EFFECTS
    ======================================== */
@@ -1899,6 +1908,22 @@ textarea,
   padding: var(--space-6) var(--space-6) var(--space-16);
   position: relative;
   z-index: 10;
+}
+
+@media (max-width: 768px) {
+  .page-content {
+    padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 900px) {
+  .bg-settings-sidebar {
+    width: 4.25rem;
+  }
+
+  .bg-settings-tab-label {
+    display: none;
+  }
 }
 
 .page-header {
