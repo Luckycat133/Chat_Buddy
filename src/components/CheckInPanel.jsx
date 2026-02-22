@@ -6,7 +6,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap';
 import { cn } from '../utils/cn';
 
 export default function CheckInPanel({ onClose }) {
-    const { checkIn, hasCheckedInToday, streakDays, points, getAchievements } = useSocial();
+    const { checkIn, hasCheckedInToday, streakDays, points, getAchievements, updateTaskProgress } = useSocial();
     const { t, language } = useLanguage();
     const [checkInResult, setCheckInResult] = useState(null);
     const [showAnimation, setShowAnimation] = useState(false);
@@ -29,6 +29,7 @@ export default function CheckInPanel({ onClose }) {
         if (result.success) {
             setShowAnimation(true);
             setTimeout(() => setShowAnimation(false), 2000);
+            updateTaskProgress('task_checkin', 1);
         }
     };
 

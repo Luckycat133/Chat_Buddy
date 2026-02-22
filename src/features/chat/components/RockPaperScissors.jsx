@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useSocial } from '../../../context/SocialContext';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { cn } from '../../../utils/cn';
+
+const WIN_POINTS_PER_ROUND = 10;
 
 // Game choices
 const CHOICES = [
@@ -19,6 +22,7 @@ const OUTCOMES = {
 
 export default function RockPaperScissors({ aiName, onClose, onResult }) {
     const { t } = useLanguage();
+    const { addPoints, updateTaskProgress } = useSocial();
     const trapRef = useFocusTrap(true);
     const [playerChoice, setPlayerChoice] = useState(null);
     const [aiChoice, setAiChoice] = useState(null);
@@ -26,6 +30,8 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
     const [countdown, setCountdown] = useState(null);
     const [score, setScore] = useState({ player: 0, ai: 0 });
     const [round, setRound] = useState(1);
+    const [roundPointsMsg, setRoundPointsMsg] = useState(null);
+    const [gameTaskDone, setGameTaskDone] = useState(false);
 
     // Countdown and game resolution effect - only runs the timer
     // Initial countdown is set by handleChoice (event handler)
@@ -47,17 +53,26 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
                 const outcome = OUTCOMES[playerChoice.id][randomChoice.id];
                 setResult(outcome);
 
-                // Update score
+                // Update score and award points for wins
                 if (outcome === 'win') {
                     setScore(prev => ({ ...prev, player: prev.player + 1 }));
+                    addPoints(WIN_POINTS_PER_ROUND);
+                    setRoundPointsMsg(t('rps_win_points', { pts: WIN_POINTS_PER_ROUND }));
+                    setTimeout(() => setRoundPointsMsg(null), 2000);
                 } else if (outcome === 'lose') {
                     setScore(prev => ({ ...prev, ai: prev.ai + 1 }));
+                }
+
+                // Mark game task complete on first play
+                if (!gameTaskDone) {
+                    updateTaskProgress('task_game', 1);
+                    setGameTaskDone(true);
                 }
             }
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [countdown, playerChoice]);
+    }, [countdown, playerChoice]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleChoice = (choice) => {
         if (playerChoice) return; // Already chose
@@ -160,8 +175,15 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
 
                     {/* Result */}
                     {result && (
-                        <div className={cn("text-center text-xl font-bold mb-4", getResultColor())}>
-                            {getResultMessage()}
+                        <div className="text-center mb-4">
+                            <div className={cn("text-xl font-bold", getResultColor())}>
+                                {getResultMessage()}
+                            </div>
+                            {roundPointsMsg && (
+                                <div className="text-sm text-green-500 font-medium mt-1 animate-fade-slide-up">
+                                    {roundPointsMsg}
+                                </div>
+                            )}
                         </div>
                     )}
 

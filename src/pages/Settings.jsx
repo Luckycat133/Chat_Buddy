@@ -9,10 +9,11 @@ import {
     ChevronRight, Bell, Lock, Globe, Info, Moon, HelpCircle,
     Volume2, VolumeX, BellOff, Trophy, Calendar, Search, Image,
     Settings as SettingsIcon, Shield, Laptop, LogOut,
-    Server, Download, Upload, Sparkles, MessageSquare, RotateCcw
+    Server, Download, Upload, Sparkles, MessageSquare, RotateCcw, ClipboardList
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import CheckInPanel from '../components/CheckInPanel';
+import DailyTaskPanel from '../components/DailyTaskPanel';
 import { useOnboarding } from '../hooks/useOnboarding';
 import AccentColorPicker from '../components/AccentColorPicker';
 import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
@@ -26,11 +27,13 @@ export default function Settings() {
     const { userProfile, getDisplayName } = useUser();
     const { settings, toggleSound, toggleDoNotDisturb } = useNotification();
     const { isDarkMode, themeMode, toggleDarkMode, animationIntensity, setAnimationIntensity, bubbleStyle, setBubbleStyle } = useTheme();
-    const { points, streakDays } = useSocial();
+    const { points, streakDays, getDailyTaskProgress } = useSocial();
+    const taskProgress = getDailyTaskProgress();
     const { reset: resetTutorial } = useOnboarding();
     const navigate = useNavigate();
 
     const [showCheckIn, setShowCheckIn] = useState(false);
+    const [showDailyTasks, setShowDailyTasks] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [showBackgroundModal, setShowBackgroundModal] = useState(false);
     const [showApiConfig, setShowApiConfig] = useState(false);
@@ -108,7 +111,7 @@ export default function Settings() {
                                         ID: {userProfile.id}
                                     </p>
 
-                                    <div className="grid grid-cols-2 gap-3 w-full">
+                                    <div className="grid grid-cols-3 gap-2 w-full">
                                         <div className="stat-card"
                                             onClick={(e) => { e.stopPropagation(); setShowCheckIn(true); }}>
                                             <div className="stat-card-label">{t('streak_stat')}</div>
@@ -123,6 +126,14 @@ export default function Settings() {
                                             <div className="stat-card-value stat-value-points">
                                                 <Trophy size={14} />
                                                 {points}
+                                            </div>
+                                        </div>
+                                        <div className="stat-card"
+                                            onClick={(e) => { e.stopPropagation(); setShowDailyTasks(true); }}>
+                                            <div className="stat-card-label">{t('daily_tasks')}</div>
+                                            <div className="stat-card-value stat-value-streak">
+                                                <ClipboardList size={14} />
+                                                {taskProgress.completed}/{taskProgress.total}
                                             </div>
                                         </div>
                                     </div>
@@ -320,6 +331,7 @@ export default function Settings() {
 
             {/* Modals */}
             {showCheckIn && <CheckInPanel onClose={() => setShowCheckIn(false)} />}
+            {showDailyTasks && <DailyTaskPanel onClose={() => setShowDailyTasks(false)} />}
             {showSearch && <MessageSearchPanel onClose={() => setShowSearch(false)} />}
             {showApiConfig && (
                 <Suspense fallback={null}>
