@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useChat } from './context/ChatContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useDocuments } from '../../context/DocumentContext';
+import { useSocial } from '../../context/SocialContext';
 import { formatFileSize } from '../../utils/fileUtils';
 
 // Sub-components (always loaded)
@@ -19,6 +20,8 @@ const ForwardModal = lazy(() => import('./components/ForwardModal'));
 const GiftPanel = lazy(() => import('./components/GiftPanel'));
 const RedPacketPanel = lazy(() => import('./components/RedPacketPanel'));
 const RockPaperScissors = lazy(() => import('./components/RockPaperScissors'));
+const NumberGuessGame = lazy(() => import('./components/NumberGuessGame'));
+const GameSelectorPanel = lazy(() => import('./components/GameSelectorPanel'));
 const GroupPoll = lazy(() => import('./components/GroupPoll'));
 const MessageSearchPanel = lazy(() => import('./components/MessageSearchPanel'));
 const ExportModal = lazy(() => import('./components/ExportModal'));
@@ -39,12 +42,14 @@ export default function ChatWindow({ chatId: propChatId }) {
     const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, deleteMessage, pinMessage, votePoll, presenceMap, moodMap, triggerGreeting, bookmarkMessage, unbookmarkMessage, markMessagesAsRead } = useChat();
     const { t, language } = useLanguage();
     const { addDocument } = useDocuments();
+    const { updateTaskProgress } = useSocial();
 
     // Feature modals state
     const [showForwardModal, setShowForwardModal] = useState(false);
     const [showGiftPanel, setShowGiftPanel] = useState(false);
     const [showRedPacketPanel, setShowRedPacketPanel] = useState(false);
-    const [showGame, setShowGame] = useState(false);
+    const [showGameSelector, setShowGameSelector] = useState(false);
+    const [activeGame, setActiveGame] = useState(null); // 'rps' | 'number_guess'
     const [showPoll, setShowPoll] = useState(false);
     const [messageToForward, setMessageToForward] = useState(null);
     const [showSearchPanel, setShowSearchPanel] = useState(false); // Lifted state
@@ -125,10 +130,8 @@ export default function ChatWindow({ chatId: propChatId }) {
     };
 
     const handleGiftSent = (gift) => {
-        // Core logic: sendMessage(chat.id, `[GIFT:${gift.emoji}:${gift.name}:${gift.name_en}]`);
-        // But let's keep logic close to UI or in Service? 
-        // For now, duplicate simple string construction or move to helper
         sendMessage(chat.id, `[GIFT:${gift.emoji}:${gift.name}:${gift.name_en}]`);
+        updateTaskProgress('task_gift', 1);
         setShowGiftPanel(false);
         showToast(t('gift_sent'));
     };
@@ -139,10 +142,15 @@ export default function ChatWindow({ chatId: propChatId }) {
         showToast(t('red_packet_sent'));
     };
 
-    const handleGameResult = ({ result, score }) => {
-        const resultText = result === 'win' ? 'Win' : result === 'lose' ? 'Lose' : 'Draw';
-        sendMessage(chat.id, `[GAME:RPS:${resultText}:${score.player}-${score.ai}]`);
-        setShowGame(false);
+    const handleGameResult = ({ result, score, attempts }) => {
+        if (activeGame === 'rps') {
+            const resultText = result === 'win' ? 'Win' : result === 'lose' ? 'Lose' : 'Draw';
+            sendMessage(chat.id, `[GAME:RPS:${resultText}:${score.player}-${score.ai}]`);
+        } else if (activeGame === 'number_guess') {
+            const resultText = result === 'win' ? `Win in ${attempts} tries` : 'Lose';
+            sendMessage(chat.id, `[GAME:NUM:${resultText}]`);
+        }
+        setActiveGame(null);
     };
 
     const handleCreatePoll = (poll) => {
@@ -223,14 +231,21 @@ export default function ChatWindow({ chatId: propChatId }) {
                 personas={personas}
                 headerInfo={{ id: chat.participants[1], name: chat.name }} // Approx for sticker picker
                 quotedMessage={quotedMessage}
-                onSendMessage={(content, qId) => sendMessage(chat.id, content, qId)}
+                onSendMessage={(content, qId) => {
+                    sendMessage(chat.id, content, qId);
+                    if (content.startsWith('[STICKER:')) {
+                        updateTaskProgress('task_sticker', 1);
+                    } else if (!content.startsWith('[') ) {
+                        updateTaskProgress('task_messages', 1);
+                    }
+                }}
                 onCancelQuote={() => setQuotedMessage(null)}
                 // Menu Actions
                 onOpenGift={() => setShowGiftPanel(true)}
                 onOpenRedPacket={() => setShowRedPacketPanel(true)}
-                onOpenGame={() => setShowGame(true)}
+                onOpenGame={() => setShowGameSelector(true)}
                 onOpenPoll={() => setShowPoll(true)}
-                onFileSelect={handleFileSelect}
+                onSendFile={handleFileSelect}
             />
 
             {/* Overlays */}
@@ -286,11 +301,34 @@ export default function ChatWindow({ chatId: propChatId }) {
                 </Suspense>
             )}
 
-            {showGame && (
+            {showGameSelector && (
+                <Suspense fallback={<ModalLoadingFallback />}>
+                    <GameSelectorPanel
+                        aiName={chat.name}
+                        onClose={() => setShowGameSelector(false)}
+                        onSelectGame={(gameId) => {
+                            setShowGameSelector(false);
+                            setActiveGame(gameId);
+                        }}
+                    />
+                </Suspense>
+            )}
+
+            {activeGame === 'rps' && (
                 <Suspense fallback={<ModalLoadingFallback />}>
                     <RockPaperScissors
                         aiName={chat.name}
-                        onClose={() => setShowGame(false)}
+                        onClose={() => setActiveGame(null)}
+                        onResult={handleGameResult}
+                    />
+                </Suspense>
+            )}
+
+            {activeGame === 'number_guess' && (
+                <Suspense fallback={<ModalLoadingFallback />}>
+                    <NumberGuessGame
+                        aiName={chat.name}
+                        onClose={() => setActiveGame(null)}
                         onResult={handleGameResult}
                     />
                 </Suspense>

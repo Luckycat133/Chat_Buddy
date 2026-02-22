@@ -27,7 +27,7 @@ const MenuButton = ({ icon: IconComponent, label, onClick, color = "text-[var(--
     </button>
 );
 
-export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSticker, quotedMessage: externalQuotedMessage, onCancelQuote }) {
+export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSticker, quotedMessage: externalQuotedMessage, onCancelQuote, onOpenGift, onOpenRedPacket, onOpenGame, onOpenPoll }) {
     const { t, language } = useLanguage();
     const { personas } = useChat();
 
@@ -188,19 +188,11 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
         setShowStickerPicker(false);
     };
 
-    // Features
-    const onOpenGift = () => {
-        alert(t('gift_coming_soon'));
-    };
-    const onOpenRedPacket = () => {
-        alert(t('red_packet_coming_soon'));
-    };
-    const onOpenGame = () => {
-        alert(t('game_coming_soon'));
-    };
-    const onOpenPoll = () => {
-        alert(t('poll_coming_soon'));
-    };
+    // Feature handlers — delegate to ChatWindow
+    const handleOpenGift = () => onOpenGift?.();
+    const handleOpenRedPacket = () => onOpenRedPacket?.();
+    const handleOpenGame = () => onOpenGame?.();
+    const handleOpenPoll = () => onOpenPoll?.();
 
     return (
         <div className="composer-wrap">
@@ -361,13 +353,13 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                         color="text-[var(--color-accent-sky)]" bg="bg-sky-50" />
                     <MenuButton icon={Heart} label={t('sticker')} onClick={() => setShowStickerPicker(true)}
                         color="text-[var(--color-accent-coral)]" bg="bg-pink-50" />
-                    <MenuButton icon={Gift} label={t('gift')} onClick={onOpenGift}
+                    <MenuButton icon={Gift} label={t('gift')} onClick={handleOpenGift}
                         color="text-[var(--color-accent-coral)]" bg="bg-pink-50" />
-                    <MenuButton icon={Coins} label={t('red_packet')} onClick={onOpenRedPacket}
+                    <MenuButton icon={Coins} label={t('red_packet')} onClick={handleOpenRedPacket}
                         color="text-red-500" bg="bg-red-50" />
-                    <MenuButton icon={Gamepad2} label={t('game')} onClick={onOpenGame}
+                    <MenuButton icon={Gamepad2} label={t('game')} onClick={handleOpenGame}
                         color="text-[var(--color-accent-lavender)]" bg="bg-purple-50" />
-                    <MenuButton icon={BarChart3} label={t('poll')} onClick={onOpenPoll}
+                    <MenuButton icon={BarChart3} label={t('poll')} onClick={handleOpenPoll}
                         color="text-[var(--color-primary)]" bg="bg-orange-50" />
                 </div>
             )}

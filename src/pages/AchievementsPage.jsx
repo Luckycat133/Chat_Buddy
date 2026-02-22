@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Trophy, Lock, Star, Gift, Flame, MessageSquare, Users, Camera, Settings as SettingsIcon } from 'lucide-react';
+import { ArrowLeft, Trophy, Lock, Star, Gift, Flame, MessageSquare, Users, Camera, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSocial } from '../context/SocialContext';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
+import DailyTaskPanel from '../components/DailyTaskPanel';
 
 export default function AchievementsPage() {
     const navigate = useNavigate();
-    const { getAchievements, points, streakDays } = useSocial();
+    const { getAchievements, points, streakDays, getDailyTaskProgress } = useSocial();
     const { t, language } = useLanguage();
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [showDailyTasks, setShowDailyTasks] = useState(false);
+
+    const taskProgress = getDailyTaskProgress();
 
     const achievements = getAchievements();
     const unlockedCount = achievements.filter(a => a.unlocked).length;
@@ -55,6 +59,28 @@ export default function AchievementsPage() {
                         </h1>
                     </div>
 
+                    {/* Daily Tasks Banner */}
+                    <button
+                        onClick={() => setShowDailyTasks(true)}
+                        className="w-full mb-4 flex items-center justify-between bg-white/20 hover:bg-white/30 transition-colors rounded-xl px-4 py-2.5 text-white"
+                    >
+                        <div className="flex items-center gap-2">
+                            <ClipboardList size={18} />
+                            <span className="text-sm font-semibold">{t('daily_tasks')}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="flex gap-1">
+                                {Array.from({ length: taskProgress.total }).map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className={cn('w-2 h-2 rounded-full', i < taskProgress.completed ? 'bg-white' : 'bg-white/30')}
+                                    />
+                                ))}
+                            </div>
+                            <span className="text-xs opacity-80">{taskProgress.completed}/{taskProgress.total}</span>
+                        </div>
+                    </button>
+
                     {/* Stats */}
                     <div className="grid grid-cols-3 gap-4 text-center text-white">
                         <div className="bg-white/20 rounded-xl p-3">
@@ -97,6 +123,8 @@ export default function AchievementsPage() {
                     );
                 })}
             </div>
+
+            {showDailyTasks && <DailyTaskPanel onClose={() => setShowDailyTasks(false)} />}
 
             {/* Achievements List */}
             <div className="flex-1 overflow-y-auto p-4">
