@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)
+![Version](https://img.shields.io/badge/version-0.2.6-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19-61DAFB.svg)
 
@@ -93,6 +93,15 @@ Meet your favorite anime characters:
 - **WeChat-style time display** (v0.2.1)
 - **Character Affinity System** (v0.2.2): Build intimacy through chatting and gifts; AI responses adapt from formal to intimate
 - **Character Mood System** (v0.2.2): 5 moods (Happy, Calm, Tired, Excited, Melancholy) affect AI tone and response style
+
+### 🎮 Social & Interaction (v0.2.6)
+
+- **Daily Task System**: 6 rotating tasks each day — check in, send messages, play games, send stickers, gifts, and chat with 3 characters; earn up to 165 pts/day
+- **Number Guess Mini-Game**: AI picks a secret number 1–100; guess in 7 tries to win 30 points
+- **Game Selector**: Choose between Rock-Paper-Scissors and Number Guess when playing games in chat
+- **RPS Point Rewards**: Earn +10 pts for each round win in Rock-Paper-Scissors
+- **Achievements**: 11 milestones with point rewards; accessible from the profile card
+- **Gift & Red Packet**: Send virtual gifts to boost affinity; send festive red packets
 
 ### 📸 Moments Enhancements (v0.2.4)
 
@@ -254,28 +263,23 @@ We welcome contributions! Please follow these guidelines:
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-**Current Version**: v0.2.2 (2026-02-15)
+**Current Version**: v0.2.6 (2026-02-22)
 
 ### Recent Updates
 
-- 💕 **Affinity/Fondness System**: Build intimacy through chatting and gifts (0-100 scale, 5 levels)
-- 😊 **Character Mood System**: 5 moods affect AI response style (Happy, Calm, Tired, Excited, Melancholy)
-- 🌐 **Dynamic Presence**: Online/Busy/Offline status based on character schedules
-- 👋 **Proactive Greetings**: AI initiates conversation after inactivity
-- 🖼️ **Immersive Background System**: 20+ AI-generated backgrounds for each persona
-- 🌙 **Dark Mode Overhaul**: Complete CSS variable system with glass effects
-- 📱 **iOS 26 Style**: Refined border-radius and subtle animations
-- 🎨 **Per-Chat Backgrounds**: Custom background for each conversation
-- 🧠 **Specialized AI Agents**: 6 task-focused assistants (Coder, Muse, Scholar, etc.)
-- 🛠️ **ReAct Tool Calling**: AI can execute code, search, generate images
-- 📸 Enhanced AI Moments with dynamic posting and smart comments
-- 📍 Location tags and visibility settings (Public/Private/etc.)
-- 💬 Reply threads and emoji reactions in Moments
-- 👫 Friends management with groups
-- 🎯 Daily Check-in and Achievements
-- 🧧 Red Packet and Gift system
-- 🎮 Rock-Paper-Scissors mini game
-- 😊 Emoji picker with 8 categories
+- 📋 **Daily Task System** (v0.2.6): 6 rotating tasks per day, up to 165 pts/day reward
+- 🔢 **Number Guess Game** (v0.2.6): Guess the secret 1-100 number in 7 tries for 30 pts
+- 🎮 **Game Selector** (v0.2.6): Pick between RPS and Number Guess in-chat
+- 💰 **RPS Point Rewards** (v0.2.6): +10 pts per round win in Rock-Paper-Scissors
+- 🖼️ **Immersive Background System** (v0.2.5): 100+ presets, dynamic animations, per-chat customization
+- 💕 **Affinity System** (v0.2.2): 5 intimacy levels; AI tone adapts from formal to intimate
+- 😊 **Character Mood System** (v0.2.2): 5 moods affect AI response style
+- 🌐 **Dynamic Presence** (v0.2.1): Online/Busy/Offline based on character schedules
+- 🧠 **Specialized AI Agents**: 6 task assistants (Coder, Muse, Scholar, Sensei, Aurora, Pixel)
+- 🛠️ **ReAct Tool Calling**: AI can execute code, search, and generate images
+- 📸 **Moments** (v0.2.7): AI posts, smart comments, emoji reactions, location tags
+- 👫 **Friends Management**: Groups, starring, remarks
+- 🎯 **Achievements**: 11 milestones with point rewards
 
 ---
 
