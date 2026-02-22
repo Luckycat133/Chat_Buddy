@@ -1,6 +1,8 @@
-import { calculateTypingDelay, getRandomDelay, compressContext } from '../../features/chat/services/chatService';
-import { executeTool } from '../../features/chat/services/toolService';
+import { calculateTypingDelay, getRandomDelay } from '../../features/chat/services/chatService';
 import { callAI } from '../../features/chat/services/chatService';
+import { executeTool } from '../../features/chat/services/toolService';
+import { compressContext, extractMemoriesAsync } from '../memory/ContextCompressor';
+import { buildMemoryBlock, buildGroupContextBlock } from '../memory/MemoryInjector';
 
 /**
  * Domain Layer: AI Pipeline
@@ -27,6 +29,9 @@ export class AIPipeline {
         const ai = personas.find(p => p.id === triggerAI.id);
         if (!ai) return;
 
+        // Cache personas reference for MEMORY_REQUEST tool access
+        this._personas = personas;
+
         const chatId = chat.id;
 
         // 1. Calculate Delays
@@ -41,16 +46,28 @@ export class AIPipeline {
         await this._wait(thinkingDelay);
 
         try {
-            // 3. Prepare Context
+            // 3. Prepare Context (T12: uses extracted ContextCompressor)
             const { compressed, summary, recentMessages } = compressContext(chat.messages, personas);
             const messagesToProcess = compressed ? recentMessages : chat.messages;
             const history = this._prepareHistory(messagesToProcess, personas, compressed, summary, chat.polls);
 
-            // 4. Generate System Prompt (T06: with affinity/mood context)
-            const systemPrompt = this._generateSystemPrompt(ai, context);
+            // T12: Fire-and-forget memory extraction when context is compressed
+            if (compressed) {
+                const oldMessages = chat.messages.slice(0, -8);
+                extractMemoriesAsync(oldMessages, ai.id, ai.name).catch(() => { });
+            }
+
+            // 4. Generate System Prompt (T06: affinity/mood, T12: long-term memory injection)
+            const memoryBlock = await buildMemoryBlock(ai.id);
+
+            // T12: Group chat context injection
+            const groupMessages = context?.recentGroupMessages || [];
+            const groupBlock = buildGroupContextBlock(groupMessages, ai.id, personas);
+
+            const systemPrompt = this._generateSystemPrompt(ai, context, memoryBlock, groupBlock);
 
             // 5. Run ReAct Loop
-            await this._runReActLoop(chatId, ai, systemPrompt, history);
+            await this._runReActLoop(chatId, ai, systemPrompt, history, 0, this._personas || []);
 
         } catch (error) {
             console.error('[AIPipeline] Error:', error);
@@ -58,7 +75,7 @@ export class AIPipeline {
         }
     }
 
-    async _runReActLoop(chatId, ai, systemPrompt, initialHistory, depth = 0) {
+    async _runReActLoop(chatId, ai, systemPrompt, initialHistory, depth = 0, personas = []) {
         if (depth > 3) {
             this.log('[AIPipeline] Max depth reached');
             this.callbacks.onTyping?.(chatId, ai.id, false);
@@ -78,17 +95,18 @@ export class AIPipeline {
             return;
         }
 
-        // Check for Tool Calls
+        // Check for Tool Calls — standard [TOOL_CALL: name {...}] or T12 [MEMORY_REQUEST: target=X, topic=Y]
         const toolMatch = response.match(/\[TOOL_CALL:\s*(\w+)\s*(\{.*?\})\s*\]/);
+        const memReqMatch = !toolMatch && response.match(/\[MEMORY_REQUEST:\s*target=([^,\]]+),\s*topic=([^\]]+)\]/);
 
         if (toolMatch) {
-            // --- Tool Execution Path ---
+            // --- Standard Tool Execution Path ---
             const [, toolName, argsStr] = toolMatch;
             this.log(`[Tool Call] ${toolName}`, argsStr);
 
             try {
                 const args = JSON.parse(argsStr);
-                const toolOutput = await executeTool(toolName, args);
+                const toolOutput = await executeTool(toolName, args, { personas, requesterId: ai.id });
 
                 // Recursive Call
                 const newHistory = [
@@ -97,7 +115,7 @@ export class AIPipeline {
                     { role: 'user', content: `[TOOL_RESULT for ${toolName}]\n${toolOutput}\n\n[Please continue based on this result]` }
                 ];
 
-                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1);
+                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
 
             } catch (e) {
                 this.log('[Tool Error]', e);
@@ -106,7 +124,31 @@ export class AIPipeline {
                     { role: 'assistant', content: response },
                     { role: 'user', content: `[TOOL_ERROR]: ${e.message}` }
                 ];
-                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1);
+                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
+            }
+
+        } else if (memReqMatch) {
+            // --- T12: MEMORY_REQUEST Tool Path ---
+            const targetName = memReqMatch[1].trim();
+            const topic = memReqMatch[2].trim();
+            this.log(`[Memory Request] ${ai.name} → ${targetName} about "${topic}"`);
+
+            try {
+                const toolOutput = await executeTool('MEMORY_REQUEST', { target: targetName, topic }, { personas, requesterId: ai.id });
+                const newHistory = [
+                    ...initialHistory,
+                    { role: 'assistant', content: response },
+                    { role: 'user', content: `[TOOL_RESULT for MEMORY_REQUEST from ${targetName}]\n${toolOutput}\n\n[Please continue based on this result]` }
+                ];
+                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
+            } catch (e) {
+                this.log('[Memory Request Error]', e);
+                const newHistory = [
+                    ...initialHistory,
+                    { role: 'assistant', content: response },
+                    { role: 'user', content: `[TOOL_ERROR]: Memory exchange failed — ${e.message}` }
+                ];
+                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
             }
 
         } else {
@@ -218,10 +260,7 @@ export class AIPipeline {
         return history;
     }
 
-    _generateSystemPrompt(ai, context = null) {
-        // Reuse existing prompt generation logic
-        // For brevity in this refactor, condensing it.
-        // Ideally imported from a PromptBuilder domain service.
+    _generateSystemPrompt(ai, context = null, memoryBlock = '', groupBlock = '') {
         const base = `You are ${ai.name}.\nPersonality: ${ai.personality}\nStyle: ${ai.style}`;
         const tools = `
 AVAILABLE TOOLS:
@@ -229,6 +268,7 @@ AVAILABLE TOOLS:
 2. STAY SILENT - [SILENCE]
 3. MULTI MESSAGE - [MULTI:msg1|msg2]
 4. SCHEDULE - [SCHEDULE:mins]
+5. MEMORY REQUEST - [MEMORY_REQUEST: target=CharacterName, topic=TopicOrQuestion]
 ${ai.agentType === 'task-specialist' ? this._getSpecialistTools(ai) : ''}
 `;
         // T06: Affinity-aware tone instructions
@@ -254,7 +294,8 @@ ${ai.agentType === 'task-specialist' ? this._getSpecialistTools(ai) : ''}
             moodHint = `\nCURRENT MOOD: ${context.mood.promptHint}`;
         }
 
-        return `${base}\n${tools}${affinityHint}${moodHint}\nRULES: Keep it short. Respond to mentions.`;
+        // T12: Long-term memory + group chat context
+        return `${base}\n${tools}${affinityHint}${moodHint}${memoryBlock}${groupBlock}\nRULES: Keep it short. Respond to mentions. Use your memories naturally — don't announce them mechanically.`;
     }
 
     _getSpecialistTools(ai) {

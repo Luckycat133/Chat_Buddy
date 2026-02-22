@@ -9,7 +9,7 @@ import {
     ChevronRight, Bell, Lock, Globe, Info, Moon, HelpCircle,
     Volume2, VolumeX, BellOff, Trophy, Calendar, Search, Image,
     Settings as SettingsIcon, Shield, Laptop, LogOut,
-    Server, Download, Upload, Sparkles, MessageSquare, RotateCcw, ClipboardList
+    Server, Download, Upload, Sparkles, MessageSquare, RotateCcw, ClipboardList, Brain
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import CheckInPanel from '../components/CheckInPanel';
@@ -18,6 +18,8 @@ import { useOnboarding } from '../hooks/useOnboarding';
 import AccentColorPicker from '../components/AccentColorPicker';
 import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
 import { exportAllData, importData } from '../config/apiConfig';
+import CharacterMemoryPanel from '../components/CharacterMemoryPanel';
+import { INITIAL_PERSONAS } from '../data/personas';
 
 const BackgroundSettingsModal = React.lazy(() => import('../features/background/BackgroundSettingsModal'));
 const ApiConfigPanel = React.lazy(() => import('../components/ApiConfigPanel'));
@@ -38,6 +40,8 @@ export default function Settings() {
     const [showBackgroundModal, setShowBackgroundModal] = useState(false);
     const [showApiConfig, setShowApiConfig] = useState(false);
     const [importMsg, setImportMsg] = useState(null);
+    const [memoryCharacter, setMemoryCharacter] = useState(null); // T12: Memory panel
+    const [showMemorySelector, setShowMemorySelector] = useState(false);
     const fileInputRef = React.useRef(null);
 
     const handleExport = () => {
@@ -289,6 +293,13 @@ export default function Settings() {
                                     onClick={() => setShowSearch(true)}
                                 />
                                 <SettingItem
+                                    icon={<Brain size={18} />}
+                                    color="bg-[var(--color-icon-purple)]"
+                                    label="Character Memory"
+                                    subLabel="View & manage what characters remember"
+                                    onClick={() => setShowMemorySelector(true)}
+                                />
+                                <SettingItem
                                     icon={<Download size={18} />}
                                     color="bg-[var(--color-icon-gray)]"
                                     label={t('export_data_title')}
@@ -331,7 +342,7 @@ export default function Settings() {
                         <section className="animate-fade-slide-up" style={{ animationDelay: '300ms' }}>
                             <div className="version-footer">
                                 <p>
-                                    Chat Buddy v0.2.7 • Built with ❤️ by Agent Coder
+                                    Chat Buddy v0.3.0 • Built with ❤️ by Agent Coder
                                 </p>
                             </div>
                         </section>
@@ -352,6 +363,47 @@ export default function Settings() {
                 <Suspense fallback={null}>
                     <BackgroundSettingsModal isOpen={true} onClose={() => setShowBackgroundModal(false)} />
                 </Suspense>
+            )}
+
+            {/* T12: Memory character selector */}
+            {showMemorySelector && (
+                <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowMemorySelector(false)} />
+                    <div className="relative w-full max-w-sm glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-5">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                                <Brain size={16} className="text-[var(--color-primary)]" />
+                                Select Character
+                            </h3>
+                            <button onClick={() => setShowMemorySelector(false)} className="btn btn-ghost btn-icon">
+                                <span style={{ fontSize: '18px', lineHeight: 1 }}>✕</span>
+                            </button>
+                        </div>
+                        <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
+                            {INITIAL_PERSONAS.filter(p => p.id.startsWith('ai-')).map(p => (
+                                <button
+                                    key={p.id}
+                                    onClick={() => { setMemoryCharacter(p); setShowMemorySelector(false); }}
+                                    className="w-full flex items-center gap-3 p-3 rounded-[var(--radius-lg)] bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                >
+                                    <img src={p.avatar} alt={p.name} className="w-9 h-9 rounded-full object-cover" />
+                                    <div>
+                                        <p className="text-sm font-medium text-[var(--color-text-primary)]">{p.name}</p>
+                                        <p className="text-xs text-[var(--color-text-secondary)] truncate">{p.personality}</p>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* T12: Memory panel for selected character */}
+            {memoryCharacter && (
+                <CharacterMemoryPanel
+                    character={memoryCharacter}
+                    onClose={() => setMemoryCharacter(null)}
+                />
             )}
         </div>
     );

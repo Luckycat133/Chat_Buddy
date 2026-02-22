@@ -1,6 +1,7 @@
 import { storage } from '../../services/storage/StorageService';
 import { AIPipeline } from './AIPipeline';
 import { cleanMessageContent, callAI } from '../../features/chat/services/chatService';
+import { extractGroupMemoriesAsync } from '../memory/ContextCompressor'; // T12 Opt-3
 import { getPresenceMap } from '../presence/PresenceService';
 import { checkReEngagement } from '../presence/GreetingService';
 import { getMoodMap } from '../presence/MoodService';
@@ -222,6 +223,17 @@ export class ChatEngine {
 
             this._checkAutoNaming(updatedChat);
             this._triggerAIResponse(updatedChat);
+
+            // T12 Opt-3: Group chat memory extraction (fire-and-forget, rate-limited)
+            const isGroupChat = updatedChat.participants.length > 2;
+            if (isGroupChat && updatedChat.messages.length >= 20 && updatedChat.messages.length % 10 === 0) {
+                const aiParticipants = updatedChat.participants
+                    .filter(id => id !== 'user-me')
+                    .map(id => this.personas.find(p => p.id === id))
+                    .filter(Boolean)
+                    .map(p => ({ id: p.id, name: p.name }));
+                extractGroupMemoriesAsync(updatedChat.messages, chatId, aiParticipants).catch(() => { });
+            }
         }
     }
 
@@ -543,8 +555,17 @@ export class ChatEngine {
             .map(id => this.personas.find(p => p.id === id))
             .filter(Boolean);
 
-        // Simple loop similar to original Context
-        // To prevent double-responses, we can use a queue or just stagger them
+        // T12: Collect recent group-chat messages for context injection
+        // A "group" chat has more than 2 participants
+        const recentGroupMessages = this.chats
+            .filter(c => c.id !== chat.id && c.participants.length > 2)
+            .flatMap(c => c.messages.slice(-5).map(m => ({
+                ...m,
+                participants: c.participants
+            })))
+            .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+            .slice(-10); // at most 10 recent group messages across all groups
+
         candidates.forEach((ai) => {
             // Check if AI was mentioned or if it's 1-on-1
             const isMentioned = chat.lastMessage.content.includes(`@${ai.name}`);
@@ -552,8 +573,9 @@ export class ChatEngine {
 
             // Should respond?
             if (isDirect || isMentioned || Math.random() > 0.3) {
-                // T06: Get affinity/mood context for this AI
-                const context = this._contextProvider?.(ai.id) || null;
+                // T06: Get affinity/mood context; T12: add group context
+                const baseContext = this._contextProvider?.(ai.id) || {};
+                const context = { ...baseContext, recentGroupMessages };
                 this.aiPipeline.processTurn(chat, this.personas, ai, context);
             }
         });
