@@ -17,15 +17,52 @@ Chat Buddy 的所有重要变更都将记录在此文件中。
 
 > 尚未分配到具体版本的计划功能。
 
-### 新增
+---
 
-- **AI 拟人化 (T05)**
-  - 基于角色作息的动态**在线/忙碌/离线**状态系统。
-  - 聊天时间轴中的可视化**正在输入**气泡动画。
-  - 打开聊天或长时间未互动时的**主动问候**。
-  - **在线状态指示器**：聊天列表和标题栏中的彩色圆点和状态文本。
+## 基础角色扮演 — v0.2.x
+
+### [0.2.7] — T11 朋友圈与动态系统（第二阶段）
+
+#### 新增
+
+- **草稿箱** — `PostComposer` 自动保存未完成的动态（防抖 500ms）；重新打开时恢复草稿并显示"草稿已恢复"提示条；支持"丢弃"按钮一键清除
+- **话题标签** — 动态内容中的 `#话题` 标签渲染为可点击的主题色链接；点击后在朋友圈页面过滤相关动态；顶部显示可关闭的筛选标签条
+- **分页加载** — 默认显示 10 条动态；底部"加载更多"按钮每次追加 10 条；切换标签筛选时自动重置分页
+- **故事事件** — 每日首次加载时检测生日与节日；匹配角色自动发布主题动态；13 位角色均配置生日；支持 4 个节日（元旦、情人节、万圣节、圣诞节）；使用 `lastStoryEventDate` 防止重复触发
+- **转发到聊天** — 新增 `RepostSheet` 底部弹窗，列出所有聊天列表；选择聊天后发送格式化消息 `[分享动态 · 作者]\n内容`；发送后显示勾选确认
+- **角色生日字段** — 为 `personas.js` 中全部 13 位角色添加 `birthday: 'MM-DD'` 字段
+- **新本地化键** — `discard_draft`、`load_more`、`repost`、`repost_success`、`select_chat_to_share`、`birthday_post_hint`、`happy_birthday`（中英双语）
+
+#### 技术细节
+
+- `MomentsState.jsx`：`DEFAULT_MOMENTS_DATA` 新增 `draft` 和 `lastStoryEventDate` 字段
+- `MomentsActions.jsx`：新增 `saveDraft`、`clearDraft`、`generateStoryPost` action
+- `MomentsContext.jsx`：新增 `useStoryEvents` hook，在 `MomentsAIOrchestrator` 中调用
+- `momentsService.js`：新增 `generateBirthdayPostSystemPrompt`、`generateHolidayPostSystemPrompt`、`SEASONAL_EVENTS`、`getTodayEvents`
+- `RepostSheet.jsx`：新组件，使用 `useChatService` 获取聊天列表和发送消息
 
 ---
+
+## [0.2.7-patch] — 审计修复（2026-02-22）
+
+> 基于 v1.0 质量审计报告的全面修复——所有 P0/P1 阻断问题已解决，P2 视觉缺陷已修补。
+
+### 修复
+
+- **L-002 (P0)** — `FriendDetail.jsx`：「发起聊天」按钮现已正确跳转至已有私聊或通过 `createChat()` 创建新会话；已有对话时按钮文案自动变为「查看聊天」
+- **L-003 (P0)** — `ChatEngine.js`：新建会话立即通过 `this.save()` → `StorageService.set()` 持久化；`_loadChatsWithMigration()` 支持旧 key 回落，保证零数据丢失
+- **T08 / B-001 (P0→P1)** — `MessageTimeline.jsx`：完整 Markdown 渲染（`react-markdown` + `remark-gfm`）；代码块语法高亮（VS Code 主题）+ 复制按钮；LaTeX（`rehype-katex`）；Mermaid 图表；表格样式
+- **B-002 (P1)** — `GroupDetails.jsx`：「群公告」和「群投票」入口已通过 `!isDirectChat` 条件守卫；1v1 私聊详情页不再显示群组专属选项
+- **B-003 (P1)** — `ProfileEditor.jsx`：昵称字段验证非空 trim 值；内联 `nicknameError` 状态阻止保存空白昵称
+- **B-004 (P1)** — `ChatList.jsx`：搜索 `filteredChats` useMemo 正确按 `searchTerm` 过滤聊天名和最近消息预览
+- **T02 (P1)** — `ApiConfigPanel.jsx`：模型名输入框新增 `<datalist>` 包含 16 个常用模型建议（GPT、Claude、Gemini、DeepSeek、Qwen、GLM、Moonshot）；新增 5 个「一键填入」厂商预设按钮（OpenAI、Anthropic、Google、DeepSeek、Ollama）自动填充 Base URL 和模型名
+- **G-001 (P2)** — `index.css`：亮色模式抑制深色辉光伪元素——`html:not(.dark) .message-bubble-ai::after { opacity: 0 }` 和 `html:not(.dark) .character-glow::before { opacity: 0 }`
+- **G-002 (P2)** — `index.css`：亮色模式侧边栏非激活导航图标改用 `#4a4e6a`（符合 WCAG AA），替代对比度不足的半透明 `--color-text-muted`；悬停恢复品牌主色
+- **R-001 (P2)** — `index.css`：新增 `@media (min-width: 768px) and (max-width: 900px)` 断点——侧边栏从 88px 收缩至 56px，图标等比缩小，悬停 tooltip 隐藏，防止平板宽度下布局溢出
+- **R-002 (P2)** — `index.css`：移动端 `.page-content` 已设置 `padding-bottom: calc(6.5rem + env(safe-area-inset-bottom))`，防止固定底部导航栏遮挡列表内容
+- **T03 — OLED** — `ThemeContext.jsx`：`toggleOLEDMode()` 和 `.dark.oled` CSS 类完全可用；Settings 页 UI 控件已验证
+- **T03 — 快捷键** — `Layout.jsx` + `useKeyboardShortcuts.js`：全局 `keydown` 监听已激活；`Ctrl+1~5` 导航、`Ctrl+/` 快捷键弹窗、`Esc` 返回/关闭全部正常
+
 
 ## 基础层 — v0.1.x
 

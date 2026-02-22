@@ -8,6 +8,8 @@ const DEFAULT_MOMENTS_DATA = {
     lastAIPostTime: {},
     imageApiKey: '',
     imageApiUrl: '',
+    draft: null,
+    lastStoryEventDate: null,
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -33,7 +35,9 @@ export const MomentsStateProvider = ({ children }) => {
         posts: momentsData.posts || [],
         lastAIPostTime: momentsData.lastAIPostTime || {},
         imageApiKey: momentsData.imageApiKey,
-        imageApiUrl: momentsData.imageApiUrl
+        imageApiUrl: momentsData.imageApiUrl,
+        draft: momentsData.draft || null,
+        lastStoryEventDate: momentsData.lastStoryEventDate || null,
     };
 
     return (

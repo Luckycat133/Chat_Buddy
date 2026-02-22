@@ -10,7 +10,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import renderMathInElement from 'katex/contrib/auto-render';
+
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
@@ -197,7 +197,6 @@ export default function MessageTimeline({
     const { t, language } = useLanguage();
     const { bubbleStyle } = useTheme();
     const messagesEndRef = useRef(null);
-    const timelineRef = useRef(null);
 
     // T07: Lightbox state for images
     const [lightboxImage, setLightboxImage] = useState(null);
@@ -206,28 +205,9 @@ export default function MessageTimeline({
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
     }, [chat?.messages]);
 
-    // T08 fallback: parse LaTeX delimiters without external remark-math dependency.
-    useEffect(() => {
-        if (!timelineRef.current) return;
-
-        const markdownBlocks = timelineRef.current.querySelectorAll('.markdown-body');
-        markdownBlocks.forEach((element) => {
-            try {
-                renderMathInElement(element, {
-                    delimiters: [
-                        { left: '$$', right: '$$', display: true },
-                        { left: '$', right: '$', display: false }
-                    ],
-                    throwOnError: false
-                });
-            } catch (error) {
-                console.error('[MessageTimeline] Failed to auto-render math:', error);
-            }
-        });
-    }, [chat?.messages]);
 
     const getSenderName = (senderId) => {
-        if (senderId === 'user-me') return 'You'; // Simplified, trans handled in parent usually or hook
+        if (senderId === 'user-me') return t('you');
         const sender = personas.find(p => p.id === senderId);
         return language === 'zh' ? (sender?.name_zh || sender?.name) : sender?.name;
     };
@@ -243,7 +223,7 @@ export default function MessageTimeline({
     };
 
     return (
-        <div ref={timelineRef} className="flex-1 overflow-y-auto p-3 pb-20 md:pb-4" data-bubble-style={bubbleStyle}>
+        <div className="flex-1 overflow-y-auto p-3 pb-20 md:pb-4" data-bubble-style={bubbleStyle}>
             {chat.messages.map((msg, index) => {
                 const isMe = msg.senderId === 'user-me';
                 const sender = isMe ? currentUser : personas.find(p => p.id === msg.senderId);
@@ -462,7 +442,7 @@ export default function MessageTimeline({
                                                                     return child;
                                                                 });
                                                             };
-                                                            return <p>{processChildren(children)}</p>;
+                                                            return <p className="whitespace-pre-wrap mb-2 last:mb-0">{processChildren(children)}</p>;
                                                         },
                                                         // T08 Phase 5: Link with preview
                                                         a: LinkWithPreview,
@@ -492,7 +472,7 @@ export default function MessageTimeline({
                                                             </div>
                                                         ),
                                                         th: ({ ...props }) => <th className="px-3 py-2 bg-[var(--color-bg-active)] text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider" {...props} />,
-                                                        td: ({ ...props }) => <td className="px-3 py-2 whitespace-nowrap text-sm text-[var(--color-text-main)] border-t border-[var(--color-border-light)]" {...props} />
+                                                        td: ({ ...props }) => <td className="px-3 py-2 text-sm text-[var(--color-text-main)] border-t border-[var(--color-border-light)] break-words" {...props} />
                                                     }}
                                                 >
                                                     {content}

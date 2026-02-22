@@ -41,7 +41,7 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 | T08 | Markdown & Content Rendering           | v0.2.4  | P1       | ✅ Done                            |
 | T09 | Immersive Background System            | v0.2.5  | P1       | Needs completion                   |
 | T10 | Social & Interaction Features          | v0.2.6  | P1       | ✅ Done                            |
-| T11 | Moments & Feed System                  | v0.2.7  | P1       | Needs completion                   |
+| T11 | Moments & Feed System                  | v0.2.7  | P1       | ✅ Done                            |
 | T12 | AI Memory & Cognitive System           | v0.3.0  | P2       | Mostly new development             |
 | T13 | AI Agent & Tool System                 | v0.3.1  | P2       | Needs de-mocking                   |
 | T14 | Knowledge Base & RAG System            | v0.3.2  | P2       | Needs search upgrade               |
@@ -541,7 +541,7 @@ src/config/
 
 ## T11 — Moments & Feed System
 
-**Version**: v0.2.7 | **Priority**: P1 | **Status**: Needs completion
+**Version**: v0.2.7 | **Priority**: P1 | **Status**: ✅ Done
 
 ### What's Done
 
@@ -554,15 +554,15 @@ src/config/
 - [x] Visibility settings
 - [x] AI content search
 - [x] Image API placeholder
+- [x] **Draft box** — auto-save, restore on reopen, discard option
+- [x] **Hashtag topics** — `#topic` clickable tags, feed filtering with dismiss pill
+- [x] **Pagination/load-more** — 10 posts per page, load-more button
+- [x] **Story events** — birthday posts for all 13 personas, seasonal holiday specials (New Year, Valentine's, Halloween, Christmas)
+- [x] **Repost/share** — forward moment to any chat as formatted message
 
-### What's Planned
+### Skipped
 
-- [ ] **Repost/share** — share moments to other chats
-- [ ] **Hashtag topics** — `#topic` tags with aggregation page
-- [ ] **Story events** — character birthday posts, holiday specials, seasonal content
-- [ ] **Draft box** — save unfinished posts
-- [ ] **Pagination/lazy loading** — virtual scroll for performance
-- [ ] **AI image generation** — generate post images via API (when available)
+- [ ] **AI image generation** — depends on external image generation API (deferred)
 
 ### Key Files
 

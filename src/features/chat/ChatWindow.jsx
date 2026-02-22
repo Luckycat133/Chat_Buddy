@@ -227,7 +227,7 @@ export default function ChatWindow({ chatId: propChatId }) {
                 chat={chat}
                 currentUser={currentUser}
                 personas={personas}
-                typingIndicators={typingIndicators} 
+                typingIndicators={typingIndicators}
                 presenceMap={presenceMap} // For potentially showing status in bubble?
                 onContextMenu={handleMessageContextMenu}
                 onVotePoll={(pollId, optId, action) => votePoll(chat.id, pollId, optId, action)}
@@ -243,9 +243,13 @@ export default function ChatWindow({ chatId: propChatId }) {
                     sendMessage(chat.id, content, qId);
                     if (content.startsWith('[STICKER:')) {
                         updateTaskProgress('task_sticker', 1);
-                    } else if (!content.startsWith('[') ) {
+                    } else if (!content.startsWith('[')) {
                         updateTaskProgress('task_messages', 1);
                     }
+                }}
+                onSendSticker={(stickerUrl) => {
+                    sendMessage(chat.id, `[STICKER:${stickerUrl}]`);
+                    updateTaskProgress('task_sticker', 1);
                 }}
                 onCancelQuote={() => setQuotedMessage(null)}
                 // Menu Actions
@@ -254,6 +258,7 @@ export default function ChatWindow({ chatId: propChatId }) {
                 onOpenGame={() => setShowGameSelector(true)}
                 onOpenPoll={() => setShowPoll(true)}
                 onSendFile={handleFileSelect}
+                onError={showToast}
             />
 
             {/* Overlays */}

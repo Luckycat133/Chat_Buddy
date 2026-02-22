@@ -81,3 +81,70 @@ export function evaluateInterestMatch(postContent, interests) {
     const contentLower = postContent.toLowerCase();
     return interests.some(interest => contentLower.includes(interest.toLowerCase()));
 }
+
+// -----------------------------------------------------------------------------
+// Story Events
+// -----------------------------------------------------------------------------
+
+export function generateBirthdayPostSystemPrompt(persona) {
+    return `You are ${persona.name} (${persona.name_zh}).
+Personality: ${persona.personality}
+Style: ${persona.style}
+Interests: ${persona.interests?.join(', ')}
+
+Today is your birthday! Write a short celebratory social media post (1-3 sentences) sharing your birthday feelings with your friends.
+Be in character, include birthday emojis 🎂🎉🎊, and make it feel genuine and personal.
+
+Output ONLY the post content, nothing else.`;
+}
+
+export function generateHolidayPostSystemPrompt(persona, holidayName) {
+    return `You are ${persona.name} (${persona.name_zh}).
+Personality: ${persona.personality}
+Style: ${persona.style}
+Interests: ${persona.interests?.join(', ')}
+
+Today is ${holidayName}! Write a short social media post (1-3 sentences) sharing holiday greetings in your character's unique style.
+Include relevant holiday emojis and make it authentic to your personality.
+
+Output ONLY the post content, nothing else.`;
+}
+
+const SEASONAL_EVENTS = [
+    { month: 1, day: 1, nameEn: "New Year's Day", nameZh: '新年' },
+    { month: 2, day: 14, nameEn: "Valentine's Day", nameZh: '情人节' },
+    { month: 10, day: 31, nameEn: 'Halloween', nameZh: '万圣节' },
+    { month: 12, day: 25, nameEn: 'Christmas', nameZh: '圣诞节' },
+];
+
+// Birthday map: persona id → 'MM-DD'
+const PERSONA_BIRTHDAYS = {
+    'ai-1': '01-23',      // Luna
+    'ai-2': '06-15',      // Max
+    'ai-3': '04-08',      // Bella
+    'ai-4': '09-22',      // Oliver
+    'ai-5': '11-05',      // Sophie
+    'ai-miku': '08-31',   // Hatsune Miku (canonical)
+    'ai-rem': '02-02',    // Rem
+    'ai-rin': '02-03',    // Rin Tohsaka
+    'ai-naruto': '10-10', // Naruto Uzumaki
+    'ai-l': '10-31',      // L
+    'ai-zerotwo': '02-27',// Zero Two
+    'ai-asuna': '09-30',  // Asuna
+    'ai-gojo': '12-07',   // Gojo Satoru
+};
+
+export function getTodayEvents() {
+    const now = new Date();
+    const month = now.getMonth() + 1; // 1-based
+    const day = now.getDate();
+    const mmdd = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+    const birthdays = Object.entries(PERSONA_BIRTHDAYS)
+        .filter(([, bd]) => bd === mmdd)
+        .map(([id]) => id);
+
+    const holiday = SEASONAL_EVENTS.find(e => e.month === month && e.day === day) || null;
+
+    return { birthdays, holiday };
+}
