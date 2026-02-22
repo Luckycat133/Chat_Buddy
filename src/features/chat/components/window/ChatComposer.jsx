@@ -17,12 +17,13 @@ import FileUploader from '../../../../components/FileUploader';
 const MenuButton = ({ icon: IconComponent, label, onClick, color = "text-[var(--color-text-secondary)]", bg = "bg-[var(--color-bg-hover)]" }) => (
     <button
         onClick={onClick}
-        className="flex flex-col items-center gap-2 p-3 rounded-2xl hover:bg-[var(--color-bg-hover)] transition-colors group"
+        className="plus-menu-btn group"
+        aria-label={label}
     >
-        <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm", bg)}>
+        <div className={cn("plus-menu-btn-icon", bg)}>
             <IconComponent size={24} className={color} />
         </div>
-        <span className="text-xs font-medium text-[var(--color-text-secondary)]">{label}</span>
+        <span className="plus-menu-btn-label">{label}</span>
     </button>
 );
 
@@ -202,14 +203,12 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
     };
 
     return (
-        <div className="flex flex-col relative z-20 pb-4 px-4">
+        <div className="composer-wrap">
             {/* Quoted Preview - Floating Pill */}
             {quotedMessage && (
-                <div className="mx-2 mb-2 px-4 py-3 glass-crystal rounded-[var(--radius-lg)] shadow-floating 
-                    flex items-center justify-between animate-fade-slide-up ring-1 ring-[var(--color-border)]">
+                <div className="quote-preview glass-crystal animate-fade-slide-up">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <div className="w-1 h-10 rounded-full animate-aurora"
-                            style={{ background: 'var(--character-gradient, var(--gradient-aurora))' }} />
+                        <div className="quote-preview-bar animate-aurora" />
                         <div className="min-w-0">
                             <p className="text-xs font-bold text-[var(--color-primary)]">
                                 {t('reply_to')} {getSenderName(quotedMessage.senderId)}
@@ -236,17 +235,12 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
             )}
 
             {/* Main Composer Area - Floating Crystal Pill box */}
-            <div className="glass-crystal rounded-[var(--radius-xl)] shadow-floating p-2 ring-1 ring-[var(--color-border)] relative">
+            <div className="composer-box glass-crystal">
                 <form onSubmit={handleSend} className="flex items-end gap-2">
                     {/* Voice/Keyboard Toggle */}
                     <button
                         type="button"
-                        className={cn(
-                            "p-3 rounded-full transition-all duration-300 mb-0.5",
-                            isRecordingMode
-                                ? "text-[var(--color-primary)] bg-[var(--color-primary-softer)] shadow-inner"
-                                : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)]"
-                        )}
+                        className={cn("composer-btn mb-0.5", isRecordingMode && "active")}
                         onClick={() => setIsRecordingMode(!isRecordingMode)}
                         aria-label={isRecordingMode ? t('keyboard') || 'Keyboard' : t('voice') || 'Voice'}
                     >
@@ -279,7 +273,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                 : t('hold_to_talk')}
                         </button>
                     ) : (
-                        <div className="flex-1 relative min-h-[48px] flex items-center bg-[var(--color-bg-white)]/50 rounded-[var(--radius-lg)] transition-all hover:bg-[var(--color-bg-white)]/70 focus-within:bg-[var(--color-bg-white)] focus-within:shadow-sm ring-1 ring-transparent focus-within:ring-[var(--character-primary,var(--color-primary))]/20 px-4">
+                        <div className="composer-input-wrap flex-1">
                             <input
                                 ref={inputRef}
                                 type="text"
@@ -287,20 +281,15 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                 onChange={handleInputChange}
                                 aria-label={t('type_message')}
                                 placeholder={t('type_message')}
-                                className="w-full bg-transparent border-none py-3 text-[16px] 
-                                    text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)] 
-                                    focus:outline-none font-medium"
+                                className="composer-input"
                             />
                             {showMentionDropdown && mentionCandidates.length > 0 && (
-                                <div className="absolute bottom-full left-0 mb-4 glass-crystal rounded-[var(--radius-lg)] 
-                                    shadow-floating border border-[var(--color-border)] py-2 min-w-[220px] max-h-[240px] 
-                                    overflow-y-auto z-40 animate-scale-spring">
+                                <div className="mention-dropdown glass-crystal animate-scale-spring">
                                     {mentionCandidates.map(p => (
                                         <button
                                             key={p.id}
                                             onClick={() => handleMentionSelect(p)}
-                                            className="w-full text-left px-4 py-3 hover:bg-[var(--color-bg-hover)]
-                                                flex items-center gap-3 transition-all"
+                                            className="mention-item"
                                         >
                                             <div className="w-8 h-8 rounded-full overflow-hidden shadow-sm">
                                                 {p.avatar
@@ -323,12 +312,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                     <div className="flex items-center gap-1 mb-0.5">
                         <button
                             type="button"
-                            className={cn(
-                                "p-3 rounded-full transition-all duration-200",
-                                showEmojiPicker
-                                    ? "text-[var(--color-primary)] bg-[var(--color-primary-softer)]"
-                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-accent-gold)] hover:bg-[var(--color-bg-hover)]"
-                            )}
+                            className={cn("composer-btn", showEmojiPicker && "active")}
                             onClick={() => { closeAll(); setShowEmojiPicker(!showEmojiPicker); }}
                             aria-label={t('emoji') || 'Emoji'}
                         >
@@ -338,10 +322,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                         {inputValue.trim() ? (
                             <button
                                 type="submit"
-                                className="ml-1 p-3 rounded-full text-white shadow-lg
-                                    hover:scale-105 active:scale-95
-                                    transition-all duration-300 animate-aurora"
-                                style={{ background: 'var(--character-gradient, var(--gradient-aurora))', backgroundSize: '150% 150%' }}
+                                className="composer-send-btn animate-aurora"
                                 aria-label={t('send') || 'Send'}
                             >
                                 <Send size={22} className="ml-0.5" />
@@ -349,12 +330,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                         ) : (
                             <button
                                 type="button"
-                                className={cn(
-                                    "p-3 rounded-full transition-all duration-300",
-                                    showPlusMenu
-                                        ? "text-white rotate-45 shadow-md"
-                                        : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)]"
-                                )}
+                                className={cn("composer-btn", showPlusMenu && "rotate-45 shadow-md text-white")}
                                 style={showPlusMenu ? { background: 'var(--character-gradient, var(--gradient-aurora))' } : {}}
                                 onClick={() => { closeAll(); setShowPlusMenu(!showPlusMenu); }}
                                 aria-label={t('more') || 'More'}
@@ -378,8 +354,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                 </div>
             )}
             {showPlusMenu && (
-                <div className="absolute bottom-full right-4 mb-3 glass-crystal rounded-[var(--radius-xl)] shadow-floating
-                    border border-[var(--color-border)] p-4 min-w-[280px] grid grid-cols-4 gap-3 z-30 animate-scale-spring">
+                <div className="plus-menu glass-crystal animate-scale-spring">
                     <MenuButton icon={ImageIcon} label={t('image')} onClick={onOpenImageUpload}
                         color="text-[var(--color-accent-lavender)]" bg="bg-purple-50" />
                     <MenuButton icon={Paperclip} label={t('file')} onClick={() => setShowFileUploader(true)}

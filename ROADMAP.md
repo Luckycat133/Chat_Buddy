@@ -33,7 +33,7 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 | --- | -------------------------------------- | ------- | -------- | ---------------------------------- |
 | T01 | Internationalization & Localization    | v0.1.1  | P0       | ✅ Done                            |
 | T02 | Core Architecture & API Compatibility  | v0.1.2  | P0       | ✅ Done                            |
-| T03 | Modern UI Design System                | v0.1.3  | P0       | 🔧 Phase 1-3 done, Phase 4 pending |
+| T03 | Modern UI Design System                | v0.1.3  | P0       | ✅ Done                            |
 | T04 | Character Visuals & Interaction Design | v0.2.0  | P1       | ✅ Done                            |
 | T05 | AI Behavior Humanization               | v0.2.1  | P1       | ✅ Done                            |
 | T06 | AI Characters & Avatar System          | v0.2.2  | P1       | ✅ Done                            |
@@ -179,9 +179,9 @@ src/config/
 - [x] Layout helpers: `.modal-header/body/footer`
 - [x] Dark mode refinements for all new component classes
 
-### Phase 4 — Page Migration & Polish (Partially Done)
+### Phase 4 — Page Migration & Polish ✅
 
-- [ ] Migrate existing inline button styles to component classes
+- [x] Migrate existing inline button styles to component classes (ChatHeader, ChatComposer)
 - [ ] Chat view redesign (clean message list, minimal chrome)
 - [ ] Settings page redesign (grouped sections, modern toggles)
 - [x] Dashboard redesign (refined Bento Grid, **draggable widgets**)
