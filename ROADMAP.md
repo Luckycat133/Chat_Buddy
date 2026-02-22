@@ -40,7 +40,7 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 | T07 | Message Feature Enhancement            | v0.2.3  | P1       | ✅ Done                            |
 | T08 | Markdown & Content Rendering           | v0.2.4  | P1       | ✅ Done                            |
 | T09 | Immersive Background System            | v0.2.5  | P1       | Needs completion                   |
-| T10 | Social & Interaction Features          | v0.2.6  | P1       | Needs completion                   |
+| T10 | Social & Interaction Features          | v0.2.6  | P1       | ✅ Done                            |
 | T11 | Moments & Feed System                  | v0.2.7  | P1       | Needs completion                   |
 | T12 | AI Memory & Cognitive System           | v0.3.0  | P2       | Mostly new development             |
 | T13 | AI Agent & Tool System                 | v0.3.1  | P2       | Needs de-mocking                   |
@@ -510,18 +510,18 @@ src/config/
 - [x] Gift system
 - [x] Rock-Paper-Scissors game
 
-### What's Planned
+### What's Done (Phase 2)
 
-- [ ] **More mini-games**
-  - Number guessing (AI picks, user guesses)
-  - Idiom chain (成语接龙, CN mode)
-  - AI trivia quiz (AI generates questions from chat context)
-- [ ] **Points economy**
-  - Spending: unlock themes, avatar frames, chat effects
-  - Earning: daily check-in, tasks, games
-  - Balance displayed in profile
+- [x] **More mini-games** — Number Guess (1-100, 7 attempts, 30 pts win); GameSelectorPanel for multi-game access
+- [x] **Points economy** — RPS awards 10 pts/round win; NumberGuess awards 30 pts; daily tasks award points
+- [x] **Daily task system** — 6 tasks: check-in, messages, game, sticker, gift, chat-3; DailyTaskPanel modal
+- [x] **Fix ChatComposer integration** — gift/game/poll/red-packet props now properly connected to ChatWindow
+
+### What's Planned (Phase 3)
+
+- [ ] **Idiom chain** (成语接龙, CN mode only)
+- [ ] **AI trivia quiz** (AI generates questions from chat context)
 - [ ] **Friend interaction log** — timeline of interaction milestones
-- [ ] **Daily task system** — diverse tasks beyond check-in (e.g., "Chat with 3 characters", "Send a sticker", "Play a game")
 - [ ] **Leaderboards** — opt-in rankings (points, streaks, achievements)
 - [ ] **Character events** — birthday events, holiday specials (characters post unique content)
 
