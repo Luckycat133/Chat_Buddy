@@ -475,7 +475,12 @@ export const LOCALES = {
         // ChatComposer
         poll: 'Poll',
         release_to_send_voice: 'Release to Send',
+        nickname_required: 'Nickname cannot be empty',
+        oled_mode: 'OLED Pure Black',
+        oled_mode_on: 'Enabled',
+        oled_mode_off: 'Disabled',
         // GroupDetails
+        chat_name_label: 'Chat Name',
         group_announcement: 'Group Announcement',
         group_poll: 'Group Poll',
         export_chat_history: 'Export Chat History',
@@ -678,6 +683,15 @@ export const LOCALES = {
 
         // T10: RPS Points
         rps_win_points: 'Won +{pts} pts!',
+
+        // T11: Moments Phase 2
+        discard_draft: 'Discard',
+        load_more: 'Load more',
+        repost: 'Share to Chat',
+        repost_success: 'Shared to {chatName}!',
+        select_chat_to_share: 'Select a chat to share',
+        birthday_post_hint: "Today is {name}'s birthday! 🎂",
+        happy_birthday: 'Happy Birthday',
     },
     zh: {
         nav_chats: '\u804A\u5929\u5217\u8868',
@@ -1155,7 +1169,12 @@ export const LOCALES = {
         // 聊天编辑器
         poll: '投票',
         release_to_send_voice: '松开发送',
+        nickname_required: '昵称不能为空',
+        oled_mode: 'OLED 纯黑模式',
+        oled_mode_on: '已开启',
+        oled_mode_off: '已关闭',
         // 群组详情
+        chat_name_label: '聊天名称',
         group_announcement: '群公告',
         group_poll: '群投票',
         export_chat_history: '导出聊天记录',
@@ -1358,5 +1377,14 @@ export const LOCALES = {
 
         // T10: RPS 积分
         rps_win_points: '赢得 +{pts} 积分！',
+
+        // T11: 朋友圈第二阶段
+        discard_draft: '丢弃',
+        load_more: '加载更多',
+        repost: '转发到聊天',
+        repost_success: '已分享到 {chatName}！',
+        select_chat_to_share: '选择要分享的聊天',
+        birthday_post_hint: '今天是{name}的生日！🎂',
+        happy_birthday: '生日快乐',
     }
 };

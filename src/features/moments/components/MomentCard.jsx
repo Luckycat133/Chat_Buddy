@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { MapPin, Heart, MessageCircle, MoreHorizontal, Trash2, Share2, SmilePlus } from 'lucide-react';
+import { MapPin, Heart, MessageCircle, MoreHorizontal, Trash2, Forward, SmilePlus } from 'lucide-react';
 import { useMoments } from '../context/MomentsContext';
 import { useFriend } from '../../../context/FriendContext';
 import { useUser } from '../../../context/UserContext';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
+import RepostSheet from './RepostSheet';
 
 const REACTION_EMOJIS = ['😂', '❤️', '👍', '🔥', '😮', '😢'];
 
-export default function MomentCard({ post, onCommentClick }) {
+export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
     const { toggleLike, deletePost, getAuthor, addReaction } = useMoments();
     const { getDisplayName } = useFriend();
     const { userProfile, getDisplayName: getUserDisplayName } = useUser();
@@ -16,6 +17,7 @@ export default function MomentCard({ post, onCommentClick }) {
 
     const [showMenu, setShowMenu] = useState(false);
     const [showReactions, setShowReactions] = useState(false);
+    const [showRepostSheet, setShowRepostSheet] = useState(false);
 
     const author = getAuthor(post.authorId);
     const isOwn = post.authorId === 'user-me';
@@ -76,16 +78,21 @@ export default function MomentCard({ post, onCommentClick }) {
         return entries.slice(0, 4); // Show max 4 different emoji types
     };
 
-    const handleShare = () => {
-        if (navigator.share) {
-            navigator.share({
-                title: 'Chat Buddy Moment',
-                text: post.content,
-            });
-        } else {
-            navigator.clipboard.writeText(post.content);
-            alert(language === 'zh' ? '已复制到剪贴板' : 'Copied to clipboard!');
-        }
+    const renderContent = (text) => {
+        if (!text) return null;
+        return text.split(/(#\w+)/g).map((part, i) =>
+            part.startsWith('#')
+                ? (
+                    <span
+                        key={i}
+                        className="text-[var(--color-primary)] font-medium cursor-pointer hover:underline"
+                        onClick={() => onHashtagClick?.(part)}
+                    >
+                        {part}
+                    </span>
+                )
+                : part
+        );
     };
 
     const handleReaction = (emoji) => {
@@ -120,7 +127,8 @@ export default function MomentCard({ post, onCommentClick }) {
     };
 
     return (
-        <div className="bg-[var(--color-bg-white)] border-b border-[var(--color-border-light)] px-4 py-4">
+        <>
+            <div className="bg-[var(--color-bg-white)] border-b border-[var(--color-border-light)] px-4 py-4">
             {/* Header */}
             <div className="flex items-start gap-3">
                 {/* Avatar */}
@@ -172,7 +180,7 @@ export default function MomentCard({ post, onCommentClick }) {
 
                     {/* Post Content */}
                     <p className="text-[var(--color-text-main)] text-[15px] mt-1 whitespace-pre-wrap">
-                        {post.content}
+                        {renderContent(post.content)}
                     </p>
 
                     {/* Images Grid */}
@@ -235,12 +243,13 @@ export default function MomentCard({ post, onCommentClick }) {
                                 )}
                             </div>
 
-                            {/* Share */}
+                            {/* Repost / Forward */}
                             <button
-                                onClick={handleShare}
+                                onClick={() => setShowRepostSheet(true)}
                                 className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                title={t('repost') || 'Share to Chat'}
                             >
-                                <Share2 size={16} />
+                                <Forward size={16} />
                             </button>
 
                             {/* Comment */}
@@ -316,6 +325,15 @@ export default function MomentCard({ post, onCommentClick }) {
                     )}
                 </div>
             </div>
-        </div>
+            </div>
+
+            {showRepostSheet && (
+                <RepostSheet
+                    post={post}
+                    authorName={getAuthorName()}
+                    onClose={() => setShowRepostSheet(false)}
+                />
+            )}
+        </>
     );
 }

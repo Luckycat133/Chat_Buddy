@@ -18,7 +18,7 @@ export function useKeyboardShortcuts(shortcuts) {
 
                 // Skip when focus is in editable elements (default: true for mod-key shortcuts)
                 const skipInputs = shortcut.skipInputs ?? wantsMod;
-                if (!skipInputs) {
+                if (skipInputs) {
                     const tag = document.activeElement?.tagName;
                     const isEditable = document.activeElement?.isContentEditable;
                     if (tag === 'INPUT' || tag === 'TEXTAREA' || isEditable) continue;

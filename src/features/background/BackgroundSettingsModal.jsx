@@ -183,7 +183,7 @@ export default function BackgroundSettingsModal({ isOpen, onClose, chatId, perso
                         {/* Content Layout */}
                         <div className="flex flex-1 overflow-hidden">
                             {/* Sidebar Tabs */}
-                            <div className="w-48 border-r border-[var(--color-border-light)] bg-[var(--color-bg-app)] flex flex-col">
+                            <div className="bg-settings-sidebar w-48 border-r border-[var(--color-border-light)] bg-[var(--color-bg-app)] flex flex-col">
                                 {TABS.map(tab => (
                                     <button
                                         key={tab.id}
@@ -194,7 +194,7 @@ export default function BackgroundSettingsModal({ isOpen, onClose, chatId, perso
                                             }`}
                                     >
                                         <tab.icon className="w-5 h-5" />
-                                        <span className="font-medium">{t(tab.labelKey)}</span>
+                                        <span className="bg-settings-tab-label font-medium">{t(tab.labelKey)}</span>
                                     </button>
                                 ))}
                             </div>

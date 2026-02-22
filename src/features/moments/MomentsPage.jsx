@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, Sparkles, Image as ImageIcon, Video, Smile } from 'lucide-react';
+import { Camera, Sparkles, Image as ImageIcon, Smile, X } from 'lucide-react';
 import { useMoments } from './context/MomentsContext';
 import { useUser } from '../../context/UserContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -18,16 +18,36 @@ export default function MomentsPage() {
     const [selectedPost, setSelectedPost] = useState(null);
     const [scrolled, setScrolled] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeHashtag, setActiveHashtag] = useState(null);
+    const [visibleCount, setVisibleCount] = useState(10);
 
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 400);
         return () => clearTimeout(timer);
     }, []);
 
+    const handleHashtagClick = (tag) => {
+        setActiveHashtag(tag);
+        setVisibleCount(10);
+    };
+
+    const clearHashtagFilter = () => {
+        setActiveHashtag(null);
+        setVisibleCount(10);
+    };
+
     // Sort posts by date, newest first
     const sortedPosts = [...posts].sort((a, b) =>
         new Date(b.createdAt) - new Date(a.createdAt)
     );
+
+    // Filter by hashtag
+    const filteredPosts = activeHashtag
+        ? sortedPosts.filter(p => p.content?.toLowerCase().includes(activeHashtag.toLowerCase()))
+        : sortedPosts;
+
+    // Paginated slice
+    const paginatedPosts = filteredPosts.slice(0, visibleCount);
 
     const handleScroll = (e) => {
         setScrolled(e.target.scrollTop > 50);
@@ -91,31 +111,61 @@ export default function MomentsPage() {
                     </div>
                 </div>
 
+                {/* Hashtag Filter Pill */}
+                {activeHashtag && (
+                    <div className="flex items-center gap-2 mb-4 px-1">
+                        <span className="text-sm font-medium text-[var(--color-primary)]">{activeHashtag}</span>
+                        <button
+                            onClick={clearHashtagFilter}
+                            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                )}
+
                 {isLoading ? (
                     <SkeletonList count={3} skeleton={SkeletonMomentCard} className="space-y-6" />
-                ) : sortedPosts.length === 0 ? (
+                ) : filteredPosts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 animate-fade-in text-center">
                         <div className="w-20 h-20 rounded-[var(--radius-xl)] bg-[var(--color-bg-active)] flex items-center justify-center mb-4 shadow-inner">
                             <Camera size={32} className="text-[var(--color-text-muted)]" />
                         </div>
                         <h3 className="text-lg font-bold text-[var(--color-text-main)] mb-1">
-                            {t('no_posts') || 'Your timeline is empty'}
+                            {activeHashtag
+                                ? (language === 'zh' ? `没有包含 ${activeHashtag} 的动态` : `No posts with ${activeHashtag}`)
+                                : (t('no_posts') || 'Your timeline is empty')
+                            }
                         </h3>
-                        <p className="text-[var(--color-text-muted)] text-sm max-w-xs">
-                            {t('be_first') || 'Be the first to capture and share a moment with your AI friends.'}
-                        </p>
+                        {!activeHashtag && (
+                            <p className="text-[var(--color-text-muted)] text-sm max-w-xs">
+                                {t('be_first') || 'Be the first to capture and share a moment with your AI friends.'}
+                            </p>
+                        )}
                     </div>
                 ) : (
-                    <div className="space-y-6">
-                        {sortedPosts.map((post, index) => (
-                            <div key={post.id} style={{ animationDelay: `${index * 100}ms` }} className="animate-fade-slide-up">
-                                <MomentCard
-                                    post={post}
-                                    onCommentClick={setSelectedPost}
-                                />
-                            </div>
-                        ))}
-                    </div>
+                    <>
+                        <div className="space-y-6">
+                            {paginatedPosts.map((post, index) => (
+                                <div key={post.id} style={{ animationDelay: `${index * 100}ms` }} className="animate-fade-slide-up">
+                                    <MomentCard
+                                        post={post}
+                                        onCommentClick={setSelectedPost}
+                                        onHashtagClick={handleHashtagClick}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        {filteredPosts.length > visibleCount && (
+                            <button
+                                onClick={() => setVisibleCount(v => v + 10)}
+                                className="w-full mt-6 py-3 rounded-xl bg-[var(--color-bg-white)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[14px] font-medium hover:bg-[var(--color-bg-hover)] transition-colors"
+                            >
+                                {t('load_more') || 'Load more'}
+                            </button>
+                        )}
+                    </>
                 )}
             </div>
 

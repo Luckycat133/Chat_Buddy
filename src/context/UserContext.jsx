@@ -23,10 +23,14 @@ export const UserProvider = ({ children }) => {
 
     // Update nickname
     const updateNickname = useCallback((nickname) => {
+        const normalized = nickname.trim().slice(0, 20);
+        if (!normalized) return false;
+
         setUserProfile(prev => ({
             ...prev,
-            nickname: nickname.trim().slice(0, 20) // Max 20 chars
+            nickname: normalized // Max 20 chars
         }));
+        return true;
     }, [setUserProfile]);
 
     // Update avatar (path or base64 data URL)

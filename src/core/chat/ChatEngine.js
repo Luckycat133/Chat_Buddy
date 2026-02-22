@@ -1,6 +1,6 @@
 import { storage } from '../../services/storage/StorageService';
 import { AIPipeline } from './AIPipeline';
-import { cleanMessageContent } from '../../features/chat/services/chatService';
+import { cleanMessageContent, callAI } from '../../features/chat/services/chatService';
 import { getPresenceMap } from '../presence/PresenceService';
 import { checkReEngagement } from '../presence/GreetingService';
 import { getMoodMap } from '../presence/MoodService';
@@ -17,6 +17,12 @@ import { addBookmark, removeBookmark, getBookmarks, isBookmarked } from '../../f
 export class ChatEngine {
     constructor() {
         this.storageKey = 'chat-buddy-chats';
+        this.storageKeyCandidates = [
+            'chat-buddy-chats',
+            'chat-buddy:chat-buddy-chats'
+        ];
+        this.migrationMetaKey = 'migrations';
+        this.chatMigrationFlag = 'chatStorageV2';
         this.chats = [];
         this.currentUserId = 'user-me';
         this.personas = []; // Need to be injected or loaded
@@ -44,8 +50,9 @@ export class ChatEngine {
      * Initialize engine with data
      */
     init(personas) {
+        this.destroy();
         this.personas = personas;
-        this.chats = storage.get(this.storageKey, []);
+        this.chats = this._loadChatsWithMigration();
         console.log('[ChatEngine] Initialized with', this.chats.length, 'chats');
 
         // T05: Start presence tracking & greeting checker
@@ -53,6 +60,85 @@ export class ChatEngine {
         this._startGreetingChecker();
 
         this._notify();
+    }
+
+    _loadChatsWithMigration() {
+        let selectedKey = null;
+        let loadedChats = [];
+
+        for (const key of this.storageKeyCandidates) {
+            const value = storage.get(key, null);
+            if (Array.isArray(value)) {
+                selectedKey = key;
+                loadedChats = value;
+                break;
+            }
+        }
+
+        const normalized = loadedChats
+            .map(chat => this._normalizeChat(chat))
+            .filter(Boolean);
+
+        // Canonical write-back to keep storage source consistent.
+        storage.set(this.storageKey, normalized);
+
+        // Mark migration metadata when data came from non-canonical key.
+        if (selectedKey && selectedKey !== this.storageKey) {
+            const migrationMeta = storage.get(this.migrationMetaKey, {});
+            storage.set(this.migrationMetaKey, {
+                ...migrationMeta,
+                [this.chatMigrationFlag]: {
+                    from: selectedKey,
+                    to: this.storageKey,
+                    migratedAt: new Date().toISOString()
+                }
+            });
+        }
+
+        return normalized;
+    }
+
+    _normalizeChat(chat) {
+        if (!chat || typeof chat !== 'object' || !chat.id) return null;
+
+        const messages = Array.isArray(chat.messages)
+            ? chat.messages.map(msg => this._normalizeMessage(msg)).filter(Boolean)
+            : [];
+
+        const lastMessage = chat.lastMessage && typeof chat.lastMessage === 'object'
+            ? this._normalizeMessage(chat.lastMessage)
+            : messages[messages.length - 1] || null;
+
+        const createdAt = chat.createdAt || chat.updatedAt || new Date().toISOString();
+        const updatedAt = chat.updatedAt || lastMessage?.timestamp || createdAt;
+        const participants = Array.isArray(chat.participants)
+            ? chat.participants
+            : ['user-me'];
+
+        return {
+            ...chat,
+            name: chat.name || 'New Chat',
+            participants,
+            messages,
+            lastMessage,
+            createdAt,
+            updatedAt,
+            polls: Array.isArray(chat.polls) ? chat.polls : [],
+            pinnedMessages: Array.isArray(chat.pinnedMessages) ? chat.pinnedMessages : [],
+            settings: chat.settings || { muteValues: {} }
+        };
+    }
+
+    _normalizeMessage(message) {
+        if (!message || typeof message !== 'object') return null;
+        if (!message.id || !message.senderId || typeof message.content !== 'string') return null;
+
+        return {
+            ...message,
+            timestamp: message.timestamp || new Date().toISOString(),
+            status: message.status || 'sent',
+            readBy: Array.isArray(message.readBy) ? message.readBy : []
+        };
     }
 
     /**
@@ -184,6 +270,45 @@ export class ChatEngine {
         if (chatIndex === -1) return;
 
         this.chats[chatIndex] = { ...this.chats[chatIndex], ...updates };
+        this.save();
+    }
+
+    pinChat(chatId, isPinned = true) {
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        if (chatIndex === -1) return;
+
+        this.chats[chatIndex] = { ...this.chats[chatIndex], isPinned };
+        this.save();
+    }
+
+    markChatUnread(chatId, isUnread = true) {
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        if (chatIndex === -1) return;
+
+        this.chats[chatIndex] = { ...this.chats[chatIndex], isUnread };
+        this.save();
+    }
+
+    deleteChat(chatId) {
+        const nextChats = this.chats.filter(c => c.id !== chatId);
+        if (nextChats.length === this.chats.length) return;
+
+        this.chats = nextChats;
+        delete this.typingIndicators[chatId];
+        this.save();
+    }
+
+    clearChatMessages(chatId) {
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        if (chatIndex === -1) return;
+
+        const chat = this.chats[chatIndex];
+        this.chats[chatIndex] = {
+            ...chat,
+            messages: [],
+            lastMessage: null,
+            pinnedMessages: []
+        };
         this.save();
     }
 
@@ -457,24 +582,22 @@ Title:`;
 
         // Call AI Service directly for the name
         // We use a light model if possible, but standard callAI logic handles it
-        import('../../features/chat/services/chatService').then(({ callAI }) => {
-            callAI([
-                { role: 'system', content: 'You are a helpful assistant that summarizes conversation topics.' },
-                { role: 'user', content: namingPrompt }
-            ], {
-                maxTokens: 20,
-                temperature: 0.3
-            }).then(title => {
-                if (title) {
-                    // Clean up quotes just in case
-                    const cleanTitle = title.replace(/["']/g, '').trim();
-                    console.log(`[ChatEngine] Auto-naming chat ${chat.id} -> ${cleanTitle}`);
+        callAI([
+            { role: 'system', content: 'You are a helpful assistant that summarizes conversation topics.' },
+            { role: 'user', content: namingPrompt }
+        ], {
+            maxTokens: 20,
+            temperature: 0.3
+        }).then(title => {
+            if (title) {
+                // Clean up quotes just in case
+                const cleanTitle = title.replace(/["']/g, '').trim();
+                console.log(`[ChatEngine] Auto-naming chat ${chat.id} -> ${cleanTitle}`);
 
-                    // Update chat name
-                    this.updateChat(chat.id, { name: cleanTitle });
-                }
-            }).catch(err => console.error('[ChatEngine] Auto-naming failed:', err));
-        });
+                // Update chat name
+                this.updateChat(chat.id, { name: cleanTitle });
+            }
+        }).catch(err => console.error('[ChatEngine] Auto-naming failed:', err));
     }
     // =========================================================================
     // T05: Presence & Greeting

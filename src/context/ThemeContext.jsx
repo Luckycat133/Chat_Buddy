@@ -40,6 +40,7 @@ const CHAT_BACKGROUNDS = [
 
 const DEFAULT_THEME = {
     mode: 'system', // 'light' | 'dark' | 'system'
+    oledEnabled: false,
     chatBackground: 'default',
     customBackground: null, // base64 image
     accentColor: null, // custom primary color
@@ -74,8 +75,14 @@ export const ThemeProvider = ({ children }) => {
         const apply = () => {
             if (resolvedMode === 'dark') {
                 document.documentElement.classList.add('dark');
+                if (theme.oledEnabled) {
+                    document.documentElement.classList.add('oled');
+                } else {
+                    document.documentElement.classList.remove('oled');
+                }
             } else {
                 document.documentElement.classList.remove('dark');
+                document.documentElement.classList.remove('oled');
             }
         };
         // Only animate if mode actually changed (not on initial mount)
@@ -85,7 +92,7 @@ export const ThemeProvider = ({ children }) => {
             apply();
         }
         prevMode.current = resolvedMode;
-    }, [resolvedMode]);
+    }, [resolvedMode, theme.oledEnabled]);
 
     // Apply custom accent color (all 6 derived CSS vars)
     useEffect(() => {
@@ -133,6 +140,14 @@ export const ThemeProvider = ({ children }) => {
     // Set explicit mode: 'light' | 'dark' | 'system'
     const setThemeMode = useCallback((mode) => {
         setTheme(prev => ({ ...prev, mode }));
+    }, [setTheme]);
+
+    const toggleOLEDMode = useCallback(() => {
+        setTheme(prev => ({ ...prev, oledEnabled: !prev.oledEnabled }));
+    }, [setTheme]);
+
+    const setOLEDMode = useCallback((enabled) => {
+        setTheme(prev => ({ ...prev, oledEnabled: Boolean(enabled) }));
     }, [setTheme]);
 
     // ========== Chat Background ==========
@@ -189,11 +204,14 @@ export const ThemeProvider = ({ children }) => {
         isDarkMode: resolvedMode === 'dark',
         themeMode: theme.mode, // raw: 'light' | 'dark' | 'system'
         resolvedMode,          // effective: 'light' | 'dark'
+        oledEnabled: Boolean(theme.oledEnabled),
 
         // Theme mode
         toggleDarkMode,
         setDarkMode,
         setThemeMode,
+        toggleOLEDMode,
+        setOLEDMode,
 
         // Backgrounds
         chatBackgrounds: CHAT_BACKGROUNDS,

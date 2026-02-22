@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { chatEngine } from '../../../core/chat/ChatEngine';
-import { INITIAL_PERSONAS, getAllPersonas } from '../../../data/personas';
+import { getAllPersonas } from '../../../data/personas';
 
 /**
  * Application Layer: Chat Service Hook
@@ -52,6 +52,10 @@ export function useChatService() {
         // Legacy Parity
         setChats: () => console.warn('setChats deprecated'),
         updateChat: (chatId, updates) => chatEngine.updateChat(chatId, updates),
+        pinChat: (chatId, isPinned) => chatEngine.pinChat(chatId, isPinned),
+        markChatUnread: (chatId, isUnread) => chatEngine.markChatUnread(chatId, isUnread),
+        deleteChat: (chatId) => chatEngine.deleteChat(chatId),
+        clearChatMessages: (chatId) => chatEngine.clearChatMessages(chatId),
         pinMessage: (chatId, msgId, isPinned) => chatEngine.pinMessage(chatId, msgId, isPinned),
         votePoll: (chatId, pollId, optionId, action) => chatEngine.votePoll(chatId, pollId, optionId, action),
 

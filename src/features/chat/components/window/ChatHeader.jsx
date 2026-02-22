@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, MoreHorizontal, Sparkles, Image, Download } from 'lucide-react';
+import { ArrowLeft, Search, MoreHorizontal, Sparkles, Image, Download, Bookmark } from 'lucide-react';
 import { useLanguage } from '../../../../context/LanguageContext';
 import { useSocial } from '../../../../context/SocialContext';
 
-export default function ChatHeader({ chat, personas, typingIndicators, presenceMap, moodMap, onOpenBackground, onOpenExport }) {
+export default function ChatHeader({ chat, personas, typingIndicators, presenceMap, moodMap, onOpenBackground, onOpenExport, onOpenBookmarks }) {
     const navigate = useNavigate();
     const { t, language } = useLanguage();
     const { getIntimacyLevel, getIntimacy } = useSocial();
@@ -162,6 +162,13 @@ export default function ChatHeader({ chat, personas, typingIndicators, presenceM
                     aria-label={t('search') || 'Search'}
                 >
                     <Search size={20} />
+                </button>
+                <button
+                    className="chat-action-btn"
+                    onClick={onOpenBookmarks}
+                    aria-label={t('bookmarks_title') || 'Bookmarks'}
+                >
+                    <Bookmark size={20} />
                 </button>
                 <button
                     className="chat-action-btn"
