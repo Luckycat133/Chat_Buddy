@@ -5,6 +5,7 @@
  * Supports multiple saved provider profiles.
  */
 import { storage } from '../services/storage/StorageService';
+import APIClient from '../services/api/APIClient';
 
 const CONFIG_KEY = 'api-config';
 const PROFILES_KEY = 'api-profiles';
@@ -126,20 +127,24 @@ export async function validateConfig(config) {
         return { valid: false, error: 'missing_fields' };
     }
 
+    // Use APIClient so relative baseUrls (e.g. /proxy/perplexity) go through
+    // the Vite dev proxy — same path as real callAI() calls.
+    const client = new APIClient({
+        baseURL: config.baseUrl.replace(/\/+$/, ''),
+        timeout: 15000,
+        maxRetries: 0,
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.apiKey}`,
+        },
+    });
+
     const start = Date.now();
     try {
-        const res = await fetch(`${config.baseUrl.replace(/\/+$/, '')}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${config.apiKey}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: config.model,
-                messages: [{ role: 'user', content: 'Hi' }],
-                max_tokens: 5,
-            }),
-            signal: AbortSignal.timeout(15000),
+        const res = await client.post('/chat/completions', {
+            model: config.model,
+            messages: [{ role: 'user', content: 'Hi' }],
+            max_tokens: 5,
         });
 
         const latency = Date.now() - start;

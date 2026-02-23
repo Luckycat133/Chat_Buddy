@@ -52,10 +52,16 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': {
-        target: 'https://maas-api.cn-huabei-1.xf-yun.com/v2',
+      '/proxy/xfyun': {
+        target: 'https://maas-api.cn-huabei-1.xf-yun.com',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        rewrite: (path) => path.replace(/^\/proxy\/xfyun/, ''),
+        secure: true,
+      },
+      '/proxy/perplexity': {
+        target: 'https://api.perplexity.ai',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/proxy\/perplexity/, ''),
         secure: true,
       }
     }

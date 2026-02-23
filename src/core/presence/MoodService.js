@@ -15,35 +15,35 @@ export const MOODS = {
         emoji: '\u{1F60A}',
         label: 'Happy',
         label_zh: '\u5F00\u5FC3',
-        promptHint: "You're in a great mood! Be enthusiastic and positive."
+        promptHint: "Great mood; be upbeat and positive."
     },
     calm: {
         id: 'calm',
         emoji: '\u{1F60C}',
         label: 'Calm',
         label_zh: '\u5E73\u9759',
-        promptHint: "You're feeling peaceful and balanced."
+        promptHint: 'Peaceful and steady tone.'
     },
     tired: {
         id: 'tired',
         emoji: '\u{1F634}',
         label: 'Tired',
         label_zh: '\u56F0\u5026',
-        promptHint: "You're feeling tired. Keep responses shorter, maybe yawn occasionally."
+        promptHint: 'Low energy; keep responses shorter.'
     },
     excited: {
         id: 'excited',
         emoji: '\u{1F929}',
         label: 'Excited',
         label_zh: '\u5174\u596E',
-        promptHint: "You're excited! Use exclamation marks, be energetic."
+        promptHint: 'Excited and energetic voice.'
     },
     melancholy: {
         id: 'melancholy',
         emoji: '\u{1F614}',
         label: 'Melancholy',
         label_zh: '\u6DF1\u601D',
-        promptHint: "You're feeling reflective and a bit wistful. Be thoughtful and introspective."
+        promptHint: 'Reflective, slightly wistful tone.'
     }
 };
 

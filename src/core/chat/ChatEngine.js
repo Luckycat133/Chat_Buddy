@@ -33,6 +33,7 @@ export class ChatEngine {
         this.typingIndicators = {}; // { chatId: [aiId, ...] }
         this.presenceMap = {};      // { personaId: 'online'|'offline'|'busy' }
         this.moodMap = {};          // { personaId: moodObject }
+        this._scheduledMessages = new Map(); // { `${chatId}:${aiId}`: timeoutId }
 
         // T06: Callback hooks & context provider
         this._onUserMessageCallbacks = [];
@@ -532,20 +533,29 @@ export class ChatEngine {
     }
 
     _handleAISchedule(chatId, ai, minutes) {
-        console.log(`[ChatEngine] Scheduling proactive msg for ${ai.name} in ${minutes}m`);
-        // TODO: Implement robust scheduling via setTimeout or a Scheduler Service
-        // For standard "Refactor Phase 2", we can keep it simple:
-        setTimeout(() => {
+        const parsedMinutes = Math.max(1, Math.min(Number(minutes) || 1, 24 * 60));
+        const scheduleKey = `${chatId}:${ai.id}`;
+        const existing = this._scheduledMessages.get(scheduleKey);
+        if (existing) {
+            clearTimeout(existing);
+        }
+
+        console.log(`[ChatEngine] Scheduling proactive msg for ${ai.name} in ${parsedMinutes}m`);
+
+        const timeoutId = setTimeout(() => {
+            this._scheduledMessages.delete(scheduleKey);
             const chat = this.chats.find(c => c.id === chatId);
             if (chat) {
                 // Determine if we should still send (check last msg time)
                 const lastMsg = chat.messages[chat.messages.length - 1];
                 const timeDiff = Date.now() - new Date(lastMsg.timestamp).getTime();
-                if (timeDiff > minutes * 60 * 1000 * 0.8) {
+                if (timeDiff > parsedMinutes * 60 * 1000 * 0.8) {
                     this.aiPipeline.processTurn(chat, this.personas, ai);
                 }
             }
-        }, minutes * 60 * 1000);
+        }, parsedMinutes * 60 * 1000);
+
+        this._scheduledMessages.set(scheduleKey, timeoutId);
     }
 
     _triggerAIResponse(chat) {
@@ -595,9 +605,8 @@ export class ChatEngine {
         // Construct a prompt specifically for naming
         const firstMessage = chat.messages[0].content;
         const namingPrompt = `
-Generate a short, descriptive title (maximum 6 words) for a conversation that starts with the following message. 
-The title should allow a user to instantly understand the topic of the chat for future lookup.
-Do not use quotes or punctuation. Just the title text.
+Generate a clear chat title (max 6 words) from this first message.
+No quotes, no punctuation, title text only.
 
 Message: "${firstMessage}"
 Title:`;
@@ -605,7 +614,7 @@ Title:`;
         // Call AI Service directly for the name
         // We use a light model if possible, but standard callAI logic handles it
         callAI([
-            { role: 'system', content: 'You are a helpful assistant that summarizes conversation topics.' },
+            { role: 'system', content: 'You generate concise topic titles.' },
             { role: 'user', content: namingPrompt }
         ], {
             maxTokens: 20,
@@ -666,6 +675,10 @@ Title:`;
     destroy() {
         if (this._presenceInterval) clearInterval(this._presenceInterval);
         if (this._greetingInterval) clearInterval(this._greetingInterval);
+        for (const timeoutId of this._scheduledMessages.values()) {
+            clearTimeout(timeoutId);
+        }
+        this._scheduledMessages.clear();
     }
 }
 

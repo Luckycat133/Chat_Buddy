@@ -100,11 +100,11 @@ export async function extractMemoriesAsync(oldMessages, characterId, characterNa
             {
                 role: 'system',
                 content:
-                    'You are a memory extraction assistant. Given a chat transcript, extract key facts about the "User" — preferences, life events, opinions, and personal details. Return ONLY a valid JSON array (no markdown, no explanation). Each item: { "fact": string, "importance": number (1-10), "category": "preference"|"fact"|"event" }. Limit to at most 8 items. If nothing notable, return [].',
+                    'Extract only user facts from the transcript. Return JSON array only (no markdown/explanation): [{"fact":string,"importance":1-10,"category":"preference"|"fact"|"event"}]. Max 8 items. If none, return [].',
             },
             {
                 role: 'user',
-                content: `Here is the transcript:\n\n${transcript}\n\nExtract key facts about the User.`,
+                content: `Transcript:\n\n${transcript}\n\nExtract user facts.`,
             },
         ];
 
@@ -162,6 +162,7 @@ export async function extractGroupMemoriesAsync(messages, chatId, aiParticipants
 
     // Only process a window of recent-enough messages to avoid noise
     const relevantMessages = messages.slice(-30);
+    const participantNameMap = new Map(aiParticipants.map(p => [p.id, p.name]));
 
     for (const ai of aiParticipants) {
         const rateKey = `${ai.id}:group:${chatId}`;
@@ -174,7 +175,7 @@ export async function extractGroupMemoriesAsync(messages, chatId, aiParticipants
         // Build transcript from the AI's perspective (it only sees what happened in the group)
         const transcript = relevantMessages
             .map((m) => {
-                const who = m.senderId === 'user-me' ? 'User' : (aiParticipants.find(p => p.id === m.senderId)?.name || 'Someone');
+                const who = m.senderId === 'user-me' ? 'User' : (participantNameMap.get(m.senderId) || 'Someone');
                 return `${who}: ${m.content}`;
             })
             .join('\n');
@@ -183,14 +184,13 @@ export async function extractGroupMemoriesAsync(messages, chatId, aiParticipants
             {
                 role: 'system',
                 content:
-                    `You are a memory extraction assistant reviewing a GROUP CHAT transcript. ` +
-                    `Extract key facts about the "User" that ${ai.name} would have observed — preferences, life events, opinions, interests. ` +
-                    `Return ONLY a valid JSON array. Each item: { "fact": string, "importance": number (1-10), "category": "preference"|"fact"|"event" }. ` +
-                    `Limit to at most 5 items. If nothing notable about the User, return [].`,
+                    `Extract user facts from this group chat as observed by ${ai.name}. ` +
+                    `Return JSON array only: [{"fact":string,"importance":1-10,"category":"preference"|"fact"|"event"}]. ` +
+                    `Max 5 items; if none, return [].`,
             },
             {
                 role: 'user',
-                content: `Group chat transcript:\n\n${transcript}\n\nExtract facts about the User that ${ai.name} learned.`,
+                content: `Group transcript:\n\n${transcript}\n\nExtract user facts learned by ${ai.name}.`,
             },
         ];
 
@@ -221,4 +221,3 @@ export async function extractGroupMemoriesAsync(messages, chatId, aiParticipants
         }).catch(() => { }); // Silent failure
     }
 }
-

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useChat } from './context/ChatContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -10,10 +10,6 @@ import { formatFileSize } from '../../utils/fileUtils';
 import ChatHeader from './components/window/ChatHeader';
 import MessageTimeline from './components/window/MessageTimeline';
 import ChatComposer from './components/window/ChatComposer';
-import MessageMenu from './components/MessageMenu';
-import BookmarkPanel from './components/BookmarkPanel';
-import GroupPoll from './components/GroupPoll';
-import MessageSearchPanel from './components/MessageSearchPanel';
 import { getCharacterThemeStyle } from './components/CharacterTheme';
 import { checkWindowOpenGreeting } from '../../core/presence/GreetingService';
 
@@ -25,6 +21,10 @@ const RockPaperScissors = lazy(() => import('./components/RockPaperScissors'));
 const NumberGuessGame = lazy(() => import('./components/NumberGuessGame'));
 const GameSelectorPanel = lazy(() => import('./components/GameSelectorPanel'));
 const ExportModal = lazy(() => import('./components/ExportModal'));
+const MessageMenu = lazy(() => import('./components/MessageMenu'));
+const BookmarkPanel = lazy(() => import('./components/BookmarkPanel'));
+const GroupPoll = lazy(() => import('./components/GroupPoll'));
+const MessageSearchPanel = lazy(() => import('./components/MessageSearchPanel'));
 
 const BackgroundLayer = lazy(() => import('../background/BackgroundLayer'));
 const BackgroundSettingsModal = lazy(() => import('../background/BackgroundSettingsModal'));
@@ -70,26 +70,31 @@ export default function ChatWindow({ chatId: propChatId }) {
 
     // T07: Export modal state
     const [showExportModal, setShowExportModal] = useState(false);
+    const greetedChatIdRef = useRef(null);
 
     const chat = chats.find(c => c.id === id);
     const isSearchRoute = location.pathname === `/chat/${id}/search`;
 
     // T05: Window-open greeting check
     useEffect(() => {
-        if (chat && chat.participants.length === 2) {
-            const otherId = chat.participants.find(p => p !== 'user-me');
-            const otherPersona = personas.find(p => p.id === otherId);
-            if (otherPersona) {
-                const greeting = checkWindowOpenGreeting(chat, otherPersona, language);
-                if (greeting) {
-                    // Slight delay to feel natural after opening
-                    setTimeout(() => {
-                        triggerGreeting(chat.id, greeting.message, greeting.personaId);
-                    }, 1000);
-                }
-            }
-        }
-    }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+        if (!chat?.id || chat.participants.length !== 2) return;
+        if (greetedChatIdRef.current === chat.id) return;
+        greetedChatIdRef.current = chat.id;
+
+        const otherId = chat.participants.find(p => p !== 'user-me');
+        const otherPersona = personas.find(p => p.id === otherId);
+        if (!otherPersona) return;
+
+        const greeting = checkWindowOpenGreeting(chat, otherPersona, language);
+        if (!greeting) return;
+
+        // Slight delay to feel natural after opening.
+        const timer = setTimeout(() => {
+            triggerGreeting(chat.id, greeting.message, greeting.personaId);
+        }, 1000);
+
+        return () => clearTimeout(timer);
+    }, [chat, chat?.id, personas, language, triggerGreeting]);
 
     // Auto-hide toast
     useEffect(() => {
@@ -263,24 +268,26 @@ export default function ChatWindow({ chatId: propChatId }) {
 
             {/* Overlays */}
             {selectedMessage && (
-                <MessageMenu
-                    message={selectedMessage}
-                    isOwnMessage={selectedMessage.senderId === 'user-me'}
-                    isPinned={chat?.pinnedMessages?.includes(selectedMessage.id)}
-                    isBookmarked={bookmarkedMessageIds.has(selectedMessage.id)}
-                    position={menuPosition}
-                    canRecall={canRecallMessage}
-                    onClose={() => setSelectedMessage(null)}
-                    onCopy={() => showToast(t('message_copied'))}
-                    onQuote={setQuotedMessage}
-                    onDelete={(id) => { deleteMessage(chat.id, id); showToast(t('message_deleted')); }}
-                    onForward={(msg) => { setMessageToForward(msg); setShowForwardModal(true); }}
-                    onPin={(msgId, pin) => {
-                        pinMessage(chat.id, msgId, pin);
-                        showToast(pin ? t('message_pinned') : t('message_unpinned'));
-                    }}
-                    onBookmark={handleBookmark}
-                />
+                <Suspense fallback={null}>
+                    <MessageMenu
+                        message={selectedMessage}
+                        isOwnMessage={selectedMessage.senderId === 'user-me'}
+                        isPinned={chat?.pinnedMessages?.includes(selectedMessage.id)}
+                        isBookmarked={bookmarkedMessageIds.has(selectedMessage.id)}
+                        position={menuPosition}
+                        canRecall={canRecallMessage}
+                        onClose={() => setSelectedMessage(null)}
+                        onCopy={() => showToast(t('message_copied'))}
+                        onQuote={setQuotedMessage}
+                        onDelete={(id) => { deleteMessage(chat.id, id); showToast(t('message_deleted')); }}
+                        onForward={(msg) => { setMessageToForward(msg); setShowForwardModal(true); }}
+                        onPin={(msgId, pin) => {
+                            pinMessage(chat.id, msgId, pin);
+                            showToast(pin ? t('message_pinned') : t('message_unpinned'));
+                        }}
+                        onBookmark={handleBookmark}
+                    />
+                </Suspense>
             )}
 
             {showForwardModal && (
@@ -350,28 +357,32 @@ export default function ChatWindow({ chatId: propChatId }) {
             {showPoll && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-lg w-full max-w-md mx-4 overflow-hidden shadow-2xl animate-scale-in">
-                        <GroupPoll onClose={() => setShowPoll(false)} onCreatePoll={handleCreatePoll} />
+                        <Suspense fallback={<ModalLoadingFallback />}>
+                            <GroupPoll onClose={() => setShowPoll(false)} onCreatePoll={handleCreatePoll} />
+                        </Suspense>
                     </div>
                 </div>
             )}
 
             {/* Search Panel */}
             {showSearchPanel && (
-                <MessageSearchPanel
-                    currentChatId={chat.id}
-                    onClose={() => {
-                        setShowSearchPanel(false);
-                        if (isSearchRoute) {
-                            navigate(`/chat/${chat.id}`, { replace: true });
-                        }
-                    }}
-                    onSelectMessage={() => {
-                        setShowSearchPanel(false);
-                        if (isSearchRoute) {
-                            navigate(`/chat/${chat.id}`, { replace: true });
-                        }
-                    }}
-                />
+                <Suspense fallback={<ModalLoadingFallback />}>
+                    <MessageSearchPanel
+                        currentChatId={chat.id}
+                        onClose={() => {
+                            setShowSearchPanel(false);
+                            if (isSearchRoute) {
+                                navigate(`/chat/${chat.id}`, { replace: true });
+                            }
+                        }}
+                        onSelectMessage={() => {
+                            setShowSearchPanel(false);
+                            if (isSearchRoute) {
+                                navigate(`/chat/${chat.id}`, { replace: true });
+                            }
+                        }}
+                    />
+                </Suspense>
             )}
 
             {showBackgroundSettings && (
@@ -386,12 +397,14 @@ export default function ChatWindow({ chatId: propChatId }) {
 
             {/* T07: Bookmark Panel */}
             {showBookmarkPanel && (
-                <BookmarkPanel
-                    isOpen={showBookmarkPanel}
-                    onClose={() => setShowBookmarkPanel(false)}
-                    onNavigateToMessage={handleNavigateToBookmark}
-                    personas={personas}
-                />
+                <Suspense fallback={<ModalLoadingFallback />}>
+                    <BookmarkPanel
+                        isOpen={showBookmarkPanel}
+                        onClose={() => setShowBookmarkPanel(false)}
+                        onNavigateToMessage={handleNavigateToBookmark}
+                        personas={personas}
+                    />
+                </Suspense>
             )}
 
             {/* T07: Export Modal */}
