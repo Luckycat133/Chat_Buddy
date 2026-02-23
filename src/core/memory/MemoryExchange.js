@@ -53,10 +53,9 @@ export async function requestMemory(requesterId, targetName, topic, personas) {
             `You are ${target.name}. ${target.personality}. ${target.style}.\n` +
             `WHAT YOU REMEMBER ABOUT THE USER:\n${memoryLines}\n\n` +
             `CONTEXT: ${relationHint}\n` +
-            `RULES: You are responding to a private question from ${requesterName} about the user. ` +
-            `Be natural and in-character — you may choose to share truthfully, deflect vaguely, ` +
-            `express uncertainty, or be protective of what you consider private. ` +
-            `Keep your response concise (1-3 sentences). Do NOT start with "I" or state you are an AI.`;
+            `RULES: Reply privately to ${requesterName} about the user, in character. ` +
+            `You may share, hedge, deflect, or protect private details. ` +
+            `Keep it concise (1-3 sentences). Do not mention being an AI.`;
 
         const messages = [
             { role: 'system', content: systemPrompt },
@@ -78,4 +77,3 @@ export async function requestMemory(requesterId, targetName, topic, personas) {
         return `[Memory exchange encountered an error and could not complete.]`;
     }
 }
-

@@ -32,6 +32,10 @@ dist-ssr
 # Test and development artifacts
 .pytest_cache
 reports/
+e2e/reports/*
+!e2e/reports/.gitkeep
+e2e/screenshots/*
+!e2e/screenshots/.gitkeep
 __pycache__/
 *.pyc
 .eslintcache

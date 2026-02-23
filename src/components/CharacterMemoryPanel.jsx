@@ -6,8 +6,8 @@
  * Allows deleting individual memories or clearing all.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Brain, Trash2, X, RefreshCw, Tag } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Brain, Trash2, X, RefreshCw } from 'lucide-react';
 import { memoryStore } from '../core/memory/MemoryStore';
 import { cn } from '../utils/cn';
 
@@ -25,20 +25,48 @@ const IMPORTANCE_LABELS = {
 
 export default function CharacterMemoryPanel({ character, onClose }) {
     const [memories, setMemories] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loadedForCharacterId, setLoadedForCharacterId] = useState(null);
     const [clearing, setClearing] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
-    const loadMemories = useCallback(async () => {
-        if (!character?.id) return;
-        setLoading(true);
-        const facts = await memoryStore.getAllFactsForUI(character.id);
-        setMemories(facts);
-        setLoading(false);
-    }, [character?.id]);
+    const characterId = character?.id;
+    const loading = Boolean(characterId) && loadedForCharacterId !== characterId;
+
+    const fetchMemories = async (targetCharacterId) => {
+        if (!targetCharacterId) return [];
+        try {
+            const facts = await memoryStore.getAllFactsForUI(targetCharacterId);
+            return Array.isArray(facts) ? facts : [];
+        } catch (_error) {
+            return [];
+        }
+    };
 
     useEffect(() => {
-        loadMemories();
-    }, [loadMemories]);
+        if (!characterId) return;
+        let cancelled = false;
+
+        (async () => {
+            const facts = await fetchMemories(characterId);
+            if (cancelled) return;
+            setMemories(facts);
+            setLoadedForCharacterId(characterId);
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [characterId]);
+
+    const handleRefresh = async () => {
+        if (!characterId || refreshing) return;
+        setRefreshing(true);
+        setLoadedForCharacterId(null);
+        const facts = await fetchMemories(characterId);
+        setMemories(facts);
+        setLoadedForCharacterId(characterId);
+        setRefreshing(false);
+    };
 
     const handleForget = async (factId) => {
         await memoryStore.forgetFact(factId);
@@ -79,7 +107,7 @@ export default function CharacterMemoryPanel({ character, onClose }) {
                             />
                         )}
                         <div>
-                            <h3 className="font-semibold text-[var(--color-text-primary)]">
+                            <h3 className="font-semibold text-[var(--color-text-main)]">
                                 <Brain size={14} className="inline mr-1 text-[var(--color-primary)]" />
                                 {character?.name}'s Memory
                             </h3>
@@ -90,11 +118,12 @@ export default function CharacterMemoryPanel({ character, onClose }) {
                     </div>
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={loadMemories}
-                            className="btn btn-ghost btn-icon"
+                            onClick={handleRefresh}
+                            disabled={refreshing}
+                            className="btn btn-ghost btn-icon disabled:opacity-60"
                             title="Refresh"
                         >
-                            <RefreshCw size={16} />
+                            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
                         </button>
                         <button onClick={onClose} className="btn btn-ghost btn-icon">
                             <X size={18} />
@@ -137,7 +166,7 @@ export default function CharacterMemoryPanel({ character, onClose }) {
 
                                     {/* Fact text */}
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm text-[var(--color-text-primary)] leading-relaxed">
+                                        <p className="text-sm text-[var(--color-text-main)] leading-relaxed">
                                             {memory.fact}
                                         </p>
                                         <p className="text-[11px] text-[var(--color-text-secondary)] mt-1">

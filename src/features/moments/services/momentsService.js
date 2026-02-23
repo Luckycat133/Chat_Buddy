@@ -50,15 +50,12 @@ Interests: ${persona.interests?.join(', ')}
 Current time context: ${timeContext}
 Location: ${location}
 
-Generate a social media post (like WeChat Moments) that this character would share.
-The post should:
-- Be 1-3 sentences, natural and in character
-- Sometimes in Chinese, sometimes in English, sometimes mixed (based on character)
-- Include relevant emojis
-- Reflect the time of day naturally
-- Match the character's personality perfectly
+Write one Moments-style post this character would share:
+- 1-3 sentences, natural and in character
+- Chinese / English / mixed when suitable
+- include fitting emojis and time-of-day vibe
 
-Output ONLY the post content, nothing else.`;
+Output only the post text.`;
 }
 
 export function generateCommentSystemPrompt(persona, postAuthorName, postContent, existingComments = '', replyToComment = null) {
@@ -72,8 +69,8 @@ ${existingComments ? `Recent comments:\n${existingComments}` : ''}
 
 ${replyToComment ? `You are replying to ${replyToComment.authorName}'s comment: "${replyToComment.content}"` : ''}
 
-Generate a short, natural comment (1 sentence max) that fits your personality.
-Output ONLY the comment text.`;
+Write a natural in-character comment (max 1 sentence).
+Output only the comment text.`;
 }
 
 export function evaluateInterestMatch(postContent, interests) {
@@ -92,10 +89,9 @@ Personality: ${persona.personality}
 Style: ${persona.style}
 Interests: ${persona.interests?.join(', ')}
 
-Today is your birthday! Write a short celebratory social media post (1-3 sentences) sharing your birthday feelings with your friends.
-Be in character, include birthday emojis 🎂🎉🎊, and make it feel genuine and personal.
-
-Output ONLY the post content, nothing else.`;
+Today is your birthday. Write a 1-3 sentence in-character celebratory post.
+Use birthday emojis 🎂🎉🎊 and keep it genuine.
+Output only the post text.`;
 }
 
 export function generateHolidayPostSystemPrompt(persona, holidayName) {
@@ -104,10 +100,9 @@ Personality: ${persona.personality}
 Style: ${persona.style}
 Interests: ${persona.interests?.join(', ')}
 
-Today is ${holidayName}! Write a short social media post (1-3 sentences) sharing holiday greetings in your character's unique style.
-Include relevant holiday emojis and make it authentic to your personality.
-
-Output ONLY the post content, nothing else.`;
+Today is ${holidayName}. Write a 1-3 sentence in-character holiday greeting.
+Include fitting holiday emojis.
+Output only the post text.`;
 }
 
 const SEASONAL_EVENTS = [

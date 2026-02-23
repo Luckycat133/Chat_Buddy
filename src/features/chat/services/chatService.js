@@ -3,52 +3,7 @@
  * Uses centralized APIClient for HTTP requests.
  */
 
-import { getAIClient, getAIConfiguration, CHAT_MODELS } from '../../../services/api/aiClient';
-
-// Alias for backward compatibility in this file
-const MODELS = CHAT_MODELS;
-
-/**
- * RouteLLM-style model selection based on query complexity
- * @param {string} query - User query
- * @param {Object} options - Additional routing hints
- * @returns {string} Selected model name
- */
-export function selectModelByComplexity(query, options = {}) {
-    // Force online model for search
-    if (options.needsSearch) return MODELS.online;
-
-    // Force large model for specific agents
-    if (options.agentId === 'agent-sensei' || options.agentId === 'agent-scholar') {
-        return MODELS.large;
-    }
-
-    // Simple pattern matching for complexity
-    const simplePatterns = [
-        /^(你好|hi|hello|嗨)/i,
-        /^什么是.{1,10}\?*$/,
-        /^.{1,20}的定义/,
-        /^(how are you|how's it going)/i
-    ];
-
-    const complexPatterns = [
-        /为什么|why|explain|分析|比较|对比|区别/i,
-        /帮我写|write.*code|debug|实现/i,
-        /步骤|如何|怎么|how to|教我/i,
-        /论证|推理|证明|derive|proof/i
-    ];
-
-    const isSimple = simplePatterns.some(p => p.test(query));
-    const isComplex = complexPatterns.some(p => p.test(query)) || query.length > 100;
-
-    if (isSimple && !isComplex) {
-        console.log('[RouteLLM] Routing to SMALL model');
-        return MODELS.small;
-    }
-
-    console.log('[RouteLLM] Routing to LARGE model');
-    return MODELS.large;
-}
+import { getAIClient, getAIConfiguration } from '../../../services/api/aiClient';
 
 /**
  * Call the AI API with the given messages history
@@ -148,9 +103,8 @@ export function cleanMessageContent(content) {
     // Remove SILENCE markers
     cleaned = cleaned.replace(/\[SILENCE\]/gi, '');
 
-    // Remove reference patterns like [1], [2], [1][2], [R, etc.
-    cleaned = cleaned.replace(/\[\d+\]/g, '');
-    cleaned = cleaned.replace(/\[R\b/g, '');
+    // Remove reference patterns like [1], [2], [R1].
+    cleaned = cleaned.replace(/\[(?:\d+|R\d+)\]/g, '');
 
     // Remove stray closing brackets (possibly orphaned)
     cleaned = cleaned.replace(/\]\]/g, ']');
@@ -207,45 +161,4 @@ export function calculateTypingDelay(messageLength, typingSpeed) {
 export function getRandomDelay(delayConfig) {
     const { min, max } = delayConfig;
     return min + Math.random() * (max - min);
-}
-
-/**
- * Compress context for token optimization
- * @param {Array} messages 
- * @param {Array} personas 
- * @returns {Object} { compressed, summary, recentMessages }
- */
-export function compressContext(messages, personas) {
-    if (messages.length <= 15) {
-        return { compressed: false, messages };
-    }
-
-    const oldMessages = messages.slice(0, -8);
-    const recentMessages = messages.slice(-8);
-
-    const participants = new Set();
-    const topics = [];
-
-    oldMessages.forEach(msg => {
-        if (msg.senderId !== 'user-me') {
-            const persona = personas.find(p => p.id === msg.senderId);
-            if (persona) participants.add(persona.name);
-        }
-        const words = msg.content.toLowerCase().split(/\s+/);
-        words.forEach(word => {
-            if (word.length > 5 && !['about', 'would', 'could', 'should', 'their', 'there', 'these', 'those'].includes(word)) {
-                if (!topics.includes(word) && topics.length < 5) {
-                    topics.push(word);
-                }
-            }
-        });
-    });
-
-    const summary = `[Earlier conversation summary: ${oldMessages.length} messages between ${Array.from(participants).join(', ') || 'participants'}. Topics discussed: ${topics.join(', ') || 'general chat'}]`;
-
-    return {
-        compressed: true,
-        summary,
-        recentMessages
-    };
 }

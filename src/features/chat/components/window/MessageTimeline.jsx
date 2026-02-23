@@ -1,8 +1,8 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState, lazy, Suspense } from 'react';
 import { cn } from '../../../../utils/cn';
 import { formatTimeSeparator, shouldShowTimeSeparator } from '../../../../utils/formatTime';
 import { downloadFile } from '../../../../utils/fileUtils';
-import { Paperclip, MoreHorizontal, Coins, Gamepad2, Copy, Check } from 'lucide-react';
+import { Paperclip, MoreHorizontal, Coins, Gamepad2 } from 'lucide-react';
 import { useLanguage } from '../../../../context/LanguageContext';
 import QuotedMessage from '../QuotedMessage';
 import PollMessage from '../PollMessage';
@@ -11,17 +11,16 @@ import remarkGfm from 'remark-gfm';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus, vs } from 'react-syntax-highlighter/dist/esm/styles/prism';
-
 import { GeneratedFileMessage } from '../FileMessage';
 import VoicePlayer from '../VoicePlayer';
 import { getCharacterGlowClass, getCharacterThemeStyle } from '../CharacterTheme';
 import { useTheme } from '../../../../context/ThemeContext';
 import TypingBubble from './TypingBubble';
 import ImageMessage, { ImageLightbox } from '../ImageMessage';
-import MermaidRenderer from '../MermaidRenderer';
 import LinkPreview from '../LinkPreview';
+
+const LazyMarkdownCodeBlock = lazy(() => import('../MarkdownCodeBlock'));
+const LazyMermaidRenderer = lazy(() => import('../MermaidRenderer'));
 
 /**
  * T07: Highlight @mentions in message content
@@ -82,68 +81,12 @@ function HighlightedMentions({ content, participants, currentUserId, onMentionCl
     });
 }
 
-/**
- * T08: Code Block with Copy Button and Theme Switching
- */
 function CodeBlock({ language, children }) {
-    const { t } = useLanguage();
-    const { isDarkMode } = useTheme();
-    const [copied, setCopied] = useState(false);
-
-    // T08 Phase 2: Theme switching
-    const codeTheme = isDarkMode ? vscDarkPlus : vs;
-    const codeBgClass = isDarkMode ? '!bg-black/80 border-white/10' : '!bg-gray-50 border-gray-200';
-
-    // T08 Phase 1: Copy button handler
-    const handleCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(String(children).replace(/\n$/, ''));
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        } catch (err) {
-            console.error('Failed to copy code:', err);
-        }
-    };
-
+    const code = String(children).replace(/\n$/, '');
     return (
-        <div className="relative group/code my-2">
-            {/* Copy button */}
-            <button
-                onClick={handleCopy}
-                className={cn(
-                    "absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium",
-                    "transition-all duration-200 opacity-0 group-hover/code:opacity-100",
-                    "bg-[var(--color-bg-white)]/90 hover:bg-[var(--color-bg-white)]",
-                    "text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]",
-                    "border border-[var(--color-border)] shadow-sm",
-                    copied && "opacity-100 !text-green-600 !bg-green-50"
-                )}
-                title={t('copy_code')}
-                aria-label={t('copy_code')}
-            >
-                {copied ? (
-                    <>
-                        <Check size={14} />
-                        <span>{t('copied')}</span>
-                    </>
-                ) : (
-                    <>
-                        <Copy size={14} />
-                        <span>{t('copy_code')}</span>
-                    </>
-                )}
-            </button>
-
-            {/* Code block */}
-            <SyntaxHighlighter
-                style={codeTheme}
-                language={language}
-                PreTag="div"
-                className={cn("rounded-md !p-3 shadow-sm border", codeBgClass)}
-            >
-                {String(children).replace(/\n$/, '')}
-            </SyntaxHighlighter>
-        </div>
+        <Suspense fallback={<pre className="my-2 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-active)] p-3 overflow-x-auto"><code>{code}</code></pre>}>
+            <LazyMarkdownCodeBlock language={language}>{code}</LazyMarkdownCodeBlock>
+        </Suspense>
     );
 }
 
@@ -200,6 +143,9 @@ export default function MessageTimeline({
 
     // T07: Lightbox state for images
     const [lightboxImage, setLightboxImage] = useState(null);
+    const mentionParticipants = chat?.participants?.map((pid) => (
+        pid === 'user-me' ? currentUser : personas?.find((p) => p.id === pid)
+    )).filter(Boolean) || [];
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
@@ -431,9 +377,7 @@ export default function MessageTimeline({
                                                                             <HighlightedMentions
                                                                                 key={idx}
                                                                                 content={child}
-                                                                                participants={chat?.participants?.map(pid =>
-                                                                                    pid === 'user-me' ? currentUser : personas?.find(p => p.id === pid)
-                                                                                ).filter(Boolean)}
+                                                                                participants={mentionParticipants}
                                                                                 currentUserId={currentUser?.id}
                                                                                 onMentionClick={onMentionClick}
                                                                             />
@@ -453,7 +397,12 @@ export default function MessageTimeline({
 
                                                             // T08 Phase 4: Mermaid diagram rendering
                                                             if (language === 'mermaid') {
-                                                                return <MermaidRenderer content={String(children)} />;
+                                                                const diagramSource = String(children);
+                                                                return (
+                                                                    <Suspense fallback={<pre className="my-2 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-active)] p-3 overflow-x-auto"><code>{diagramSource}</code></pre>}>
+                                                                        <LazyMermaidRenderer content={diagramSource} />
+                                                                    </Suspense>
+                                                                );
                                                             }
 
                                                             return !inline && match ? (

@@ -85,7 +85,6 @@ export class AIPipeline {
         // Call LLM
         const requestMessages = [{ role: 'system', content: systemPrompt }, ...initialHistory];
         const response = await callAI(requestMessages, {
-            systemPrompt: ai.systemPrompt,
             agentId: ai.id,
             maxTokens: depth > 0 ? 500 : undefined
         });
@@ -222,9 +221,10 @@ export class AIPipeline {
     // In a future step, these could be extracted to a pure utility class
 
     _prepareHistory(messages, personas, compressed, summary, polls) {
+        const personaNameMap = new Map(personas.map(p => [p.id, p.name]));
         const rawHistory = messages.slice(-12).map(m => {
             const isUser = m.senderId === 'user-me';
-            const sender = isUser ? 'User' : personas.find(p => p.id === m.senderId)?.name || 'Unknown';
+            const sender = isUser ? 'User' : (personaNameMap.get(m.senderId) || 'Unknown');
 
             let content = m.content;
             if (content.startsWith('[POLL:') && polls) {
@@ -262,29 +262,29 @@ export class AIPipeline {
 
     _generateSystemPrompt(ai, context = null, memoryBlock = '', groupBlock = '') {
         const base = `You are ${ai.name}.\nPersonality: ${ai.personality}\nStyle: ${ai.style}`;
-        const tools = `
-AVAILABLE TOOLS:
-1. SEND MESSAGE - Normal response
-2. STAY SILENT - [SILENCE]
-3. MULTI MESSAGE - [MULTI:msg1|msg2]
-4. SCHEDULE - [SCHEDULE:mins]
-5. MEMORY REQUEST - [MEMORY_REQUEST: target=CharacterName, topic=TopicOrQuestion]
+        const personaRules = ai.systemPrompt ? `\nCORE INSTRUCTIONS:\n${ai.systemPrompt}\n` : '';
+        const controlTags = `
+CONTROL TAGS:
+- [TOOL_CALL: tool_name {"arg":"value"}]
+- [MEMORY_REQUEST: target=CharacterName, topic=Question]
+- [SILENCE] | [MULTI:msg1|msg2] | [SCHEDULE:mins]
 ${ai.agentType === 'task-specialist' ? this._getSpecialistTools(ai) : ''}
+- Normal chat = plain text. Never wrap control tags in code fences.
 `;
         // T06: Affinity-aware tone instructions
         let affinityHint = '';
         if (context?.intimacyLevel) {
             const level = context.intimacyLevel;
             if (level >= 5) {
-                affinityHint = '\nRELATIONSHIP: You are soulmates with the user. Be very intimate, use affectionate language, share deep thoughts, give long detailed responses.';
+                affinityHint = '\nRELATIONSHIP: soulmate. Be intimate, affectionate, and detailed.';
             } else if (level >= 4) {
-                affinityHint = '\nRELATIONSHIP: You are close friends with the user. Be intimate, use nicknames occasionally, share deeper thoughts.';
+                affinityHint = '\nRELATIONSHIP: close friend. Warm, personal, occasional nicknames.';
             } else if (level >= 3) {
-                affinityHint = '\nRELATIONSHIP: You are good friends with the user. Be warm, share personal anecdotes, use casual language.';
+                affinityHint = '\nRELATIONSHIP: good friend. Warm and casual.';
             } else if (level >= 2) {
-                affinityHint = '\nRELATIONSHIP: You are friends with the user. Be friendly and conversational.';
+                affinityHint = '\nRELATIONSHIP: friend. Friendly and conversational.';
             } else {
-                affinityHint = '\nRELATIONSHIP: You are acquaintances with the user. Keep responses brief and polite. Use a somewhat formal tone.';
+                affinityHint = '\nRELATIONSHIP: acquaintance. Brief, polite, slightly formal.';
             }
         }
 
@@ -295,7 +295,7 @@ ${ai.agentType === 'task-specialist' ? this._getSpecialistTools(ai) : ''}
         }
 
         // T12: Long-term memory + group chat context
-        return `${base}\n${tools}${affinityHint}${moodHint}${memoryBlock}${groupBlock}\nRULES: Keep it short. Respond to mentions. Use your memories naturally — don't announce them mechanically.`;
+        return `${base}${personaRules}\n${controlTags}${affinityHint}${moodHint}${memoryBlock}${groupBlock}\nRULES: concise, reply when relevant, use memories naturally.`;
     }
 
     _getSpecialistTools(ai) {
