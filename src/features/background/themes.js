@@ -1185,5 +1185,5 @@ export const DEFAULT_BACKGROUND = {
   value: null,
   blur: 0,
   opacity: 1,
-  overlayColor: "rgba(0,0,0,0.3)",
+  overlayColor: "rgba(0,0,0,0)",
 };

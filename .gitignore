@@ -20,6 +20,7 @@ dist-ssr
 .agents/
 .agent/
 **/*.local.json
+*.skill
 
 # Editor directories and files
 .vscode/*

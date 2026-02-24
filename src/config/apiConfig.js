@@ -116,6 +116,30 @@ export function loadProfile(name) {
     return profile;
 }
 
+function normalizeBaseUrlForDevProxy(baseUrl) {
+    const raw = String(baseUrl || '').trim().replace(/\/+$/, '');
+    if (!raw) return '';
+
+    if (!import.meta.env.DEV || typeof window === 'undefined') return raw;
+
+    try {
+        const url = new URL(raw, window.location.origin);
+        const path = url.pathname === '/' ? '' : url.pathname;
+
+        if (url.origin === 'https://maas-api.cn-huabei-1.xf-yun.com') {
+            return `/proxy/xfyun${path}`;
+        }
+
+        if (url.origin === 'https://api.perplexity.ai') {
+            return `/proxy/perplexity${path}`;
+        }
+    } catch {
+        // Keep raw value
+    }
+
+    return raw;
+}
+
 // ─── Validation ─────────────────────────────────────────────
 
 /**
@@ -129,8 +153,10 @@ export async function validateConfig(config) {
 
     // Use APIClient so relative baseUrls (e.g. /proxy/perplexity) go through
     // the Vite dev proxy — same path as real callAI() calls.
+    const normalizedBase = normalizeBaseUrlForDevProxy(config.baseUrl);
+
     const client = new APIClient({
-        baseURL: config.baseUrl.replace(/\/+$/, ''),
+        baseURL: normalizedBase,
         timeout: 15000,
         maxRetries: 0,
         headers: {
@@ -139,24 +165,43 @@ export async function validateConfig(config) {
         },
     });
 
+    const endpoints = ['/chat/completions'];
+    if (
+        normalizedBase &&
+        !/\/v\d+$/i.test(normalizedBase) &&
+        !/\/chat\/completions$/i.test(normalizedBase)
+    ) {
+        endpoints.push('/v1/chat/completions');
+    }
+
     const start = Date.now();
     try {
-        const res = await client.post('/chat/completions', {
-            model: config.model,
-            messages: [{ role: 'user', content: 'Hi' }],
-            max_tokens: 5,
-        });
+        let lastResult = { valid: false, error: 'request_failed', latency: Date.now() - start };
 
-        const latency = Date.now() - start;
+        for (let i = 0; i < endpoints.length; i++) {
+            const endpoint = endpoints[i];
+            const res = await client.post(endpoint, {
+                model: config.model,
+                messages: [{ role: 'user', content: 'Hi' }],
+                max_tokens: 5,
+            });
 
-        if (res.ok) return { valid: true, latency };
+            const latency = Date.now() - start;
 
-        const body = await res.json().catch(() => null);
-        return {
-            valid: false,
-            error: body?.error?.message || `HTTP ${res.status}`,
-            latency,
-        };
+            if (res.ok) return { valid: true, latency };
+
+            const body = await res.json().catch(() => null);
+            const error = body?.error?.message || `HTTP ${res.status}`;
+            lastResult = { valid: false, error, latency };
+
+            if ((res.status === 404 || res.status === 405) && i < endpoints.length - 1) {
+                continue;
+            }
+
+            return lastResult;
+        }
+
+        return lastResult;
     } catch (err) {
         return { valid: false, error: err.name === 'TimeoutError' ? 'timeout' : err.message };
     }
