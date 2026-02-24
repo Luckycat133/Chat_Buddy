@@ -7,6 +7,29 @@ import { checkReEngagement } from '../presence/GreetingService';
 import { getMoodMap } from '../presence/MoodService';
 import { addBookmark, removeBookmark, getBookmarks, isBookmarked } from '../../features/chat/services/BookmarkService';
 
+// T13: Build a human-readable summary of tool input arguments
+function _buildToolInputSummary(toolName, args) {
+    const labels = {
+        run_code: args?.language ? `Running ${args.language} code…` : 'Executing code…',
+        search_docs: `Searching docs: "${args?.query || ''}"`,
+        analyze_code: 'Analyzing code…',
+        web_search: `Searching: "${args?.query || ''}"`,
+        sonar_search: `Sonar search: "${args?.query || ''}"`,
+        deep_research: `Deep research: "${args?.query || ''}"`,
+        fact_check: `Fact-checking: "${args?.claim || ''}"`,
+        cite_sources: 'Generating citations…',
+        immersive_translate: `Translating to ${args?.targetLang || 'target language'}…`,
+        detect_content_domain: 'Detecting content domain…',
+        execute_math: `Computing: ${args?.expression || ''}`,
+        check_prerequisites: `Checking prerequisites for "${args?.topic || ''}"`,
+        generate_quiz: `Generating quiz on "${args?.topic || ''}"`,
+        track_progress: `Tracking: ${args?.topic || ''} (${args?.status || ''})`,
+        delegate_task: `Delegating to ${args?.agentId || 'agent'}…`,
+        MEMORY_REQUEST: `Memory request → ${args?.target || ''}: "${args?.topic || ''}"`,
+    };
+    return labels[toolName] || `Running tool: ${toolName}…`;
+}
+
 /**
  * Domain Layer: Chat Engine
  * The central nervous system for Chat Buddy.
@@ -44,7 +67,10 @@ export class ChatEngine {
             onTyping: this._handleAITyping.bind(this),
             onMessage: this._handleAIMessage.bind(this),
             onSchedule: this._handleAISchedule.bind(this),
-            onLog: (msg, data) => console.log(`[ChatEngine] ${msg}`, data)
+            onLog: (msg, data) => console.log(`[ChatEngine] ${msg}`, data),
+            // T13: Tool event callbacks for real-time visualization
+            onToolStart: this._handleToolStart.bind(this),
+            onToolEnd: this._handleToolEnd.bind(this),
         });
     }
 
@@ -149,6 +175,29 @@ export class ChatEngine {
     subscribe(callback) {
         this.listeners.add(callback);
         return () => this.listeners.delete(callback);
+    }
+
+    /**
+     * T13: Register a custom (user-defined) agent persona at runtime.
+     * Safe to call multiple times — deduplicates by id.
+     */
+    addPersona(persona) {
+        if (!persona?.id) return;
+        const exists = this.personas.some(p => p.id === persona.id);
+        if (!exists) {
+            this.personas.push(persona);
+        } else {
+            // Update in-place (e.g. after editing)
+            const idx = this.personas.findIndex(p => p.id === persona.id);
+            this.personas[idx] = persona;
+        }
+    }
+
+    /**
+     * T13: Remove a custom agent persona (delete).
+     */
+    removePersona(personaId) {
+        this.personas = this.personas.filter(p => p.id !== personaId);
     }
 
     /**
@@ -530,6 +579,59 @@ export class ChatEngine {
     _handleAIMessage(chatId, content, aiId) {
         // AI sends message -> Reuse internal logic
         this.sendMessage(chatId, content, aiId);
+    }
+
+    // T13: Tool event – insert ephemeral loading card into message list
+    _handleToolStart(chatId, aiId, toolName, args) {
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        if (chatIndex === -1) return null;
+
+        const msgId = 'tool-evt-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+        const inputSummary = _buildToolInputSummary(toolName, args);
+
+        const toolMsg = {
+            id: msgId,
+            senderId: aiId,
+            type: 'tool_event',
+            toolName,
+            status: 'loading',
+            inputSummary,
+            outputDetail: null,
+            timestamp: new Date().toISOString(),
+            content: '',
+            readBy: [],
+        };
+
+        const updatedChat = { ...this.chats[chatIndex] };
+        updatedChat.messages = [...updatedChat.messages, toolMsg];
+        this.chats[chatIndex] = updatedChat;
+        this._notify(); // Ephemeral — no save yet
+        return msgId;
+    }
+
+    // T13: Tool event – update card with result and persist
+    _handleToolEnd(chatId, msgId, result, error) {
+        if (!msgId) return;
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        if (chatIndex === -1) return;
+
+        const chat = this.chats[chatIndex];
+        const msgIndex = chat.messages.findIndex(m => m.id === msgId);
+        if (msgIndex === -1) return;
+
+        const raw = error ? error : (result || '');
+        const outputDetail = raw.length > 500 ? raw.slice(0, 497) + '…' : raw;
+
+        const updatedMsg = {
+            ...chat.messages[msgIndex],
+            status: error ? 'error' : 'success',
+            outputDetail,
+        };
+
+        const updatedMessages = [...chat.messages];
+        updatedMessages[msgIndex] = updatedMsg;
+        this.chats[chatIndex] = { ...chat, messages: updatedMessages };
+        this.save();
     }
 
     _handleAISchedule(chatId, ai, minutes) {
