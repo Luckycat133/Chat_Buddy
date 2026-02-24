@@ -21,13 +21,19 @@ const BackgroundLayer = ({ chatId, personaId }) => {
         pointerEvents: 'none',
     };
 
+    // Keep "none" background fully transparent; only apply soft contrast when
+    // an actual background asset is active.
+    const overlayColor = config.type === 'none'
+        ? 'rgba(0,0,0,0)'
+        : (config.overlayColor || 'rgba(0,0,0,0.12)');
+
     const overlayStyle = {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: config.overlayColor || 'rgba(0,0,0,0)',
+        backgroundColor: overlayColor,
         transition: 'background-color 0.3s ease',
         zIndex: 2,
     };

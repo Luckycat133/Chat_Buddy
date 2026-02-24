@@ -31,7 +31,10 @@ export default function Layout() {
 
             prevPathRef.current = location.pathname;
 
-            return () => clearTimeout(timer);
+            return () => {
+                clearTimeout(timer);
+                main.classList.remove('page-transitioning');
+            };
         }
     }, [location]);
 
@@ -47,7 +50,7 @@ export default function Layout() {
     useKeyboardShortcuts(shortcuts);
 
     return (
-        <div className="flex h-screen bg-[var(--color-bg-app)] text-[var(--color-text-main)] overflow-hidden font-sans relative">
+        <div className="flex h-screen h-[100dvh] min-h-0 bg-[var(--color-bg-app)] text-[var(--color-text-main)] overflow-hidden font-sans relative">
             {/* Global Background Layer */}
             <Suspense fallback={null}>
                 <BackgroundLayer />
@@ -108,17 +111,19 @@ export default function Layout() {
             </aside>
 
             {/* Main Content - Floating Island */}
-            <div className="flex flex-1 overflow-hidden relative p-4 pl-0">
+            <div className="flex flex-1 min-h-0 overflow-hidden relative p-0 md:p-4 md:pl-0">
                 <main
                     ref={mainRef}
                     className={cn(
-                        "w-full h-full flex flex-col relative rounded-[var(--radius-xl)] shadow-floating glass-crystal overflow-hidden",
-                        "border border-[var(--color-border-light)]",
+                        "w-full h-full min-h-0 flex flex-col relative overflow-hidden transition-all duration-[280ms] ease-out",
+                        "bg-[var(--color-bg-chat)] md:bg-transparent",
+                        "md:rounded-[var(--radius-xl)] md:shadow-floating md:glass-crystal",
+                        "md:border md:border-[var(--color-border-light)]",
                         "transition-all duration-[280ms] ease-out"
                     )}
                 >
                     {/* Background sheen for the main container */}
-                    <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-[var(--color-bg-white)]/40 to-transparent pointer-events-none opacity-50"></div>
+                    <div aria-hidden="true" className="hidden md:block absolute inset-0 bg-gradient-to-br from-[var(--color-bg-white)]/40 to-transparent pointer-events-none opacity-50"></div>
 
                     <Outlet key={location.pathname} />
                 </main>

@@ -81,6 +81,11 @@ export class ChatEngine {
         this.destroy();
         this.personas = personas;
         this.chats = this._loadChatsWithMigration();
+        const { chats: dedupedChats, changed } = this._dedupeDirectSocialChats(this.chats);
+        if (changed) {
+            this.chats = dedupedChats;
+            storage.set(this.storageKey, this.chats);
+        }
         console.log('[ChatEngine] Initialized with', this.chats.length, 'chats');
 
         // T05: Start presence tracking & greeting checker
@@ -167,6 +172,142 @@ export class ChatEngine {
             status: message.status || 'sent',
             readBy: Array.isArray(message.readBy) ? message.readBy : []
         };
+    }
+
+    _isTaskParticipant(participantId) {
+        if (!participantId || participantId === this.currentUserId) return false;
+        const persona = this.personas.find(p => p.id === participantId);
+        if (persona?.agentType === 'task-specialist') return true;
+        return String(participantId).startsWith('agent-');
+    }
+
+    _getDirectPeerId(chat) {
+        if (!chat || !Array.isArray(chat.participants)) return null;
+        const uniqueParticipants = [...new Set(chat.participants.filter(Boolean))];
+        if (uniqueParticipants.length !== 2) return null;
+        if (!uniqueParticipants.includes(this.currentUserId)) return null;
+        return uniqueParticipants.find(id => id !== this.currentUserId) || null;
+    }
+
+    _getChatActivityTimestamp(chat) {
+        return chat?.lastMessage?.timestamp || chat?.updatedAt || chat?.createdAt || new Date(0).toISOString();
+    }
+
+    _mergeDirectChatCluster(cluster) {
+        const sorted = [...cluster].sort(
+            (a, b) => new Date(this._getChatActivityTimestamp(b)) - new Date(this._getChatActivityTimestamp(a))
+        );
+        const canonical = sorted[0];
+
+        const messageMap = new Map();
+        sorted.forEach((chat) => {
+            (chat.messages || []).forEach((message) => {
+                const normalized = this._normalizeMessage(message);
+                if (!normalized) return;
+                if (!messageMap.has(normalized.id)) {
+                    messageMap.set(normalized.id, normalized);
+                }
+            });
+        });
+
+        const messages = Array.from(messageMap.values()).sort(
+            (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+        );
+
+        const mergedPollsMap = new Map();
+        sorted.forEach((chat) => {
+            (chat.polls || []).forEach((poll) => {
+                if (poll?.id && !mergedPollsMap.has(poll.id)) {
+                    mergedPollsMap.set(poll.id, poll);
+                }
+            });
+        });
+
+        const mergedPinnedMessages = Array.from(
+            new Set(sorted.flatMap(chat => Array.isArray(chat.pinnedMessages) ? chat.pinnedMessages : []))
+        );
+
+        const mergedMuteValues = {};
+        sorted.forEach((chat) => {
+            Object.assign(mergedMuteValues, chat?.settings?.muteValues || {});
+        });
+
+        const createdAt = sorted.reduce((earliest, chat) => {
+            const value = chat?.createdAt || chat?.updatedAt;
+            if (!value) return earliest;
+            if (!earliest) return value;
+            return new Date(value) < new Date(earliest) ? value : earliest;
+        }, null) || canonical.createdAt || new Date().toISOString();
+
+        const lastMessage = messages[messages.length - 1] || canonical.lastMessage || null;
+        const updatedAt = lastMessage?.timestamp || canonical.updatedAt || createdAt;
+        const name = canonical.name || sorted.find(chat => chat.name)?.name || 'New Chat';
+        const avatar = canonical.avatar || sorted.find(chat => chat.avatar)?.avatar || null;
+        const admins = Array.from(
+            new Set(sorted.flatMap(chat => Array.isArray(chat.admins) ? chat.admins : []))
+        ).filter(Boolean);
+        if (!admins.includes(this.currentUserId)) {
+            admins.unshift(this.currentUserId);
+        }
+
+        return {
+            ...canonical,
+            name,
+            avatar,
+            participants: [this.currentUserId, this._getDirectPeerId(canonical)].filter(Boolean),
+            admins,
+            messages,
+            lastMessage,
+            createdAt,
+            updatedAt,
+            isPinned: sorted.some(chat => chat.isPinned),
+            isUnread: sorted.some(chat => chat.isUnread),
+            pinnedMessages: mergedPinnedMessages,
+            polls: Array.from(mergedPollsMap.values()),
+            settings: {
+                ...(canonical.settings || {}),
+                muteValues: mergedMuteValues
+            }
+        };
+    }
+
+    _dedupeDirectSocialChats(chats = []) {
+        if (!Array.isArray(chats) || chats.length === 0) {
+            return { chats: [], changed: false };
+        }
+
+        const socialDirectGroups = new Map();
+        const passthrough = [];
+        let changed = false;
+
+        chats.forEach((chat) => {
+            const peerId = this._getDirectPeerId(chat);
+            if (!peerId || this._isTaskParticipant(peerId)) {
+                passthrough.push(chat);
+                return;
+            }
+
+            if (!socialDirectGroups.has(peerId)) {
+                socialDirectGroups.set(peerId, []);
+            }
+            socialDirectGroups.get(peerId).push(chat);
+        });
+
+        const mergedSocialDirectChats = [];
+        socialDirectGroups.forEach((cluster) => {
+            if (cluster.length <= 1) {
+                mergedSocialDirectChats.push(cluster[0]);
+                return;
+            }
+            changed = true;
+            mergedSocialDirectChats.push(this._mergeDirectChatCluster(cluster));
+        });
+
+        const nextChats = [...passthrough, ...mergedSocialDirectChats].sort(
+            (a, b) => new Date(this._getChatActivityTimestamp(b)) - new Date(this._getChatActivityTimestamp(a))
+        );
+
+        return { chats: nextChats, changed };
     }
 
     /**
@@ -302,11 +443,36 @@ export class ChatEngine {
     }
 
     createChat(name, participantIds, avatar = null) {
+        const normalizedParticipantIds = [...new Set((participantIds || []).filter(id => id && id !== this.currentUserId))];
+        const isDirect = normalizedParticipantIds.length === 1;
+        const directPeerId = isDirect ? normalizedParticipantIds[0] : null;
+
+        if (isDirect && !this._isTaskParticipant(directPeerId)) {
+            const existingDirectChat = this.chats
+                .filter(chat => this._getDirectPeerId(chat) === directPeerId)
+                .sort((a, b) => new Date(this._getChatActivityTimestamp(b)) - new Date(this._getChatActivityTimestamp(a)))[0];
+
+            if (existingDirectChat) {
+                const needsUpdate = (!existingDirectChat.avatar && avatar) ||
+                    (!existingDirectChat.name || existingDirectChat.name === 'New Chat');
+
+                if (needsUpdate) {
+                    this.updateChat(existingDirectChat.id, {
+                        avatar: existingDirectChat.avatar || avatar,
+                        name: existingDirectChat.name && existingDirectChat.name !== 'New Chat'
+                            ? existingDirectChat.name
+                            : (name || existingDirectChat.name)
+                    });
+                }
+                return existingDirectChat.id;
+            }
+        }
+
         const newChat = {
             id: crypto.randomUUID(),
             name,
             avatar,
-            participants: ['user-me', ...participantIds],
+            participants: [this.currentUserId, ...normalizedParticipantIds],
             admins: ['user-me'],
             messages: [],
             createdAt: new Date().toISOString(),

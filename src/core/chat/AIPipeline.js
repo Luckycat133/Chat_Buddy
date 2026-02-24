@@ -50,6 +50,7 @@ export class AIPipeline {
             const { compressed, summary, recentMessages } = compressContext(chat.messages, personas);
             const messagesToProcess = compressed ? recentMessages : chat.messages;
             const history = this._prepareHistory(messagesToProcess, personas, compressed, summary, chat.polls);
+            const latestUserLanguage = this._detectLatestUserLanguage(chat.messages);
 
             // T12: Fire-and-forget memory extraction when context is compressed
             if (compressed) {
@@ -64,7 +65,12 @@ export class AIPipeline {
             const groupMessages = context?.recentGroupMessages || [];
             const groupBlock = buildGroupContextBlock(groupMessages, ai.id, personas);
 
-            const systemPrompt = this._generateSystemPrompt(ai, context, memoryBlock, groupBlock);
+            const systemPrompt = this._generateSystemPrompt(
+                ai,
+                { ...(context || {}), latestUserLanguage },
+                memoryBlock,
+                groupBlock
+            );
 
             // 5. Run ReAct Loop
             await this._runReActLoop(chatId, ai, systemPrompt, history, 0, this._personas || []);
@@ -274,6 +280,24 @@ export class AIPipeline {
     _generateSystemPrompt(ai, context = null, memoryBlock = '', groupBlock = '') {
         const base = `You are ${ai.name}.\nPersonality: ${ai.personality}\nStyle: ${ai.style}`;
         const personaRules = ai.systemPrompt ? `\nCORE INSTRUCTIONS:\n${ai.systemPrompt}\n` : '';
+        const preferredLanguage = context?.preferredLanguage === 'en' ? 'English' : 'Simplified Chinese';
+        const latestUserLanguage = context?.latestUserLanguage;
+        const strictTurnLanguage = latestUserLanguage === 'en'
+            ? 'English'
+            : latestUserLanguage === 'zh'
+                ? 'Simplified Chinese'
+                : null;
+        const strictTurnRule = strictTurnLanguage
+            ? `- Current turn language detected: ${strictTurnLanguage}. Your next reply MUST be in ${strictTurnLanguage}.`
+            : '';
+        const languageHint = `
+LANGUAGE RULES (HIGH PRIORITY):
+- Preferred output language: ${preferredLanguage}.
+${strictTurnRule || `- Current turn language: follow ${preferredLanguage} unless user explicitly asks otherwise.`}
+- Always follow the user's latest message language when clear.
+- If the user writes in Chinese, reply in Simplified Chinese.
+- Do not switch to English unless the user asks in English.
+`;
         const controlTags = `
 CONTROL TAGS:
 - [TOOL_CALL: tool_name {"arg":"value"}]
@@ -306,10 +330,28 @@ ${ai.agentType === 'task-specialist' ? this._getSpecialistTools(ai) : ''}
         }
 
         // T12: Long-term memory + group chat context
-        return `${base}${personaRules}\n${controlTags}${affinityHint}${moodHint}${memoryBlock}${groupBlock}\nRULES: concise, reply when relevant, use memories naturally.`;
+        return `${base}${personaRules}\n${languageHint}${controlTags}${affinityHint}${moodHint}${memoryBlock}${groupBlock}\nRULES: concise, reply when relevant, use memories naturally.`;
     }
 
     _getSpecialistTools(ai) {
         return (ai.tools || []).map(t => `- [TOOL_CALL: ${t.name} ...arguments]`).join('\n');
+    }
+
+    _detectLatestUserLanguage(messages = []) {
+        if (!Array.isArray(messages) || messages.length === 0) return null;
+
+        const latestUserMessage = [...messages].reverse().find(
+            (msg) => msg?.senderId === 'user-me' && typeof msg?.content === 'string' && msg.content.trim()
+        );
+        if (!latestUserMessage) return null;
+
+        const text = latestUserMessage.content;
+        const zhCount = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+        const enCount = (text.match(/[A-Za-z]/g) || []).length;
+
+        if (zhCount === 0 && enCount === 0) return null;
+        if (zhCount > 0 && enCount === 0) return 'zh';
+        if (enCount > 0 && zhCount === 0) return 'en';
+        return zhCount >= enCount ? 'zh' : 'en';
     }
 }
