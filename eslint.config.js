@@ -6,6 +6,13 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   globalIgnores(['dist', 'e2e', '*.cjs', '*.test.js']),
+  // T13: Sandbox worker uses Web Worker globals (importScripts, self)
+  {
+    files: ['public/sandbox.worker.js'],
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.worker },
+    },
+  },
   {
     files: ['**/*.{js,jsx}'],
     extends: [

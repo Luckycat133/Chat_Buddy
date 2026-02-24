@@ -651,7 +651,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-### [0.3.1] — T13 AI Agent & Tool System
+### [0.3.1] — T13 AI Agent & Tool System (Phase 2)
+
+> Custom agents, real sandbox execution, tool visualization, and agent collaboration.
+
+#### Added
+
+- **Custom Agent Editor** — `AgentEditorModal.jsx` lets users create/edit/delete custom AI agents
+  - Fields: name, Chinese name, description, system prompt, skills (multi-select), theme color
+  - Persisted to IndexedDB via `AgentStore`; merged with built-in agents at runtime
+  - "Create" button in AgentsPage header; "Edit" pencil icon on custom agent cards
+  - "Custom" badge distinguishes user-created agents from built-in ones
+- **Code Sandbox Worker** — `public/sandbox.worker.js` isolates code execution from main thread
+  - JavaScript: uses Worker-scope `Function` with `console.log` capture; 10-second kill timeout
+  - Python: lazy-loads Pyodide (WebAssembly) on first Python request; 30-second timeout
+  - Infinite-loop protection: terminates and recreates the Worker on timeout
+- **Tool Result Cards** — `ToolResultCard.jsx` renders inline tool events in chat timeline
+  - Three states: loading (spinner), success (green check), error (red X)
+  - Expandable output panel (capped at 500 chars); labeled by tool type with appropriate icon
+  - AIPipeline now emits `onToolStart`/`onToolEnd` callbacks before/after each tool call
+  - ChatEngine inserts ephemeral `type: 'tool_event'` messages; completes and saves on finish
+- **Agent Collaboration** — `delegate_task` tool allows agents to sub-delegate to peers
+  - Invocation: `[TOOL_CALL: delegate_task {"agentId": "agent-coder", "prompt": "..."}]`
+  - Max delegation depth 2 — infinite loop guard
+  - Result surfaces as a `[Delegated response from X]` block in the calling agent's context
+
+#### Changed
+
+- **AgentsPage**: loads and merges custom agents from IndexedDB; shows custom badge + edit button
+- **ChatEngine**: `addPersona()` and `removePersona()` for runtime persona registration
+- **AIPipeline**: passes `delegationDepth` to `executeTool` extras; `onToolStart`/`onToolEnd` emitted around every standard tool call
+- **toolService**: `run_code` now routes through sandbox worker; `delegate_task` case added
+- **eslint.config.js**: `globals.worker` added for `public/sandbox.worker.js`
+
+#### Technical
+
+- `AgentStore.js`: IndexedDB CRUD for custom agents (singleton `agentStore`)
+- `ToolResultCard.jsx`: collapsible glass card, 14 tool-type icon mappings
+- `public/sandbox.worker.js`: JS + Python (Pyodide) isolated execution with timeout
+- `_buildToolInputSummary()` helper in ChatEngine for human-readable tool labels
+
+---
+
+### [0.3.1-base] — T13 AI Agent & Tool System (Phase 1)
 
 > From character role-play to task execution.
 
@@ -676,14 +718,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `chatService.js` for dynamic system prompts
 - Refactored `ChatContext.js` for recursive tool execution loops
 - Upgraded localization for all agent types and skills
-
-#### Planned
-
-- Real code sandbox execution (WebAssembly/iframe)
-- Agent-to-agent collaboration chains
-- User-defined custom agents
-- Tool execution result visualization
-- Agent task history and reuse
 
 ---
 

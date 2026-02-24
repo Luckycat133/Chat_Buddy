@@ -21,6 +21,7 @@ import LinkPreview from '../LinkPreview';
 
 const LazyMarkdownCodeBlock = lazy(() => import('../MarkdownCodeBlock'));
 const LazyMermaidRenderer = lazy(() => import('../MermaidRenderer'));
+import ToolResultCard from '../ToolResultCard';
 
 /**
  * T07: Highlight @mentions in message content
@@ -171,6 +172,17 @@ export default function MessageTimeline({
     return (
         <div className="flex-1 overflow-y-auto p-3 pb-20 md:pb-4" data-bubble-style={bubbleStyle}>
             {chat.messages.map((msg, index) => {
+                // T13: tool_event messages are rendered as inline tool cards, not bubbles
+                if (msg.type === 'tool_event') {
+                    return (
+                        <ToolResultCard
+                            key={msg.id}
+                            msg={msg}
+                            language={language}
+                        />
+                    );
+                }
+
                 const isMe = msg.senderId === 'user-me';
                 const sender = isMe ? currentUser : personas.find(p => p.id === msg.senderId);
                 const senderName = getSenderName(msg.senderId);

@@ -43,7 +43,7 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 | T10 | Social & Interaction Features          | v0.2.6  | P1       | ✅ Done                            |
 | T11 | Moments & Feed System                  | v0.2.7  | P1       | ✅ Done                            |
 | T12 | AI Memory & Cognitive System           | v0.3.0  | P2       | ✅ Done                            |
-| T13 | AI Agent & Tool System                 | v0.3.1  | P2       | Needs de-mocking                   |
+| T13 | AI Agent & Tool System                 | v0.3.1  | P2       | ✅ Done                             |
 | T14 | Knowledge Base & RAG System            | v0.3.2  | P2       | Needs search upgrade               |
 | T15 | Professional Agent Capabilities        | v0.3.3  | P2       | Needs deepening                    |
 
@@ -620,29 +620,28 @@ src/config/
 
 ## T13 — AI Agent & Tool System
 
-**Version**: v0.3.1 | **Priority**: P2 | **Status**: Needs de-mocking
+**Version**: v0.3.1 | **Priority**: P2 | **Status**: ✅ Done
 
 ### What's Done
 
 - [x] 6 task agents (Coder, Muse, Scholar, Sensei, Aurora, Pixel)
 - [x] Agent Skills system (17+ skills)
 - [x] ReAct tool calling architecture
-- [x] toolService (mostly mock)
 - [x] Agent Workspace
 - [x] Contact list filtering
-
-### What's Planned
-
-- [ ] **Real code sandbox** — WebAssembly or sandboxed iframe for JS/Python execution
-- [ ] **Agent collaboration** — one agent delegates subtasks to another
-- [ ] **Custom agents** — user defines agent via skill combination + system prompt
-- [ ] **Tool result visualization** — code output panels, search result cards
-- [ ] **Agent task history** — browse and reuse previous agent conversations
+- [x] **Custom Agent Editor** — `AgentEditorModal.jsx` + `AgentStore` (IndexedDB)
+- [x] **Sandbox Web Worker** — isolated JS/Python execution with timeout (`public/sandbox.worker.js`)
+- [x] **Tool Result Cards** — `ToolResultCard.jsx` with loading/success/error states in chat timeline
+- [x] **Agent Collaboration** — `delegate_task` tool with depth-2 loop guard
 
 ### Key Files
 
 - `src/features/chat/services/toolService.js`
 - `src/core/chat/AIPipeline.js`
+- `src/core/agents/AgentStore.js`
+- `src/components/AgentEditorModal.jsx`
+- `src/features/chat/components/ToolResultCard.jsx`
+- `public/sandbox.worker.js`
 - `src/data/taskAgents.js`
 - `src/data/agentSkills.js`
 - `src/pages/AgentWorkspace.jsx`

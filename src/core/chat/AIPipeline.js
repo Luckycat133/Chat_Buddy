@@ -103,9 +103,17 @@ export class AIPipeline {
             const [, toolName, argsStr] = toolMatch;
             this.log(`[Tool Call] ${toolName}`, argsStr);
 
+            // T13: Emit tool start event so UI can show loading card
+            let toolMsgId = null;
             try {
                 const args = JSON.parse(argsStr);
-                const toolOutput = await executeTool(toolName, args, { personas, requesterId: ai.id });
+
+                toolMsgId = this.callbacks.onToolStart?.(chatId, ai.id, toolName, args) ?? null;
+
+                const toolOutput = await executeTool(toolName, args, { personas, requesterId: ai.id, delegationDepth: depth });
+
+                // T13: Emit tool end (success)
+                this.callbacks.onToolEnd?.(chatId, toolMsgId, toolOutput, null);
 
                 // Recursive Call
                 const newHistory = [
@@ -118,6 +126,9 @@ export class AIPipeline {
 
             } catch (e) {
                 this.log('[Tool Error]', e);
+                // T13: Emit tool end (error)
+                this.callbacks.onToolEnd?.(chatId, toolMsgId, null, e.message);
+
                 const newHistory = [
                     ...initialHistory,
                     { role: 'assistant', content: response },

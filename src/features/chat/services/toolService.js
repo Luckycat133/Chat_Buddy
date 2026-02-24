@@ -64,7 +64,7 @@ export async function executeTool(toolName, args, extras = {}) {
 
             // ========== Programming Tools ==========
             case 'run_code':
-                return executeJavaScript(args.code);
+                return executeInSandbox(args.code, args.language || 'javascript');
             case 'search_docs':
                 return mockSearchDocs(args.query);
             case 'analyze_code':
@@ -113,6 +113,10 @@ export async function executeTool(toolName, args, extras = {}) {
             // ========== T12: Memory Exchange Tool ==========
             case 'MEMORY_REQUEST':
                 return executeMemoryRequest(args, extras.personas || [], extras.requesterId || '__unknown__');
+
+            // ========== T13: Agent Collaboration Tool ==========
+            case 'delegate_task':
+                return executeDelegateTask(args, extras.personas || [], extras.delegationDepth || 0);
 
             default:
                 return `Error: Tool '${toolName}' not found.`;
@@ -258,27 +262,78 @@ function trackProgressTool(topicKeyword, status, misconception) {
 
 // ========== Programming Tool Implementations ==========
 
+// T13: Singleton sandbox worker for isolated code execution
+let _sandboxWorker = null;
+let _workerRequestCounter = 0;
+const _workerCallbacks = new Map(); // requestId → { resolve, reject }
+
+function getSandboxWorker() {
+    if (_sandboxWorker) return _sandboxWorker;
+    _sandboxWorker = new Worker('/sandbox.worker.js');
+    _sandboxWorker.onmessage = (event) => {
+        const { type, requestId, status, output } = event.data;
+        if (type === 'STATUS') {
+            console.log('[SandboxWorker]', output);
+            return;
+        }
+        if (type === 'RESULT' && _workerCallbacks.has(requestId)) {
+            const { resolve } = _workerCallbacks.get(requestId);
+            _workerCallbacks.delete(requestId);
+            resolve({ status, output });
+        }
+    };
+    _sandboxWorker.onerror = (err) => {
+        console.error('[SandboxWorker] Uncaught error:', err);
+        // Reject all pending and reset
+        _workerCallbacks.forEach(({ reject }) => reject(new Error('Worker crashed')));
+        _workerCallbacks.clear();
+        _sandboxWorker = null;
+    };
+    return _sandboxWorker;
+}
+
 /**
- * Safe client-side JS execution
+ * T13: Execute code in the isolated sandbox worker with a 10-second timeout.
+ * Supports 'javascript' and 'python'.
  */
-function executeJavaScript(code) {
+async function executeInSandbox(code, language = 'javascript') {
     if (!code) return "Error: No code provided";
 
-    let logs = [];
-    const mockConsole = {
-        log: (...args) => logs.push(args.join(' ')),
-        error: (...args) => logs.push('ERROR: ' + args.join(' ')),
-        warn: (...args) => logs.push('WARN: ' + args.join(' '))
-    };
+    const requestId = ++_workerRequestCounter;
+    const TIMEOUT_MS = language === 'python' ? 30000 : 10000; // Python WASM needs more time
 
-    try {
-        const userFunc = new Function('console', code);
-        const result = userFunc(mockConsole);
-        const output = logs.length > 0 ? logs.join('\n') : (result !== undefined ? String(result) : 'Success (No output)');
-        return `[Execution Result]\n${output}`;
-    } catch (e) {
-        return `[Execution Error]\n${e.name}: ${e.message}`;
-    }
+    return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+            if (_workerCallbacks.has(requestId)) {
+                _workerCallbacks.delete(requestId);
+                // Kill and recreate worker to stop infinite loops
+                try { _sandboxWorker?.terminate(); } catch (_) { /* */ }
+                _sandboxWorker = null;
+                resolve(`[Execution Timeout] Code exceeded ${TIMEOUT_MS / 1000}s limit and was terminated.`);
+            }
+        }, TIMEOUT_MS);
+
+        _workerCallbacks.set(requestId, {
+            resolve: ({ status, output }) => {
+                clearTimeout(timeout);
+                const label = status === 'error' ? '[Execution Error]' : '[Execution Result]';
+                resolve(`${label}\n${output}`);
+            },
+            reject: (err) => {
+                clearTimeout(timeout);
+                resolve(`[Execution Error]\n${err.message}`);
+            },
+        });
+
+        try {
+            getSandboxWorker().postMessage({ type: 'EXECUTE', requestId, language, code });
+        } catch (err) {
+            clearTimeout(timeout);
+            _workerCallbacks.delete(requestId);
+            _sandboxWorker = null;
+            resolve(`[Execution Error]\n${err.message}`);
+        }
+    });
 }
 
 // ========== Research Tool Implementations ==========
@@ -665,6 +720,54 @@ async function executeMemoryRequest(args, personas, requesterId = '__unknown__')
         return '[MEMORY_REQUEST Error] Missing required fields: target and topic.';
     }
     return requestMemory(requesterId, target, topic, personas);
+}
+
+// ========== T13: Agent Collaboration Implementation ==========
+
+/**
+ * Delegate a sub-task to another agent and return its response.
+ * Max delegation depth: 2 — prevents infinite agent loops.
+ *
+ * @param {Object} args        - { agentId, prompt }
+ * @param {Array}  personas    - Full persona list to look up the target agent
+ * @param {number} depth       - Current delegation depth (passed by AIPipeline)
+ * @returns {Promise<string>}  - Delegated agent's response
+ */
+async function executeDelegateTask(args, personas, depth = 0) {
+    const { agentId, prompt } = args;
+
+    if (!agentId || !prompt) {
+        return '[Delegate Error] Missing required fields: agentId and prompt.';
+    }
+    if (depth >= 2) {
+        return '[Delegate Error] Maximum delegation depth reached (2). Cannot delegate further.';
+    }
+
+    const targetAgent = personas.find(p => p.id === agentId);
+    if (!targetAgent) {
+        return `[Delegate Error] Agent "${agentId}" not found.`;
+    }
+
+    console.log(`[ToolService] Delegating to ${targetAgent.name}: "${prompt.slice(0, 80)}..."`);
+
+    try {
+        const systemPrompt = targetAgent.systemPrompt ||
+            `You are ${targetAgent.name}, a specialized AI assistant. ${targetAgent.personality || ''}`;
+
+        const result = await callAI(
+            [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: prompt }
+            ],
+            { agentId, maxTokens: 800, temperature: 0.7 }
+        );
+
+        if (!result) return `[Delegate Error] ${targetAgent.name} did not respond.`;
+
+        return `[Delegated response from ${targetAgent.name}]\n${result}`;
+    } catch (e) {
+        return `[Delegate Error] ${targetAgent.name} failed: ${e.message}`;
+    }
 }
 
 export default executeTool;

@@ -15,7 +15,10 @@ node_modules
 dist
 dist-ssr
 *.local
+# Agent configurations
 .claude/
+.agents/
+.agent/
 **/*.local.json
 
 # Editor directories and files
