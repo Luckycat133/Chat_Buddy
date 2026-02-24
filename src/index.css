@@ -39,45 +39,47 @@
   --color-gray-900: #212121;
 
   /* Semantic Colors */
-  --color-text-main: #1a1a2e;
-  --color-text-secondary: #4a4a68;
-  --color-text-muted: #6f7488;
-  --color-text-light: #c4c4d4;
+  --color-text-main: #141a2a;
+  --color-text-primary: var(--color-text-main);
+  --color-text-secondary: #2f3d58;
+  --color-text-muted: #55637f;
+  --color-text-light: #8a97ad;
   --color-danger: #ff6b6b;
   --color-success: #4ecdc4;
   --color-warning: #ffe66d;
 
   /* Premium Backgrounds */
-  --color-bg-app: #f0f2f8;
+  --color-bg-app: #ffffff;
   /* Slightly darker for islands to pop */
   --color-bg-white: #ffffff;
   --color-bg-hover: rgba(255, 155, 122, 0.08);
   --color-bg-active: rgba(255, 155, 122, 0.15);
-  --color-bg-chat: #f5f6fa;
-  --color-bg-glass: rgba(255, 255, 255, 0.72);
-  --color-bg-glass-strong: rgba(255, 255, 255, 0.88);
+  --color-bg-chat: #ffffff;
+  --color-bg-glass: rgba(255, 255, 255, 0.94);
+  --color-bg-glass-strong: rgba(255, 255, 255, 0.98);
 
   /* Vision Pro / Aurora Gradients */
   --gradient-aurora: linear-gradient(135deg,
       #ff9b7a 0%,
       #ff7e9d 50%,
       #b8a4e3 100%);
+  --gradient-user-bubble: linear-gradient(135deg, #f9735d 0%, #ef5b7f 100%);
   --gradient-aurora-soft: linear-gradient(135deg,
       rgba(255, 155, 122, 0.15) 0%,
       rgba(255, 126, 157, 0.1) 50%,
       rgba(184, 164, 227, 0.08) 100%);
   --gradient-sidebar: linear-gradient(180deg,
       #ffffff 0%,
-      #fdf8f6 50%,
-      #f8f5ff 100%);
+      #ffffff 50%,
+      #fbfcff 100%);
   --gradient-header: linear-gradient(135deg,
-      rgba(255, 255, 255, 0.85) 0%,
-      rgba(255, 251, 249, 0.8) 100%);
-  --gradient-card: linear-gradient(145deg, #ffffff 0%, #fafafa 100%);
+      rgba(255, 255, 255, 0.96) 0%,
+      rgba(248, 251, 255, 0.94) 100%);
+  --gradient-card: linear-gradient(145deg, #ffffff 0%, #ffffff 100%);
 
   /* Border */
-  --color-border: rgba(0, 0, 0, 0.06);
-  --color-border-light: rgba(0, 0, 0, 0.04);
+  --color-border: rgba(19, 29, 49, 0.11);
+  --color-border-light: rgba(19, 29, 49, 0.07);
   --color-border-aurora: rgba(255, 155, 122, 0.25);
 
   /* iOS 26 Depth System */
@@ -1074,8 +1076,8 @@ textarea,
 }
 
 .page-transitioning {
-  opacity: 0;
-  transform: translateY(4px) scale(0.998);
+  opacity: 0.96;
+  transform: translateY(2px) scale(0.999);
 }
 
 @keyframes shimmer {
@@ -1236,10 +1238,11 @@ textarea,
   --color-gray-900: #f5f5f5;
 
   /* Semantic Colors */
-  --color-text-main: #f0f2f8;
-  --color-text-secondary: #b0b0c8;
-  --color-text-muted: #6e6e85;
-  --color-text-light: #4a4a5a;
+  --color-text-main: #f3f6ff;
+  --color-text-primary: var(--color-text-main);
+  --color-text-secondary: #c7cede;
+  --color-text-muted: #9ea8bd;
+  --color-text-light: #717d95;
 
   /* Premium Backgrounds */
   --color-bg-app: #0f0f13;
@@ -2008,7 +2011,7 @@ html:not(.dark) .character-glow::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  opacity: 0.2;
+  opacity: 0;
   background:
     radial-gradient(circle at 10% 20%,
       var(--color-primary-glow) 0%,
@@ -2016,6 +2019,10 @@ html:not(.dark) .character-glow::before {
     radial-gradient(circle at 90% 80%,
       var(--color-accent-blue-glow) 0%,
       transparent 40%);
+}
+
+.dark .page-ambient-glow {
+  opacity: 0.16;
 }
 
 /* ========================================
@@ -2134,18 +2141,20 @@ html:not(.dark) .character-glow::before {
 .control-card {
   padding: var(--space-5);
   border-radius: var(--radius-xl);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-border);
   cursor: pointer;
   transition: all var(--duration-normal) var(--ease-default);
   position: relative;
   overflow: hidden;
-  background: var(--color-bg-app);
-  opacity: 0.8;
+  background: var(--color-bg-white);
+  box-shadow: var(--shadow-xs);
+  opacity: 1;
 }
 
 .control-card:hover {
-  opacity: 1;
-  transform: scale(1.02);
+  transform: translateY(-1px);
+  border-color: var(--color-border-aurora);
+  box-shadow: var(--shadow-sm);
 }
 
 .control-card.active {

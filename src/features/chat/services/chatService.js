@@ -5,6 +5,87 @@
 
 import { getAIClient, getAIConfiguration } from '../../../services/api/aiClient';
 
+function toTextContent(value) {
+    if (typeof value === 'string') return value;
+    if (!value) return '';
+
+    if (Array.isArray(value)) {
+        return value
+            .map(item => toTextContent(item))
+            .filter(Boolean)
+            .join('');
+    }
+
+    if (typeof value === 'object') {
+        if (typeof value.text === 'string') return value.text;
+        if (typeof value.content === 'string') return value.content;
+        if (typeof value.output_text === 'string') return value.output_text;
+    }
+
+    return '';
+}
+
+function extractAssistantContent(data) {
+    const choice = data?.choices?.[0];
+    const msg = choice?.message;
+
+    const candidates = [
+        msg?.content,
+        choice?.text,
+        choice?.delta?.content,
+        data?.output_text,
+        msg?.reasoning_content,
+    ];
+
+    for (const candidate of candidates) {
+        const text = toTextContent(candidate).trim();
+        if (text) return text;
+    }
+
+    // OpenAI Responses-style fallback for compatible gateways.
+    if (Array.isArray(data?.output)) {
+        const outputText = data.output
+            .map((item) => {
+                const direct = toTextContent(item?.content);
+                if (direct) return direct;
+                if (Array.isArray(item?.content)) {
+                    return item.content.map(part => toTextContent(part)).join('');
+                }
+                return '';
+            })
+            .join('')
+            .trim();
+        if (outputText) return outputText;
+    }
+
+    return '';
+}
+
+async function parseResponseBody(response) {
+    try {
+        return await response.json();
+    } catch {
+        return null;
+    }
+}
+
+function buildCompletionEndpoints(baseURL = '') {
+    const endpoints = ['/chat/completions'];
+    const normalized = String(baseURL || '').trim().replace(/\/+$/, '');
+
+    // If base URL has no explicit API version, try /v1 fallback for
+    // OpenAI-compatible providers that require it.
+    if (
+        normalized &&
+        !/\/v\d+$/i.test(normalized) &&
+        !/\/chat\/completions$/i.test(normalized)
+    ) {
+        endpoints.push('/v1/chat/completions');
+    }
+
+    return endpoints;
+}
+
 /**
  * Call the AI API with the given messages history
  * @param {Array} messages - List of message objects {role, content}
@@ -63,16 +144,37 @@ export async function callAI(messages, options = {}) {
     }
 
     try {
-        const response = await aiClient.post('/chat/completions', requestBody);
+        const endpoints = buildCompletionEndpoints(aiClient.baseURL);
 
-        const data = await response.json();
-        if (data.error) {
-            console.error('API Error:', data.error, options.agentId ? `(Agent: ${options.agentId})` : '');
+        for (let i = 0; i < endpoints.length; i++) {
+            const endpoint = endpoints[i];
+            const response = await aiClient.post(endpoint, requestBody);
+            const data = await parseResponseBody(response);
+
+            if (!response.ok) {
+                // Retry with /v1 only on obvious route mismatch.
+                if ((response.status === 404 || response.status === 405) && i < endpoints.length - 1) {
+                    continue;
+                }
+                const msg = data?.error?.message || `HTTP ${response.status}`;
+                console.error('API Error:', msg, options.agentId ? `(Agent: ${options.agentId})` : '');
+                return null;
+            }
+
+            if (data?.error) {
+                console.error('API Error:', data.error, options.agentId ? `(Agent: ${options.agentId})` : '');
+                return null;
+            }
+
+            const content = extractAssistantContent(data);
+            if (content) {
+                return content.trim();
+            }
+
+            // Endpoint is reachable but payload has no usable content.
             return null;
         }
-        if (data.choices && data.choices.length > 0) {
-            return data.choices[0].message.content.trim();
-        }
+
         return null;
     } catch (error) {
         console.error('API Call Failed:', error, options.agentId ? `(Agent: ${options.agentId})` : '');

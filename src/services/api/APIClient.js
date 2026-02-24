@@ -67,7 +67,22 @@ class APIClient {
 
     _buildUrl(endpoint) {
         if (endpoint.startsWith('http')) return endpoint;
-        return `${this.baseURL}${endpoint}`;
+
+        const base = (this.baseURL || '').trim();
+        if (!base) return endpoint;
+
+        const normalizedBase = base.replace(/\/+$/, '');
+        const normalizedEndpoint = endpoint
+            ? `/${String(endpoint).replace(/^\/+/, '')}`
+            : '';
+
+        // If base URL already points to the completions endpoint,
+        // avoid appending it twice.
+        if (/\/chat\/completions$/i.test(normalizedBase) && normalizedEndpoint === '/chat/completions') {
+            return normalizedBase;
+        }
+
+        return `${normalizedBase}${normalizedEndpoint}`;
     }
 
     async _fetchWithRetry(url, config, retriesLeft) {

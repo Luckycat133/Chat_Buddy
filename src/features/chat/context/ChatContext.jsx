@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
 import { useChatService } from '../hooks/useChatService';
 import { useSocial } from '../../../context/SocialContext';
+import { useLanguage } from '../../../context/LanguageContext';
 import { chatEngine } from '../../../core/chat/ChatEngine';
 
 // Facade Context for backward compatibility
@@ -29,6 +30,7 @@ export const ChatProvider = ({ children }) => {
     // Wiring the new Service
     const service = useChatService();
     const { addChatIntimacy, getIntimacyLevel, getIntimacy } = useSocial();
+    const { resolvedAiLanguage, language } = useLanguage();
 
     // Compatibility Refs (some old components might rely on refs for async closures)
     // We mock them or link them to current state if absolutely necessary
@@ -52,18 +54,24 @@ export const ChatProvider = ({ children }) => {
     const getIntimacyLevelRef = useRef(getIntimacyLevel);
     const getIntimacyRef = useRef(getIntimacy);
     const moodMapRef = useRef(service.moodMap);
+    const aiLanguageRef = useRef(resolvedAiLanguage);
+    const uiLanguageRef = useRef(language);
     useEffect(() => {
         getIntimacyLevelRef.current = getIntimacyLevel;
         getIntimacyRef.current = getIntimacy;
         moodMapRef.current = service.moodMap;
-    }, [getIntimacyLevel, getIntimacy, service.moodMap]);
+        aiLanguageRef.current = resolvedAiLanguage;
+        uiLanguageRef.current = language;
+    }, [getIntimacyLevel, getIntimacy, service.moodMap, resolvedAiLanguage, language]);
 
     const contextProviderFn = useCallback((personaId) => {
         const levelData = getIntimacyLevelRef.current(personaId);
         return {
             intimacyLevel: levelData.level,
             intimacyScore: getIntimacyRef.current(personaId),
-            mood: moodMapRef.current?.[personaId] || null
+            mood: moodMapRef.current?.[personaId] || null,
+            preferredLanguage: aiLanguageRef.current || 'zh',
+            uiLanguage: uiLanguageRef.current || 'zh',
         };
     }, []);
 

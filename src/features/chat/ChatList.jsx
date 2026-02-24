@@ -168,7 +168,7 @@ export default function ChatList() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const [activeTab, setActiveTab] = useState('all'); // 'all', 'social', 'task'
+    const [activeTab, setActiveTab] = useState('all'); // 'all', 'social'
 
     // Context menu state
     const [contextMenu, setContextMenu] = useState(null); // { chatId, x, y }
@@ -197,6 +197,9 @@ export default function ChatList() {
                 }
                 // Determine type based on AI agent type
                 type = ai.agentType === 'task-specialist' ? 'task' : 'social';
+            } else if (typeof aiId === 'string' && aiId.startsWith('agent-')) {
+                // Keep historical/removed task agents out of normal chat list.
+                type = 'task';
             }
         }
         return { 
@@ -213,9 +216,10 @@ export default function ChatList() {
         return chats
             .map(chat => ({ chat, meta: getChatMetadata(chat) }))
             .filter(({ meta }) => {
+                const isSocialChat = meta.type === 'social';
                 const matchesTab = activeTab === 'all' || meta.type === activeTab;
                 const matchesSearch = meta.name.toLowerCase().includes(normalizedSearch);
-                return matchesSearch && matchesTab;
+                return isSocialChat && matchesSearch && matchesTab;
             })
             .sort((a, b) => {
                 if (a.chat.isPinned && !b.chat.isPinned) return -1;
@@ -297,7 +301,7 @@ export default function ChatList() {
 
                     {/* Filter Tabs - Inside the Glass Shell */}
                     <div className="flex gap-2 mt-2 px-1 pb-1 overflow-x-auto scrollbar-hide">
-                        {['all', 'social', 'task'].map((tab) => (
+                        {['all', 'social'].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -313,7 +317,6 @@ export default function ChatList() {
                             >
                                 {tab === 'all' && t('all_chats')}
                                 {tab === 'social' && t('social_companions')}
-                                {tab === 'task' && t('task_agents')}
                             </button>
                         ))}
                     </div>

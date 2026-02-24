@@ -106,7 +106,10 @@ export default function FriendsPage() {
                             onFocus={() => setSearchFocused(true)}
                             onBlur={() => setSearchFocused(false)}
                             className={cn(
-                                "input-modern pl-12 pr-10",
+                                "w-full rounded-[var(--radius-xl)] border border-[var(--color-border)]",
+                                "bg-[var(--color-bg-white)] text-[var(--color-text-main)]",
+                                "py-3 pl-12 pr-10 text-[15px] font-medium placeholder:text-[var(--color-text-muted)]",
+                                "focus:outline-none focus:border-[var(--color-primary)]",
                                 searchFocused && "ring-4 ring-[var(--color-primary)]/10"
                             )}
                         />

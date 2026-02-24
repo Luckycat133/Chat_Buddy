@@ -32,6 +32,31 @@ export const SONAR_MODELS = {
 
 let aiClientInstance = null;
 
+function normalizeBaseUrlForDevProxy(baseUrl) {
+    const raw = String(baseUrl || '').trim().replace(/\/+$/, '');
+    if (!raw) return '';
+
+    // Only rewrite in local dev. Production should use the configured URL as-is.
+    if (!import.meta.env.DEV || typeof window === 'undefined') return raw;
+
+    try {
+        const url = new URL(raw, window.location.origin);
+        const path = url.pathname === '/' ? '' : url.pathname;
+
+        if (url.origin === 'https://maas-api.cn-huabei-1.xf-yun.com') {
+            return `/proxy/xfyun${path}`;
+        }
+
+        if (url.origin === 'https://api.perplexity.ai') {
+            return `/proxy/perplexity${path}`;
+        }
+    } catch {
+        // Keep original value for relative URLs or invalid input.
+    }
+
+    return raw;
+}
+
 /**
  * Get or create the AI API client instance.
  * Config priority: localStorage runtime > .env build-time > defaults
@@ -39,9 +64,10 @@ let aiClientInstance = null;
 export function getAIClient() {
     if (!aiClientInstance) {
         const config = getConfig();
+        const normalizedBaseUrl = normalizeBaseUrlForDevProxy(config.baseUrl);
 
         aiClientInstance = new APIClient({
-            baseURL: config.baseUrl,
+            baseURL: normalizedBaseUrl,
             timeout: config.timeout || 60000,
             maxRetries: config.maxRetries || 3,
             headers: { 'Content-Type': 'application/json' }

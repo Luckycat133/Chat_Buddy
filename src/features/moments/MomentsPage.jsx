@@ -13,6 +13,8 @@ export default function MomentsPage() {
     const { posts } = useMoments();
     const { userProfile, getDisplayName } = useUser();
     const { t, language } = useLanguage();
+    const safePosts = Array.isArray(posts) ? posts : [];
+    const safeUserProfile = (userProfile && typeof userProfile === 'object') ? userProfile : { avatar: null };
 
     const [showComposer, setShowComposer] = useState(false);
     const [selectedPost, setSelectedPost] = useState(null);
@@ -37,7 +39,7 @@ export default function MomentsPage() {
     };
 
     // Sort posts by date, newest first
-    const sortedPosts = [...posts].sort((a, b) =>
+    const sortedPosts = [...safePosts].sort((a, b) =>
         new Date(b.createdAt) - new Date(a.createdAt)
     );
 
@@ -55,7 +57,7 @@ export default function MomentsPage() {
 
     return (
         <div
-            className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto custom-scrollbar relative"
+            className="flex-1 h-full min-h-0 bg-[var(--color-bg-app)] overflow-y-auto custom-scrollbar relative"
             onScroll={handleScroll}
         >
             {/* Header Background Gradient */}
@@ -93,8 +95,8 @@ export default function MomentsPage() {
                 >
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-[var(--color-bg-active)] overflow-hidden">
-                            {userProfile.avatar ? (
-                                <img src={userProfile.avatar} alt="You" className="w-full h-full object-cover" />
+                            {safeUserProfile.avatar ? (
+                                <img src={safeUserProfile.avatar} alt="You" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-[var(--color-primary)] font-bold">
                                     {getDisplayName(language).charAt(0)}
