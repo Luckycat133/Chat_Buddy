@@ -28,8 +28,8 @@ export default function AgentsPage() {
         });
     }, []);
 
-    const builtinAgents = getTaskSpecialists();
-    const allAgents = [...builtinAgents, ...customAgents];
+    const builtinAgents = Array.isArray(getTaskSpecialists()) ? getTaskSpecialists() : [];
+    const allAgents = [...builtinAgents, ...(Array.isArray(customAgents) ? customAgents : [])];
 
     const filteredAgents = allAgents.filter(agent => {
         const agentName = language === 'zh' ? (agent.name_zh || agent.name) : agent.name;
@@ -68,7 +68,7 @@ export default function AgentsPage() {
     };
 
     return (
-        <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto pb-20 md:pb-0 relative custom-scrollbar">
+        <div className="flex-1 h-full min-h-0 bg-[var(--color-bg-app)] overflow-y-auto pb-20 md:pb-0 relative custom-scrollbar">
             {/* Background Ambient Glow */}
             <div className="fixed top-0 left-0 right-0 h-[400px] pointer-events-none opacity-30 select-none animate-aurora"
                 style={{ background: 'radial-gradient(circle at 50% -20%, var(--color-primary) 0%, transparent 60%)' }} />

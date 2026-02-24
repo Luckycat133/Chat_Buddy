@@ -275,7 +275,6 @@ export default function MessageTimeline({
                                 isMe ? "justify-end" : "justify-start",
                                 "bubble-enter"
                             )}
-                            style={{ animationDelay: `${(index % 5) * 50}ms` }}
                             onContextMenu={(e) => onContextMenu(e, msg)}
                         >
                             <div
@@ -306,7 +305,16 @@ export default function MessageTimeline({
                                                     getCharacterGlowClass(msg.senderId)
                                                 ))
                                             : "bg-transparent"
-                                    )}>
+                                    )}
+                                        style={isMe && (type === 'text' || type === 'file')
+                                            ? {
+                                                background: 'var(--gradient-user-bubble, linear-gradient(135deg, #f9735d 0%, #ef5b7f 100%))',
+                                                backgroundSize: '180% 180%',
+                                                color: '#ffffff',
+                                                textShadow: '0 1px 1px rgba(0, 0, 0, 0.18)'
+                                            }
+                                            : undefined
+                                        }>
                                         {quotedData && (
                                             <QuotedMessage quotedMessage={quotedData} senderName={quotedData.senderName} />
                                         )}

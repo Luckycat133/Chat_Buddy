@@ -147,6 +147,59 @@ describe('chatService.callAI', () => {
     expect(capturedBodies[0].max_tokens).toBe(2048);
     expect(capturedBodies[0].temperature).toBe(0.1);
   });
+
+  it('test_when_base_url_requires_v1_path_should_retry_with_v1_chat_completions', async () => {
+    // Given
+    let plainPathCalls = 0;
+    let v1PathCalls = 0;
+
+    server.use(
+      http.post('https://mock.api/chat/completions', () => {
+        plainPathCalls += 1;
+        return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 });
+      }),
+      http.post('https://mock.api/v1/chat/completions', () => {
+        v1PathCalls += 1;
+        return HttpResponse.json({
+          choices: [{ message: { content: 'ok via v1' } }],
+        });
+      })
+    );
+
+    // When
+    const result = await callAI([{ role: 'user', content: 'hello' }]);
+
+    // Then
+    expect(result).toBe('ok via v1');
+    expect(plainPathCalls).toBe(1);
+    expect(v1PathCalls).toBe(1);
+  });
+
+  it('test_when_message_content_is_structured_array_should_extract_text_content', async () => {
+    // Given
+    server.use(
+      http.post('*/chat/completions', () =>
+        HttpResponse.json({
+          choices: [
+            {
+              message: {
+                content: [
+                  { type: 'text', text: 'hello ' },
+                  { type: 'output_text', text: 'world' },
+                ],
+              },
+            },
+          ],
+        })
+      )
+    );
+
+    // When
+    const result = await callAI([{ role: 'user', content: 'hello' }]);
+
+    // Then
+    expect(result).toBe('hello world');
+  });
 });
 
 describe('chatService.cleanMessageContent', () => {
