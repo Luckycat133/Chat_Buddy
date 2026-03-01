@@ -56,13 +56,13 @@ export default function MomentsPage() {
     };
 
     return (
-        <div
-            className="flex-1 h-full min-h-0 bg-[var(--color-bg-app)] overflow-y-auto custom-scrollbar relative"
-            onScroll={handleScroll}
-        >
+        <div className="h-full w-full flex flex-col bg-[var(--color-bg-app)] relative">
             {/* Header Background Gradient */}
             <div className="fixed top-0 left-0 right-0 h-[300px] pointer-events-none opacity-20"
                 style={{ background: 'radial-gradient(ellipse at top, var(--color-primary-glow) 0%, transparent 70%)' }} />
+
+            {/* Scrollable content area */}
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-20 md:pb-0" onScroll={handleScroll}>
 
             {/* Floating Glass Header */}
             <div className={cn(
@@ -78,7 +78,7 @@ export default function MomentsPage() {
                     className="flex items-center gap-2 bg-[var(--color-bg-white)] hover:bg-[var(--color-bg-hover)] px-4 py-2 rounded-full cursor-pointer transition-all border border-[var(--color-border)] shadow-sm active:scale-95 group">
                     <Camera size={18} className="text-[var(--color-primary)] group-hover:scale-110 transition-transform" />
                     <span className="text-sm font-bold text-[var(--color-text-main)] hidden md:block">
-                        {language === 'zh' ? '发布动态' : 'Share Moment'}
+                        {t('share_moment')}
                     </span>
                 </div>
             </div>
@@ -104,7 +104,7 @@ export default function MomentsPage() {
                             )}
                         </div>
                         <div className="flex-1 bg-[var(--color-bg-app)] rounded-full h-10 flex items-center px-4 text-[var(--color-text-muted)] text-sm group-hover:text-[var(--color-text-main)] transition-colors">
-                            {language === 'zh' ? '分享当下的想法...' : 'Share your thoughts...'}
+                            {t('share_thoughts')}
                         </div>
                         <div className="flex gap-3 text-[var(--color-text-muted)]">
                             <ImageIcon size={20} className="hover:text-[var(--color-primary)] transition-colors" />
@@ -171,13 +171,15 @@ export default function MomentsPage() {
                 )}
             </div>
 
-            {/* Post Composer Modal */}
+            </div>
+
+            {/* Post Composer Modal (outside scroll container) */}
             <PostComposer
                 isOpen={showComposer}
                 onClose={() => setShowComposer(false)}
             />
 
-            {/* Comments Sheet */}
+            {/* Comments Sheet (outside scroll container) */}
             {selectedPost && (
                 <CommentsSheet
                     post={selectedPost}

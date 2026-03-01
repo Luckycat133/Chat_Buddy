@@ -700,6 +700,18 @@ export const LOCALES = {
         select_chat_to_share: 'Select a chat to share',
         birthday_post_hint: "Today is {name}'s birthday! 🎂",
         happy_birthday: 'Happy Birthday',
+        // Agents Page - UI strings
+        create_agent: 'Create',
+        btn_edit: 'Edit',
+        custom_badge: 'Custom',
+        custom_agent_desc: 'Custom AI assistant',
+        create_first_agent: 'Create your first agent',
+        // Moments Page - inline UI strings
+        share_moment: 'Share Moment',
+        share_thoughts: 'Share your thoughts...',
+        // Friend Groups - bilingual name field labels
+        group_name_zh_label: 'Chinese',
+        group_name_zh_placeholder: 'e.g. Anime',
     },
     zh: {
         nav_chats: '\u804A\u5929\u5217\u8868',
@@ -1402,5 +1414,17 @@ export const LOCALES = {
         select_chat_to_share: '选择要分享的聊天',
         birthday_post_hint: '今天是{name}的生日！🎂',
         happy_birthday: '生日快乐',
+        // Agents Page - UI strings
+        create_agent: '创建助手',
+        btn_edit: '编辑',
+        custom_badge: '自定义',
+        custom_agent_desc: '自定义 AI 助手',
+        create_first_agent: '创建第一个助手',
+        // Moments Page - inline UI strings
+        share_moment: '发布动态',
+        share_thoughts: '分享当下的想法...',
+        // Friend Groups - bilingual name field labels
+        group_name_zh_label: '中文',
+        group_name_zh_placeholder: '例如：二次元',
     }
 };

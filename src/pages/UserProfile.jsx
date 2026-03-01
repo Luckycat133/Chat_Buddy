@@ -101,7 +101,7 @@ export default function UserProfile() {
                             <div>
                                 <p className="text-2xl font-bold text-[var(--color-text-main)]">{totalMessages}</p>
                                 <p className="text-[var(--color-text-muted)] text-sm">
-                                    {language === 'zh' ? '消息' : 'Messages'}
+                                    {t('messages_stat')}
                                 </p>
                             </div>
                         </div>
@@ -112,7 +112,7 @@ export default function UserProfile() {
                             <div>
                                 <p className="text-2xl font-bold text-[var(--color-text-main)]">{totalChats}</p>
                                 <p className="text-[var(--color-text-muted)] text-sm">
-                                    {language === 'zh' ? '对话' : 'Chats'}
+                                    {t('chats_stat')}
                                 </p>
                             </div>
                         </div>
@@ -128,7 +128,7 @@ export default function UserProfile() {
                     </div>
                     <div>
                         <p className="text-[var(--color-text-muted)] text-sm">
-                            {language === 'zh' ? '加入时间' : 'Member Since'}
+                            {t('member_since')}
                         </p>
                         <p className="text-[var(--color-text-main)] font-medium">
                             {formatDate(userProfile.createdAt)}

@@ -104,13 +104,13 @@ export default function FriendGroups() {
                         {/* Group Name */}
                         <div className="mb-3">
                             <label className="text-[var(--color-text-muted)] text-sm mb-1 block">
-                                {t('group_name') || 'Group Name'} (中文)
+                                {t('group_name') || 'Group Name'} ({t('group_name_zh_label') || 'Chinese'})
                             </label>
                             <input
                                 type="text"
                                 value={newGroupName}
                                 onChange={(e) => setNewGroupName(e.target.value)}
-                                placeholder="例如：二次元"
+                                placeholder={t('group_name_zh_placeholder') || 'e.g. Anime'}
                                 maxLength={10}
                                 className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] text-[15px] outline-none focus:border-[var(--color-primary)]"
                             />
