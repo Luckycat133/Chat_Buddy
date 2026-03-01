@@ -7,18 +7,18 @@ const mockConfig = {
   model: 'mock-model',
 };
 
-vi.mock('../../../services/api/aiClient', async () => {
-  const APIClientModule = await import('../../../services/api/APIClient');
-  const APIClient = APIClientModule.default;
-
+vi.mock('../../../services/api/aiClient', () => {
   return {
-    getAIClient: () =>
-      new APIClient({
-        baseURL: 'https://mock.api',
-        timeout: 1_000,
-        maxRetries: 0,
-        headers: { 'Content-Type': 'application/json' },
-      }),
+    getAIClient: () => ({
+      baseURL: 'https://mock.api',
+      post: async (endpoint, body) => {
+        return fetch('https://mock.api' + endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      },
+    }),
     getAIConfiguration: () => mockConfig,
   };
 });

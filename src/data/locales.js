@@ -808,6 +808,7 @@ export const LOCALES = {
         select_chat_to_share: 'Select a chat to share',
         birthday_post_hint: "Today is {name}'s birthday! 🎂",
         happy_birthday: 'Happy Birthday',
+
         // Agents Page - UI strings
         create_agent: 'Create',
         btn_edit: 'Edit',
@@ -872,6 +873,65 @@ export const LOCALES = {
         replied_verb: 'replied',
         // RepostSheet
         no_chats_available: 'No chats available',
+
+        // T10 Phase 3: Idiom Chain
+        game_idiom_chain: 'Idiom Chain (Chinese Only)',
+        game_idiom_chain_desc: 'Chain idioms with AI — each must start with the last character',
+        idiom_your_idiom: 'Enter a Chinese idiom...',
+        idiom_submit: 'Submit',
+        idiom_ai_thinking: 'AI is thinking...',
+        idiom_success_round: 'Round {n} — keep going!',
+        idiom_win_pts: '+{pts} pts earned!',
+        idiom_fail_msg: 'Not a valid idiom chain. Game over!',
+        idiom_ai_response: "AI's idiom: {idiom}",
+        idiom_play_again: 'Play Again',
+        idiom_game_over: 'Game Over',
+        idiom_rounds_completed: 'You completed {rounds} rounds!',
+        idiom_lang_only_zh: 'Idiom Chain is only available in Chinese mode.',
+        idiom_chain_rules: 'Each idiom must start with the last character of the previous idiom.',
+        idiom_not_enough_msg: 'Chat about something before playing Idiom Chain.',
+
+        // T10 Phase 3: Trivia Quiz
+        trivia_quiz: 'Trivia Quiz',
+        trivia_quiz_desc: 'Generate a quiz based on our chat history',
+        trivia_generating: 'Generating quiz questions...',
+        trivia_question_n: 'Question {n} of {total}',
+        trivia_submit_answer: 'Submit',
+        trivia_result: 'You scored {score}/{total}!',
+        trivia_history_tab: 'History',
+        trivia_current_tab: 'Quiz',
+        trivia_no_history: 'No quiz history yet',
+        trivia_past_score: '{score}/{total} — {date}',
+        trivia_not_enough_msgs: 'Chat more before generating a quiz (need 5+ messages).',
+        trivia_parse_fail: 'Could not generate quiz. Please try again later.',
+        trivia_finish: 'Finish Quiz',
+        trivia_close: 'Close',
+        trivia_score_broadcast: 'Trivia result: {score}/5 🎯',
+
+        // T10 Phase 3: Interaction Timeline
+        timeline_title: 'Memory Timeline',
+        timeline_view_btn: 'Our Memories',
+        timeline_empty: 'No milestones yet — keep chatting!',
+        timeline_days_together: '{days} days together',
+        timeline_first_chat: 'First Conversation',
+        timeline_intimacy_up: 'Relationship Level Up ({level})',
+        timeline_gift_sent: 'You sent a gift: {gift}',
+        timeline_achievement: 'Achievement: {name}',
+        timeline_first_checkin: 'First Check-in',
+        timeline_close: 'Close',
+
+        // T10 Phase 3: Stats Leaderboard
+        stats_leaderboard: 'My Stats',
+        stats_total_points: 'Total Points',
+        stats_max_streak: 'Longest Streak',
+        stats_top_friends: 'Most Chatted',
+        stats_game_stats: 'Game Stats',
+        stats_top_intimacy: 'Closest Companion',
+        stats_achievements: 'Achievements',
+        stats_days: 'days',
+        stats_games_played: 'Games Played',
+        stats_messages: 'messages',
+        stats_no_data: 'No data yet'
     },
     zh: {
         nav_chats: '\u804A\u5929\u5217\u8868',
@@ -1682,6 +1742,7 @@ export const LOCALES = {
         select_chat_to_share: '选择要分享的聊天',
         birthday_post_hint: '今天是{name}的生日！🎂',
         happy_birthday: '生日快乐',
+
         // Agents Page - UI strings
         create_agent: '创建助手',
         btn_edit: '编辑',
@@ -1746,5 +1807,64 @@ export const LOCALES = {
         replied_verb: '回复',
         // 转发
         no_chats_available: '暂无聊天',
+
+        // T10 Phase 3: 成语接龙
+        game_idiom_chain: '成语接龙',
+        game_idiom_chain_desc: '和AI轮流接龙，下一个成语需以上一个结尾字开头',
+        idiom_your_idiom: '输入一个成语...',
+        idiom_submit: '提交',
+        idiom_ai_thinking: 'AI思考中...',
+        idiom_success_round: '第{n}轮 — 继续加油！',
+        idiom_win_pts: '+{pts} 积分到手！',
+        idiom_fail_msg: '不符合接龙规则，游戏结束！',
+        idiom_ai_response: 'AI的成语：{idiom}',
+        idiom_play_again: '再来一局',
+        idiom_game_over: '游戏结束',
+        idiom_rounds_completed: '你完成了{rounds}轮接龙！',
+        idiom_lang_only_zh: '成语接龙仅在中文模式下显示。',
+        idiom_chain_rules: '每个成语必须以上一个成语的最后一个汉字开头。',
+        idiom_not_enough_msg: '聊天内容太少，先多聊聊再玩成语接龙吧。',
+
+        // T10 Phase 3: 默契问答
+        trivia_quiz: '默契问答',
+        trivia_quiz_desc: '根据聊天记录生成专属测验',
+        trivia_generating: '正在生成题目...',
+        trivia_question_n: '第{n}题 / 共{total}题',
+        trivia_submit_answer: '提交',
+        trivia_result: '你得了{score}/{total}分！',
+        trivia_history_tab: '历史记录',
+        trivia_current_tab: '当前测验',
+        trivia_no_history: '暂无测验记录',
+        trivia_past_score: '{score}/{total} — {date}',
+        trivia_not_enough_msgs: '聊天内容不够多，至少需要5条消息才能生成题目。',
+        trivia_parse_fail: '题目生成失败，请稍后重试。',
+        trivia_finish: '完成测验',
+        trivia_close: '关闭',
+        trivia_score_broadcast: '默契问答成绩：{score}/5 🎯',
+
+        // T10 Phase 3: 互动时间轴
+        timeline_title: '我们的回忆',
+        timeline_view_btn: '查看回忆',
+        timeline_empty: '还没有里程碑，多聊聊吧！',
+        timeline_days_together: '已陪伴{days}天',
+        timeline_first_chat: '第一次对话',
+        timeline_intimacy_up: '关系升级（{level}）',
+        timeline_gift_sent: '你送出了礼物：{gift}',
+        timeline_achievement: '成就解锁：{name}',
+        timeline_first_checkin: '第一次签到',
+        timeline_close: '关闭',
+
+        // T10 Phase 3: 个人数据统计
+        stats_leaderboard: '我的数据',
+        stats_total_points: '总积分',
+        stats_max_streak: '最长连续签到',
+        stats_top_friends: '最多对话',
+        stats_game_stats: '游戏统计',
+        stats_top_intimacy: '最亲密的伙伴',
+        stats_achievements: '成就',
+        stats_days: '天',
+        stats_games_played: '游戏场次',
+        stats_messages: '条消息',
+        stats_no_data: '暂无数据'
     }
 };

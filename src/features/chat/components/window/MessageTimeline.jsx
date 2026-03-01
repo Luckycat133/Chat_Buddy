@@ -406,7 +406,7 @@ export default function MessageTimeline({
                                                                     return child;
                                                                 });
                                                             };
-                                                            return <p className="whitespace-pre-wrap mb-2 last:mb-0">{processChildren(children)}</p>;
+                                                            return <div className="whitespace-pre-wrap mb-2 last:mb-0">{processChildren(children)}</div>;
                                                         },
                                                         // T08 Phase 5: Link with preview
                                                         a: LinkWithPreview,

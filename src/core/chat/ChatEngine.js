@@ -430,7 +430,8 @@ export class ChatEngine {
                     .map(id => this.personas.find(p => p.id === id))
                     .filter(Boolean)
                     .map(p => ({ id: p.id, name: p.name }));
-                extractGroupMemoriesAsync(updatedChat.messages, chatId, aiParticipants).catch(() => { });
+                const promise = extractGroupMemoriesAsync(updatedChat.messages, chatId, aiParticipants);
+                if (promise && promise.catch) promise.catch(() => { });
             }
         }
     }
