@@ -211,10 +211,11 @@ export function cleanMessageContent(content) {
     // Remove stray closing brackets (possibly orphaned)
     cleaned = cleaned.replace(/\]\]/g, ']');
     cleaned = cleaned.replace(/\]\s*$/g, '');
+    cleaned = cleaned.replace(/^\s*\[?\]/g, '');
 
     // Transform GAME:Poll messages for AI context instead of removing them
     cleaned = cleaned.replace(/\[GAME:Poll:\s*(.+?)\]/gi, (match, question) => {
-        return `[System: A poll has been created: "${question}". Please vote for an option.]`;
+        return `System: A poll has been created: "${question}". Please vote for an option.`;
     });
 
     // Note: [POLL:ID] messages are kept as is, handled in context preparation

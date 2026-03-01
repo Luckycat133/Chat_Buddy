@@ -43,7 +43,7 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 | T10 | Social & Interaction Features          | v0.2.6  | P1       | ✅ Done                            |
 | T11 | Moments & Feed System                  | v0.2.7  | P1       | ✅ Done                            |
 | T12 | AI Memory & Cognitive System           | v0.3.0  | P2       | ✅ Done                            |
-| T13 | AI Agent & Tool System                 | v0.3.1  | P2       | ✅ Done                             |
+| T13 | AI Agent & Tool System                 | v0.3.1  | P2       | ✅ Done                            |
 | T14 | Knowledge Base & RAG System            | v0.3.2  | P2       | ✅ Done                            |
 | T15 | Professional Agent Capabilities        | v0.3.3  | P2       | ✅ Done                            |
 
@@ -389,6 +389,7 @@ src/config/
 ### Implementation Details
 
 **New Files:**
+
 - `src/features/chat/services/BookmarkService.js` — Bookmark CRUD operations
 - `src/features/chat/components/BookmarkPanel.jsx` — Bookmark list slide-in panel
 - `src/features/chat/hooks/useDraft.js` — Draft auto-save hook with 500ms debounce
@@ -398,6 +399,7 @@ src/config/
 - `src/features/chat/components/VoicePlayer.jsx` — Voice message with waveform visualization
 
 **Modified Files:**
+
 - `src/core/chat/ChatEngine.js` — Added `bookmarkMessage`, `unbookmarkMessage`, `markMessagesAsRead`
 - `src/features/chat/hooks/useChatService.js` — Exposed bookmark and read receipt methods
 - `src/features/chat/components/MessageMenu.jsx` — Added bookmark/unbookmark menu item
@@ -593,7 +595,7 @@ src/config/
 - [x] **Group chat context sharing** — `MemoryInjector.buildGroupContextBlock()` injects recent group-chat summaries into private chat prompts; `ChatEngine` collects and passes `recentGroupMessages` via context
 - [x] **Group chat memory extraction** — `extractGroupMemoriesAsync()` distills important user facts from group chats into each AI participant's long-term memory (triggered every 10 messages, rate-limited per hour per character per group)
 - [x] **Memory exchange tool** — `[MEMORY_REQUEST: target=Name, topic=...]` parsed in `AIPipeline._runReActLoop()`; `MemoryExchange.requestMemory()` runs a background LLM call in the target character's voice with their own memories loaded; target can share truthfully, deflect, or be protective
-- [x] **Real requester identity** — requesting character's real ID is passed through the tool chain, so the target character knows *who* is asking when deciding whether to share
+- [x] **Real requester identity** — requesting character's real ID is passed through the tool chain, so the target character knows _who_ is asking when deciding whether to share
 - [x] **Forgetting mechanism** — time-based decay using `importance × DAYS_PER_IMPORTANCE` formula; `applyDecay()` called on app startup via `useChatService`
 - [x] **Deduplication** — Jaccard word-similarity check (>85%) prevents saving near-identical facts
 - [x] **Memory UI** — Settings > Advanced Tools > **Character Memory** — character selector then `CharacterMemoryPanel` showing all facts with category, importance indicator, timestamps; supports single-fact forget and clear-all
