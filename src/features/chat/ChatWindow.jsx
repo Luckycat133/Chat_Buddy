@@ -20,6 +20,8 @@ const RedPacketPanel = lazy(() => import('./components/RedPacketPanel'));
 const RockPaperScissors = lazy(() => import('./components/RockPaperScissors'));
 const NumberGuessGame = lazy(() => import('./components/NumberGuessGame'));
 const GameSelectorPanel = lazy(() => import('./components/GameSelectorPanel'));
+const TriviaQuiz = lazy(() => import('./components/TriviaQuiz'));
+const IdiomChain = lazy(() => import('./components/IdiomChain'));
 const ExportModal = lazy(() => import('./components/ExportModal'));
 const MessageMenu = lazy(() => import('./components/MessageMenu'));
 const BookmarkPanel = lazy(() => import('./components/BookmarkPanel'));
@@ -350,6 +352,24 @@ export default function ChatWindow({ chatId: propChatId }) {
                         aiName={chat.name}
                         onClose={() => setActiveGame(null)}
                         onResult={handleGameResult}
+                    />
+                </Suspense>
+            )}
+
+            {activeGame === 'trivia' && (
+                <Suspense fallback={<ModalLoadingFallback />}>
+                    <TriviaQuiz
+                        aiName={chat.name}
+                        onClose={() => setActiveGame(null)}
+                    />
+                </Suspense>
+            )}
+
+            {activeGame === 'idiom_chain' && (
+                <Suspense fallback={<ModalLoadingFallback />}>
+                    <IdiomChain
+                        aiName={chat.name}
+                        onClose={() => setActiveGame(null)}
                     />
                 </Suspense>
             )}

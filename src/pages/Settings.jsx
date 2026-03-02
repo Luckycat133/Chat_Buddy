@@ -9,7 +9,8 @@ import {
     ChevronRight, Bell, Lock, Globe, Info, Moon, HelpCircle,
     Volume2, VolumeX, BellOff, Trophy, Calendar, Search, Image,
     Settings as SettingsIcon, Shield, Laptop, LogOut,
-    Server, Download, Upload, Sparkles, MessageSquare, RotateCcw, ClipboardList, Brain
+    Server, Download, Upload, Sparkles, MessageSquare, RotateCcw, ClipboardList, Brain,
+    Database, Cpu, Network, GraduationCap
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import CheckInPanel from '../components/CheckInPanel';
@@ -23,6 +24,10 @@ import { INITIAL_PERSONAS } from '../data/personas';
 
 const BackgroundSettingsModal = React.lazy(() => import('../features/background/BackgroundSettingsModal'));
 const ApiConfigPanel = React.lazy(() => import('../components/ApiConfigPanel'));
+const KnowledgeBasePanel = React.lazy(() => import('../components/KnowledgeBasePanel'));
+const ModelSwitcherPanel = React.lazy(() => import('../components/ModelSwitcherPanel'));
+const KnowledgeGraphPanel = React.lazy(() => import('../components/KnowledgeGraphPanel'));
+const LearningReportPanel = React.lazy(() => import('../components/LearningReportPanel'));
 
 export default function Settings() {
     const { language, toggleLanguage, t } = useLanguage();
@@ -42,6 +47,11 @@ export default function Settings() {
     const [importMsg, setImportMsg] = useState(null);
     const [memoryCharacter, setMemoryCharacter] = useState(null); // T12: Memory panel
     const [showMemorySelector, setShowMemorySelector] = useState(false);
+    // T14/T15 panels
+    const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
+    const [showModelSwitcher, setShowModelSwitcher] = useState(false);
+    const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
+    const [showLearningReport, setShowLearningReport] = useState(false);
     const fileInputRef = React.useRef(null);
 
     const handleExport = () => {
@@ -300,6 +310,41 @@ export default function Settings() {
                                     onClick={() => setShowMemorySelector(true)}
                                 />
                                 <SettingItem
+                                    icon={<Database size={18} />}
+                                    color="bg-emerald-500"
+                                    label={t('kb_title')}
+                                    subLabel={t('kb_settings_desc')}
+                                    onClick={() => setShowKnowledgeBase(true)}
+                                />
+                                <SettingItem
+                                    icon={<Cpu size={18} />}
+                                    color="bg-indigo-500"
+                                    label={t('model_switcher_title')}
+                                    subLabel={t('model_switcher_settings_desc')}
+                                    onClick={() => setShowModelSwitcher(true)}
+                                />
+                                <SettingItem
+                                    icon={<Network size={18} />}
+                                    color="bg-violet-500"
+                                    label={t('kg_title')}
+                                    subLabel={t('kg_settings_desc')}
+                                    onClick={() => setShowKnowledgeGraph(true)}
+                                />
+                                <SettingItem
+                                    icon={<GraduationCap size={18} />}
+                                    color="bg-amber-500"
+                                    label={t('learning_report_title')}
+                                    subLabel={t('learning_report_settings_desc')}
+                                    onClick={() => setShowLearningReport(true)}
+                                />
+                                <SettingItem
+                                    icon={<Trophy size={18} />}
+                                    color="bg-yellow-500"
+                                    label={t('leaderboard_title')}
+                                    subLabel={t('leaderboard_settings_desc')}
+                                    onClick={() => navigate('/leaderboard')}
+                                />
+                                <SettingItem
                                     icon={<Download size={18} />}
                                     color="bg-[var(--color-icon-gray)]"
                                     label={t('export_data_title')}
@@ -362,6 +407,26 @@ export default function Settings() {
             {showBackgroundModal && (
                 <Suspense fallback={null}>
                     <BackgroundSettingsModal isOpen={true} onClose={() => setShowBackgroundModal(false)} />
+                </Suspense>
+            )}
+            {showKnowledgeBase && (
+                <Suspense fallback={null}>
+                    <KnowledgeBasePanel onClose={() => setShowKnowledgeBase(false)} />
+                </Suspense>
+            )}
+            {showModelSwitcher && (
+                <Suspense fallback={null}>
+                    <ModelSwitcherPanel onClose={() => setShowModelSwitcher(false)} />
+                </Suspense>
+            )}
+            {showKnowledgeGraph && (
+                <Suspense fallback={null}>
+                    <KnowledgeGraphPanel onClose={() => setShowKnowledgeGraph(false)} />
+                </Suspense>
+            )}
+            {showLearningReport && (
+                <Suspense fallback={null}>
+                    <LearningReportPanel onClose={() => setShowLearningReport(false)} />
                 </Suspense>
             )}
 

@@ -688,6 +688,114 @@ export const LOCALES = {
         game_rps_desc: 'Classic hand game — best of rounds',
         game_number_guess: 'Number Guess',
         game_number_guess_desc: 'Guess my secret number in 7 tries',
+        game_trivia: 'Trivia Quiz',
+        game_trivia_desc: 'AI-generated questions across various topics',
+        game_idiom_chain: 'Idiom Chain',
+        game_idiom_chain_desc: '成语接龙 — Chinese idiom chain (CN mode)',
+
+        // T10: Idiom Chain
+        idiom_chain_title: 'Idiom Chain (成语接龙)',
+        idiom_chain_desc: 'Continue the chain using the last character',
+        idiom_start: 'Start Game',
+        idiom_start_hint: 'AI will give you a starting idiom — continue the chain!',
+        idiom_input_hint: 'Enter an idiom starting with',
+        idiom_enter: 'Enter a 4-character Chinese idiom',
+        idiom_invalid: 'Please enter exactly 4 Chinese characters',
+        idiom_wrong_start: 'Must start with "{char}"',
+        idiom_duplicate: 'This idiom was already used!',
+
+        // T10: Trivia Quiz
+        trivia_title: 'Trivia Quiz',
+        trivia_select_category: 'Choose a topic to test your knowledge',
+        trivia_questions: 'questions',
+        trivia_generating: 'Generating questions...',
+        trivia_finished: 'Quiz Complete!',
+        trivia_correct: 'correct',
+        trivia_see_results: 'See Results',
+        next_question: 'Next Question',
+
+        // T10: Leaderboard
+        leaderboard_title: 'Leaderboard',
+        leaderboard_desc: 'Your rankings and social stats',
+        leaderboard_settings_desc: 'View rankings and achievements',
+        total_points_earned: 'total points earned',
+        streak_days: 'day streak',
+        no_achievements_yet: 'No achievements yet — start chatting!',
+
+        // T10: Friend Interaction Log
+        interaction_log_title: 'Interaction History',
+        interaction_log_events: 'events',
+        interaction_log_empty: 'No interactions yet',
+        interaction_log_empty_hint: 'Chat, send gifts, and engage to build your history',
+
+        // T14: Knowledge Base
+        kb_title: 'Knowledge Base',
+        kb_settings_desc: 'Manage documents for AI context',
+        kb_docs: 'documents',
+        kb_chunks: 'chunks',
+        kb_uploading: 'Uploading...',
+        kb_upload: 'Upload Document',
+        kb_upload_failed: 'Upload failed. Please try a text-based file.',
+        kb_clear_all: 'Clear All',
+        kb_confirm_clear: 'Tap again to confirm',
+        kb_rag_enabled: 'Context Search (RAG)',
+        kb_rag_desc: 'AI automatically retrieves relevant document sections',
+        kb_toggle_rag: 'Toggle RAG',
+        kb_empty: 'No documents yet',
+        kb_empty_hint: 'Upload text files for AI to reference during conversations',
+
+        // T15: Translation Compare View
+        translation_compare: 'Translation',
+        translation_source: 'Source',
+        translation_result: 'Translation',
+
+        // T15: Scholar Citations
+        scholar_sources: 'Sources',
+
+        // T15: Code Diff
+        code_diff: 'Code Diff',
+        diff_unified: 'Unified',
+        diff_split: 'Split',
+        diff_before: 'Before',
+        diff_after: 'After',
+
+        // T15: Model Switcher
+        model_switcher_title: 'Model Switcher',
+        model_switcher_desc: 'Switch AI models and track usage',
+        model_switcher_settings_desc: 'Manual model switching + token usage',
+        save_model: 'Save Model',
+        token_usage: 'Token Usage',
+        tokens_input: 'Input Tokens',
+        tokens_output: 'Output Tokens',
+        token_sessions: 'Sessions',
+        estimated_cost: 'Est. cost',
+
+        // T15: Knowledge Graph
+        kg_title: 'Knowledge Graph',
+        kg_settings_desc: 'Explore and expand Sensei\'s concept map',
+        kg_builtin: 'built-in nodes',
+        kg_custom: 'custom',
+        kg_search_placeholder: 'Search concepts...',
+        kg_all: 'All',
+        kg_custom_only: 'Custom',
+        kg_no_results: 'No concepts found',
+        kg_add_node: 'Add Custom Concept',
+        kg_name_en: 'English name',
+        kg_name_zh: 'Chinese name',
+        kg_description: 'Description (optional)',
+        kg_prerequisites_hint: 'Prerequisites (comma-separated IDs)',
+        kg_add_concept: 'Add Custom Concept',
+
+        // T15: Learning Report
+        learning_report_title: 'Learning Report',
+        learning_report_desc: 'Sensei session progress & quiz history',
+        learning_report_settings_desc: 'View Sensei learning progress',
+        learning_sessions: 'Sessions',
+        learning_avg_score: 'Avg. Score',
+        learning_topics: 'Topics Studied',
+        learning_quizzes: 'Quiz History',
+        learning_no_data: 'No learning data yet',
+        learning_no_data_hint: 'Start a conversation with Sensei to track your progress',
 
         // T10: RPS Points
         rps_win_points: 'Won +{pts} pts!',
@@ -1454,6 +1562,114 @@ export const LOCALES = {
         game_rps_desc: '经典手势游戏，一决胜负',
         game_number_guess: '猜数字',
         game_number_guess_desc: '7次机会猜出秘密数字',
+        game_trivia: '知识竞答',
+        game_trivia_desc: 'AI生成各类话题的问题',
+        game_idiom_chain: '成语接龙',
+        game_idiom_chain_desc: '用上一个成语的最后一字开头继续接龙',
+
+        // T10: 成语接龙
+        idiom_chain_title: '成语接龙',
+        idiom_chain_desc: '用上一个成语的最后一个字开始新的成语',
+        idiom_start: '开始游戏',
+        idiom_start_hint: 'AI会给你一个起始成语，然后继续接龙！',
+        idiom_input_hint: '输入以此字开头的成语',
+        idiom_enter: '请输入四字成语',
+        idiom_invalid: '请输入恰好4个汉字',
+        idiom_wrong_start: '必须以"{char}"开头',
+        idiom_duplicate: '这个成语已经用过了！',
+
+        // T10: 知识竞答
+        trivia_title: '知识竞答',
+        trivia_select_category: '选择一个话题测试你的知识',
+        trivia_questions: '道题',
+        trivia_generating: '正在生成题目...',
+        trivia_finished: '测验完成！',
+        trivia_correct: '正确率',
+        trivia_see_results: '查看结果',
+        next_question: '下一题',
+
+        // T10: 排行榜
+        leaderboard_title: '排行榜',
+        leaderboard_desc: '你的排名和社交数据',
+        leaderboard_settings_desc: '查看排名和成就',
+        total_points_earned: '总积分',
+        streak_days: '天连续签到',
+        no_achievements_yet: '还没有成就——开始聊天吧！',
+
+        // T10: 好友互动日志
+        interaction_log_title: '互动记录',
+        interaction_log_events: '条记录',
+        interaction_log_empty: '暂无互动记录',
+        interaction_log_empty_hint: '聊天、送礼物、互动来建立你们的历史',
+
+        // T14: 知识库
+        kb_title: '知识库',
+        kb_settings_desc: '管理AI上下文文档',
+        kb_docs: '个文档',
+        kb_chunks: '个片段',
+        kb_uploading: '上传中...',
+        kb_upload: '上传文档',
+        kb_upload_failed: '上传失败，请尝试文本类文件。',
+        kb_clear_all: '清空全部',
+        kb_confirm_clear: '再次点击确认',
+        kb_rag_enabled: '上下文搜索（RAG）',
+        kb_rag_desc: 'AI自动检索相关文档段落',
+        kb_toggle_rag: '切换RAG',
+        kb_empty: '还没有文档',
+        kb_empty_hint: '上传文本文件，让AI在对话中引用',
+
+        // T15: 翻译对比视图
+        translation_compare: '翻译对比',
+        translation_source: '原文',
+        translation_result: '译文',
+
+        // T15: Scholar引用
+        scholar_sources: '来源',
+
+        // T15: 代码对比
+        code_diff: '代码差异',
+        diff_unified: '合并',
+        diff_split: '分屏',
+        diff_before: '修改前',
+        diff_after: '修改后',
+
+        // T15: 模型切换器
+        model_switcher_title: '模型切换',
+        model_switcher_desc: '切换AI模型并追踪用量',
+        model_switcher_settings_desc: '手动切换模型 + 令牌用量',
+        save_model: '保存模型',
+        token_usage: '令牌用量',
+        tokens_input: '输入令牌',
+        tokens_output: '输出令牌',
+        token_sessions: '会话数',
+        estimated_cost: '预估费用',
+
+        // T15: 知识图谱
+        kg_title: '知识图谱',
+        kg_settings_desc: '探索和扩展Sensei的概念图',
+        kg_builtin: '内置节点',
+        kg_custom: '自定义',
+        kg_search_placeholder: '搜索概念...',
+        kg_all: '全部',
+        kg_custom_only: '自定义',
+        kg_no_results: '未找到概念',
+        kg_add_node: '添加自定义概念',
+        kg_name_en: '英文名称',
+        kg_name_zh: '中文名称',
+        kg_description: '描述（可选）',
+        kg_prerequisites_hint: '前置知识（逗号分隔ID）',
+        kg_add_concept: '添加自定义概念',
+
+        // T15: 学习报告
+        learning_report_title: '学习报告',
+        learning_report_desc: 'Sensei会话进度与测验历史',
+        learning_report_settings_desc: '查看Sensei学习进度',
+        learning_sessions: '学习会话',
+        learning_avg_score: '平均分',
+        learning_topics: '已学主题',
+        learning_quizzes: '测验历史',
+        learning_no_data: '还没有学习数据',
+        learning_no_data_hint: '和Sensei开始对话来记录你的进度',
 
         // T10: RPS 积分
         rps_win_points: '赢得 +{pts} 积分！',

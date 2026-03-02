@@ -44,8 +44,8 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 | T11 | Moments & Feed System                  | v0.2.7  | P1       | ✅ Done                            |
 | T12 | AI Memory & Cognitive System           | v0.3.0  | P2       | ✅ Done                            |
 | T13 | AI Agent & Tool System                 | v0.3.1  | P2       | ✅ Done                             |
-| T14 | Knowledge Base & RAG System            | v0.3.2  | P2       | Needs search upgrade               |
-| T15 | Professional Agent Capabilities        | v0.3.3  | P2       | Needs deepening                    |
+| T14 | Knowledge Base & RAG System            | v0.3.2  | P2       | ✅ Done                            |
+| T15 | Professional Agent Capabilities        | v0.3.3  | P2       | ✅ Done                            |
 
 ---
 
@@ -485,7 +485,7 @@ src/config/
 
 ## T10 — Social & Interaction Features
 
-**Version**: v0.2.6 | **Priority**: P1 | **Status**: Needs completion
+**Version**: v0.2.6 | **Priority**: P1 | **Status**: ✅ Done
 
 ### Design Principle
 
@@ -514,13 +514,13 @@ src/config/
 - [x] **Daily task system** — 6 tasks: check-in, messages, game, sticker, gift, chat-3; DailyTaskPanel modal
 - [x] **Fix ChatComposer integration** — gift/game/poll/red-packet props now properly connected to ChatWindow
 
-### What's Planned (Phase 3)
+### What's Done (Phase 3)
 
-- [ ] **Idiom chain** (成语接龙, CN mode only)
-- [ ] **AI trivia quiz** (AI generates questions from chat context)
-- [ ] **Friend interaction log** — timeline of interaction milestones
-- [ ] **Leaderboards** — opt-in rankings (points, streaks, achievements)
-- [ ] **Character events** — birthday events, holiday specials (characters post unique content)
+- [x] **Idiom chain** (成语接龙, CN mode only) — `IdiomChain.jsx`, AI validates chain continuity, awards points
+- [x] **AI trivia quiz** — `TriviaQuiz.jsx`, 6 categories, AI-generated questions, 6 pts/correct answer
+- [x] **Friend interaction log** — `FriendInteractionLog.jsx`, timeline of interaction milestones per friend
+- [x] **Leaderboards** — `LeaderboardPage.jsx`, 4 tabs: Intimacy, Points, Streak, Achievements
+- [x] **Character events** — `characterEvents.js`, birthday/holiday detection, pre-defined bilingual event posts
 
 ### Key Files
 
@@ -652,7 +652,7 @@ src/config/
 
 ## T14 — Knowledge Base & RAG System
 
-**Version**: v0.3.2 | **Priority**: P2 | **Status**: Needs search upgrade
+**Version**: v0.3.2 | **Priority**: P2 | **Status**: ✅ Done
 
 ### What's Done
 
@@ -662,12 +662,15 @@ src/config/
 - [x] DocumentContext
 - [x] AI file generation ([FILE:name:content])
 
-### What's Planned
+### What's Done (Phase 2)
 
-- [ ] **Vector embedding search** — integrate local embedding model API
-- [ ] **Knowledge base management UI** — list, delete, edit uploaded documents
-- [ ] **Incremental document updates** — add/remove chunks without full re-index
-- [ ] **Hybrid search** — combine keyword + vector for better recall
+- [x] **Hybrid search** — BM25 + Jaccard similarity (60/40 weight) in `ragUtils.js`; better recall over pure TF-IDF
+- [x] **Knowledge base management UI** — `KnowledgeBasePanel.jsx`; list, preview, delete documents, RAG toggle, file upload, clear-all with double-tap confirm
+- [x] **Incremental document updates** — `addDocumentToIndex`/`removeDocumentFromIndex` in `ragUtils.js`; no full re-index required
+
+### Future Improvements
+
+- [ ] **Vector embedding search** — integrate local embedding model API (deferred — requires external service)
 
 ### Key Files
 
@@ -684,7 +687,7 @@ src/config/
 
 ## T15 — Professional Agent Capabilities
 
-**Version**: v0.3.3 | **Priority**: P2 | **Status**: Needs deepening
+**Version**: v0.3.3 | **Priority**: P2 | **Status**: ✅ Done
 
 ### What's Done
 
@@ -693,14 +696,14 @@ src/config/
 - [x] RouteLLM: Smart model routing
 - [x] Scholar: Perplexity Sonar, citations, deep research, fact-checking
 
-### What's Planned
+### What's Done (Phase 2)
 
-- [ ] **Translation comparison view** — source/target side-by-side
-- [ ] **Knowledge graph expansion** — user adds custom concept nodes
-- [ ] **Learning report export** — PDF/chart visualization of progress
-- [ ] **Search result cards** — visual cards for Scholar citations
-- [ ] **Multi-model panel** — manual model switching + token cost dashboard
-- [ ] **Coder diff view** — visual code diff for Coder agent suggestions
+- [x] **Translation comparison view** — `TranslationCompareView.jsx`; source/target side-by-side with language badges and copy buttons; parses `[TRANSLATION:source||target||from||to]` markers from Muse output
+- [x] **Knowledge graph expansion** — `KnowledgeGraphPanel.jsx`; browse built-in nodes, add custom concept nodes persisted to localStorage
+- [x] **Learning report export** — `LearningReportPanel.jsx`; Sensei progress stats, topic bars, quiz history, export to `.txt` file
+- [x] **Search result cards** — `ScholarResultCard.jsx`; visual citation cards with verdict badges (verified/disputed/unverifiable), expandable snippets, external links; parses `[CITATION:n|url|title|snippet|verdict]` markers
+- [x] **Multi-model panel** — `ModelSwitcherPanel.jsx`; 5 model presets, token usage stats, estimated cost display
+- [x] **Coder diff view** — `CodeDiffView.jsx`; LCS-based line diff, unified/split view modes, copy button; parses `[DIFF:lang|before||after]` markers
 
 ### Key Files
 
