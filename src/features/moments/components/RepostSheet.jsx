@@ -36,7 +36,7 @@ export default function RepostSheet({ post, authorName, onClose }) {
                 <div className="flex-1 overflow-y-auto">
                     {chats.length === 0 ? (
                         <div className="p-8 text-center text-[var(--color-text-muted)] text-[14px]">
-                            {language === 'zh' ? '暂无聊天' : 'No chats available'}
+                            {t('no_chats_available')}
                         </div>
                     ) : (
                         chats.map(chat => (

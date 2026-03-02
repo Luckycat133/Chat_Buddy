@@ -39,7 +39,7 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 | T06 | AI Characters & Avatar System          | v0.2.2  | P1       | ✅ Done                            |
 | T07 | Message Feature Enhancement            | v0.2.3  | P1       | ✅ Done                            |
 | T08 | Markdown & Content Rendering           | v0.2.4  | P1       | ✅ Done                            |
-| T09 | Immersive Background System            | v0.2.5  | P1       | Needs completion                   |
+| T09 | Immersive Background System            | v0.2.5  | P1       | ✅ Done                            |
 | T10 | Social & Interaction Features          | v0.2.6  | P1       | ✅ Done                            |
 | T11 | Moments & Feed System                  | v0.2.7  | P1       | ✅ Done                            |
 | T12 | AI Memory & Cognitive System           | v0.3.0  | P2       | ✅ Done                            |
@@ -453,7 +453,7 @@ src/config/
 
 ## T09 — Immersive Background System
 
-**Version**: v0.2.5 | **Priority**: P1 | **Status**: Needs completion
+**Version**: v0.2.5 | **Priority**: P1 | **Status**: ✅ Done
 
 ### What's Done
 
@@ -463,15 +463,12 @@ src/config/
 - [x] 20+ AI-generated character backgrounds
 - [x] 3 global theme presets
 - [x] Per-chat customization + fallback chain
-
-### What's Planned
-
-- [ ] **Dynamic backgrounds** — animated CSS (particles, rain, snow, aurora)
-- [ ] **Blur & transparency sliders** — user adjusts overlay opacity
-- [ ] **Video backgrounds** — looping MP4/WebM clips
-- [ ] **Time-based switching** — day/night variants per background
-- [ ] **Image compression** — resize uploaded images, use IndexedDB instead of base64 in localStorage
-- [ ] **Background sharing** — export/import background config as JSON
+- [x] **Dynamic backgrounds** — animated CSS (particles, rain, snow, aurora) via `DynamicBackground.jsx`
+- [x] **Blur & transparency sliders** — user adjusts overlay opacity in `BackgroundSettingsModal.jsx`
+- [x] **Video backgrounds** — looping MP4/WebM via `VideoLayer` in `BackgroundLayer.jsx`
+- [x] **Time-based switching** — day/night switching on 60s interval in `BackgroundContext.jsx`
+- [x] **Image compression** — canvas-based resize + IndexedDB storage via `ImageStorageService.js`
+- [x] **Background sharing** — export/import config as JSON via `BackgroundShareService.js`
 
 ### Key Files
 

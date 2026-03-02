@@ -7,21 +7,21 @@ import { CheckCircle2, Circle, Clock, Users } from 'lucide-react';
 /**
  * Format remaining time for countdown
  */
-function formatRemainingTime(expiresAt, language) {
+function formatRemainingTime(expiresAt, t) {
     if (!expiresAt) return null;
     const now = Date.now();
     const expires = new Date(expiresAt).getTime();
     const diff = expires - now;
 
-    if (diff <= 0) return language === 'zh' ? '已结束' : 'Ended';
+    if (diff <= 0) return t('poll_ended_label');
 
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
     if (hours > 0) {
-        return language === 'zh' ? `剩余 ${hours} 小时` : `${hours}h ${minutes}m left`;
+        return t('poll_time_left_hours', { hours, minutes });
     }
-    return language === 'zh' ? `剩余 ${minutes} 分钟` : `${minutes}m left`;
+    return t('poll_time_left_minutes', { minutes });
 }
 
 /**
@@ -34,20 +34,20 @@ function isPollExpired(poll) {
 
 export default function PollMessage({ poll, onVote }) {
     const { currentUser } = useChat();
-    const { language } = useLanguage();
-    const [timeLeft, setTimeLeft] = useState(formatRemainingTime(poll?.expiresAt, language));
+    const { t } = useLanguage();
+    const [timeLeft, setTimeLeft] = useState(() => formatRemainingTime(poll?.expiresAt, t));
 
     // Update countdown timer
     useEffect(() => {
         if (!poll?.expiresAt || isPollExpired(poll)) return;
 
         const interval = setInterval(() => {
-            setTimeLeft(formatRemainingTime(poll.expiresAt, language));
+            setTimeLeft(formatRemainingTime(poll.expiresAt, t));
         }, 60000); // Update every minute
 
         return () => clearInterval(interval);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [poll?.expiresAt, language]);
+    }, [poll?.expiresAt, t]);
 
     if (!poll) return null;
 
@@ -88,10 +88,10 @@ export default function PollMessage({ poll, onVote }) {
                 <div className="flex items-center gap-3 text-xs text-[var(--color-text-muted)]">
                     <span className="flex items-center gap-1">
                         <Users size={12} />
-                        {poll.isAnonymous ? (language === 'zh' ? '匿名' : 'Anonymous') : (language === 'zh' ? '公开' : 'Public')}
+                        {poll.isAnonymous ? t('poll_anonymous_short') : t('poll_public_short')}
                     </span>
                     <span>•</span>
-                    <span>{poll.isMultiChoice ? (language === 'zh' ? '多选' : 'Multi') : (language === 'zh' ? '单选' : 'Single')}</span>
+                    <span>{poll.isMultiChoice ? t('multi_choice') : t('single_choice')}</span>
                     {timeLeft && (
                         <>
                             <span>•</span>
@@ -100,7 +100,7 @@ export default function PollMessage({ poll, onVote }) {
                                 expired && "text-red-500 font-medium"
                             )}>
                                 <Clock size={12} />
-                                {expired ? (language === 'zh' ? '已结束' : 'Ended') : timeLeft}
+                                {expired ? t('poll_ended_label') : timeLeft}
                             </span>
                         </>
                     )}
@@ -157,7 +157,7 @@ export default function PollMessage({ poll, onVote }) {
 
             <div className="mt-3 pt-3 border-t border-[var(--color-border-light)] flex justify-between items-center">
                 <span className="text-xs text-[var(--color-text-muted)]">
-                    {totalVotes} {language === 'zh' ? '人已参与' : 'votes'}
+                    {t('poll_votes_count', { n: totalVotes })}
                 </span>
             </div>
         </div>
