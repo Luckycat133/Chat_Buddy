@@ -52,9 +52,9 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
         const diffDays = Math.floor(diffMs / 86400000);
 
         if (diffMins < 1) return t('just_now') || 'Just now';
-        if (diffMins < 60) return `${diffMins} ${language === 'zh' ? '分钟前' : 'min ago'}`;
-        if (diffHours < 24) return `${diffHours} ${language === 'zh' ? '小时前' : 'h ago'}`;
-        if (diffDays < 7) return `${diffDays} ${language === 'zh' ? '天前' : 'd ago'}`;
+        if (diffMins < 60) return t('time_min_ago', { n: diffMins });
+        if (diffHours < 24) return t('time_hour_ago', { n: diffHours });
+        if (diffDays < 7) return t('time_day_ago', { n: diffDays });
         return date.toLocaleDateString();
     };
 

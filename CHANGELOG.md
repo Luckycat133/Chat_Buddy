@@ -19,6 +19,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.3-patch] — T15 + T14 + T10 Phase 3 Completion (2026-03-02)
+
+> All remaining roadmap items for v0.3.x completed — professional agent capabilities deepened, RAG upgraded, and social feature set finalized.
+
+### Added — T15 Professional Agent Capabilities (Phase 2)
+
+- **Translation Compare View** (`TranslationCompareView.jsx`)
+  - Side-by-side source/target display with language code badges (EN/ZH/JA etc.)
+  - Per-panel copy-to-clipboard buttons
+  - Parses `[TRANSLATION:source||target||from||to]` markers from Muse agent output
+  - `parseTranslationMarker()` utility exported for reuse
+- **Scholar Citation Cards** (`ScholarResultCard.jsx`)
+  - Visual citation cards with verdict badges: Verified ✅ / Disputed ⚠️ / Unverifiable ❓
+  - Expandable snippet preview, external link button
+  - Parses `[CITATION:n|url|title|snippet|verdict]` markers from Scholar output
+- **Coder Diff View** (`CodeDiffView.jsx`)
+  - LCS (longest common subsequence)-based line diff algorithm
+  - Unified and split view modes with toggle
+  - Added/removed line counts badge, copy button for revised code
+  - Parses `[DIFF:lang|before||after]` markers from Coder agent output
+- **Model Switcher Panel** (`ModelSwitcherPanel.jsx`)
+  - 5 model presets: DeepSeek Chat, DeepSeek R1, Claude Sonnet 4, GPT-4o Mini, Custom
+  - Live token usage stats from `chat-buddy-token-usage` localStorage
+  - Estimated cost display based on selected model pricing
+  - Accessible from Settings > Advanced Tools
+- **Knowledge Graph Panel** (`KnowledgeGraphPanel.jsx`)
+  - Browse 25+ built-in concept nodes (Math/Science/Coding categories)
+  - Add/delete custom concept nodes with name, category, and description
+  - Custom nodes persisted to `chat-buddy-custom-kg-nodes` localStorage
+  - Search filter, category color badges, prerequisite display
+- **Learning Report Panel** (`LearningReportPanel.jsx`)
+  - Sensei learning progress: sessions completed, average quiz score
+  - Topic mastery progress bars with lesson and struggle counts
+  - Quiz history cards with score and date
+  - Export report as `.txt` file download via Blob URL
+
+### Added — T14 Knowledge Base & RAG System (Phase 2)
+
+- **Hybrid Search** (`ragUtils.js`)
+  - BM25 scoring (K1=1.5, B=0.75) alongside Jaccard similarity
+  - Combined score: 60% normalized BM25 + 40% Jaccard for improved recall over pure TF-IDF
+  - Average document length normalization for fair cross-chunk comparison
+  - `calculateBM25Score()` function exported
+- **Knowledge Base Management UI** (`KnowledgeBasePanel.jsx`)
+  - Document list with name, file size, type, chunk count, and upload date
+  - Inline content preview toggle (first 400 chars in monospace)
+  - Per-document delete, clear-all with double-tap confirmation (3s timeout)
+  - File upload: accepts txt/md/json/csv/js/py/ts/jsx/tsx/html/css/yaml
+  - RAG enable/disable toggle
+  - Accessible from Settings > Advanced Tools
+
+### Added — T10 Social & Interaction Features (Phase 3)
+
+- **Idiom Chain Game** (`IdiomChain.jsx`)
+  - 成语接龙 — Chinese-only mode (hidden in English UI)
+  - Player and AI alternate 4-character Chinese idioms
+  - Validates correct chain continuation (first char must match previous last char)
+  - Duplicate idiom detection; AI uses `callAI()` for responses
+  - Points awarded on AI surrender: `max(10, score × 5)`
+  - Accessible via Games menu in chat
+- **AI Trivia Quiz** (`TriviaQuiz.jsx`)
+  - 3-phase UI: category select → playing → results
+  - 6 categories: General Knowledge, Science, History, Pop Culture, Technology, Math (EN+ZH)
+  - 5 questions generated in parallel via AI; strict JSON format with fallback
+  - 6 points per correct answer; explanation shown after each answer
+  - Progress dots with color coding (green/red/pending)
+- **Friend Interaction Log** (`FriendInteractionLog.jsx`)
+  - Vertical timeline of interaction history per friend
+  - 6 activity types with colored icons: Viewed Moment, Sent Gift, Chatted, Liked Moment, Commented, Mentioned
+  - Relative time display (just now / Xm / Xh / Xd / date)
+- **Leaderboard Page** (`LeaderboardPage.jsx`)
+  - 4 tabs: Intimacy Rankings, Points, Streak, Achievements
+  - Intimacy tab: ranks all 19 personas (companions + agents) by intimacy score
+  - Top 3 medals (🥇🥈🥉), progress bars, intimacy level labels
+  - Points/Streak/Achievement tabs show user's own current stats
+  - Accessible at `/leaderboard` route
+- **Character Events Service** (`characterEvents.js`)
+  - `checkAndTriggerEvents(personas, addPost)` — checks birthdays (MM-DD format) and 4 holidays
+  - Pre-defined bilingual event content for 5 characters + default fallback
+  - 4 seasonal holidays: New Year, Valentine's Day, Halloween, Christmas
+  - Uses `chat-buddy-triggered-events` localStorage to prevent duplicate posts per day
+  - `getUpcomingBirthdays(personas)` — returns next 7 days upcoming birthdays
+
+### Changed
+
+- `GameSelectorPanel.jsx`: Added Trivia and Idiom Chain to games list; Idiom Chain filtered to Chinese mode only (`langFilter: 'zh'`)
+- `ChatWindow.jsx`: Added lazy-loaded `TriviaQuiz` and `IdiomChain` components
+- `Settings.jsx`: Added 4 new Advanced Tools items (Knowledge Base, Model Switcher, Knowledge Graph, Learning Report) with lazy-loaded panels
+- `App.jsx`: Added `/leaderboard` route pointing to `LeaderboardPage`
+- `locales.js`: Added ~110 new translation keys (EN+ZH) for all new components
+
+---
+
 ## [0.2.7-patch] — Audit Remediation (2026-02-22)
 
 > Full quality audit pass based on v1.0 audit report — all P0/P1 blockers resolved, P2 visual defects patched.
@@ -616,14 +709,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Domain filtering presets (Academic, News, Tech)
   - Multi-hop deep research for complex queries
   - Fact-checking with confidence scores
-
-#### Planned
-
-- Translation source/target side-by-side view
-- Knowledge graph expansion + user-defined nodes
-- Learning report export (PDF/charts)
-- Search result card UI (source, date, confidence visualization)
-- Multi-model switch panel + token usage stats
+- **Translation Compare View**, **Scholar Citation Cards**, **Coder Diff View**, **Model Switcher Panel**, **Knowledge Graph Panel**, **Learning Report Panel** — see `[0.3.3-patch]` entry above
 
 ---
 
@@ -643,11 +729,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Download generated files
   - Code preview component
 
-#### Planned
-
-- True vector embedding search (local embedding API)
-- Knowledge base management UI (view/delete/edit documents)
-- Incremental document updates
+- **Hybrid Search**, **Knowledge Base Management UI** — see `[0.3.3-patch]` entry above
 
 ---
 

@@ -7,7 +7,7 @@ import { cn } from '../../../utils/cn';
 
 export default function MessageSearchPanel({ onClose, onSelectMessage, currentChatId }) {
     const { chats, personas } = useChat();
-    const { language } = useLanguage();
+    const { t, language } = useLanguage();
     const trapRef = useFocusTrap(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedTerm, setDebouncedTerm] = useState('');
@@ -121,7 +121,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                     minute: '2-digit'
                 });
             } else if (days === 1) {
-                return language === 'zh' ? '昨天' : 'Yesterday';
+                return t('search_yesterday');
             } else if (days < 7) {
                 return date.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'short' });
             } else {
@@ -145,7 +145,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
         >
             {/* Header */}
             <h2 id="message-search-title" className="sr-only">
-                {language === 'zh' ? '搜索聊天记录' : 'Search Messages'}
+                {t('search_messages_title')}
             </h2>
             <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
                 <button onClick={onClose} className="text-[var(--color-text-muted)]" aria-label="Close">
@@ -158,7 +158,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                         type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder={language === 'zh' ? '搜索聊天记录...' : 'Search messages...'}
+                        placeholder={t('search_messages_placeholder')}
                         autoFocus
                         className="w-full pl-10 pr-4 py-2 bg-[var(--color-bg-app)] rounded-lg text-[15px] outline-none focus:ring-2 ring-[var(--color-primary)]/30"
                     />
@@ -176,7 +176,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                                 searchScope === 'current' ? "bg-[var(--color-bg-white)] shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
                             )}
                         >
-                            {language === 'zh' ? '当前聊天' : 'Current Chat'}
+                            {t('search_current_chat')}
                         </button>
                         <button
                             onClick={() => setSearchScope('all')}
@@ -185,7 +185,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                                 searchScope === 'all' ? "bg-[var(--color-bg-white)] shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
                             )}
                         >
-                            {language === 'zh' ? '所有聊天' : 'All Chats'}
+                            {t('search_all_chats')}
                         </button>
                     </div>
                 )}
@@ -200,11 +200,11 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                                 fileType === type ? "bg-[var(--color-bg-white)] shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
                             )}
                         >
-                            {type === 'all' ? (language === 'zh' ? '全部' : 'All') :
-                                type === 'text' ? (language === 'zh' ? '文本' : 'Text') :
-                                    type === 'image' ? (language === 'zh' ? '图片' : 'Image') :
-                                        type === 'file' ? (language === 'zh' ? '文件' : 'File') :
-                                            (language === 'zh' ? '语音' : 'Audio')}
+                            {type === 'all' ? t('search_type_all') :
+                                type === 'text' ? t('search_type_text') :
+                                    type === 'image' ? t('search_type_image') :
+                                        type === 'file' ? t('search_type_file') :
+                                            t('search_type_audio')}
                         </button>
                     ))}
                 </div>
@@ -215,18 +215,18 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                 {searchTerm.length < 2 ? (
                     <div className="p-8 text-center text-[var(--color-text-muted)]">
                         <MessageSquare size={48} className="mx-auto mb-4 opacity-50" />
-                        <p>{language === 'zh' ? '输入关键词搜索' : 'Enter keywords to search'}</p>
-                        <p className="text-sm mt-1">{language === 'zh' ? '至少2个字符' : 'At least 2 characters'}</p>
+                        <p>{t('search_enter_keywords')}</p>
+                        <p className="text-sm mt-1">{t('search_min_chars')}</p>
                     </div>
                 ) : searchResults.length === 0 ? (
                     <div className="p-8 text-center text-[var(--color-text-muted)]">
                         <Search size={48} className="mx-auto mb-4 opacity-50" />
-                        <p>{language === 'zh' ? '未找到结果' : 'No results found'}</p>
+                        <p>{t('search_no_results')}</p>
                     </div>
                 ) : (
                     <>
                         <div className="px-4 py-2 bg-[var(--color-bg-app)] text-sm text-[var(--color-text-muted)]">
-                            {language === 'zh' ? `找到 ${searchResults.length} 条结果` : `${searchResults.length} results found`}
+                            {t('search_results_count', { count: searchResults.length })}
                         </div>
                         {searchResults.map((result) => (
                             <button

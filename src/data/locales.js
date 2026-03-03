@@ -688,6 +688,114 @@ export const LOCALES = {
         game_rps_desc: 'Classic hand game — best of rounds',
         game_number_guess: 'Number Guess',
         game_number_guess_desc: 'Guess my secret number in 7 tries',
+        game_trivia: 'Trivia Quiz',
+        game_trivia_desc: 'AI-generated questions across various topics',
+        game_idiom_chain: 'Idiom Chain',
+        game_idiom_chain_desc: '成语接龙 — Chinese idiom chain (CN mode)',
+
+        // T10: Idiom Chain
+        idiom_chain_title: 'Idiom Chain (成语接龙)',
+        idiom_chain_desc: 'Continue the chain using the last character',
+        idiom_start: 'Start Game',
+        idiom_start_hint: 'AI will give you a starting idiom — continue the chain!',
+        idiom_input_hint: 'Enter an idiom starting with',
+        idiom_enter: 'Enter a 4-character Chinese idiom',
+        idiom_invalid: 'Please enter exactly 4 Chinese characters',
+        idiom_wrong_start: 'Must start with "{char}"',
+        idiom_duplicate: 'This idiom was already used!',
+
+        // T10: Trivia Quiz
+        trivia_title: 'Trivia Quiz',
+        trivia_select_category: 'Choose a topic to test your knowledge',
+        trivia_questions: 'questions',
+        trivia_generating: 'Generating questions...',
+        trivia_finished: 'Quiz Complete!',
+        trivia_correct: 'correct',
+        trivia_see_results: 'See Results',
+        next_question: 'Next Question',
+
+        // T10: Leaderboard
+        leaderboard_title: 'Leaderboard',
+        leaderboard_desc: 'Your rankings and social stats',
+        leaderboard_settings_desc: 'View rankings and achievements',
+        total_points_earned: 'total points earned',
+        streak_days: 'day streak',
+        no_achievements_yet: 'No achievements yet — start chatting!',
+
+        // T10: Friend Interaction Log
+        interaction_log_title: 'Interaction History',
+        interaction_log_events: 'events',
+        interaction_log_empty: 'No interactions yet',
+        interaction_log_empty_hint: 'Chat, send gifts, and engage to build your history',
+
+        // T14: Knowledge Base
+        kb_title: 'Knowledge Base',
+        kb_settings_desc: 'Manage documents for AI context',
+        kb_docs: 'documents',
+        kb_chunks: 'chunks',
+        kb_uploading: 'Uploading...',
+        kb_upload: 'Upload Document',
+        kb_upload_failed: 'Upload failed. Please try a text-based file.',
+        kb_clear_all: 'Clear All',
+        kb_confirm_clear: 'Tap again to confirm',
+        kb_rag_enabled: 'Context Search (RAG)',
+        kb_rag_desc: 'AI automatically retrieves relevant document sections',
+        kb_toggle_rag: 'Toggle RAG',
+        kb_empty: 'No documents yet',
+        kb_empty_hint: 'Upload text files for AI to reference during conversations',
+
+        // T15: Translation Compare View
+        translation_compare: 'Translation',
+        translation_source: 'Source',
+        translation_result: 'Translation',
+
+        // T15: Scholar Citations
+        scholar_sources: 'Sources',
+
+        // T15: Code Diff
+        code_diff: 'Code Diff',
+        diff_unified: 'Unified',
+        diff_split: 'Split',
+        diff_before: 'Before',
+        diff_after: 'After',
+
+        // T15: Model Switcher
+        model_switcher_title: 'Model Switcher',
+        model_switcher_desc: 'Switch AI models and track usage',
+        model_switcher_settings_desc: 'Manual model switching + token usage',
+        save_model: 'Save Model',
+        token_usage: 'Token Usage',
+        tokens_input: 'Input Tokens',
+        tokens_output: 'Output Tokens',
+        token_sessions: 'Sessions',
+        estimated_cost: 'Est. cost',
+
+        // T15: Knowledge Graph
+        kg_title: 'Knowledge Graph',
+        kg_settings_desc: 'Explore and expand Sensei\'s concept map',
+        kg_builtin: 'built-in nodes',
+        kg_custom: 'custom',
+        kg_search_placeholder: 'Search concepts...',
+        kg_all: 'All',
+        kg_custom_only: 'Custom',
+        kg_no_results: 'No concepts found',
+        kg_add_node: 'Add Custom Concept',
+        kg_name_en: 'English name',
+        kg_name_zh: 'Chinese name',
+        kg_description: 'Description (optional)',
+        kg_prerequisites_hint: 'Prerequisites (comma-separated IDs)',
+        kg_add_concept: 'Add Custom Concept',
+
+        // T15: Learning Report
+        learning_report_title: 'Learning Report',
+        learning_report_desc: 'Sensei session progress & quiz history',
+        learning_report_settings_desc: 'View Sensei learning progress',
+        learning_sessions: 'Sessions',
+        learning_avg_score: 'Avg. Score',
+        learning_topics: 'Topics Studied',
+        learning_quizzes: 'Quiz History',
+        learning_no_data: 'No learning data yet',
+        learning_no_data_hint: 'Start a conversation with Sensei to track your progress',
 
         // T10: RPS Points
         rps_win_points: 'Won +{pts} pts!',
@@ -700,6 +808,70 @@ export const LOCALES = {
         select_chat_to_share: 'Select a chat to share',
         birthday_post_hint: "Today is {name}'s birthday! 🎂",
         happy_birthday: 'Happy Birthday',
+        // Agents Page - UI strings
+        create_agent: 'Create',
+        btn_edit: 'Edit',
+        custom_badge: 'Custom',
+        custom_agent_desc: 'Custom AI assistant',
+        create_first_agent: 'Create your first agent',
+        // Moments Page - inline UI strings
+        share_moment: 'Share Moment',
+        share_thoughts: 'Share your thoughts...',
+        // Friend Groups - bilingual name field labels
+        group_name_zh_label: 'Chinese',
+        group_name_zh_placeholder: 'e.g. Anime',
+        // Group Announcement
+        announcement_confirm_delete: 'Delete this announcement?',
+        announcement_placeholder: 'Enter announcement...',
+        announcement_publish: 'Publish',
+        announcement_updated_at: 'Updated',
+        announcement_empty: 'No announcement yet',
+        announcement_create_btn: 'Create Announcement',
+        // Message Search Panel
+        search_messages_title: 'Search Messages',
+        search_messages_placeholder: 'Search messages...',
+        search_current_chat: 'Current Chat',
+        search_all_chats: 'All Chats',
+        search_type_all: 'All',
+        search_type_text: 'Text',
+        search_type_image: 'Image',
+        search_type_file: 'File',
+        search_type_audio: 'Audio',
+        search_enter_keywords: 'Enter keywords to search',
+        search_min_chars: 'At least 2 characters',
+        search_no_results: 'No results found',
+        search_results_count: '{count} results found',
+        search_yesterday: 'Yesterday',
+        // Poll Message & Group Poll
+        poll_ended_label: 'Ended',
+        poll_time_left_hours: '{hours}h {minutes}m left',
+        poll_time_left_minutes: '{minutes}m left',
+        poll_anonymous_short: 'Anonymous',
+        poll_public_short: 'Public',
+        poll_create_title: 'Create Poll',
+        poll_create_btn: 'Create',
+        poll_question_label: 'Question',
+        poll_question_placeholder: 'Enter your question...',
+        poll_options_label: 'Options',
+        poll_option_n_placeholder: 'Option {n}',
+        poll_add_option: 'Add option',
+        poll_allow_multi: 'Allow multiple choices',
+        poll_anon_voting: 'Anonymous voting',
+        poll_timer_label: 'Timer (hours)',
+        poll_no_expiration: 'No expiration',
+        poll_ends_in_hours: 'Poll ends in {hours} hours',
+        poll_votes_count: '{n} votes',
+        // Image Message
+        image_load_failed: 'Failed to load image',
+        image_zoom_hint: 'Click image to zoom, click background to close',
+        // Time format suffixes (MomentCard, CommentsSheet)
+        time_min_ago: '{n} min ago',
+        time_hour_ago: '{n} h ago',
+        time_day_ago: '{n} d ago',
+        // CommentsSheet reply verb
+        replied_verb: 'replied',
+        // RepostSheet
+        no_chats_available: 'No chats available',
     },
     zh: {
         nav_chats: '\u804A\u5929\u5217\u8868',
@@ -1390,6 +1562,114 @@ export const LOCALES = {
         game_rps_desc: '经典手势游戏，一决胜负',
         game_number_guess: '猜数字',
         game_number_guess_desc: '7次机会猜出秘密数字',
+        game_trivia: '知识竞答',
+        game_trivia_desc: 'AI生成各类话题的问题',
+        game_idiom_chain: '成语接龙',
+        game_idiom_chain_desc: '用上一个成语的最后一字开头继续接龙',
+
+        // T10: 成语接龙
+        idiom_chain_title: '成语接龙',
+        idiom_chain_desc: '用上一个成语的最后一个字开始新的成语',
+        idiom_start: '开始游戏',
+        idiom_start_hint: 'AI会给你一个起始成语，然后继续接龙！',
+        idiom_input_hint: '输入以此字开头的成语',
+        idiom_enter: '请输入四字成语',
+        idiom_invalid: '请输入恰好4个汉字',
+        idiom_wrong_start: '必须以"{char}"开头',
+        idiom_duplicate: '这个成语已经用过了！',
+
+        // T10: 知识竞答
+        trivia_title: '知识竞答',
+        trivia_select_category: '选择一个话题测试你的知识',
+        trivia_questions: '道题',
+        trivia_generating: '正在生成题目...',
+        trivia_finished: '测验完成！',
+        trivia_correct: '正确率',
+        trivia_see_results: '查看结果',
+        next_question: '下一题',
+
+        // T10: 排行榜
+        leaderboard_title: '排行榜',
+        leaderboard_desc: '你的排名和社交数据',
+        leaderboard_settings_desc: '查看排名和成就',
+        total_points_earned: '总积分',
+        streak_days: '天连续签到',
+        no_achievements_yet: '还没有成就——开始聊天吧！',
+
+        // T10: 好友互动日志
+        interaction_log_title: '互动记录',
+        interaction_log_events: '条记录',
+        interaction_log_empty: '暂无互动记录',
+        interaction_log_empty_hint: '聊天、送礼物、互动来建立你们的历史',
+
+        // T14: 知识库
+        kb_title: '知识库',
+        kb_settings_desc: '管理AI上下文文档',
+        kb_docs: '个文档',
+        kb_chunks: '个片段',
+        kb_uploading: '上传中...',
+        kb_upload: '上传文档',
+        kb_upload_failed: '上传失败，请尝试文本类文件。',
+        kb_clear_all: '清空全部',
+        kb_confirm_clear: '再次点击确认',
+        kb_rag_enabled: '上下文搜索（RAG）',
+        kb_rag_desc: 'AI自动检索相关文档段落',
+        kb_toggle_rag: '切换RAG',
+        kb_empty: '还没有文档',
+        kb_empty_hint: '上传文本文件，让AI在对话中引用',
+
+        // T15: 翻译对比视图
+        translation_compare: '翻译对比',
+        translation_source: '原文',
+        translation_result: '译文',
+
+        // T15: Scholar引用
+        scholar_sources: '来源',
+
+        // T15: 代码对比
+        code_diff: '代码差异',
+        diff_unified: '合并',
+        diff_split: '分屏',
+        diff_before: '修改前',
+        diff_after: '修改后',
+
+        // T15: 模型切换器
+        model_switcher_title: '模型切换',
+        model_switcher_desc: '切换AI模型并追踪用量',
+        model_switcher_settings_desc: '手动切换模型 + 令牌用量',
+        save_model: '保存模型',
+        token_usage: '令牌用量',
+        tokens_input: '输入令牌',
+        tokens_output: '输出令牌',
+        token_sessions: '会话数',
+        estimated_cost: '预估费用',
+
+        // T15: 知识图谱
+        kg_title: '知识图谱',
+        kg_settings_desc: '探索和扩展Sensei的概念图',
+        kg_builtin: '内置节点',
+        kg_custom: '自定义',
+        kg_search_placeholder: '搜索概念...',
+        kg_all: '全部',
+        kg_custom_only: '自定义',
+        kg_no_results: '未找到概念',
+        kg_add_node: '添加自定义概念',
+        kg_name_en: '英文名称',
+        kg_name_zh: '中文名称',
+        kg_description: '描述（可选）',
+        kg_prerequisites_hint: '前置知识（逗号分隔ID）',
+        kg_add_concept: '添加自定义概念',
+
+        // T15: 学习报告
+        learning_report_title: '学习报告',
+        learning_report_desc: 'Sensei会话进度与测验历史',
+        learning_report_settings_desc: '查看Sensei学习进度',
+        learning_sessions: '学习会话',
+        learning_avg_score: '平均分',
+        learning_topics: '已学主题',
+        learning_quizzes: '测验历史',
+        learning_no_data: '还没有学习数据',
+        learning_no_data_hint: '和Sensei开始对话来记录你的进度',
 
         // T10: RPS 积分
         rps_win_points: '赢得 +{pts} 积分！',
@@ -1402,5 +1682,69 @@ export const LOCALES = {
         select_chat_to_share: '选择要分享的聊天',
         birthday_post_hint: '今天是{name}的生日！🎂',
         happy_birthday: '生日快乐',
+        // Agents Page - UI strings
+        create_agent: '创建助手',
+        btn_edit: '编辑',
+        custom_badge: '自定义',
+        custom_agent_desc: '自定义 AI 助手',
+        create_first_agent: '创建第一个助手',
+        // Moments Page - inline UI strings
+        share_moment: '发布动态',
+        share_thoughts: '分享当下的想法...',
+        // Friend Groups - bilingual name field labels
+        group_name_zh_label: '中文',
+        group_name_zh_placeholder: '例如：二次元',
+        // 群公告
+        announcement_confirm_delete: '确定删除公告吗？',
+        announcement_placeholder: '输入群公告内容...',
+        announcement_publish: '发布',
+        announcement_updated_at: '更新于',
+        announcement_empty: '暂无群公告',
+        announcement_create_btn: '发布公告',
+        // 搜索聊天记录
+        search_messages_title: '搜索聊天记录',
+        search_messages_placeholder: '搜索聊天记录...',
+        search_current_chat: '当前聊天',
+        search_all_chats: '所有聊天',
+        search_type_all: '全部',
+        search_type_text: '文本',
+        search_type_image: '图片',
+        search_type_file: '文件',
+        search_type_audio: '语音',
+        search_enter_keywords: '输入关键词搜索',
+        search_min_chars: '至少2个字符',
+        search_no_results: '未找到结果',
+        search_results_count: '找到 {count} 条结果',
+        search_yesterday: '昨天',
+        // 投票
+        poll_ended_label: '已结束',
+        poll_time_left_hours: '剩余 {hours} 小时',
+        poll_time_left_minutes: '剩余 {minutes} 分钟',
+        poll_anonymous_short: '匿名',
+        poll_public_short: '公开',
+        poll_create_title: '创建投票',
+        poll_create_btn: '创建',
+        poll_question_label: '问题',
+        poll_question_placeholder: '输入投票问题...',
+        poll_options_label: '选项',
+        poll_option_n_placeholder: '选项 {n}',
+        poll_add_option: '添加选项',
+        poll_allow_multi: '允许多选',
+        poll_anon_voting: '匿名投票',
+        poll_timer_label: '倒计时（小时）',
+        poll_no_expiration: '无限期',
+        poll_ends_in_hours: '投票将在 {hours} 小时后结束',
+        poll_votes_count: '{n}人已参与',
+        // 图片消息
+        image_load_failed: '图片加载失败',
+        image_zoom_hint: '点击图片放大，点击背景关闭',
+        // 时间格式后缀
+        time_min_ago: '{n}分钟前',
+        time_hour_ago: '{n}小时前',
+        time_day_ago: '{n}天前',
+        // 评论
+        replied_verb: '回复',
+        // 转发
+        no_chats_available: '暂无聊天',
     }
 };

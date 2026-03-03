@@ -9,6 +9,7 @@ const GAMES = [
         nameKey: 'game_rps',
         descKey: 'game_rps_desc',
         color: 'from-orange-400 to-red-500',
+        langFilter: null, // available in all languages
     },
     {
         id: 'number_guess',
@@ -16,11 +17,29 @@ const GAMES = [
         nameKey: 'game_number_guess',
         descKey: 'game_number_guess_desc',
         color: 'from-indigo-500 to-purple-600',
+        langFilter: null,
+    },
+    {
+        id: 'trivia',
+        icon: '🧠',
+        nameKey: 'game_trivia',
+        descKey: 'game_trivia_desc',
+        color: 'from-violet-500 to-purple-600',
+        langFilter: null,
+    },
+    {
+        id: 'idiom_chain',
+        icon: '🀄',
+        nameKey: 'game_idiom_chain',
+        descKey: 'game_idiom_chain_desc',
+        color: 'from-red-500 to-orange-500',
+        langFilter: 'zh', // Chinese mode only
     },
 ];
 
 export default function GameSelectorPanel({ aiName, onSelectGame, onClose }) {
-    const { t } = useLanguage();
+    const { t, language } = useLanguage();
+    const availableGames = GAMES.filter(g => !g.langFilter || g.langFilter === language);
 
     return (
         <div
@@ -47,7 +66,7 @@ export default function GameSelectorPanel({ aiName, onSelectGame, onClose }) {
 
                 {/* Game list */}
                 <div className="p-4 space-y-3 pb-6">
-                    {GAMES.map(game => (
+                    {availableGames.map(game => (
                         <button
                             key={game.id}
                             onClick={() => onSelectGame(game.id)}
