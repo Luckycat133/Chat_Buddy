@@ -395,9 +395,9 @@ export default function BackgroundSettingsModal({ isOpen, onClose, chatId, perso
                                                     <p className="text-xs text-gray-400 mt-0.5">{t('background_overlay_hint')}</p>
                                                 </div>
                                                 <div className="flex space-x-3">
-                                                    {['rgba(0,0,0,0)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.6)', 'rgba(255,255,255,0.2)'].map((color, idx) => (
+                                                    {['rgba(0,0,0,0)', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.6)', 'rgba(255,255,255,0.2)'].map((color) => (
                                                         <button
-                                                            key={idx}
+                                                            key={color}
                                                             onClick={() => handleAdjustmentChange('overlayColor', color)}
                                                             className={`w-10 h-10 rounded-full border-2 ${currentConfig.overlayColor === color ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-gray-300 dark:border-gray-600'}`}
                                                             style={{ backgroundColor: color === 'rgba(0,0,0,0)' ? '#fff' : color }}

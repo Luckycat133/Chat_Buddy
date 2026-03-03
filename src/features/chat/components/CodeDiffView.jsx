@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * T15: CodeDiffView
  * Visual before/after code diff for Coder agent suggestions.

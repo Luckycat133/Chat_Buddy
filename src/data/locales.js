@@ -317,7 +317,6 @@ export const LOCALES = {
         dnd_off: 'Off',
         advanced_tools: 'Advanced Tools',
         global_search: 'Global Search',
-        search_all_chats: 'Search across all chats',
         export_data: 'Export Data',
         backup_memories: 'Backup your memories',
         device_management: 'Device Management',
@@ -352,7 +351,6 @@ export const LOCALES = {
         achievement_system: 'Achievements',
         unlocked: 'Unlocked',
         total_points: 'Points',
-        streak_days: 'Streak',
         // Friends - AI Companions Count
         ai_companions_count: '{count} AI companions',
         // CheckIn
@@ -1191,7 +1189,6 @@ export const LOCALES = {
         dnd_off: '\u5DF2\u5173\u95ED',
         advanced_tools: '\u9AD8\u7EA7\u5DE5\u5177',
         global_search: '\u5168\u5C40\u641C\u7D22',
-        search_all_chats: '\u641C\u7D22\u6240\u6709\u804A\u5929\u8BB0\u5F55',
         export_data: '\u6570\u636E\u5BFC\u51FA',
         backup_memories: '\u5907\u4EFD\u4F60\u7684\u56DE\u5FC6',
         device_management: '\u8BBE\u5907\u7BA1\u7406',
@@ -1226,7 +1223,6 @@ export const LOCALES = {
         achievement_system: '\u6210\u5C31\u7CFB\u7EDF',
         unlocked: '\u5DF2\u89E3\u9501',
         total_points: '\u603B\u79EF\u5206',
-        streak_days: '\u8FDE\u7EED\u5929\u6570',
         // \u597D\u53CB - AI\u4F19\u4F34\u8BA1\u6570
         ai_companions_count: '{count} \u4F4DAI\u4F19\u4F34',
         // \u7B7E\u5230

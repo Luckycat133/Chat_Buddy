@@ -281,7 +281,7 @@ export default function PostComposer({ isOpen, onClose }) {
                         images.length >= 3 && "grid-cols-3"
                     )}>
                         {images.map((img, index) => (
-                            <div key={index} className="relative aspect-square">
+                            <div key={img} className="relative aspect-square">
                                 <img
                                     src={img}
                                     alt=""
@@ -351,9 +351,9 @@ export default function PostComposer({ isOpen, onClose }) {
 
                     {/* Preset Locations */}
                     <div className="flex-1 overflow-y-auto">
-                        {PRESET_LOCATIONS.map((loc, index) => (
+                        {PRESET_LOCATIONS.map((loc) => (
                             <button
-                                key={index}
+                                key={loc.en}
                                 onClick={() => selectLocation(loc)}
                                 className="w-full flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border-light)] hover:bg-[var(--color-bg-app)]"
                             >

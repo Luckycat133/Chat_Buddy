@@ -96,11 +96,19 @@ class APIClient {
             config.signal.addEventListener('abort', abortListener, { once: true });
         }
 
+        const cleanup = () => {
+            clearTimeout(timeoutId);
+            if (config.signal && abortListener) {
+                config.signal.removeEventListener('abort', abortListener);
+            }
+        };
+
         try {
             const response = await fetch(url, { ...config, signal: controller.signal });
 
             // Handle 429 Rate Limiting with Backoff
             if (response.status === 429 && retriesLeft > 0) {
+                cleanup();
                 const waitTime = 1000 * (this.maxRetries - retriesLeft + 1) + Math.random() * 500;
                 console.warn(`[APIClient] Rate limited, retrying in ${waitTime}ms...`);
                 await new Promise(r => setTimeout(r, waitTime));
@@ -109,6 +117,7 @@ class APIClient {
 
             // Normal retry for 5xx errors
             if (!response.ok && response.status >= 500 && retriesLeft > 0) {
+                cleanup();
                 console.warn(`[APIClient] Server error ${response.status}, retrying...`);
                 await new Promise(r => setTimeout(r, 1000));
                 return this._fetchWithRetry(url, config, retriesLeft - 1);
@@ -120,16 +129,14 @@ class APIClient {
 
         } catch (error) {
             if (retriesLeft > 0 && error.name !== 'AbortError') {
+                cleanup();
                 console.warn(`[APIClient] Network error: ${error.message}, retrying...`);
                 await new Promise(r => setTimeout(r, 1000));
                 return this._fetchWithRetry(url, config, retriesLeft - 1);
             }
             throw error;
         } finally {
-            clearTimeout(timeoutId);
-            if (config.signal && abortListener) {
-                config.signal.removeEventListener('abort', abortListener);
-            }
+            cleanup();
         }
     }
 }

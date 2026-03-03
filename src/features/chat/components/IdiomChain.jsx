@@ -23,7 +23,7 @@ function isValidIdiom(text) {
     return /^[\u4e00-\u9fff]{4}$/.test(text.trim());
 }
 
-export default function IdiomChain({ aiName, onClose, onAwardPoints }) {
+export default function IdiomChain({ aiName: _aiName, onClose, onAwardPoints: _onAwardPoints }) {
     const { t, language } = useLanguage();
     const { addPoints, updateTaskProgress } = useSocial();
     const [chain, setChain] = useState([]);

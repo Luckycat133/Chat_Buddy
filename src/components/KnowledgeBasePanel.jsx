@@ -34,14 +34,13 @@ function formatDate(iso, language) {
 
 function DocumentCard({ doc, chunksForDoc, language, t, onDelete }) {
     const [showPreview, setShowPreview] = useState(false);
-    const Icon = getFileIcon(doc.type || '');
     const chunkCount = chunksForDoc.length;
 
     return (
         <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-bg-white)] overflow-hidden transition-all">
             <div className="flex items-start gap-3 p-3.5">
                 <div className="w-9 h-9 rounded-[var(--radius-md)] bg-[var(--color-bg-hover)] flex items-center justify-center shrink-0 mt-0.5">
-                    <Icon size={18} className="text-[var(--color-primary)]" />
+                    {React.createElement(getFileIcon(doc.type || ''), { size: 18, className: "text-[var(--color-primary)]" })}
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-[var(--color-text-main)] truncate">{doc.name}</p>

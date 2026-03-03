@@ -823,6 +823,7 @@ export class ChatEngine {
             if (chat) {
                 // Determine if we should still send (check last msg time)
                 const lastMsg = chat.messages[chat.messages.length - 1];
+                if (!lastMsg) return;
                 const timeDiff = Date.now() - new Date(lastMsg.timestamp).getTime();
                 if (timeDiff > parsedMinutes * 60 * 1000 * 0.8) {
                     this.aiPipeline.processTurn(chat, this.personas, ai);
@@ -878,7 +879,8 @@ export class ChatEngine {
         if (!ai || ai.agentType !== 'task-specialist') return;
 
         // Construct a prompt specifically for naming
-        const firstMessage = chat.messages[0].content;
+        const firstMessage = chat.messages[0]?.content;
+        if (!firstMessage) return;
         const namingPrompt = `
 Generate a clear chat title (max 6 words) from this first message.
 No quotes, no punctuation, title text only.
@@ -895,7 +897,7 @@ Title:`;
             maxTokens: 20,
             temperature: 0.3
         }).then(title => {
-            if (title) {
+            if (title && this.chats.find(c => c.id === chat.id)) {
                 // Clean up quotes just in case
                 const cleanTitle = title.replace(/["']/g, '').trim();
                 console.log(`[ChatEngine] Auto-naming chat ${chat.id} -> ${cleanTitle}`);
