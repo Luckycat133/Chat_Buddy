@@ -57,6 +57,7 @@ export class ChatEngine {
         this.presenceMap = {};      // { personaId: 'online'|'offline'|'busy' }
         this.moodMap = {};          // { personaId: moodObject }
         this._scheduledMessages = new Map(); // { `${chatId}:${aiId}`: timeoutId }
+        this._saveTimer = null; // Debounce timer for deferred localStorage write
 
         // T06: Callback hooks & context provider
         this._onUserMessageCallbacks = [];
@@ -372,8 +373,14 @@ export class ChatEngine {
     }
 
     save() {
-        storage.set(this.storageKey, this.chats);
+        // Notify listeners first so React can schedule a re-render without delay
         this._notify();
+        // Debounce the localStorage write to the next macrotask so the UI
+        // update (message appearing) is not blocked by the synchronous write
+        clearTimeout(this._saveTimer);
+        this._saveTimer = setTimeout(() => {
+            storage.set(this.storageKey, this.chats);
+        }, 0);
     }
 
     // =========================================================================
@@ -943,6 +950,12 @@ Title:`;
     destroy() {
         if (this._presenceInterval) clearInterval(this._presenceInterval);
         if (this._greetingInterval) clearInterval(this._greetingInterval);
+        // Flush any pending deferred save before destroying
+        if (this._saveTimer) {
+            clearTimeout(this._saveTimer);
+            this._saveTimer = null;
+            storage.set(this.storageKey, this.chats);
+        }
         for (const timeoutId of this._scheduledMessages.values()) {
             clearTimeout(timeoutId);
         }

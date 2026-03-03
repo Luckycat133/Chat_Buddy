@@ -8,7 +8,7 @@ import { cn } from '../../../utils/cn';
  * Displays inline image messages with click-to-expand lightbox
  */
 export default function ImageMessage({ url, alt = '', isMe, onClick }) {
-    const { language } = useLanguage();
+    const { t } = useLanguage();
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
 
@@ -18,7 +18,7 @@ export default function ImageMessage({ url, alt = '', isMe, onClick }) {
                 "p-4 rounded-xl bg-[var(--color-bg-active)] text-center min-w-[200px]",
                 isMe ? "text-white/80" : "text-[var(--color-text-muted)]"
             )}>
-                <p className="text-sm">{language === 'zh' ? '图片加载失败' : 'Failed to load image'}</p>
+                <p className="text-sm">{t('image_load_failed')}</p>
             </div>
         );
     }
@@ -59,7 +59,7 @@ export default function ImageMessage({ url, alt = '', isMe, onClick }) {
  * Full-screen image viewer with download option
  */
 export function ImageLightbox({ url, alt = '', isOpen, onClose }) {
-    const { language } = useLanguage();
+    const { t } = useLanguage();
     const [scale, setScale] = useState(1);
 
     if (!isOpen) return null;
@@ -93,7 +93,7 @@ export function ImageLightbox({ url, alt = '', isOpen, onClose }) {
                     className="flex items-center gap-2 px-3 py-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-all"
                 >
                     <Download size={18} />
-                    <span className="text-sm">{language === 'zh' ? '下载' : 'Download'}</span>
+                    <span className="text-sm">{t('download')}</span>
                 </button>
             </div>
 
@@ -111,7 +111,7 @@ export function ImageLightbox({ url, alt = '', isOpen, onClose }) {
 
             {/* Hint */}
             <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white/50 text-sm">
-                {language === 'zh' ? '点击图片放大，点击背景关闭' : 'Click image to zoom, click background to close'}
+                {t('image_zoom_hint')}
             </div>
         </div>
     );

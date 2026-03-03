@@ -4,7 +4,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
 
 export default function GroupAnnouncement({ announcement, isAdmin, onClose, onSave, onDelete }) {
-    const { language } = useLanguage();
+    const { t, language } = useLanguage();
     const [isEditing, setIsEditing] = useState(!announcement);
     const [content, setContent] = useState(announcement?.content || '');
 
@@ -19,7 +19,7 @@ export default function GroupAnnouncement({ announcement, isAdmin, onClose, onSa
     };
 
     const handleDelete = () => {
-        if (confirm(language === 'zh' ? '确定删除公告吗？' : 'Delete this announcement?')) {
+        if (confirm(t('announcement_confirm_delete'))) {
             onDelete?.();
             onClose?.();
         }
@@ -46,7 +46,7 @@ export default function GroupAnnouncement({ announcement, isAdmin, onClose, onSa
                     <div className="flex items-center gap-2 text-white">
                         <Megaphone size={20} />
                         <h3 className="font-medium text-[17px]">
-                            {language === 'zh' ? '群公告' : 'Group Announcement'}
+                            {t('group_announcement')}
                         </h3>
                     </div>
                     <button onClick={onClose} className="text-white/80 hover:text-white">
@@ -61,7 +61,7 @@ export default function GroupAnnouncement({ announcement, isAdmin, onClose, onSa
                             <textarea
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
-                                placeholder={language === 'zh' ? '输入群公告内容...' : 'Enter announcement...'}
+                                placeholder={t('announcement_placeholder')}
                                 maxLength={500}
                                 rows={6}
                                 className="w-full px-4 py-3 bg-[var(--color-bg-app)] rounded-lg text-[15px] outline-none focus:ring-2 ring-[var(--color-primary)]/30 resize-none"
@@ -81,7 +81,7 @@ export default function GroupAnnouncement({ announcement, isAdmin, onClose, onSa
                                         }}
                                         className="flex-1 py-2.5 border border-[var(--color-border)] rounded-lg font-medium text-[var(--color-text-main)]"
                                     >
-                                        {language === 'zh' ? '取消' : 'Cancel'}
+                                        {t('cancel')}
                                     </button>
                                 )}
                                 <button
@@ -94,7 +94,7 @@ export default function GroupAnnouncement({ announcement, isAdmin, onClose, onSa
                                             : "bg-gray-200 text-gray-400"
                                     )}
                                 >
-                                    {language === 'zh' ? '发布' : 'Publish'}
+                                    {t('announcement_publish')}
                                 </button>
                             </div>
                         </>
@@ -108,7 +108,7 @@ export default function GroupAnnouncement({ announcement, isAdmin, onClose, onSa
                                         {announcement.content}
                                     </p>
                                     <p className="text-xs text-[var(--color-text-muted)] mt-2">
-                                        {language === 'zh' ? '更新于' : 'Updated'} {formatDate(announcement.updatedAt)}
+                                        {t('announcement_updated_at')} {formatDate(announcement.updatedAt)}
                                     </p>
                                 </div>
                             </div>
@@ -120,13 +120,13 @@ export default function GroupAnnouncement({ announcement, isAdmin, onClose, onSa
                                         onClick={handleDelete}
                                         className="flex-1 py-2.5 border border-red-200 text-red-500 rounded-lg font-medium hover:bg-red-50 transition-colors"
                                     >
-                                        {language === 'zh' ? '删除' : 'Delete'}
+                                        {t('delete')}
                                     </button>
                                     <button
                                         onClick={() => setIsEditing(true)}
                                         className="flex-1 py-2.5 bg-[var(--color-primary)] text-white rounded-lg font-medium"
                                     >
-                                        {language === 'zh' ? '编辑' : 'Edit'}
+                                        {t('btn_edit')}
                                     </button>
                                 </div>
                             )}
@@ -134,13 +134,13 @@ export default function GroupAnnouncement({ announcement, isAdmin, onClose, onSa
                     ) : (
                         <div className="text-center py-8 text-[var(--color-text-muted)]">
                             <Megaphone size={48} className="mx-auto mb-4 opacity-50" />
-                            <p>{language === 'zh' ? '暂无群公告' : 'No announcement yet'}</p>
+                            <p>{t('announcement_empty')}</p>
                             {isAdmin && (
                                 <button
                                     onClick={() => setIsEditing(true)}
                                     className="mt-4 px-6 py-2 bg-[var(--color-primary)] text-white rounded-full font-medium"
                                 >
-                                    {language === 'zh' ? '发布公告' : 'Create Announcement'}
+                                    {t('announcement_create_btn')}
                                 </button>
                             )}
                         </div>

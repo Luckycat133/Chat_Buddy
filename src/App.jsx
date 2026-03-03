@@ -18,6 +18,7 @@ const AgentsPage = lazy(() => import('./pages/AgentsPage'));
 const AgentWorkspace = lazy(() => import('./pages/AgentWorkspace'));
 const MomentsPage = lazy(() => import('./features/moments/MomentsPage'));
 const AchievementsPage = lazy(() => import('./pages/AchievementsPage'));
+const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 
 const RouteLoadingFallback = () => (
@@ -45,6 +46,7 @@ export default function App() {
               <Route path="friends/groups" element={<FriendGroups />} />
               <Route path="moments" element={<MomentsPage />} />
               <Route path="achievements" element={<AchievementsPage />} />
+              <Route path="leaderboard" element={<LeaderboardPage />} />
               <Route path="groups" element={<Navigate to="/" replace />} />
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<UserProfile />} />

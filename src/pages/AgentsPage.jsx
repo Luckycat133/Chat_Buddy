@@ -68,10 +68,13 @@ export default function AgentsPage() {
     };
 
     return (
-        <div className="flex-1 h-full min-h-0 bg-[var(--color-bg-app)] overflow-y-auto pb-20 md:pb-0 relative custom-scrollbar">
+        <div className="h-full w-full flex flex-col bg-[var(--color-bg-app)] relative">
             {/* Background Ambient Glow */}
             <div className="fixed top-0 left-0 right-0 h-[400px] pointer-events-none opacity-30 select-none animate-aurora"
                 style={{ background: 'radial-gradient(circle at 50% -20%, var(--color-primary) 0%, transparent 60%)' }} />
+
+            {/* Scrollable content area */}
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-20 md:pb-0">
 
             {/* Header Section with Floating Search */}
             <div className="relative z-10 px-6 py-8">
@@ -91,7 +94,7 @@ export default function AgentsPage() {
                         className="shrink-0 mt-1 flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-bold text-sm shadow-glow transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
                     >
                         <Plus size={17} />
-                        <span className="hidden sm:inline">{language === 'zh' ? '创建助手' : 'Create'}</span>
+                        <span className="hidden sm:inline">{t('create_agent')}</span>
                     </button>
                 </div>
 
@@ -158,7 +161,7 @@ export default function AgentsPage() {
                                             <button
                                                 onClick={(e) => openEdit(e, agent)}
                                                 className="glass rounded-full p-2 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:bg-white/20"
-                                                title={language === 'zh' ? '编辑' : 'Edit'}
+                                                title={t('btn_edit')}
                                             >
                                                 <Pencil size={16} className="text-[var(--color-text-main)]" />
                                             </button>
@@ -172,7 +175,7 @@ export default function AgentsPage() {
                                     {isCustom && (
                                         <div className="absolute top-4 left-4">
                                             <span className="px-2 py-0.5 rounded-full text-[10px] font-bold glass border border-[var(--color-border-light)] text-[var(--color-text-muted)] uppercase tracking-wider">
-                                                {language === 'zh' ? '自定义' : 'Custom'}
+                                                {t('custom_badge')}
                                             </span>
                                         </div>
                                     )}
@@ -194,7 +197,7 @@ export default function AgentsPage() {
                                         </div>
 
                                         <p className="text-[var(--color-text-secondary)] line-clamp-2 md:line-clamp-3 mb-4 text-sm font-medium leading-relaxed opacity-90 group-hover:opacity-100">
-                                            {desc || (language === 'zh' ? '自定义 AI 助手' : 'Custom AI assistant')}
+                                            {desc || t('custom_agent_desc')}
                                         </p>
 
                                         <div className="flex flex-wrap gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
@@ -226,13 +229,15 @@ export default function AgentsPage() {
                             {t('try_different_search') || 'Try adjusting your search terms to find the right assistant.'}
                         </p>
                         <button onClick={openCreate} className="mt-6 flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[var(--color-primary)] text-white font-bold text-sm hover:bg-[var(--color-primary-hover)] transition-colors">
-                            <Plus size={16} /> {language === 'zh' ? '创建第一个助手' : 'Create your first agent'}
+                            <Plus size={16} /> {t('create_first_agent')}
                         </button>
                     </div>
                 )}
             </div>
 
-            {/* Agent Editor Modal */}
+            </div>
+
+            {/* Agent Editor Modal (outside scroll container) */}
             <AgentEditorModal
                 isOpen={editorOpen}
                 agent={editingAgent}
