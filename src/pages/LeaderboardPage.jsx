@@ -66,8 +66,6 @@ export default function LeaderboardPage() {
     const achievements = useMemo(() => getAchievements?.() || [], [getAchievements]);
     const unlockedCount = achievements.filter(a => a.unlockedAt).length;
 
-    const activeTabCfg = TABS.find(t => t.id === activeTab);
-
     return (
         <div className="page-container custom-scrollbar">
             <div className="page-ambient-glow" />

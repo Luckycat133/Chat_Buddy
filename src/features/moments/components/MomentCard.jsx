@@ -191,9 +191,9 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
                             post.images.length === 2 && "grid-cols-2 max-w-[280px]",
                             post.images.length >= 3 && "grid-cols-3 max-w-[280px]"
                         )}>
-                            {post.images.slice(0, 9).map((img, index) => (
+                            {post.images.slice(0, 9).map((img) => (
                                 <div
-                                    key={index}
+                                    key={img}
                                     className="aspect-square rounded overflow-hidden bg-[var(--color-bg-app)]"
                                 >
                                     <img src={img} alt="" className="w-full h-full object-cover" />

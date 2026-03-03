@@ -11,10 +11,14 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build output
 dist
 dist-ssr
 *.local
+
 # Agent configurations
 .claude/
 .agents/
@@ -36,6 +40,7 @@ dist-ssr
 # Test and development artifacts
 .pytest_cache
 reports/
+test_reports/
 e2e/reports/*
 !e2e/reports/.gitkeep
 e2e/screenshots/*
@@ -44,3 +49,6 @@ __pycache__/
 *.pyc
 .eslintcache
 .vite/
+
+# Coverage
+coverage/

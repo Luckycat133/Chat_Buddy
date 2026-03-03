@@ -69,7 +69,7 @@ function exportReport(progress, language) {
 
 export default function LearningReportPanel({ onClose }) {
     const { t, language } = useLanguage();
-    const progress = useMemo(loadProgress, []);
+    const progress = useMemo(() => loadProgress(), []);
 
     const avgQuizScore = useMemo(() => {
         if (progress.quizzes.length === 0) return 0;

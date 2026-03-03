@@ -38,7 +38,7 @@ correct is the index (0-3) of the correct option. Output only JSON.`;
         const parsed = JSON.parse(jsonMatch[0]);
         if (!parsed.question || !Array.isArray(parsed.options) || parsed.options.length < 2) throw new Error('Invalid format');
         return parsed;
-    } catch (e) {
+    } catch (_e) {
         // Fallback question if AI fails
         return {
             question: language === 'zh' ? `关于${category}：什么是人工智能？` : `About ${category}: What does AI stand for?`,
@@ -51,7 +51,7 @@ correct is the index (0-3) of the correct option. Output only JSON.`;
     }
 }
 
-export default function TriviaQuiz({ aiName, onClose }) {
+export default function TriviaQuiz({ aiName: _aiName, onClose }) {
     const { t, language } = useLanguage();
     const { addPoints, updateTaskProgress } = useSocial();
     const [phase, setPhase] = useState('select'); // 'select' | 'playing' | 'result'

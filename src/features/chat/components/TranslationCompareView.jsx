@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * T15: TranslationCompareView
  * Side-by-side source / translated text panel for Muse agent.
@@ -6,7 +7,7 @@
 import React, { useState } from 'react';
 import { Copy, Check, ArrowRight, Languages } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
-import { cn } from '../../../utils/cn';
+// cn utility available if needed
 
 const LANG_LABELS = {
     en: 'EN', zh: 'ZH', ja: 'JA', ko: 'KO', fr: 'FR', de: 'DE', es: 'ES',
