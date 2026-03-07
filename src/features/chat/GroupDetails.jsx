@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Megaphone, BarChart3, Download } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Megaphone, BarChart3, Download, X, Check, Search } from 'lucide-react';
 import { useChat } from './context/ChatContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { cn } from '../../utils/cn';
@@ -20,6 +20,7 @@ export default function GroupDetails() {
     // Feature modals
     const [showAnnouncement, setShowAnnouncement] = useState(false);
     const [showPoll, setShowPoll] = useState(false);
+    const [showAddMember, setShowAddMember] = useState(false);
 
     if (!chat) return <div className="flex items-center justify-center h-full bg-[var(--color-bg-app)] text-[var(--color-text-muted)]">{t('chat_not_found')}</div>;
 
@@ -83,6 +84,18 @@ export default function GroupDetails() {
         sendMessage(id, `[POLL:${poll.id}]`);
     };
 
+    const handleAddMembers = (newParticipantIds) => {
+        const currentParticipants = chat.participants || [];
+        const updatedParticipants = [...new Set([...currentParticipants, ...newParticipantIds])];
+        updateChat(id, { participants: updatedParticipants });
+        // Send system message about new members
+        const newPersonas = newParticipantIds.map(pid => personas.find(p => p.id === pid)).filter(Boolean);
+        const names = newPersonas.map(p => language === 'zh' ? (p.name_zh || p.name) : p.name).join(', ');
+        if (names) {
+            sendMessage(id, `[System] ${names} joined the group`);
+        }
+    };
+
     const isDirectChat = chat.participants.length === 2;
     const aiParticipants = chat.participants.filter(pid => pid !== 'user-me');
 
@@ -123,7 +136,10 @@ export default function GroupDetails() {
                     })}
                     {!isDirectChat && (
                         <div className="flex flex-col items-center w-14">
-                            <div className="w-12 h-12 rounded-[4px] border-2 border-dashed border-[#C7C7CC] flex items-center justify-center mb-1 cursor-pointer">
+                            <div
+                                className="w-12 h-12 rounded-[4px] border-2 border-dashed border-[#C7C7CC] flex items-center justify-center mb-1 cursor-pointer hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors"
+                                onClick={() => setShowAddMember(true)}
+                            >
                                 <span className="text-[24px] text-[#C7C7CC]">+</span>
                             </div>
                         </div>
@@ -268,7 +284,136 @@ export default function GroupDetails() {
                     />
                 )
             }
+
+            {/* Add Member Modal */}
+            {!isDirectChat && showAddMember && (
+                <AddMemberModal
+                    currentParticipants={chat.participants || []}
+                    allPersonas={personas}
+                    onClose={() => setShowAddMember(false)}
+                    onAddMembers={handleAddMembers}
+                />
+            )}
         </div >
+    );
+}
+
+// AddMemberModal Component
+function AddMemberModal({ currentParticipants, allPersonas, onClose, onAddMembers }) {
+    const { t, language } = useLanguage();
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Filter out already participating AIs
+    const availablePersonas = allPersonas.filter(p =>
+        p.id.startsWith('ai-') && !currentParticipants.includes(p.id)
+    );
+
+    const filteredPersonas = availablePersonas.filter(p => {
+        const name = language === 'zh' ? (p.name_zh || p.name) : p.name;
+        return name.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+
+    const toggleSelection = (id) => {
+        setSelectedIds(prev =>
+            prev.includes(id)
+                ? prev.filter(x => x !== id)
+                : [...prev, id]
+        );
+    };
+
+    const handleAdd = () => {
+        if (selectedIds.length === 0) return;
+        onAddMembers(selectedIds);
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+            <div
+                className="bg-[var(--color-bg-white)] rounded-xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden animate-scale-in"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
+                    <button onClick={onClose} className="text-[var(--color-text-muted)]">
+                        <X size={24} />
+                    </button>
+                    <h3 className="font-medium text-[17px]">{t('add_member_title')}</h3>
+                    <button
+                        onClick={handleAdd}
+                        disabled={selectedIds.length === 0}
+                        className={cn(
+                            "px-4 py-1.5 rounded-full text-sm font-medium transition-all",
+                            selectedIds.length > 0
+                                ? "bg-[var(--color-primary)] text-white"
+                                : "bg-gray-200 text-gray-400"
+                        )}
+                    >
+                        {t('add_member_btn')}{selectedIds.length > 0 && ` (${selectedIds.length})`}
+                    </button>
+                </div>
+
+                {/* Search */}
+                <div className="p-3 bg-[var(--color-bg-app)]">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
+                        <input
+                            type="text"
+                            placeholder={t('search')}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-[var(--color-bg-white)] border-none rounded-lg py-2 pl-10 pr-3 text-sm placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
+                        />
+                    </div>
+                </div>
+
+                {/* Persona List */}
+                <div className="flex-1 overflow-y-auto">
+                    {filteredPersonas.length === 0 ? (
+                        <div className="p-8 text-center text-[var(--color-text-muted)]">
+                            {availablePersonas.length === 0 ? t('no_available_members') : t('no_friends_found')}
+                        </div>
+                    ) : (
+                        filteredPersonas.map((persona) => {
+                            const isSelected = selectedIds.includes(persona.id);
+                            const pName = language === 'zh' ? (persona.name_zh || persona.name) : persona.name;
+
+                            return (
+                                <div
+                                    key={persona.id}
+                                    onClick={() => toggleSelection(persona.id)}
+                                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] active:bg-[var(--color-bg-hover)] cursor-pointer"
+                                >
+                                    {/* Checkbox */}
+                                    <div className={cn(
+                                        "w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center flex-shrink-0",
+                                        isSelected
+                                            ? "bg-[var(--color-primary)] border-[var(--color-primary)]"
+                                            : "border-[var(--color-border)]"
+                                    )}>
+                                        {isSelected && <Check size={12} className="text-white" strokeWidth={3} />}
+                                    </div>
+
+                                    {/* Avatar */}
+                                    <div className="w-10 h-10 rounded-[4px] overflow-hidden flex-shrink-0 bg-[#E0E0E0] mr-3">
+                                        <img src={persona.avatar} alt={pName} className="w-full h-full object-cover" />
+                                    </div>
+
+                                    {/* Name & Personality */}
+                                    <div className="flex-1 min-w-0">
+                                        <span className="text-[16px] text-[var(--color-text-main)] block">{pName}</span>
+                                        <span className="text-[12px] text-[var(--color-text-muted)] truncate block">
+                                            {persona.personality}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            </div>
+        </div>
     );
 }
 

@@ -52,7 +52,9 @@ export default function Settings() {
     const [showModelSwitcher, setShowModelSwitcher] = useState(false);
     const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
     const [showLearningReport, setShowLearningReport] = useState(false);
+    const [showPrivacyModal, setShowPrivacyModal] = useState(false);
     const fileInputRef = React.useRef(null);
+    const { resetProfile } = useUser();
 
     const handleExport = () => {
         exportAllData();
@@ -68,6 +70,44 @@ export default function Settings() {
             setImportMsg({ type: 'error', text: t('import_failed', { error: err.message }) });
         }
         e.target.value = '';
+    };
+
+    const handleLogout = () => {
+        if (window.confirm(t('confirm_logout'))) {
+            // Clear all localStorage data
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('chat-buddy:') || key.startsWith('chat-buddy-')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            // Reset user profile
+            resetProfile();
+            // Show success message
+            alert(t('logout_success'));
+            // Navigate to home
+            navigate('/');
+            // Reload page to reset all state
+            window.location.reload();
+        }
+    };
+
+    const handleClearAllData = () => {
+        if (window.confirm(t('privacy_clear_confirm'))) {
+            // Clear all localStorage data
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('chat-buddy:') || key.startsWith('chat-buddy-')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            // Reset user profile
+            resetProfile();
+            // Close modal
+            setShowPrivacyModal(false);
+            // Show success message
+            alert(t('data_cleared'));
+            // Reload page
+            window.location.reload();
+        }
     };
 
     return (
@@ -175,7 +215,7 @@ export default function Settings() {
                                     icon={<Lock size={18} />}
                                     color="bg-[var(--color-icon-green)]"
                                     label={t('privacy') || 'Privacy & Security'}
-                                    onClick={() => { }}
+                                    onClick={() => setShowPrivacyModal(true)}
                                 />
                                 <SettingItem
                                     icon={<HelpCircle size={18} />}
@@ -195,7 +235,7 @@ export default function Settings() {
                                     color="bg-[var(--color-danger)]"
                                     label={t('logout') || 'Log Out'}
                                     labelClassName="text-[var(--color-danger)]"
-                                    onClick={() => { }} // Handle logout
+                                    onClick={handleLogout}
                                 />
                             </div>
                         </section>
@@ -469,6 +509,69 @@ export default function Settings() {
                     character={memoryCharacter}
                     onClose={() => setMemoryCharacter(null)}
                 />
+            )}
+
+            {/* Phase 1: Privacy Modal */}
+            {showPrivacyModal && (
+                <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPrivacyModal(false)} />
+                    <div className="relative w-full max-w-md glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                                <Shield size={20} className="text-[var(--color-primary)]" />
+                                {t('privacy_title')}
+                            </h3>
+                            <button onClick={() => setShowPrivacyModal(false)} className="btn btn-ghost btn-icon">
+                                <span style={{ fontSize: '18px', lineHeight: 1 }}>✕</span>
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Data Management Section */}
+                            <div className="p-4 bg-white/5 rounded-[var(--radius-lg)]">
+                                <h4 className="text-sm font-medium text-[var(--color-text-primary)] mb-3 flex items-center gap-2">
+                                    <Database size={16} className="text-[var(--color-primary)]" />
+                                    {t('privacy_data_management')}
+                                </h4>
+
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={() => { setShowPrivacyModal(false); handleExport(); }}
+                                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                    >
+                                        <Download size={18} className="text-[var(--color-icon-blue)]" />
+                                        <div>
+                                            <p className="text-sm font-medium text-[var(--color-text-primary)]">{t('privacy_export_data')}</p>
+                                            <p className="text-xs text-[var(--color-text-secondary)]">{t('export_data_desc')}</p>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={handleClearAllData}
+                                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors text-left"
+                                    >
+                                        <LogOut size={18} className="text-red-500" />
+                                        <div>
+                                            <p className="text-sm font-medium text-red-500">{t('privacy_clear_data')}</p>
+                                            <p className="text-xs text-red-400/70">{t('danger_zone')}</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Privacy Info */}
+                            <div className="p-4 bg-white/5 rounded-[var(--radius-lg)]">
+                                <h4 className="text-sm font-medium text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+                                    <Info size={16} className="text-[var(--color-icon-teal)]" />
+                                    {t('about')}
+                                </h4>
+                                <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                                    {t('faq_a5')}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

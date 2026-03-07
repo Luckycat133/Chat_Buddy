@@ -510,6 +510,82 @@ Chat Buddy 的所有重要变更都将记录在此文件中。
 
 ---
 
+### [0.3.3-patch-2] — UI 完善与智能体工具 (2026-03-06)
+
+> 完成 UI 占位功能并实现缺失的智能体工具能力。
+
+#### 新增 — 第一阶段：UI 修复
+
+- **设置隐私与退出** (`src/pages/Settings.jsx`)
+  - 隐私与安全模态框，包含数据管理选项
+  - 导出数据和清除所有数据功能，带确认对话框
+  - 退出登录流程，清除 localStorage 并重置应用状态
+  - 新增翻译键：`confirm_logout`、`logout_success`、`privacy_title` 等
+- **全局搜索快捷键 (Ctrl+K)** (`src/components/Layout.jsx`)
+  - 快捷键 `Ctrl+K` 打开全局消息搜索面板
+  - Escape 键处理关闭搜索面板
+- **群组添加成员** (`src/features/chat/GroupDetails.jsx`)
+  - 群详情页面"+"按钮现在打开添加成员模态框
+  - 新增 `AddMemberModal` 组件用于选择不在群组中的 AI 角色
+  - 添加新成员时发送系统消息
+  - 新增翻译键：`add_member_title`、`add_member_btn`、`no_available_members`
+- **翻译更新** (`src/data/locales.js`)
+  - 添加 `gift_desc`、`red_packet_desc`、`game_desc`、`poll_desc` 替换"即将推出"文案
+
+#### 新增 — 第二阶段：智能体工具
+
+- **Pixel 智能体工具启用** (`src/data/taskAgents.js`)
+  - 将 Pixel 创意智能体的 `toolsEnabled` 从 `false` 改为 `true`
+- **语法检查工具** (`src/features/chat/services/toolService.js`)
+  - AI 驱动的语法检查，提供详细反馈
+  - 检测语法错误、拼写错误、标点问题和风格改进
+- **数据分析工具** (`src/features/chat/services/toolService.js`)
+  - AI 驱动的数据分析，提供汇总统计
+  - 识别模式、趋势并提供进一步分析建议
+- **图像生成工具** (`src/features/chat/services/toolService.js`)
+  - 基于 AI 的图像生成描述（模拟，无需外部 API）
+  - 根据提示词描述生成的图像外观
+- **调色板工具** (`src/features/chat/services/toolService.js`)
+  - AI 驱动的调色板生成，支持情绪和基础颜色
+  - 预定义回退调色板：暖色、冷色、深色、 pastel、鲜艳、自然、海洋、日落
+
+#### 新增 — 第三阶段：AI 行为增强
+
+- **AI "编辑中" 状态** (`AIPipeline.js`, `ChatEngine.js`, `TypingBubble.jsx`)
+  - 检测长对话上下文（>500 字符）时显示"编辑中..."状态
+  - 输入指示器中显示铅笔图标和脉冲动画效果
+  - 新增 `editingIndicators` 状态，与现有的 `typingIndicators` 并行
+- **消息撤回模拟** (`AIPipeline.js`, `ChatEngine.js`, `MessageTimeline.jsx`)
+  - 5% 概率 AI 会撤回并修改已发送的消息
+  - 撤回的消息显示为灰色文本："XX 撤回了一条消息"
+  - AI 在短暂延迟后发送修订版本，使对话更自然
+
+#### 新增 — 第四阶段：用户定制功能
+
+- **头像上传模态框** (`AvatarUploadModal.jsx`)
+  - 专业的头像上传流程：选择 → 裁剪 → 预览
+  - 基于 Canvas 的图片裁剪，支持缩放控制（0.5x - 2x）
+  - 自动调整大小为 256x256 输出
+  - Base64 存储到 `chat-buddy-user-profile` localStorage
+  - 支持 JPG/PNG 格式，最大 5MB
+- **角色创建器模态框** (`CharacterCreatorModal.jsx`)
+  - 4 步向导创建自定义 AI 角色
+  - 第 1 步：基本信息（英文/中文名字）
+  - 第 2 步：性格与兴趣，6 种说话风格预设
+  - 第 3 步：头像选择（预设头像或自定义上传）
+  - 第 4 步：主题颜色选择（8 种颜色选项）
+  - 根据角色特征自动生成系统提示词
+- **动态角色支持** (`personas.js`)
+  - `getCustomPersonas()` - 从 `chat-buddy-custom-personas` localStorage 加载自定义角色
+  - `saveCustomPersona()` - 保存新的自定义角色
+  - `deleteCustomPersona()` - 删除自定义角色
+  - `getAllPersonas()` 现在包含自定义角色和内置角色
+- **新增翻译键** (`locales.js`)
+  - 头像上传：`crop_avatar`、`preview_avatar`、`select_photo`、`avatar_upload_desc` 等
+  - 角色创建器：`create_custom_character`、`basic_info`、`personality_interests`、`speaking_style`、`theme_color` 等
+
+---
+
 ### [0.3.2] — T14 知识库与 RAG 系统
 
 > 文档增强的 AI 回复。

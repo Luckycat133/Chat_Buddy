@@ -72,7 +72,7 @@ export async function executeTool(toolName, args, extras = {}) {
 
             // ========== Writing Tools ==========
             case 'check_grammar':
-                return "Grammar check passed.";
+                return executeGrammarCheck(args.text);
             case 'translate':
                 return executeAITranslate(args.text, args.targetLanguage);
 
@@ -86,7 +86,7 @@ export async function executeTool(toolName, args, extras = {}) {
             case 'web_search':
                 return executeWebSearch(args.query);
             case 'analyze_data':
-                return "Data analysis complete. (Simulated)";
+                return executeDataAnalysis(args);
 
             // ========== Scholar Research Tools (Perplexity Sonar) ==========
             case 'sonar_search':
@@ -106,9 +106,9 @@ export async function executeTool(toolName, args, extras = {}) {
 
             // ========== Creative Tools ==========
             case 'generate_image':
-                return "[Image Generation] - API request simulation";
+                return executeGenerateImage(args);
             case 'color_palette':
-                return "Recommended Palette: #FF5733, #C70039, #900C3F, #581845";
+                return executeColorPalette(args);
 
             // ========== T12: Memory Exchange Tool ==========
             case 'MEMORY_REQUEST':
@@ -372,6 +372,176 @@ async function executeAITranslate(text, targetLang = 'Chinese') {
     );
 
     return result || "[Translation Failed]";
+}
+
+// ========== Writing Tool Implementations ==========
+
+/**
+ * AI-driven grammar checking with detailed feedback
+ */
+async function executeGrammarCheck(text) {
+    if (!text) return "[Grammar Check Error] No text provided";
+
+    const systemPrompt = `You are a professional grammar checker and writing coach.
+Analyze the provided text for:
+1. Grammar errors (subject-verb agreement, tense issues, etc.)
+2. Spelling mistakes
+3. Punctuation errors
+4. Style improvements (clarity, conciseness, word choice)
+
+For each issue found:
+- Quote the problematic text
+- Provide the correction
+- Briefly explain why
+
+If no issues found, simply confirm: "No grammar issues found. The text looks good!"
+
+Format your response clearly with markdown.`;
+
+    try {
+        const result = await callAI(
+            [{ role: 'user', content: text }],
+            { systemPrompt, maxTokens: 600, temperature: 0.2 }
+        );
+
+        return `## Grammar Check Results
+
+${result}`;
+    } catch (error) {
+        console.error('[Grammar Check Error]', error);
+        return `[Grammar Check Error] ${error.message}`;
+    }
+}
+
+/**
+ * AI-based data analysis with summary statistics and insights
+ */
+async function executeDataAnalysis(args) {
+    const { data, type = 'general' } = args;
+    if (!data) return "[Data Analysis Error] No data provided";
+
+    const systemPrompt = `You are a data analyst. Analyze the provided data and provide:
+1. Summary statistics (count, average, min, max if numeric)
+2. Key patterns or trends
+3. Notable observations
+4. Suggestions for further analysis
+
+Format your response clearly with markdown. Be concise but thorough.`;
+
+    try {
+        const dataStr = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        const result = await callAI(
+            [{ role: 'user', content: `Analyze this ${type} data:\n${dataStr}` }],
+            { systemPrompt, maxTokens: 800, temperature: 0.3 }
+        );
+
+        return `## Data Analysis Results
+
+${result}`;
+    } catch (error) {
+        console.error('[Data Analysis Error]', error);
+        return `[Data Analysis Error] ${error.message}`;
+    }
+}
+
+/**
+ * AI-based image generation description (simulated since no image API available)
+ */
+async function executeGenerateImage(args) {
+    const { prompt, size = '1024x1024' } = args;
+    if (!prompt) return "[Image Generation Error] No prompt provided";
+
+    const systemPrompt = `You are an image generation describer. The user wants to generate an image with the prompt: "${prompt}".
+
+Describe what the generated image would look like in vivid detail:
+1. Main subject and composition
+2. Colors and lighting
+3. Style and mood
+4. Any notable details
+
+Then acknowledge that this is a simulated response and suggest connecting an actual image generation API for real images.`;
+
+    try {
+        const result = await callAI(
+            [{ role: 'user', content: `Describe what an image with prompt "${prompt}" would look like` }],
+            { systemPrompt, maxTokens: 400, temperature: 0.7 }
+        );
+
+        return `## Image Generation Request
+
+**Prompt:** "${prompt}"
+**Requested Size:** ${size}
+
+---
+
+${result}
+
+---
+
+💡 *Note: This is a simulated description. To generate actual images, connect an image generation API (like DALL-E, Midjourney, or Stable Diffusion) in your settings.*`;
+    } catch (error) {
+        console.error('[Image Generation Error]', error);
+        return `[Image Generation Error] ${error.message}`;
+    }
+}
+
+/**
+ * AI-based color palette generation
+ */
+async function executeColorPalette(args) {
+    const { mood, baseColor, count = 5 } = args;
+
+    // Predefined palettes as fallback
+    const palettes = {
+        warm: ['#FF6B6B', '#FF8E53', '#FFCD56', '#FFD93D', '#FFC857'],
+        cool: ['#4ECDC4', '#44A08D', '#96C93D', '#00B4DB', '#0083B0'],
+        dark: ['#2C3E50', '#34495E', '#7F8C8D', '#95A5A6', '#BDC3C7'],
+        pastel: ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF'],
+        vibrant: ['#FF006E', '#FB5607', '#FFBE0B', '#8338EC', '#3A86FF'],
+        nature: ['#2D5016', '#538D22', '#73A942', '#AAD576', '#D4F1AC'],
+        ocean: ['#006D77', '#83C5BE', '#EDF6F9', '#FFDDD2', '#E29578'],
+        sunset: ['#FF595E', '#FFCA3A', '#8AC926', '#1982C4', '#6A4C93']
+    };
+
+    const systemPrompt = `Generate a ${count}-color palette${mood ? ` for a "${mood}" mood` : ''}${baseColor ? ` based on ${baseColor}` : ''}.
+
+For each color, provide:
+- Hex code
+- Color name
+- Suggested usage (e.g., primary, accent, background)
+
+Format:
+**Color Name**: #HEXCODE - Usage description
+
+Also include a brief description of the overall palette mood and best use cases.`;
+
+    try {
+        const result = await callAI(
+            [{ role: 'user', content: 'Generate a color palette' }],
+            { systemPrompt, maxTokens: 500, temperature: 0.6 }
+        );
+
+        // Also provide a fallback palette if AI fails
+        const fallback = palettes[mood] || palettes.warm;
+
+        return `## Color Palette Generated
+
+${result}
+
+---
+
+**Quick Reference Palette:** ${fallback.slice(0, count).join(', ')}
+
+💡 *Tip: Use these colors consistently across your design for visual harmony.*`;
+    } catch (error) {
+        console.error('[Color Palette Error]', error);
+        const fallback = palettes[mood] || palettes.warm;
+        return `## Color Palette (${mood || 'warm'})
+
+${fallback.slice(0, count).join(', ')}
+
+*Error generating detailed palette: ${error.message}*`;
+    }
 }
 
 // ========== Legacy Mock Implementations ==========

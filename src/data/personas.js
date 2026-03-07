@@ -315,12 +315,67 @@ INITIAL_PERSONAS.forEach(persona => {
     }
 });
 
+// Phase 4: Custom personas storage
+const CUSTOM_PERSONAS_KEY = 'chat-buddy-custom-personas';
+
 /**
- * Get all personas including task specialists
- * @returns {Array} Combined array of social companions and task specialists
+ * Get custom personas from localStorage
+ * @returns {Array} Array of custom personas
+ */
+export function getCustomPersonas() {
+    if (typeof window === 'undefined') return [];
+    try {
+        const stored = localStorage.getItem(CUSTOM_PERSONAS_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        console.error('[Personas] Error loading custom personas:', e);
+        return [];
+    }
+}
+
+/**
+ * Save custom persona to localStorage
+ * @param {Object} persona - Custom persona object
+ */
+export function saveCustomPersona(persona) {
+    if (typeof window === 'undefined') return;
+    try {
+        const existing = getCustomPersonas();
+        // Check if updating existing
+        const index = existing.findIndex(p => p.id === persona.id);
+        if (index >= 0) {
+            existing[index] = persona;
+        } else {
+            existing.push(persona);
+        }
+        localStorage.setItem(CUSTOM_PERSONAS_KEY, JSON.stringify(existing));
+    } catch (e) {
+        console.error('[Personas] Error saving custom persona:', e);
+    }
+}
+
+/**
+ * Delete custom persona from localStorage
+ * @param {string} personaId - ID of persona to delete
+ */
+export function deleteCustomPersona(personaId) {
+    if (typeof window === 'undefined') return;
+    try {
+        const existing = getCustomPersonas();
+        const filtered = existing.filter(p => p.id !== personaId);
+        localStorage.setItem(CUSTOM_PERSONAS_KEY, JSON.stringify(filtered));
+    } catch (e) {
+        console.error('[Personas] Error deleting custom persona:', e);
+    }
+}
+
+/**
+ * Get all personas including task specialists and custom personas
+ * @returns {Array} Combined array of social companions, task specialists, and custom personas
  */
 export function getAllPersonas() {
-    return [...INITIAL_PERSONAS, ...TASK_AGENTS];
+    const customPersonas = getCustomPersonas();
+    return [...INITIAL_PERSONAS, ...TASK_AGENTS, ...customPersonas];
 }
 
 /**

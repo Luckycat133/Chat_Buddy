@@ -43,7 +43,7 @@ export default function ChatWindow({ chatId: propChatId }) {
     const location = useLocation();
     const navigate = useNavigate();
     const id = propChatId || paramChatId;
-    const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, deleteMessage, pinMessage, votePoll, presenceMap, moodMap, triggerGreeting, bookmarkMessage, unbookmarkMessage, markMessagesAsRead } = useChat();
+    const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, editingIndicators, deleteMessage, pinMessage, votePoll, presenceMap, moodMap, triggerGreeting, bookmarkMessage, unbookmarkMessage, markMessagesAsRead } = useChat();
     const { t, language } = useLanguage();
     const { addDocument } = useDocuments();
     const { updateTaskProgress } = useSocial();
@@ -235,6 +235,7 @@ export default function ChatWindow({ chatId: propChatId }) {
                 currentUser={currentUser}
                 personas={personas}
                 typingIndicators={typingIndicators}
+                editingIndicators={editingIndicators}
                 presenceMap={presenceMap} // For potentially showing status in bubble?
                 onContextMenu={handleMessageContextMenu}
                 onVotePoll={(pollId, optId, action) => votePoll(chat.id, pollId, optId, action)}
