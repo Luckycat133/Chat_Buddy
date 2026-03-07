@@ -22,6 +22,60 @@ export class AIPipeline {
         else console.log(msg, data || '');
     }
 
+    _buildNativeToolsForAI(ai) {
+        if (!ai?.toolsEnabled || !Array.isArray(ai.tools) || ai.tools.length === 0) {
+            return null;
+        }
+
+        return ai.tools.map(tool => ({
+            type: 'function',
+            function: {
+                name: tool.name,
+                description: tool.description || `Tool: ${tool.name}`,
+                // Keep permissive schema so OpenAI-compatible providers can still plan calls.
+                parameters: tool.parameters || {
+                    type: 'object',
+                    properties: {},
+                    additionalProperties: true
+                }
+            }
+        }));
+    }
+
+    _parseNativeToolMarker(response) {
+        if (typeof response !== 'string' || !response.startsWith('[TOOL_CALL_NATIVE:')) {
+            return null;
+        }
+
+        const match = response.match(/^\[TOOL_CALL_NATIVE:([\s\S]+)\]$/);
+        if (!match) return null;
+
+        try {
+            const payload = JSON.parse(match[1]);
+            const calls = Array.isArray(payload) ? payload : [payload];
+            return calls
+                .map(call => {
+                    const fn = call?.function || {};
+                    const name = fn.name;
+                    if (!name) return null;
+                    let args = {};
+                    if (typeof fn.arguments === 'string' && fn.arguments.trim()) {
+                        try {
+                            args = JSON.parse(fn.arguments);
+                        } catch {
+                            args = {};
+                        }
+                    } else if (fn.arguments && typeof fn.arguments === 'object') {
+                        args = fn.arguments;
+                    }
+                    return { name, args };
+                })
+                .filter(Boolean);
+        } catch {
+            return null;
+        }
+    }
+
     /**
      * Main entry point to trigger AI response
      */
@@ -99,9 +153,12 @@ export class AIPipeline {
 
         // Call LLM
         const requestMessages = [{ role: 'system', content: systemPrompt }, ...initialHistory];
+        const nativeTools = this._buildNativeToolsForAI(ai);
         const response = await callAI(requestMessages, {
             agentId: ai.id,
-            maxTokens: depth > 0 ? 500 : undefined
+            maxTokens: depth > 0 ? 500 : undefined,
+            tools: nativeTools || undefined,
+            toolChoice: nativeTools ? 'auto' : undefined
         });
 
         if (!response) {
@@ -109,11 +166,44 @@ export class AIPipeline {
             return;
         }
 
-        // Check for Tool Calls — standard [TOOL_CALL: name {...}] or T12 [MEMORY_REQUEST: target=X, topic=Y]
+        // Check for Tool Calls — native OpenAI, standard [TOOL_CALL: name {...}] or T12 [MEMORY_REQUEST: target=X, topic=Y]
+        const nativeToolCalls = this._parseNativeToolMarker(response);
         const toolMatch = response.match(/\[TOOL_CALL:\s*(\w+)\s*(\{.*?\})\s*\]/);
         const memReqMatch = !toolMatch && response.match(/\[MEMORY_REQUEST:\s*target=([^,\]]+),\s*topic=([^\]]+)\]/);
 
-        if (toolMatch) {
+        if (nativeToolCalls && nativeToolCalls.length > 0) {
+            const firstCall = nativeToolCalls[0];
+            this.log(`[Native Tool Call] ${firstCall.name}`, firstCall.args);
+
+            let toolMsgId = null;
+            try {
+                toolMsgId = this.callbacks.onToolStart?.(chatId, ai.id, firstCall.name, firstCall.args) ?? null;
+                const toolOutput = await executeTool(firstCall.name, firstCall.args, {
+                    personas,
+                    requesterId: ai.id,
+                    delegationDepth: depth
+                });
+                this.callbacks.onToolEnd?.(chatId, toolMsgId, toolOutput, null);
+
+                const newHistory = [
+                    ...initialHistory,
+                    { role: 'assistant', content: `[TOOL_CALL: ${firstCall.name} ${JSON.stringify(firstCall.args)}]` },
+                    { role: 'user', content: `[TOOL_RESULT for ${firstCall.name}]\n${toolOutput}\n\n[Please continue based on this result]` }
+                ];
+
+                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
+            } catch (e) {
+                this.log('[Native Tool Error]', e);
+                this.callbacks.onToolEnd?.(chatId, toolMsgId, null, e.message);
+
+                const newHistory = [
+                    ...initialHistory,
+                    { role: 'assistant', content: `[TOOL_CALL: ${firstCall.name} ${JSON.stringify(firstCall.args)}]` },
+                    { role: 'user', content: `[TOOL_ERROR]: ${e.message}` }
+                ];
+                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
+            }
+        } else if (toolMatch) {
             // --- Standard Tool Execution Path ---
             const [, toolName, argsStr] = toolMatch;
             this.log(`[Tool Call] ${toolName}`, argsStr);

@@ -46,7 +46,7 @@ export const LOCALES = {
         participants: 'Participants',
         members_count: 'Members',
         ai_friend: 'AI Friend',
-        add_friend_placeholder: 'Add Friend (Not Implemented)',
+        add_friend_placeholder: 'Add Friend',
         danger_zone: 'Danger Zone',
         delete_chat: 'Delete Conversation',
         confirm_delete: 'Are you sure you want to delete this chat?',
@@ -317,7 +317,6 @@ export const LOCALES = {
         dnd_off: 'Off',
         advanced_tools: 'Advanced Tools',
         global_search: 'Global Search',
-        search_all_chats: 'Search across all chats',
         export_data: 'Export Data',
         backup_memories: 'Backup your memories',
         device_management: 'Device Management',
@@ -352,7 +351,6 @@ export const LOCALES = {
         achievement_system: 'Achievements',
         unlocked: 'Unlocked',
         total_points: 'Points',
-        streak_days: 'Streak',
         // Friends - AI Companions Count
         ai_companions_count: '{count} AI companions',
         // CheckIn
@@ -690,8 +688,6 @@ export const LOCALES = {
         game_number_guess_desc: 'Guess my secret number in 7 tries',
         game_trivia: 'Trivia Quiz',
         game_trivia_desc: 'AI-generated questions across various topics',
-        game_idiom_chain: 'Idiom Chain',
-        game_idiom_chain_desc: '成语接龙 — Chinese idiom chain (CN mode)',
 
         // T10: Idiom Chain
         idiom_chain_title: 'Idiom Chain (成语接龙)',
@@ -708,7 +704,6 @@ export const LOCALES = {
         trivia_title: 'Trivia Quiz',
         trivia_select_category: 'Choose a topic to test your knowledge',
         trivia_questions: 'questions',
-        trivia_generating: 'Generating questions...',
         trivia_finished: 'Quiz Complete!',
         trivia_correct: 'correct',
         trivia_see_results: 'See Results',
@@ -967,7 +962,6 @@ export const LOCALES = {
         avatar_upload_hint: 'JPG or PNG, max 5MB',
         avatar_preview_desc: 'This is how your avatar will appear',
         back: 'Back',
-        preview: 'Preview',
         reset: 'Reset',
         // Character Creator
         create_custom_character: 'Create Custom Character',
@@ -984,7 +978,6 @@ export const LOCALES = {
         choose_avatar: 'Choose Avatar',
         select_avatar_for_character: 'Select an avatar for your character',
         upload_custom_avatar: 'Upload Custom Avatar',
-        theme_color: 'Theme Color',
         choose_theme_color: 'Choose a theme color for your character',
         unnamed: 'Unnamed',
         creating: 'Creating...',
@@ -1038,7 +1031,7 @@ export const LOCALES = {
         participants: '\u7FA4\u7EC4\u6210\u5458',
         members_count: '\u4EBA',
         ai_friend: 'AI\u597D\u53CB',
-        add_friend_placeholder: '\u6DFB\u52A0\u597D\u53CB (\u672A\u5B9E\u73B0)',
+        add_friend_placeholder: '\u6DFB\u52A0\u597D\u53CB',
         danger_zone: '\u5371\u9669\u533A\u57DF',
         delete_chat: '\u5220\u9664\u5BF9\u8BDD',
         confirm_delete: '\u786E\u5B9A\u8981\u5220\u9664\u8FD9\u4E2A\u5BF9\u8BDD\u5417\uFF1F',
@@ -1309,7 +1302,6 @@ export const LOCALES = {
         dnd_off: '\u5DF2\u5173\u95ED',
         advanced_tools: '\u9AD8\u7EA7\u5DE5\u5177',
         global_search: '\u5168\u5C40\u641C\u7D22',
-        search_all_chats: '\u641C\u7D22\u6240\u6709\u804A\u5929\u8BB0\u5F55',
         export_data: '\u6570\u636E\u5BFC\u51FA',
         backup_memories: '\u5907\u4EFD\u4F60\u7684\u56DE\u5FC6',
         device_management: '\u8BBE\u5907\u7BA1\u7406',
@@ -1344,7 +1336,6 @@ export const LOCALES = {
         achievement_system: '\u6210\u5C31\u7CFB\u7EDF',
         unlocked: '\u5DF2\u89E3\u9501',
         total_points: '\u603B\u79EF\u5206',
-        streak_days: '\u8FDE\u7EED\u5929\u6570',
         // \u597D\u53CB - AI\u4F19\u4F34\u8BA1\u6570
         ai_companions_count: '{count} \u4F4DAI\u4F19\u4F34',
         // \u7B7E\u5230
@@ -1682,8 +1673,6 @@ export const LOCALES = {
         game_number_guess_desc: '7次机会猜出秘密数字',
         game_trivia: '知识竞答',
         game_trivia_desc: 'AI生成各类话题的问题',
-        game_idiom_chain: '成语接龙',
-        game_idiom_chain_desc: '用上一个成语的最后一字开头继续接龙',
 
         // T10: 成语接龙
         idiom_chain_title: '成语接龙',
@@ -1700,7 +1689,6 @@ export const LOCALES = {
         trivia_title: '知识竞答',
         trivia_select_category: '选择一个话题测试你的知识',
         trivia_questions: '道题',
-        trivia_generating: '正在生成题目...',
         trivia_finished: '测验完成！',
         trivia_correct: '正确率',
         trivia_see_results: '查看结果',
@@ -1959,7 +1947,6 @@ export const LOCALES = {
         avatar_upload_hint: 'JPG 或 PNG，最大 5MB',
         avatar_preview_desc: '这是你的头像显示效果',
         back: '返回',
-        preview: '预览',
         reset: '重置',
         // 角色创建器
         create_custom_character: '创建自定义角色',
@@ -1976,7 +1963,6 @@ export const LOCALES = {
         choose_avatar: '选择头像',
         select_avatar_for_character: '为角色选择一个头像',
         upload_custom_avatar: '上传自定义头像',
-        theme_color: '主题颜色',
         choose_theme_color: '选择角色的主题颜色',
         unnamed: '未命名',
         creating: '创建中...',

@@ -6,7 +6,6 @@
 import React, { useState } from 'react';
 import { Copy, Check, ArrowRight, Languages } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
-import { cn } from '../../../utils/cn';
 
 const LANG_LABELS = {
     en: 'EN', zh: 'ZH', ja: 'JA', ko: 'KO', fr: 'FR', de: 'DE', es: 'ES',
@@ -30,23 +29,6 @@ function CopyButton({ text, t }) {
             {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
         </button>
     );
-}
-
-/**
- * Parse [TRANSLATION:source||target||from||to] marker from message content.
- * Returns { source, target, from, to } or null.
- */
-export function parseTranslationMarker(content) {
-    const match = content?.match(/\[TRANSLATION:([\s\S]*?)\]/);
-    if (!match) return null;
-    const parts = match[1].split('||');
-    return {
-        source: parts[0]?.trim() || '',
-        target: parts[1]?.trim() || '',
-        from: (parts[2]?.trim() || 'auto').toLowerCase(),
-        to: (parts[3]?.trim() || 'en').toLowerCase(),
-        rest: content.replace(match[0], '').trim()
-    };
 }
 
 export default function TranslationCompareView({ source, target, from = 'auto', to = 'en' }) {

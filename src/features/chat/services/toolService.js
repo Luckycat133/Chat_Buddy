@@ -4,6 +4,7 @@
  */
 
 import { callAI } from './chatService';
+import { getAIClient, getAIConfiguration } from '../../../services/api/aiClient';
 import {
     KNOWLEDGE_NODES,
     QUIZ_BANK,
@@ -450,6 +451,39 @@ ${result}`;
 async function executeGenerateImage(args) {
     const { prompt, size = '1024x1024' } = args;
     if (!prompt) return "[Image Generation Error] No prompt provided";
+
+    // Attempt real image generation via OpenAI-compatible endpoint first.
+    try {
+        const aiClient = getAIClient();
+        const cfg = getAIConfiguration();
+        const imageModel = args.model || cfg.imageModel || cfg.model || 'gpt-image-1';
+
+        const response = await aiClient.post('/images/generations', {
+            model: imageModel,
+            prompt,
+            size,
+            response_format: 'b64_json'
+        });
+
+        const data = await response.json().catch(() => null);
+        if (response.ok && Array.isArray(data?.data) && data.data.length > 0) {
+            const first = data.data[0];
+            const imageUrl = first.url || (first.b64_json ? `data:image/png;base64,${first.b64_json}` : null);
+            if (imageUrl) {
+                return `## Image Generation Result
+
+**Prompt:** "${prompt}"
+**Model:** ${imageModel}
+**Size:** ${size}
+
+${imageUrl.startsWith('data:')
+        ? '[Image generated as base64 data URL. Use compatible renderer to preview.]'
+        : `Generated image URL: ${imageUrl}`}`;
+            }
+        }
+    } catch {
+        // Fall through to simulation mode.
+    }
 
     const systemPrompt = `You are an image generation describer. The user wants to generate an image with the prompt: "${prompt}".
 

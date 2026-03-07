@@ -166,6 +166,7 @@ Guidelines:
                 sleep: { start: 0, end: 7 },
                 busy: []
             },
+            agentType: 'social-companion',
             // Mark as custom character
             isCustom: true,
             createdAt: new Date().toISOString()

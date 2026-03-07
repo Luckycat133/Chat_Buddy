@@ -61,6 +61,85 @@ function extractAssistantContent(data) {
     return '';
 }
 
+function extractToolCallMarker(data) {
+    const choice = data?.choices?.[0];
+    const msg = choice?.message;
+    const toolCalls = Array.isArray(msg?.tool_calls) ? msg.tool_calls : null;
+    const functionCall = msg?.function_call || null;
+
+    if (toolCalls && toolCalls.length > 0) {
+        return `[TOOL_CALL_NATIVE:${JSON.stringify(toolCalls)}]`;
+    }
+
+    if (functionCall) {
+        return `[TOOL_CALL_NATIVE:${JSON.stringify([{ type: 'function', function: functionCall }])}]`;
+    }
+
+    return null;
+}
+
+function extractDeltaContent(data) {
+    const choice = data?.choices?.[0];
+    if (!choice) return '';
+    const delta = choice.delta || {};
+    return toTextContent(delta.content || delta.text || '');
+}
+
+async function parseSSEStream(response, onDelta) {
+    const reader = response.body?.getReader?.();
+    if (!reader) return null;
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+    let nativeToolCalls = null;
+
+    while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split(/\r?\n\r?\n/);
+        buffer = events.pop() || '';
+
+        for (const event of events) {
+            const dataLines = event
+                .split(/\r?\n/)
+                .filter(line => line.startsWith('data:'))
+                .map(line => line.slice(5).trim());
+
+            if (dataLines.length === 0) continue;
+            const dataPayload = dataLines.join('\n');
+
+            if (dataPayload === '[DONE]') {
+                continue;
+            }
+
+            try {
+                const json = JSON.parse(dataPayload);
+                const delta = extractDeltaContent(json);
+                if (delta) {
+                    fullText += delta;
+                    onDelta?.(delta, fullText, json);
+                }
+
+                const marker = extractToolCallMarker(json);
+                if (marker) {
+                    nativeToolCalls = marker;
+                }
+            } catch {
+                // Ignore malformed SSE frames from intermediate providers.
+            }
+        }
+    }
+
+    const tail = decoder.decode();
+    if (tail) buffer += tail;
+
+    if (!fullText && nativeToolCalls) return nativeToolCalls;
+    return fullText.trim() || null;
+}
+
 async function parseResponseBody(response) {
     try {
         return await response.json();
@@ -143,15 +222,30 @@ export async function callAI(messages, options = {}) {
         requestBody.max_tokens = maxTokens;
     }
 
+    if (Array.isArray(options.tools) && options.tools.length > 0) {
+        requestBody.tools = options.tools;
+    }
+
+    if (options.toolChoice) {
+        requestBody.tool_choice = options.toolChoice;
+    } else if (options.tool_choice) {
+        requestBody.tool_choice = options.tool_choice;
+    }
+
+    if (options.stream) {
+        requestBody.stream = true;
+    }
+
     try {
         const endpoints = buildCompletionEndpoints(aiClient.baseURL);
 
         for (let i = 0; i < endpoints.length; i++) {
             const endpoint = endpoints[i];
             const response = await aiClient.post(endpoint, requestBody);
-            const data = await parseResponseBody(response);
+            let data = null;
 
             if (!response.ok) {
+                data = await parseResponseBody(response);
                 // Retry with /v1 only on obvious route mismatch.
                 if ((response.status === 404 || response.status === 405) && i < endpoints.length - 1) {
                     continue;
@@ -161,6 +255,13 @@ export async function callAI(messages, options = {}) {
                 return null;
             }
 
+            if (options.stream && response.headers?.get?.('content-type')?.includes('text/event-stream')) {
+                const streamed = await parseSSEStream(response, options.onStreamChunk);
+                if (streamed) return streamed;
+            }
+
+            data = await parseResponseBody(response);
+
             if (data?.error) {
                 console.error('API Error:', data.error, options.agentId ? `(Agent: ${options.agentId})` : '');
                 return null;
@@ -169,6 +270,11 @@ export async function callAI(messages, options = {}) {
             const content = extractAssistantContent(data);
             if (content) {
                 return content.trim();
+            }
+
+            const toolCallMarker = extractToolCallMarker(data);
+            if (toolCallMarker) {
+                return toolCallMarker;
             }
 
             // Endpoint is reachable but payload has no usable content.

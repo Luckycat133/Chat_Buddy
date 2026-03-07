@@ -21,7 +21,7 @@ const RockPaperScissors = lazy(() => import('./components/RockPaperScissors'));
 const NumberGuessGame = lazy(() => import('./components/NumberGuessGame'));
 const GameSelectorPanel = lazy(() => import('./components/GameSelectorPanel'));
 const TriviaQuiz = lazy(() => import('./components/TriviaQuiz'));
-const IdiomChain = lazy(() => import('./components/IdiomChain'));
+const IdiomChainGame = lazy(() => import('./components/IdiomChainGame'));
 const ExportModal = lazy(() => import('./components/ExportModal'));
 const MessageMenu = lazy(() => import('./components/MessageMenu'));
 const BookmarkPanel = lazy(() => import('./components/BookmarkPanel'));
@@ -157,13 +157,16 @@ export default function ChatWindow({ chatId: propChatId }) {
         showToast(t('red_packet_sent'));
     };
 
-    const handleGameResult = ({ result, score, attempts }) => {
+    const handleGameResult = ({ result, score, attempts, rounds }) => {
         if (activeGame === 'rps') {
             const resultText = result === 'win' ? 'Win' : result === 'lose' ? 'Lose' : 'Draw';
             sendMessage(chat.id, `[GAME:RPS:${resultText}:${score.player}-${score.ai}]`);
         } else if (activeGame === 'number_guess') {
             const resultText = result === 'win' ? `Win in ${attempts} tries` : 'Lose';
             sendMessage(chat.id, `[GAME:NUM:${resultText}]`);
+        } else if (activeGame === 'idiom_chain') {
+            const completedRounds = rounds || 0;
+            sendMessage(chat.id, `[GAME:IDIOM:${result}:${completedRounds}]`);
         }
         setActiveGame(null);
     };
@@ -361,6 +364,8 @@ export default function ChatWindow({ chatId: propChatId }) {
                 <Suspense fallback={<ModalLoadingFallback />}>
                     <TriviaQuiz
                         aiName={chat.name}
+                        chatId={chat.id}
+                        personaId={chat.participants.find(p => p !== 'user-me')}
                         onClose={() => setActiveGame(null)}
                     />
                 </Suspense>
@@ -368,8 +373,9 @@ export default function ChatWindow({ chatId: propChatId }) {
 
             {activeGame === 'idiom_chain' && (
                 <Suspense fallback={<ModalLoadingFallback />}>
-                    <IdiomChain
+                    <IdiomChainGame
                         aiName={chat.name}
+                        onResult={handleGameResult}
                         onClose={() => setActiveGame(null)}
                     />
                 </Suspense>
