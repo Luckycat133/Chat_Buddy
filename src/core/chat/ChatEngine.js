@@ -54,6 +54,7 @@ export class ChatEngine {
 
         // Ephemeral state
         this.typingIndicators = {}; // { chatId: [aiId, ...] }
+        this.editingIndicators = {}; // Phase 3: { chatId: Set(aiId) }
         this.presenceMap = {};      // { personaId: 'online'|'offline'|'busy' }
         this.moodMap = {};          // { personaId: moodObject }
         this._scheduledMessages = new Map(); // { `${chatId}:${aiId}`: timeoutId }
@@ -72,6 +73,9 @@ export class ChatEngine {
             // T13: Tool event callbacks for real-time visualization
             onToolStart: this._handleToolStart.bind(this),
             onToolEnd: this._handleToolEnd.bind(this),
+            // Phase 3: Editing and recall callbacks
+            onEditing: this._handleAIEditing.bind(this),
+            onRecall: this._handleAIRecall.bind(this),
         });
     }
 
@@ -366,6 +370,9 @@ export class ChatEngine {
         const state = {
             chats: this.chats,
             typingIndicators: { ...this.typingIndicators },
+            editingIndicators: Object.fromEntries(
+                Object.entries(this.editingIndicators).map(([k, v]) => [k, [...v]])
+            ),
             presenceMap: { ...this.presenceMap },
             moodMap: { ...this.moodMap }
         };
@@ -748,6 +755,36 @@ export class ChatEngine {
             }
         }
         this._notify(); // Ephemeral update, no save
+    }
+
+    // Phase 3: Handle AI editing state
+    _handleAIEditing(chatId, aiId, isEditing) {
+        if (!this.editingIndicators[chatId]) {
+            this.editingIndicators[chatId] = new Set();
+        }
+        if (isEditing) {
+            this.editingIndicators[chatId].add(aiId);
+        } else {
+            this.editingIndicators[chatId].delete(aiId);
+            if (this.editingIndicators[chatId].size === 0) {
+                delete this.editingIndicators[chatId];
+            }
+        }
+        this._notify(); // Ephemeral update, no save
+    }
+
+    // Phase 3: Handle AI message recall
+    _handleAIRecall(chatId, aiId) {
+        const chat = this.chats.find(c => c.id === chatId);
+        if (!chat) return;
+
+        // Find the AI's last message
+        const lastMsg = [...chat.messages].reverse().find(m => m.senderId === aiId);
+        if (lastMsg && !lastMsg.recalled) {
+            lastMsg.recalled = true;
+            lastMsg.recalledAt = new Date().toISOString();
+            this.save();
+        }
     }
 
     _handleAIMessage(chatId, content, aiId) {

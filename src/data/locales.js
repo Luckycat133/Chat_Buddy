@@ -931,7 +931,65 @@ export const LOCALES = {
         stats_days: 'days',
         stats_games_played: 'Games Played',
         stats_messages: 'messages',
-        stats_no_data: 'No data yet'
+        stats_no_data: 'No data yet',
+
+        // Phase 1: Privacy & Logout
+        confirm_logout: 'Are you sure you want to log out?',
+        logout_success: 'Logged out successfully',
+        privacy_title: 'Privacy & Security',
+        privacy_data_management: 'Data Management',
+        privacy_clear_data: 'Clear All Data',
+        privacy_export_data: 'Export Data',
+        privacy_clear_confirm: 'This will permanently delete all your chats, settings, and data. This action cannot be undone.',
+        data_cleared: 'All data has been cleared',
+
+        // Phase 1: Add Member
+        add_member_title: 'Add Members',
+        add_member_desc: 'Add AI friends to this group',
+        add_member_btn: 'Add',
+        no_available_members: 'No available members to add',
+
+        // Phase 1: Global Search (Ctrl+K)
+        global_search_title: 'Global Search',
+        global_search_placeholder: 'Search across all chats...',
+
+        // Updated - remove "coming soon" since features are implemented
+        gift_desc: 'Send gifts to your AI friends',
+        red_packet_desc: 'Send red packets with points',
+        game_desc: 'Play mini-games with AI',
+        poll_desc: 'Create polls in group chats',
+
+        // Phase 4: Avatar Upload & Character Creator
+        crop_avatar: 'Crop Avatar',
+        preview_avatar: 'Preview Avatar',
+        select_photo: 'Select Photo',
+        avatar_upload_desc: 'Upload a photo for your avatar',
+        avatar_upload_hint: 'JPG or PNG, max 5MB',
+        avatar_preview_desc: 'This is how your avatar will appear',
+        back: 'Back',
+        preview: 'Preview',
+        reset: 'Reset',
+        // Character Creator
+        create_custom_character: 'Create Custom Character',
+        basic_info: 'Basic Info',
+        give_character_name: 'Give your character a name',
+        english_name: 'English Name',
+        chinese_name_optional: 'Chinese Name (Optional)',
+        personality_interests: 'Personality & Interests',
+        define_personality: 'Define your character\'s personality',
+        personality_desc: 'Personality',
+        interests: 'Interests',
+        add_interest: 'Add interest...',
+        speaking_style: 'Speaking Style',
+        choose_avatar: 'Choose Avatar',
+        select_avatar_for_character: 'Select an avatar for your character',
+        upload_custom_avatar: 'Upload Custom Avatar',
+        theme_color: 'Theme Color',
+        choose_theme_color: 'Choose a theme color for your character',
+        unnamed: 'Unnamed',
+        creating: 'Creating...',
+        create_character: 'Create Character',
+        next: 'Next'
     },
     zh: {
         nav_chats: '\u804A\u5929\u5217\u8868',
@@ -1865,6 +1923,64 @@ export const LOCALES = {
         stats_days: '天',
         stats_games_played: '游戏场次',
         stats_messages: '条消息',
-        stats_no_data: '暂无数据'
+        stats_no_data: '暂无数据',
+
+        // Phase 1: 隐私与退出
+        confirm_logout: '确定要退出登录吗？',
+        logout_success: '已成功退出登录',
+        privacy_title: '隐私与安全',
+        privacy_data_management: '数据管理',
+        privacy_clear_data: '清除所有数据',
+        privacy_export_data: '导出数据',
+        privacy_clear_confirm: '此操作将永久删除所有聊天记录、设置和数据。此操作无法撤销。',
+        data_cleared: '所有数据已清除',
+
+        // Phase 1: 添加成员
+        add_member_title: '添加成员',
+        add_member_desc: '添加 AI 好友到此群聊',
+        add_member_btn: '添加',
+        no_available_members: '没有可添加的成员',
+
+        // Phase 1: 全局搜索 (Ctrl+K)
+        global_search_title: '全局搜索',
+        global_search_placeholder: '搜索所有聊天...',
+
+        // 更新 - 移除"即将推出"文案，因功能已实现
+        gift_desc: '给 AI 好友送礼物',
+        red_packet_desc: '发红包给好友',
+        game_desc: '与 AI 玩迷你游戏',
+        poll_desc: '在群聊中创建投票',
+
+        // Phase 4: 头像上传与角色创建
+        crop_avatar: '裁剪头像',
+        preview_avatar: '预览头像',
+        select_photo: '选择照片',
+        avatar_upload_desc: '上传一张照片作为你的头像',
+        avatar_upload_hint: 'JPG 或 PNG，最大 5MB',
+        avatar_preview_desc: '这是你的头像显示效果',
+        back: '返回',
+        preview: '预览',
+        reset: '重置',
+        // 角色创建器
+        create_custom_character: '创建自定义角色',
+        basic_info: '基本信息',
+        give_character_name: '给你的角色起个名字',
+        english_name: '英文名字',
+        chinese_name_optional: '中文名字（可选）',
+        personality_interests: '性格与兴趣',
+        define_personality: '定义角色的性格特点',
+        personality_desc: '性格描述',
+        interests: '兴趣爱好',
+        add_interest: '添加兴趣...',
+        speaking_style: '说话风格',
+        choose_avatar: '选择头像',
+        select_avatar_for_character: '为角色选择一个头像',
+        upload_custom_avatar: '上传自定义头像',
+        theme_color: '主题颜色',
+        choose_theme_color: '选择角色的主题颜色',
+        unnamed: '未命名',
+        creating: '创建中...',
+        create_character: '创建角色',
+        next: '下一步'
     }
 };

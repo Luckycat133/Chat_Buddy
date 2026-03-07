@@ -8,6 +8,7 @@ import { SHORTCUT_DEFINITIONS, formatShortcut } from '../config/shortcuts';
 import { useOnboarding } from '../hooks/useOnboarding';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import OnboardingTutorial from './OnboardingTutorial';
+import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
 
 const BackgroundLayer = React.lazy(() => import('../features/background/BackgroundLayer'));
 
@@ -18,6 +19,7 @@ export default function Layout() {
     const mainRef = useRef(null);
     const prevPathRef = useRef(location.pathname);
     const [showShortcuts, setShowShortcuts] = useState(false);
+    const [showGlobalSearch, setShowGlobalSearch] = useState(false);
     const onboarding = useOnboarding();
 
     useEffect(() => {
@@ -43,9 +45,14 @@ export default function Layout() {
         ...SHORTCUT_DEFINITIONS.filter(s => s.route).map(s => ({
             key: s.key, ctrl: true, action: () => navigate(s.route),
         })),
+        { key: 'k', ctrl: true, action: () => setShowGlobalSearch(true) },
         { key: '/', ctrl: true, action: () => setShowShortcuts(prev => !prev) },
-        { key: 'Escape', ctrl: false, action: () => { if (showShortcuts) setShowShortcuts(false); else window.history.back(); } },
-    ], [navigate, showShortcuts]);
+        { key: 'Escape', ctrl: false, action: () => {
+            if (showGlobalSearch) setShowGlobalSearch(false);
+            else if (showShortcuts) setShowShortcuts(false);
+            else window.history.back();
+        } },
+    ], [navigate, showShortcuts, showGlobalSearch]);
 
     useKeyboardShortcuts(shortcuts);
 
@@ -145,6 +152,9 @@ export default function Layout() {
 
             {/* Keyboard Shortcuts Modal */}
             {showShortcuts && <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />}
+
+            {/* Global Search (Ctrl+K) */}
+            {showGlobalSearch && <MessageSearchPanel onClose={() => setShowGlobalSearch(false)} />}
 
             {/* Onboarding Tutorial */}
             {onboarding.shouldShow && (

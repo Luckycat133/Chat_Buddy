@@ -347,7 +347,7 @@ export const TASK_AGENTS = [
             { name: 'generate_image', description: '生成设计概念图' },
             { name: 'color_palette', description: '生成配色方案' }
         ],
-        toolsEnabled: false,
+        toolsEnabled: true,
 
         states: {
             default: 'ready',

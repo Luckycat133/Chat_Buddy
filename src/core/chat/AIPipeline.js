@@ -40,7 +40,16 @@ export class AIPipeline {
 
         await this._wait(readDelay);
 
-        // 2. Start "Typing"
+        // Phase 3: Check if this will be a long response (editing state)
+        const totalContextLength = chat.messages?.reduce((sum, m) => sum + (m.content?.length || 0), 0) || 0;
+        const willBeLong = totalContextLength > 500;
+
+        // 2. Start "Typing" or "Editing"
+        if (willBeLong) {
+            this.callbacks.onEditing?.(chatId, ai.id, true);
+            await this._wait(1500); // Show editing state briefly
+            this.callbacks.onEditing?.(chatId, ai.id, false);
+        }
         this.callbacks.onTyping?.(chatId, ai.id, true);
 
         await this._wait(thinkingDelay);
@@ -169,17 +178,54 @@ export class AIPipeline {
 
         } else {
             // --- Final Response Path ---
-            await this._handleFinalResponse(chatId, ai, response);
+            await this._handleFinalResponse(chatId, ai, response, initialHistory);
         }
     }
 
-    async _handleFinalResponse(chatId, ai, response) {
+    async _handleFinalResponse(chatId, ai, response, _history = []) {
         if (!response) {
             this.callbacks.onTyping?.(chatId, ai.id, false);
             return;
         }
 
         if (response.includes('[SILENCE]')) {
+            this.callbacks.onTyping?.(chatId, ai.id, false);
+            return;
+        }
+
+        // Phase 3: Simulate message recall (5% probability)
+        const shouldSimulateRecall = Math.random() < 0.05;
+
+        if (shouldSimulateRecall && !response.includes('[SILENCE]')) {
+            // Send initial message
+            await this._simulateTypingAndSend(chatId, ai, response);
+
+            // Wait 2-5 seconds
+            await this._wait(2000 + Math.random() * 3000);
+
+            // Recall the last message
+            this.callbacks.onRecall?.(chatId, ai.id);
+
+            // Wait then send revised version
+            await this._wait(1500);
+            const revisedPrompt = `You just sent this message but decided to revise it:
+${response}
+
+Please send a revised/improved version. Be natural and conversational.`;
+
+            const revisedResponse = await callAI([
+                { role: 'system', content: `You are ${ai.name}. ${ai.personality}` },
+                { role: 'user', content: revisedPrompt }
+            ], {
+                agentId: ai.id,
+                maxTokens: 500,
+                temperature: 0.7
+            });
+
+            if (revisedResponse && !revisedResponse.includes('[SILENCE]')) {
+                await this._simulateTypingAndSend(chatId, ai, revisedResponse);
+            }
+
             this.callbacks.onTyping?.(chatId, ai.id, false);
             return;
         }

@@ -134,6 +134,7 @@ export default function MessageTimeline({
     currentUser,
     personas,
     typingIndicators, // T05: New prop
+    editingIndicators, // Phase 3: Editing state
     onContextMenu,
     onVotePoll,
     onMentionClick // T07: Mention click handler
@@ -186,6 +187,26 @@ export default function MessageTimeline({
                 const isMe = msg.senderId === 'user-me';
                 const sender = isMe ? currentUser : personas.find(p => p.id === msg.senderId);
                 const senderName = getSenderName(msg.senderId);
+
+                // Phase 3: Handle recalled messages
+                if (msg.recalled) {
+                    return (
+                        <React.Fragment key={msg.id}>
+                            {showTimeSeparator && (
+                                <div className="flex justify-center my-6">
+                                    <span className="px-3 py-1 bg-[var(--color-bg-active)] text-[var(--color-text-muted)] text-[11px] font-medium rounded-full shadow-sm">
+                                        {formatTimeSeparator(msg.timestamp, language)}
+                                    </span>
+                                </div>
+                            )}
+                            <div className="flex justify-center my-2">
+                                <span className="text-xs text-[var(--color-text-muted)] italic">
+                                    {senderName} {t('message_recalled') || 'recalled a message'}
+                                </span>
+                            </div>
+                        </React.Fragment>
+                    );
+                }
 
                 let content = msg.content;
                 let reaction = null;
@@ -493,6 +514,12 @@ export default function MessageTimeline({
                         </div>
                     </React.Fragment>
                 );
+            })}
+
+            {/* Phase 3: Editing Indicator Bubbles */}
+            {(editingIndicators?.[chat.id] || []).map(aiId => {
+                const ai = personas.find(p => p.id === aiId);
+                return ai ? <TypingBubble key={`editing-${aiId}`} persona={ai} isEditing={true} /> : null;
             })}
 
             {/* T05: Typing Indicator Bubbles */}

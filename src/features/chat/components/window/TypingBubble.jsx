@@ -1,7 +1,8 @@
 import React from 'react';
 import { getCharacterThemeStyle } from '../CharacterTheme';
+import { Pencil } from 'lucide-react';
 
-export default function TypingBubble({ persona }) {
+export default function TypingBubble({ persona, isEditing = false }) {
     if (!persona) return null;
 
     return (
@@ -22,11 +23,19 @@ export default function TypingBubble({ persona }) {
                 </div>
 
                 {/* Bubble */}
-                <div className="typing-bubble message-bubble-ai self-end">
-                    <span className="typing-dot"></span>
-                    <span className="typing-dot" style={{ animationDelay: '0.15s' }}></span>
-                    <span className="typing-dot" style={{ animationDelay: '0.3s' }}></span>
-                </div>
+                {isEditing ? (
+                    // Phase 3: Editing state with pencil icon
+                    <div className="flex items-center gap-2 px-4 py-2 bg-[var(--color-bg-white)] text-[var(--color-text-muted)] rounded-[20px] rounded-tl-sm border border-[var(--color-border-light)] shadow-sm self-end">
+                        <Pencil size={14} className="animate-pulse" />
+                        <span className="text-sm">Editing...</span>
+                    </div>
+                ) : (
+                    <div className="typing-bubble message-bubble-ai self-end">
+                        <span className="typing-dot"></span>
+                        <span className="typing-dot" style={{ animationDelay: '0.15s' }}></span>
+                        <span className="typing-dot" style={{ animationDelay: '0.3s' }}></span>
+                    </div>
+                )}
             </div>
         </div>
     );

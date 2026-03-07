@@ -19,6 +19,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.3-patch-2] — UI Completeness & Agent Tools (2026-03-06)
+
+> Completion of stub UI elements and implementation of missing agent tool capabilities.
+
+### Added — Phase 1: UI Fixes
+
+- **Settings Privacy & Logout** (`src/pages/Settings.jsx`)
+  - Privacy & Security modal with data management options
+  - Export data and Clear all data functionality with confirmation dialogs
+  - Logout flow that clears localStorage and resets application state
+  - New translation keys: `confirm_logout`, `logout_success`, `privacy_title`, etc.
+- **Global Search Shortcut (Ctrl+K)** (`src/components/Layout.jsx`)
+  - Keyboard shortcut `Ctrl+K` opens global message search panel
+  - Escape key handling to close search panel
+- **Group Add Member** (`src/features/chat/GroupDetails.jsx`)
+  - "+" button in group details now opens Add Member modal
+  - New `AddMemberModal` component for selecting AI personas not in group
+  - Sends system message when new members are added
+  - New translation keys: `add_member_title`, `add_member_btn`, `no_available_members`
+- **Translation Updates** (`src/data/locales.js`)
+  - Added `gift_desc`, `red_packet_desc`, `game_desc`, `poll_desc` to replace "coming soon" texts
+
+### Added — Phase 2: Agent Tools
+
+- **Pixel Agent Tools Enabled** (`src/data/taskAgents.js`)
+  - Changed `toolsEnabled: false` to `toolsEnabled: true` for Pixel creative agent
+- **Grammar Check Tool** (`src/features/chat/services/toolService.js`)
+  - AI-powered grammar checking with detailed feedback
+  - Detects grammar errors, spelling mistakes, punctuation issues, and style improvements
+- **Data Analysis Tool** (`src/features/chat/services/toolService.js`)
+  - AI-powered data analysis with summary statistics
+  - Identifies patterns, trends, and provides suggestions for further analysis
+- **Image Generation Tool** (`src/features/chat/services/toolService.js`)
+  - AI-based image generation description (simulated, no external API required)
+  - Describes what the generated image would look like based on prompt
+- **Color Palette Tool** (`src/features/chat/services/toolService.js`)
+  - AI-powered color palette generation with mood and base color support
+  - Predefined fallback palettes: warm, cool, dark, pastel, vibrant, nature, ocean, sunset
+
+### Added — Phase 3: AI Behavior Enhancement
+
+- **AI "Editing" State** (`AIPipeline.js`, `ChatEngine.js`, `TypingBubble.jsx`)
+  - Detects long conversation context (>500 characters) and shows "Editing..." status
+  - Pencil icon with animated pulse effect in typing bubble
+  - New `editingIndicators` state alongside existing `typingIndicators`
+- **Message Recall Simulation** (`AIPipeline.js`, `ChatEngine.js`, `MessageTimeline.jsx`)
+  - 5% probability AI will recall and revise a sent message
+  - Recalled messages shown as gray text: "XX recalled a message"
+  - AI sends revised version after brief delay for natural conversation flow
+
+### Added — Phase 4: User Customization
+
+- **Avatar Upload Modal** (`AvatarUploadModal.jsx`)
+  - Professional avatar upload with 3-step workflow: select → crop → preview
+  - Canvas-based image cropping with zoom controls (0.5x - 2x)
+  - Automatic resizing to 256x256 output
+  - Base64 storage to `chat-buddy-user-profile` localStorage
+  - Supports JPG/PNG formats up to 5MB
+- **Character Creator Modal** (`CharacterCreatorModal.jsx`)
+  - 4-step wizard for creating custom AI personas
+  - Step 1: Basic info (English/Chinese names)
+  - Step 2: Personality & interests with 6 speaking style presets
+  - Step 3: Avatar selection (preset avatars or custom upload)
+  - Step 4: Theme color selection (8 color options)
+  - Auto-generated system prompt based on character traits
+- **Dynamic Persona Support** (`personas.js`)
+  - `getCustomPersonas()` - Load custom personas from `chat-buddy-custom-personas` localStorage
+  - `saveCustomPersona()` - Persist new custom persona
+  - `deleteCustomPersona()` - Remove custom persona
+  - `getAllPersonas()` now includes custom personas alongside built-in ones
+- **New Translation Keys** (`locales.js`)
+  - Avatar upload: `crop_avatar`, `preview_avatar`, `select_photo`, `avatar_upload_desc`, `avatar_upload_hint`, etc.
+  - Character creator: `create_custom_character`, `basic_info`, `personality_interests`, `speaking_style`, `theme_color`, etc.
+
+---
+
 ## [0.3.3-patch] — T15 + T14 + T10 Phase 3 Completion (2026-03-02)
 
 > All remaining roadmap items for v0.3.x completed — professional agent capabilities deepened, RAG upgraded, and social feature set finalized.
