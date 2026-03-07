@@ -136,6 +136,33 @@ cp .env.example .env
 npm run dev
 ```
 
+### 原生依赖故障排查（macOS Apple Silicon）
+
+若出现以下报错：
+- `Cannot find module @rollup/rollup-darwin-arm64`
+- `Cannot find native binding`（`@tailwindcss/oxide`）
+- `Cannot find module ../lightningcss.darwin-arm64.node`
+- `The service was stopped`（`esbuild`）
+
+执行：
+
+```bash
+rm -rf node_modules/@rollup/rollup-darwin-arm64 \
+       node_modules/lightningcss \
+       node_modules/lightningcss-darwin-arm64 \
+       node_modules/@tailwindcss/oxide \
+       node_modules/@tailwindcss/oxide-darwin-arm64
+npm install
+```
+
+然后验证：
+
+```bash
+npm run lint
+npm run test
+npm run build
+```
+
 ### 环境变量
 
 | 变量              | 必需 | 说明                                        |
@@ -182,8 +209,8 @@ npm run dev
 - 前端：React 19, Vite
 - 样式：TailwindCSS
 - 状态：Clean Architecture (ChatEngine + Context)
-- AI：DeepSeek / Perplexity API
-- 存储：LocalStorage
+- AI：DeepSeek / Perplexity / OpenAI 兼容 API
+- 存储：LocalStorage（轻量设置）+ IndexedDB（聊天/文档主数据、媒体与背景资源）
 
 ### 项目结构
 

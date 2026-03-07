@@ -8,21 +8,6 @@ import { Code2, Copy, Check, ArrowRight, Plus, Minus } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
 
-/**
- * Parse [DIFF:lang|before||after] from message content.
- */
-export function parseDiffMarker(content) {
-    if (!content) return null;
-    const match = content.match(/\[DIFF:([^|]*)\|([\s\S]*?)\|\|([\s\S]*?)\]/);
-    if (!match) return null;
-    return {
-        lang: match[1]?.trim() || 'text',
-        before: match[2]?.trim() || '',
-        after: match[3]?.trim() || '',
-        rest: content.replace(match[0], '').trim()
-    };
-}
-
 function computeLineDiff(before, after) {
     const beforeLines = before.split('\n');
     const afterLines = after.split('\n');

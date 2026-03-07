@@ -122,6 +122,51 @@ export function calculateSimilarity(queryKeywords, chunkKeywords) {
  */
 const BM25_K1 = 1.5;
 const BM25_B = 0.75;
+const EMBEDDING_DIM = 256;
+
+function hashToken(token, dim = EMBEDDING_DIM) {
+    let hash = 0;
+    for (let i = 0; i < token.length; i++) {
+        hash = (hash << 5) - hash + token.charCodeAt(i);
+        hash |= 0;
+    }
+    return Math.abs(hash) % dim;
+}
+
+export function buildLightweightEmbedding(text, dim = EMBEDDING_DIM) {
+    const vector = new Array(dim).fill(0);
+    const tokens = text.toLowerCase()
+        .replace(/[^\w\s\u4e00-\u9fff]/g, ' ')
+        .split(/\s+/)
+        .filter(Boolean);
+
+    if (tokens.length === 0) return vector;
+
+    for (const token of tokens) {
+        const idx = hashToken(token, dim);
+        vector[idx] += 1;
+    }
+
+    const norm = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+    if (norm > 0) {
+        for (let i = 0; i < vector.length; i++) {
+            vector[i] = vector[i] / norm;
+        }
+    }
+
+    return vector;
+}
+
+export function cosineSimilarity(vecA, vecB) {
+    if (!Array.isArray(vecA) || !Array.isArray(vecB) || vecA.length !== vecB.length) {
+        return 0;
+    }
+    let dot = 0;
+    for (let i = 0; i < vecA.length; i++) {
+        dot += (vecA[i] || 0) * (vecB[i] || 0);
+    }
+    return dot;
+}
 
 /**
  * Calculate BM25 score for a chunk given a query
@@ -152,9 +197,9 @@ export function calculateBM25Score(queryKeywords, chunkContent, avgDocLength) {
  * Hybrid search: combines BM25 score with Jaccard similarity
  * Normalizes both scores and averages them for better recall
  */
-function hybridScore(bm25, jaccard, bm25Max) {
+function hybridScore(bm25, jaccard, vectorScore, bm25Max) {
     const normalizedBM25 = bm25Max > 0 ? bm25 / bm25Max : 0;
-    return 0.6 * normalizedBM25 + 0.4 * jaccard;
+    return 0.5 * normalizedBM25 + 0.3 * jaccard + 0.2 * Math.max(0, vectorScore);
 }
 
 /**
@@ -169,7 +214,8 @@ export function indexDocument(document) {
         documentName: name,
         chunkIndex: index,
         content: chunk,
-        keywords: extractKeywords(chunk)
+        keywords: extractKeywords(chunk),
+        embedding: buildLightweightEmbedding(chunk)
     }));
 }
 
@@ -181,6 +227,7 @@ export function searchDocuments(query, indexedChunks, topK = 3) {
     if (indexedChunks.length === 0) return [];
     const queryKeywords = extractKeywords(query);
     if (queryKeywords.length === 0) return [];
+    const queryEmbedding = buildLightweightEmbedding(query);
 
     // Compute average document length for BM25 normalization
     const avgDocLength = indexedChunks.reduce((sum, c) =>
@@ -190,7 +237,11 @@ export function searchDocuments(query, indexedChunks, topK = 3) {
     const scored = indexedChunks.map(chunk => {
         const bm25 = calculateBM25Score(queryKeywords, chunk.content, avgDocLength);
         const jaccard = calculateSimilarity(queryKeywords, chunk.keywords);
-        return { ...chunk, bm25, jaccard };
+        const embedding = Array.isArray(chunk.embedding)
+            ? chunk.embedding
+            : buildLightweightEmbedding(chunk.content);
+        const vectorScore = cosineSimilarity(queryEmbedding, embedding);
+        return { ...chunk, bm25, jaccard, vectorScore, embedding };
     });
 
     // Normalize BM25 by the max in the result set
@@ -199,7 +250,7 @@ export function searchDocuments(query, indexedChunks, topK = 3) {
     return scored
         .map(chunk => ({
             ...chunk,
-            score: hybridScore(chunk.bm25, chunk.jaccard, bm25Max)
+            score: hybridScore(chunk.bm25, chunk.jaccard, chunk.vectorScore, bm25Max)
         }))
         .filter(chunk => chunk.score > 0)
         .sort((a, b) => b.score - a.score)
@@ -263,23 +314,27 @@ export function loadIndex() {
 /**
  * Add document to index
  */
-export function addDocumentToIndex(document) {
-    const existingIndex = loadIndex();
+export function addDocumentToIndex(document, existingIndex = null, options = { persist: true }) {
+    const baseIndex = Array.isArray(existingIndex) ? existingIndex : loadIndex();
     // Remove existing chunks for this document
-    const filteredIndex = existingIndex.filter(c => c.documentId !== document.id);
+    const filteredIndex = baseIndex.filter(c => c.documentId !== document.id);
     // Add new chunks
     const newChunks = indexDocument(document);
     const updatedIndex = [...filteredIndex, ...newChunks];
-    saveIndex(updatedIndex);
+    if (options.persist !== false) {
+        saveIndex(updatedIndex);
+    }
     return updatedIndex;
 }
 
 /**
  * Remove document from index
  */
-export function removeDocumentFromIndex(documentId) {
-    const existingIndex = loadIndex();
-    const updatedIndex = existingIndex.filter(c => c.documentId !== documentId);
-    saveIndex(updatedIndex);
+export function removeDocumentFromIndex(documentId, existingIndex = null, options = { persist: true }) {
+    const baseIndex = Array.isArray(existingIndex) ? existingIndex : loadIndex();
+    const updatedIndex = baseIndex.filter(c => c.documentId !== documentId);
+    if (options.persist !== false) {
+        saveIndex(updatedIndex);
+    }
     return updatedIndex;
 }

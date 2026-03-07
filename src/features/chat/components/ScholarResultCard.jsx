@@ -14,27 +14,6 @@ const VERDICT_CONFIG = {
     unverifiable: { icon: HelpCircle, color: 'text-[var(--color-text-muted)]', bg: 'bg-[var(--color-bg-hover)]', labelEn: 'Unverifiable', labelZh: '无法核实' },
 };
 
-/**
- * Parse [CITATION:n|url|title|snippet|verdict] from message content.
- * Returns array of citation objects.
- */
-export function parseCitationMarkers(content) {
-    if (!content) return [];
-    const regex = /\[CITATION:(\d+)\|([^|]*)\|([^|]*)\|([^|]*)\|?([^\]]*)\]/g;
-    const results = [];
-    let match;
-    while ((match = regex.exec(content)) !== null) {
-        results.push({
-            n: match[1],
-            url: match[2]?.trim(),
-            title: match[3]?.trim(),
-            snippet: match[4]?.trim(),
-            verdict: match[5]?.trim() || null,
-        });
-    }
-    return results;
-}
-
 function getDomain(url) {
     try { return new URL(url).hostname.replace('www.', ''); } catch { return url; }
 }

@@ -1,4 +1,5 @@
 import { storage } from '../../services/storage/StorageService';
+import chatStorage from '../../services/storage/ChatStorageService';
 import { AIPipeline } from './AIPipeline';
 import { cleanMessageContent, callAI } from '../../features/chat/services/chatService';
 import { extractGroupMemoriesAsync } from '../memory/ContextCompressor'; // T12 Opt-3
@@ -98,6 +99,29 @@ export class ChatEngine {
         this._startGreetingChecker();
 
         this._notify();
+        this._hydrateChatsFromIndexedDB();
+    }
+
+    async _hydrateChatsFromIndexedDB() {
+        try {
+            await chatStorage.migrateFromLocalStorage(this.storageKeyCandidates);
+            const indexedChats = await chatStorage.loadChats();
+            if (!Array.isArray(indexedChats)) return;
+
+            const normalized = indexedChats
+                .map(chat => this._normalizeChat(chat))
+                .filter(Boolean);
+
+            const currentSnapshot = JSON.stringify(this.chats);
+            const nextSnapshot = JSON.stringify(normalized);
+            if (currentSnapshot !== nextSnapshot) {
+                this.chats = normalized;
+                storage.set(this.storageKey, normalized);
+                this._notify();
+            }
+        } catch {
+            // Non-fatal: localStorage path remains available.
+        }
     }
 
     _loadChatsWithMigration() {
@@ -337,6 +361,7 @@ export class ChatEngine {
             const idx = this.personas.findIndex(p => p.id === persona.id);
             this.personas[idx] = persona;
         }
+        this._notify();
     }
 
     /**
@@ -344,6 +369,7 @@ export class ChatEngine {
      */
     removePersona(personaId) {
         this.personas = this.personas.filter(p => p.id !== personaId);
+        this._notify();
     }
 
     /**
@@ -387,6 +413,7 @@ export class ChatEngine {
         clearTimeout(this._saveTimer);
         this._saveTimer = setTimeout(() => {
             storage.set(this.storageKey, this.chats);
+            chatStorage.saveChats(this.chats);
         }, 0);
     }
 
@@ -993,6 +1020,7 @@ Title:`;
             clearTimeout(this._saveTimer);
             this._saveTimer = null;
             storage.set(this.storageKey, this.chats);
+            chatStorage.saveChats(this.chats);
         }
         for (const timeoutId of this._scheduledMessages.values()) {
             clearTimeout(timeoutId);

@@ -23,7 +23,7 @@ function isValidIdiom(text) {
     return /^[\u4e00-\u9fff]{4}$/.test(text.trim());
 }
 
-export default function IdiomChain({ aiName, onClose, onAwardPoints }) {
+export default function IdiomChain({ aiName: _aiName, onClose, onAwardPoints: _onAwardPoints }) {
     const { t, language } = useLanguage();
     const { addPoints, updateTaskProgress } = useSocial();
     const [chain, setChain] = useState([]);
@@ -59,8 +59,8 @@ export default function IdiomChain({ aiName, onClose, onAwardPoints }) {
             const response = await callAI([
                 { role: 'system', content: '你是成语接龙游戏的裁判，只输出四字成语或认输，不输出其他任何内容。' },
                 { role: 'user', content: prompt }
-            ], { max_tokens: 20 });
-            const text = (response?.choices?.[0]?.message?.content || '').trim();
+            ], { maxTokens: 20 });
+            const text = String(response || '').trim();
             return text;
         } catch {
             return '认输';

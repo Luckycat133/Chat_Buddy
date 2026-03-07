@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Star, Users, ChevronRight, Settings, Sparkles, X, Clock } from 'lucide-react';
+import { Search, Star, Users, ChevronRight, Settings, X, Clock, UserPlus } from 'lucide-react';
 import { useChat } from '../features/chat/context/ChatContext';
 import { useFriend } from '../context/FriendContext';
 import { useLanguage } from '../context/LanguageContext';
 import FriendDetail from '../components/FriendDetail';
+import CharacterCreatorModal from '../components/CharacterCreatorModal';
 import { SkeletonList, SkeletonFriendCard } from '../components/Skeleton';
 import HighlightText from '../components/HighlightText';
 import { cn } from '../utils/cn';
+import { saveCustomPersona } from '../data/personas';
 
 export default function FriendsPage() {
     const navigate = useNavigate();
-    const { personas } = useChat();
+    const { personas, addPersona } = useChat();
     const { groups, getFriendMeta, getDisplayName, getStarredFriends, getFriendsInGroup, getFriendSubtitle } = useFriend();
     const { t, language } = useLanguage();
 
@@ -20,6 +22,7 @@ export default function FriendsPage() {
     const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'starred', or group id
     const [selectedFriend, setSelectedFriend] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [showCreator, setShowCreator] = useState(false);
 
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 300);
@@ -59,6 +62,17 @@ export default function FriendsPage() {
 
     const filteredFriends = getFilteredFriends();
     const starredCount = getStarredFriends(personas).length;
+    const handleCreatePersona = (persona) => {
+        saveCustomPersona({
+            ...persona,
+            agentType: 'social-companion'
+        });
+        addPersona?.({
+            ...persona,
+            agentType: 'social-companion'
+        });
+        setShowCreator(false);
+    };
 
     return (
         <div className="page-container custom-scrollbar">
@@ -85,6 +99,13 @@ export default function FriendsPage() {
                         className="btn btn-ghost btn-icon"
                     >
                         <Settings size={20} />
+                    </button>
+                    <button
+                        onClick={() => setShowCreator(true)}
+                        className="btn btn-ghost btn-icon ml-2"
+                        title={t('create_custom_character') || 'Create Custom Character'}
+                    >
+                        <UserPlus size={20} />
                     </button>
                 </div>
 
@@ -249,6 +270,14 @@ export default function FriendsPage() {
                 <FriendDetail
                     friend={selectedFriend}
                     onClose={() => setSelectedFriend(null)}
+                />
+            )}
+
+            {showCreator && (
+                <CharacterCreatorModal
+                    isOpen={showCreator}
+                    onClose={() => setShowCreator(false)}
+                    onCreate={handleCreatePersona}
                 />
             )}
         </div>

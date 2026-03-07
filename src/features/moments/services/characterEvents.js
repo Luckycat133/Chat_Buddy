@@ -12,8 +12,8 @@ const HOLIDAY_EVENTS = [
         date: '01-01',
         titleEn: "🎊 Happy New Year!",
         titleZh: "🎊 新年快乐！",
-        contentEn: (name) => `Wishing everyone a wonderful new year! May this year be full of growth, joy, and amazing conversations. 🌟 #NewYear`,
-        contentZh: (name) => `祝大家新年快乐！愿这一年充满成长、快乐和美好的对话。🌟 #新年`,
+        contentEn: () => `Wishing everyone a wonderful new year! May this year be full of growth, joy, and amazing conversations. 🌟 #NewYear`,
+        contentZh: () => `祝大家新年快乐！愿这一年充满成长、快乐和美好的对话。🌟 #新年`,
         location: 'Times Square',
         location_zh: '时代广场',
     },
@@ -21,8 +21,8 @@ const HOLIDAY_EVENTS = [
         date: '02-14',
         titleEn: "💝 Valentine's Day",
         titleZh: "💝 情人节",
-        contentEn: (name) => `Happy Valentine's Day! Love and connection are the most beautiful things in the world. 💕 #ValentinesDay`,
-        contentZh: (name) => `情人节快乐！爱与连接是世界上最美丽的事物。💕 #情人节`,
+        contentEn: () => `Happy Valentine's Day! Love and connection are the most beautiful things in the world. 💕 #ValentinesDay`,
+        contentZh: () => `情人节快乐！爱与连接是世界上最美丽的事物。💕 #情人节`,
         location: 'Paris, City of Love',
         location_zh: '爱之都巴黎',
     },
@@ -30,8 +30,8 @@ const HOLIDAY_EVENTS = [
         date: '10-31',
         titleEn: "🎃 Halloween Night!",
         titleZh: "🎃 万圣节夜！",
-        contentEn: (name) => `Boo! Happy Halloween everyone! What's everyone dressing up as tonight? 🦇🕷️ #Halloween #TrickOrTreat`,
-        contentZh: (name) => `嘿！万圣节快乐！大家今晚都扮成什么了？🦇🕷️ #万圣节 #不给糖就捣蛋`,
+        contentEn: () => `Boo! Happy Halloween everyone! What's everyone dressing up as tonight? 🦇🕷️ #Halloween #TrickOrTreat`,
+        contentZh: () => `嘿！万圣节快乐！大家今晚都扮成什么了？🦇🕷️ #万圣节 #不给糖就捣蛋`,
         location: 'Haunted Manor',
         location_zh: '鬼屋庄园',
     },
@@ -39,8 +39,8 @@ const HOLIDAY_EVENTS = [
         date: '12-25',
         titleEn: "🎄 Merry Christmas!",
         titleZh: "🎄 圣诞快乐！",
-        contentEn: (name) => `Merry Christmas! Wishing you warmth, happiness, and all the things you love this holiday season! 🎁❄️ #Christmas #HolidaySpirit`,
-        contentZh: (name) => `圣诞快乐！愿你在这个节日季节感受到温暖、幸福和所有你热爱的事物！🎁❄️ #圣诞节 #节日精神`,
+        contentEn: () => `Merry Christmas! Wishing you warmth, happiness, and all the things you love this holiday season! 🎁❄️ #Christmas #HolidaySpirit`,
+        contentZh: () => `圣诞快乐！愿你在这个节日季节感受到温暖、幸福和所有你热爱的事物！🎁❄️ #圣诞节 #节日精神`,
         location: 'North Pole',
         location_zh: '北极',
     },
@@ -69,8 +69,8 @@ const BIRTHDAY_CONTENT = {
         zh: "💪 又强了一年！刚刚做了一个生日健身——硬拉创新高！用增长肌肉开启人生新一年，没有比这更好的了！🏋️ #生日 #健身"
     },
     default: {
-        en: (name) => `🎉 Today is my special day! Another year, another adventure ahead. Thank you all for being part of my journey! 💫 #Birthday`,
-        zh: (name) => `🎉 今天是我的特别日子！又一年，又一段冒险在前。感谢大家陪伴我的旅程！💫 #生日`
+        en: () => `🎉 Today is my special day! Another year, another adventure ahead. Thank you all for being part of my journey! 💫 #Birthday`,
+        zh: () => `🎉 今天是我的特别日子！又一年，又一段冒险在前。感谢大家陪伴我的旅程！💫 #生日`
     }
 };
 

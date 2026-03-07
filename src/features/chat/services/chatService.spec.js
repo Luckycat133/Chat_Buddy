@@ -200,6 +200,71 @@ describe('chatService.callAI', () => {
     // Then
     expect(result).toBe('hello world');
   });
+
+  it('test_when_native_tools_are_provided_should_send_tools_and_tool_choice', async () => {
+    // Given
+    const capturedBodies = [];
+    server.use(
+      http.post('*/chat/completions', async ({ request }) => {
+        capturedBodies.push(await request.json());
+        return HttpResponse.json({
+          choices: [{ message: { content: 'ok' } }],
+        });
+      })
+    );
+
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'web_search',
+          description: 'Search web',
+          parameters: { type: 'object', properties: {} },
+        },
+      },
+    ];
+
+    // When
+    const result = await callAI(
+      [{ role: 'user', content: 'search this' }],
+      { tools, toolChoice: 'auto' }
+    );
+
+    // Then
+    expect(result).toBe('ok');
+    expect(capturedBodies[0].tools).toEqual(tools);
+    expect(capturedBodies[0].tool_choice).toBe('auto');
+  });
+
+  it('test_when_response_contains_native_tool_calls_should_return_native_tool_marker', async () => {
+    // Given
+    server.use(
+      http.post('*/chat/completions', () =>
+        HttpResponse.json({
+          choices: [
+            {
+              message: {
+                tool_calls: [
+                  {
+                    id: 'call_1',
+                    type: 'function',
+                    function: { name: 'execute_math', arguments: '{"expression":"1+1"}' },
+                  },
+                ],
+              },
+            },
+          ],
+        })
+      )
+    );
+
+    // When
+    const result = await callAI([{ role: 'user', content: 'use tool' }]);
+
+    // Then
+    expect(result).toContain('[TOOL_CALL_NATIVE:');
+    expect(result).toContain('"execute_math"');
+  });
 });
 
 describe('chatService.cleanMessageContent', () => {

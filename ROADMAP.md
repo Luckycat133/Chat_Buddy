@@ -103,10 +103,10 @@ v0.1.x  Foundation          │    T01 i18n  │  T02 API  │  T03 UI    │
 
 ### Future Improvements
 
-- [ ] Full OpenAI Chat Completions format:
+- [x] Full OpenAI Chat Completions format:
   - `tools` / `tool_choice` support
   - Streaming (`stream: true`) with SSE parsing
-- [ ] IndexedDB migration for large data (chat history, documents)
+- [x] IndexedDB migration for large data (chat history, documents)
 
 ### Key Files
 
@@ -287,10 +287,10 @@ src/config/
 
 ### Future Improvements
 
-- [ ] **AI "editing" state**
+- [x] **AI "editing" state**
   - Show "editing..." for 1-2s before long responses
   - Visual difference from "typing..." (e.g., pencil icon vs dots)
-- [ ] **Message recall simulation**
+- [x] **Message recall simulation**
   - Rare event (~5% chance): AI "unsends" a message, then sends a revised version
   - Shows "X recalled a message" notification
   - Adds organic feel to conversations
@@ -339,11 +339,11 @@ src/config/
 
 ### Future Improvements
 
-- [ ] **Custom User Avatar**
+- [x] **Custom User Avatar**
   - Upload from device
   - Crop/resize tool (circular crop)
   - Stored as compressed base64 or object URL
-- [ ] **Custom Character Creator** (planned, not for v0.2.2)
+- [x] **Custom Character Creator**
   - User defines: name, personality traits, interests, speaking style
   - Select base avatar or upload custom
   - Generate system prompt from traits
@@ -561,7 +561,8 @@ src/config/
 
 ### Skipped
 
-- [ ] **AI image generation** — depends on external image generation API (deferred)
+- [ ] Advanced post-processing for AI images (quality/style pipelines)
+- [x] **AI image generation** — OpenAI-compatible `/images/generations` attempt with fallback simulation mode
 
 ### Key Files
 
@@ -666,13 +667,14 @@ src/config/
 
 ### What's Done (Phase 2)
 
-- [x] **Hybrid search** — BM25 + Jaccard similarity (60/40 weight) in `ragUtils.js`; better recall over pure TF-IDF
+- [x] **Hybrid search** — BM25 + Jaccard + lightweight vector similarity in `ragUtils.js`; better recall over pure keyword matching
 - [x] **Knowledge base management UI** — `KnowledgeBasePanel.jsx`; list, preview, delete documents, RAG toggle, file upload, clear-all with double-tap confirm
 - [x] **Incremental document updates** — `addDocumentToIndex`/`removeDocumentFromIndex` in `ragUtils.js`; no full re-index required
 
 ### Future Improvements
 
-- [ ] **Vector embedding search** — integrate local embedding model API (deferred — requires external service)
+- [x] **Lightweight vector scoring** — local hash embedding + cosine similarity blended into hybrid ranking
+- [ ] **External embedding search** — integrate dedicated embedding model API for stronger semantic retrieval
 
 ### Key Files
 

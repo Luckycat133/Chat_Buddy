@@ -3,7 +3,7 @@
  * Manual model switching + token usage dashboard.
  * Reads/writes to localStorage apiConfig, shows usage stats.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Cpu, Check, ChevronRight, BarChart2, Zap } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
@@ -99,23 +99,18 @@ function formatNum(n) {
 
 export default function ModelSwitcherPanel({ onClose }) {
     const { t, language } = useLanguage();
-    const [currentModel, setCurrentModel] = useState('deepseek-chat');
-    const [customModel, setCustomModel] = useState('');
-    const [usage, setUsage] = useState({ totalInput: 0, totalOutput: 0, sessions: 0 });
-    const [saved, setSaved] = useState(false);
-
-    useEffect(() => {
+    const [currentModel, setCurrentModel] = useState(() => {
         const cfg = getApiConfig();
         const model = cfg.model || import.meta.env?.VITE_AI_MODEL || 'deepseek-chat';
-        const preset = MODEL_PRESETS.find(m => m.id === model);
-        if (preset) {
-            setCurrentModel(model);
-        } else {
-            setCurrentModel('custom');
-            setCustomModel(model);
-        }
-        setUsage(getUsageStats());
-    }, []);
+        return MODEL_PRESETS.some(m => m.id === model) ? model : 'custom';
+    });
+    const [customModel, setCustomModel] = useState(() => {
+        const cfg = getApiConfig();
+        const model = cfg.model || import.meta.env?.VITE_AI_MODEL || 'deepseek-chat';
+        return MODEL_PRESETS.some(m => m.id === model) ? '' : model;
+    });
+    const [usage] = useState(() => getUsageStats());
+    const [saved, setSaved] = useState(false);
 
     const handleSelect = (modelId) => {
         setCurrentModel(modelId);

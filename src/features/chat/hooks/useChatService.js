@@ -53,6 +53,8 @@ export function useChatService() {
         sendMessage: (chatId, content, quotedId) => chatEngine.sendMessage(chatId, content, 'user-me', quotedId),
         deleteMessage: (chatId, msgId) => chatEngine.deleteMessage(chatId, msgId),
         createChat: (name, pIds, avatar) => chatEngine.createChat(name, pIds, avatar),
+        addPersona: (persona) => chatEngine.addPersona(persona),
+        removePersona: (personaId) => chatEngine.removePersona(personaId),
         triggerGreeting: (chatId, msg, pId) => chatEngine.triggerGreeting(chatId, msg, pId), // T05: Exposed for debugging/testing
 
         // Legacy Parity

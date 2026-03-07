@@ -3,7 +3,6 @@ import { X, Trophy, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useSocial } from '../../../context/SocialContext';
 import { callAI } from '../services/chatService';
-import { cn } from '../../../utils/cn';
 
 const POINTS_PER_ROUND = 5;
 
@@ -32,7 +31,6 @@ export default function IdiomChainGame({ aiName, onClose, onResult }) {
     const [history, setHistory] = useState([]); // [{type:'user'|'ai', idiom, meaning?, valid}]
     const [loading, setLoading] = useState(false);
     const [gameOver, setGameOver] = useState(false);
-    const [won, setWon] = useState(false);
     const [totalPts, setTotalPts] = useState(0);
     const [requiredChar, setRequiredChar] = useState('');
     const inputRef = useRef(null);
@@ -141,7 +139,6 @@ export default function IdiomChainGame({ aiName, onClose, onResult }) {
         setHistory([]);
         setLoading(false);
         setGameOver(false);
-        setWon(false);
         setTotalPts(0);
         setRequiredChar('');
         setTimeout(() => inputRef.current?.focus(), 100);
@@ -150,7 +147,6 @@ export default function IdiomChainGame({ aiName, onClose, onResult }) {
     const handleFinish = () => {
         if (rounds > 0) {
             updateTaskProgress('task_game', 1);
-            setWon(true);
             onResult?.({ result: 'win', rounds, points: totalPts });
         }
         onClose();

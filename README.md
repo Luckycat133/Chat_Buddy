@@ -147,6 +147,33 @@ cp .env.example .env
 npm run dev
 ```
 
+### Native Dependency Troubleshooting (macOS Apple Silicon)
+
+If you see errors such as:
+- `Cannot find module @rollup/rollup-darwin-arm64`
+- `Cannot find native binding` (`@tailwindcss/oxide`)
+- `Cannot find module ../lightningcss.darwin-arm64.node`
+- `The service was stopped` (`esbuild`)
+
+Run:
+
+```bash
+rm -rf node_modules/@rollup/rollup-darwin-arm64 \
+       node_modules/lightningcss \
+       node_modules/lightningcss-darwin-arm64 \
+       node_modules/@tailwindcss/oxide \
+       node_modules/@tailwindcss/oxide-darwin-arm64
+npm install
+```
+
+Then verify:
+
+```bash
+npm run lint
+npm run test
+npm run build
+```
+
 ### Environment Variables
 
 | Variable          | Required | Description                                     |
@@ -195,7 +222,7 @@ npm run dev
 - Animations: Framer Motion
 - State: Clean Architecture (ChatEngine + Context)
 - AI: DeepSeek / Perplexity / OpenAI-compatible API
-- Storage: LocalStorage (settings, chats) + IndexedDB (custom background images)
+- Storage: LocalStorage (light settings) + IndexedDB (chat/doc primary data, media/background assets)
 
 ### Project Structure
 
