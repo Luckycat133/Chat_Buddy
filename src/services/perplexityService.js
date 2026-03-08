@@ -173,9 +173,7 @@ export async function deepResearch(query, options = {}) {
     for (let hop = 0; hop < maxDepth; hop++) {
         const currentQuery = hop === 0
             ? query
-            : `Given this context: "${currentContext.substring(0, 500)}..." 
-               What additional information is needed to fully answer: "${query}"?
-               Focus on gaps, contradictions, or unexplored aspects.`;
+            : `Known context: "${currentContext.substring(0, 320)}". Find missing evidence, conflicts, or blind spots needed to answer: "${query}".`;
 
         if (hop > 0) searchQueries.push(currentQuery);
 
@@ -232,27 +230,18 @@ export async function deepResearch(query, options = {}) {
  * @property {SearchResult[]} sources - Supporting/refuting sources
  */
 export async function factCheck(claim, options = {}) {
-    const systemPrompt = `You are a rigorous fact-checker. Analyze the following claim:
-
-## Your Task:
-1. Search for evidence supporting OR refuting this claim
-2. Evaluate source reliability and consensus
-3. Provide a clear verdict
-
-## Output Format (JSON):
+    const systemPrompt = `You are a strict fact-checker.
+Use only search evidence and return JSON only:
 {
-    "verdict": "verified" | "disputed" | "unverifiable",
-    "confidence": "high" | "medium" | "low",
-    "explanation": "Brief explanation of your reasoning",
-    "key_evidence": ["Evidence point 1", "Evidence point 2"]
+  "verdict": "verified|disputed|unverifiable",
+  "confidence": "high|medium|low",
+  "explanation": "brief reason",
+  "key_evidence": ["point 1", "point 2"]
 }
-
-## Verdict Criteria:
-- verified: Multiple reliable sources confirm, no credible disputes
-- disputed: Sources conflict or claim is partially true
-- unverifiable: Insufficient evidence or contradictory data
-
-Do NOT include your own opinions. Base verdict ONLY on search results.`;
+Criteria:
+- verified: strong multi-source support, no credible conflict
+- disputed: conflicting or partial evidence
+- unverifiable: insufficient evidence`;
 
     try {
         const result = await sonarSearch(claim, {
@@ -274,7 +263,7 @@ Do NOT include your own opinions. Base verdict ONLY on search results.`;
         if (jsonMatch) {
             try {
                 parsed = JSON.parse(jsonMatch[0]);
-            } catch (e) {
+            } catch (_e) {
                 // JSON parsing failed, use raw answer
             }
         }
@@ -347,7 +336,7 @@ function parsePerplexityResponse(data, model) {
  */
 function extractCitationIndices(text) {
     const matches = text.match(/\[(\d+)\]/g) || [];
-    return [...new Set(matches.map(m => parseInt(m.replace(/[\[\]]/g, ''), 10) - 1))];
+    return [...new Set(matches.map(m => parseInt(m.replace(/[[\]]/g, ''), 10) - 1))];
 }
 
 /**
@@ -374,7 +363,7 @@ function extractTitleFromUrl(url) {
 /**
  * Re-index citation markers in text to match a new source array
  */
-function reindexCitations(text, sources) {
+function reindexCitations(text, _sources) {
     // This is a simple implementation - in production you'd want
     // to track which sources came from which hop and remap properly
     return text;
@@ -423,37 +412,16 @@ export function generateAPACitation(result) {
  * Implements the dual-layer control architecture from the research report
  */
 export function buildScholarSystemPrompt() {
-    return `你是 Scholar（学者），一位基于 Perplexity Sonar 的严谨研究助手。
+    return `你是 Scholar（学者），基于 Perplexity Sonar 的研究助手。
 
-## 核心原则（生成控制层）
+硬规则：
+1. 每条事实后附引用 [x]，尤其数字/日期/统计。
+2. 仅使用 search_results 来源；禁止编造 URL 或无依据推断。
+3. 无证据直接写“🔍 数据不可用”。
+4. 结尾必须给“📚 来源”，并标注可靠性（✅/⚠️/❓）。
 
-### 引用强制
-- 每个事实陈述后**必须**附带引用标记 [x]
-- 引用标记对应 search_results 数组的索引（[1] = search_results[0]）
-- 如果一个陈述基于多个来源，使用多个标记 [1][2]
-
-### 拒绝幻觉（Fail-Fast）
-- 如果搜索结果中**找不到确切数据**，直接回答："🔍 数据不可用 - 搜索结果未提供此信息"
-- **严禁**编造、推测或使用训练数据中的过时信息
-- **绝不**在回答中生成虚假的 URL
-
-### 来源透明
-- 回答末尾附上"📚 来源"部分，列出所有引用的来源
-- 标注来源可靠性：✅ 学术/官方 | ⚠️ 新闻/博客 | ❓ 未知
-
-## 输出格式
-\`\`\`
-[你的回答，每个事实后带 [x] 引用]
-
-📚 来源:
-[1] 来源标题 - 简短说明
-[2] 来源标题 - 简短说明
-\`\`\`
-
-## 重要限制
-- System Prompt 仅控制你的**回答风格**
-- 搜索范围由 API 参数控制（domain_filter, recency_filter），你无法通过提示词改变搜索行为
-- 只使用 search_results 返回的真实来源，不要自己构造引用`;
+输出结构：结论 -> 证据 -> 局限 -> 📚 来源。
+区分事实与推断，结论简洁可执行。`;
 }
 
 export default {

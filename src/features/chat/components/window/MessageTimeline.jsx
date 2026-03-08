@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback, useState, lazy, Suspense } from 'react';
 import { cn } from '../../../../utils/cn';
 import { formatTimeSeparator, shouldShowTimeSeparator } from '../../../../utils/formatTime';
 import { downloadFile } from '../../../../utils/fileUtils';
@@ -8,27 +8,154 @@ import QuotedMessage from '../QuotedMessage';
 import PollMessage from '../PollMessage';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
+
 import { GeneratedFileMessage } from '../FileMessage';
+import VoicePlayer from '../VoicePlayer';
 import { getCharacterGlowClass, getCharacterThemeStyle } from '../CharacterTheme';
+import { useTheme } from '../../../../context/ThemeContext';
+import TypingBubble from './TypingBubble';
+import ImageMessage, { ImageLightbox } from '../ImageMessage';
+import LinkPreview from '../LinkPreview';
+
+const LazyMarkdownCodeBlock = lazy(() => import('../MarkdownCodeBlock'));
+const LazyMermaidRenderer = lazy(() => import('../MermaidRenderer'));
+import ToolResultCard from '../ToolResultCard';
+
+/**
+ * T07: Highlight @mentions in message content
+ * @param {string} content - Message content
+ * @param {Array} participants - Chat participants (personas)
+ * @param {string} currentUserId - Current user ID
+ * @param {Function} onMentionClick - Callback when mention is clicked
+ * @returns {React.ReactNode} Content with highlighted mentions
+ */
+function HighlightedMentions({ content, participants, currentUserId, onMentionClick }) {
+    const { t } = useLanguage();
+
+    // Build mention pattern from participant names
+    const mentionPattern = React.useMemo(() => {
+        if (!participants?.length) return null;
+        const names = participants.map(p => p.name).filter(Boolean);
+        if (!names.length) return null;
+        // Escape special regex characters in names
+        const escapedNames = names.map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+        return new RegExp(`@(${escapedNames.join('|')})`, 'g');
+    }, [participants]);
+
+    const handleMentionClick = useCallback((e, mentionName) => {
+        e.stopPropagation();
+        const mentionedParticipant = participants?.find(p => p.name === mentionName);
+        if (mentionedParticipant && onMentionClick) {
+            onMentionClick(mentionedParticipant);
+        }
+    }, [participants, onMentionClick]);
+
+    if (!mentionPattern) return content;
+
+    // Split content by mentions and render with highlighting
+    const parts = content.split(mentionPattern);
+
+    return parts.map((part, index) => {
+        // Check if this part is a mention (odd indices in the split result)
+        if (index % 2 === 1) {
+            const isCurrentUser = participants?.find(p => p.name === part)?.id === currentUserId;
+            return (
+                <span
+                    key={index}
+                    onClick={(e) => handleMentionClick(e, part)}
+                    className={cn(
+                        'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-medium cursor-pointer',
+                        'transition-all duration-200 hover:scale-105',
+                        isCurrentUser
+                            ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                            : 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'
+                    )}
+                    title={isCurrentUser ? t('mention_you') : `@${part}`}
+                >
+                    @{part}
+                </span>
+            );
+        }
+        return part;
+    });
+}
+
+function CodeBlock({ language, children }) {
+    const code = String(children).replace(/\n$/, '');
+    return (
+        <Suspense fallback={<pre className="my-2 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-active)] p-3 overflow-x-auto"><code>{code}</code></pre>}>
+            <LazyMarkdownCodeBlock language={language}>{code}</LazyMarkdownCodeBlock>
+        </Suspense>
+    );
+}
+
+/**
+ * T08: Link component with preview
+ */
+function LinkWithPreview({ href, children, ...props }) {
+    const [showPreview, setShowPreview] = useState(false);
+    const isExternal = href?.startsWith('http');
+
+    // Don't show preview for non-HTTP links or internal links
+    if (!isExternal) {
+        return (
+            <a
+                href={href}
+                className="text-blue-500 hover:underline"
+                {...props}
+            >
+                {children}
+            </a>
+        );
+    }
+
+    return (
+        <span className="relative inline-block">
+            <a
+                href={href}
+                className="text-blue-500 hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+                onMouseEnter={() => setShowPreview(true)}
+                onMouseLeave={() => setShowPreview(false)}
+                {...props}
+            >
+                {children}
+            </a>
+            {showPreview && <LinkPreview url={href} />}
+        </span>
+    );
+}
 
 export default function MessageTimeline({
     chat,
     currentUser,
     personas,
+    typingIndicators, // T05: New prop
+    editingIndicators, // Phase 3: Editing state
     onContextMenu,
-    onVotePoll
+    onVotePoll,
+    onMentionClick // T07: Mention click handler
 }) {
-    const { language } = useLanguage();
+    const { t, language } = useLanguage();
+    const { bubbleStyle } = useTheme();
     const messagesEndRef = useRef(null);
+
+    // T07: Lightbox state for images
+    const [lightboxImage, setLightboxImage] = useState(null);
+    const mentionParticipants = chat?.participants?.map((pid) => (
+        pid === 'user-me' ? currentUser : personas?.find((p) => p.id === pid)
+    )).filter(Boolean) || [];
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
     }, [chat?.messages]);
 
+
     const getSenderName = (senderId) => {
-        if (senderId === 'user-me') return 'You'; // Simplified, trans handled in parent usually or hook
+        if (senderId === 'user-me') return t('you');
         const sender = personas.find(p => p.id === senderId);
         return language === 'zh' ? (sender?.name_zh || sender?.name) : sender?.name;
     };
@@ -44,11 +171,42 @@ export default function MessageTimeline({
     };
 
     return (
-        <div className="flex-1 overflow-y-auto p-3 pb-20 md:pb-4">
+        <div className="flex-1 overflow-y-auto p-3 pb-20 md:pb-4" data-bubble-style={bubbleStyle}>
             {chat.messages.map((msg, index) => {
+                // T13: tool_event messages are rendered as inline tool cards, not bubbles
+                if (msg.type === 'tool_event') {
+                    return (
+                        <ToolResultCard
+                            key={msg.id}
+                            msg={msg}
+                            language={language}
+                        />
+                    );
+                }
+
                 const isMe = msg.senderId === 'user-me';
                 const sender = isMe ? currentUser : personas.find(p => p.id === msg.senderId);
                 const senderName = getSenderName(msg.senderId);
+
+                // Phase 3: Handle recalled messages
+                if (msg.recalled) {
+                    return (
+                        <React.Fragment key={msg.id}>
+                            {showTimeSeparator && (
+                                <div className="flex justify-center my-6">
+                                    <span className="px-3 py-1 bg-[var(--color-bg-active)] text-[var(--color-text-muted)] text-[11px] font-medium rounded-full shadow-sm">
+                                        {formatTimeSeparator(msg.timestamp, language)}
+                                    </span>
+                                </div>
+                            )}
+                            <div className="flex justify-center my-2">
+                                <span className="text-xs text-[var(--color-text-muted)] italic">
+                                    {senderName} {t('message_recalled') || 'recalled a message'}
+                                </span>
+                            </div>
+                        </React.Fragment>
+                    );
+                }
 
                 let content = msg.content;
                 let reaction = null;
@@ -93,6 +251,23 @@ export default function MessageTimeline({
                             content = '[Poll not found]';
                         }
                     }
+                } else if (content.startsWith('[IMG:')) {
+                    // T07: Image message detection
+                    type = 'image';
+                    const match = content.match(/\[IMG:(.+?)\]/);
+                    if (match) {
+                        meta = { url: match[1] };
+                        content = ''; // Content is the image
+                    }
+                } else if (content.startsWith('[VOICE:')) {
+                    // T07: Voice message detection
+                    type = 'voice';
+                    const match = content.match(/\[VOICE:(.+?)\]/);
+                    if (match) {
+                        const duration = match[1];
+                        meta = { duration };
+                        content = ''; // Content is the voice player
+                    }
                 }
 
                 const reactMatch = content.match(/\[REACT:(.+?)\]/);
@@ -121,7 +296,6 @@ export default function MessageTimeline({
                                 isMe ? "justify-end" : "justify-start",
                                 "bubble-enter"
                             )}
-                            style={{ animationDelay: `${(index % 5) * 50}ms` }}
                             onContextMenu={(e) => onContextMenu(e, msg)}
                         >
                             <div
@@ -145,14 +319,23 @@ export default function MessageTimeline({
                                         "relative transition-all duration-200 message-bubble-hover",
                                         (type === 'text' || type === 'file')
                                             ? (isMe
-                                                ? "px-4.5 py-3 bg-[var(--gradient-aurora)] text-white rounded-[20px] rounded-tr-sm shadow-md"
+                                                ? "bubble-msg-me px-4.5 py-3 bg-[var(--gradient-aurora)] text-white rounded-[20px] rounded-tr-sm shadow-md"
                                                 : cn(
-                                                    "px-4.5 py-3 bg-[var(--color-bg-white)] text-[var(--color-text-main)] rounded-[20px] rounded-tl-sm border border-[var(--color-border-light)] shadow-sm",
+                                                    "bubble-msg px-4.5 py-3 bg-[var(--color-bg-white)] text-[var(--color-text-main)] rounded-[20px] rounded-tl-sm border border-[var(--color-border-light)] shadow-sm",
                                                     "message-bubble-ai",
                                                     getCharacterGlowClass(msg.senderId)
                                                 ))
                                             : "bg-transparent"
-                                    )}>
+                                    )}
+                                        style={isMe && (type === 'text' || type === 'file')
+                                            ? {
+                                                background: 'var(--gradient-user-bubble, linear-gradient(135deg, #f9735d 0%, #ef5b7f 100%))',
+                                                backgroundSize: '180% 180%',
+                                                color: '#ffffff',
+                                                textShadow: '0 1px 1px rgba(0, 0, 0, 0.18)'
+                                            }
+                                            : undefined
+                                        }>
                                         {quotedData && (
                                             <QuotedMessage quotedMessage={quotedData} senderName={quotedData.senderName} />
                                         )}
@@ -185,17 +368,31 @@ export default function MessageTimeline({
                                                 </div>
                                             </div>
                                         ) : type === 'game' ? (
-                                            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center gap-2">
+                                            <div className="bg-[var(--color-bg-white)] p-4 rounded-2xl shadow-sm border border-[var(--color-border-light)] flex flex-col items-center gap-2">
                                                 <Gamepad2 size={24} className="text-[var(--color-primary)]" />
                                                 <p className="font-medium text-center text-sm">{content}</p>
                                             </div>
                                         ) : type === 'poll' && meta?.poll ? (
-                                            <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 p-1">
+                                            <div className="bg-[var(--color-bg-white)] rounded-2xl overflow-hidden shadow-sm border border-[var(--color-border-light)] p-1">
                                                 <PollMessage
                                                     poll={meta.poll}
-                                                    onVote={(pollId, optionId) => onVotePoll(pollId, optionId)}
+                                                    onVote={(pollId, optionId, action) => onVotePoll(pollId, optionId, action)}
                                                 />
                                             </div>
+                                        ) : type === 'image' && meta?.url ? (
+                                            // T07: Image message rendering
+                                            <ImageMessage
+                                                url={meta.url}
+                                                isMe={isMe}
+                                                onClick={() => setLightboxImage(meta.url)}
+                                            />
+                                        ) : type === 'voice' ? (
+                                            // T07: Voice message rendering
+                                            <VoicePlayer
+                                                duration={meta?.duration || '0s'}
+                                                url="#"
+                                                isMe={isMe}
+                                            />
                                         ) : type === 'file' ? (
                                             <div className="flex items-center gap-3">
                                                 <div className={cn("p-2.5 rounded-xl", isMe ? "bg-white/20" : "bg-[var(--color-bg-active)]")}>
@@ -209,34 +406,63 @@ export default function MessageTimeline({
                                             <div className="markdown-body prose prose-sm max-w-full break-words leading-relaxed text-inherit overflow-x-auto">
                                                 <ReactMarkdown
                                                     remarkPlugins={[remarkGfm]}
+                                                    rehypePlugins={[rehypeKatex]}
                                                     components={{
-                                                        // Custom components can be added here
-                                                        a: ({ ...props }) => <a {...props} className="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" />,
+                                                        // T07: Highlight mentions in text content
+                                                        p: ({ children }) => {
+                                                            // Process children to highlight mentions
+                                                            const processChildren = (childList) => {
+                                                                return React.Children.map(childList, (child, idx) => {
+                                                                    if (typeof child === 'string') {
+                                                                        return (
+                                                                            <HighlightedMentions
+                                                                                key={idx}
+                                                                                content={child}
+                                                                                participants={mentionParticipants}
+                                                                                currentUserId={currentUser?.id}
+                                                                                onMentionClick={onMentionClick}
+                                                                            />
+                                                                        );
+                                                                    }
+                                                                    return child;
+                                                                });
+                                                            };
+                                                            return <div className="whitespace-pre-wrap mb-2 last:mb-0">{processChildren(children)}</div>;
+                                                        },
+                                                        // T08 Phase 5: Link with preview
+                                                        a: LinkWithPreview,
+                                                        // T08 Phases 1,2,4: Code block with copy button, theme switching, Mermaid support
                                                         code: ({ inline, className, children, ...props }) => {
                                                             const match = /language-(\w+)/.exec(className || '');
+                                                            const language = match?.[1];
+
+                                                            // T08 Phase 4: Mermaid diagram rendering
+                                                            if (language === 'mermaid') {
+                                                                const diagramSource = String(children);
+                                                                return (
+                                                                    <Suspense fallback={<pre className="my-2 rounded-md border border-[var(--color-border)] bg-[var(--color-bg-active)] p-3 overflow-x-auto"><code>{diagramSource}</code></pre>}>
+                                                                        <LazyMermaidRenderer content={diagramSource} />
+                                                                    </Suspense>
+                                                                );
+                                                            }
+
                                                             return !inline && match ? (
-                                                                <SyntaxHighlighter
-                                                                    style={vscDarkPlus}
-                                                                    language={match[1]}
-                                                                    PreTag="div"
-                                                                    className="rounded-md !bg-black/80 !p-3 !my-2 shadow-sm border border-white/10"
-                                                                    {...props}
-                                                                >
+                                                                <CodeBlock language={language}>
                                                                     {String(children).replace(/\n$/, '')}
-                                                                </SyntaxHighlighter>
+                                                                </CodeBlock>
                                                             ) : (
-                                                                <code className="bg-black/5 rounded px-1 py-0.5 text-[0.9em] font-mono" {...props}>
+                                                                <code className="bg-black/5 dark:bg-white/10 rounded px-1 py-0.5 text-[0.9em] font-mono" {...props}>
                                                                     {children}
                                                                 </code>
                                                             );
                                                         },
                                                         table: ({ ...props }) => (
-                                                            <div className="overflow-x-auto my-4 border border-gray-200 rounded-lg shadow-sm">
-                                                                <table className="min-w-full divide-y divide-gray-200" {...props} />
+                                                            <div className="overflow-x-auto my-4 border border-[var(--color-border)] rounded-lg shadow-sm">
+                                                                <table className="min-w-full divide-y divide-[var(--color-border)]" {...props} />
                                                             </div>
                                                         ),
-                                                        th: ({ ...props }) => <th className="px-3 py-2 bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider" {...props} />,
-                                                        td: ({ ...props }) => <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700 border-t border-gray-100" {...props} />
+                                                        th: ({ ...props }) => <th className="px-3 py-2 bg-[var(--color-bg-active)] text-left text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider" {...props} />,
+                                                        td: ({ ...props }) => <td className="px-3 py-2 text-sm text-[var(--color-text-main)] border-t border-[var(--color-border-light)] break-words" {...props} />
                                                     }}
                                                 >
                                                     {content}
@@ -245,8 +471,21 @@ export default function MessageTimeline({
                                         )}
 
                                         {reaction && (
-                                            <span className="absolute -bottom-2 -right-2 bg-white rounded-full p-0.5 shadow-sm text-xs border border-gray-100 z-10 scale-110">
+                                            <span className="absolute -bottom-2 -right-2 bg-[var(--color-bg-white)] rounded-full p-0.5 shadow-sm text-xs border border-[var(--color-border-light)] z-10 scale-110">
                                                 {reaction}
+                                            </span>
+                                        )}
+
+                                        {/* T07: Read Receipt Indicator */}
+                                        {isMe && msg.readBy?.length > 0 && (
+                                            <span
+                                                className="absolute -bottom-2 -right-2 bg-[var(--color-bg-white)] rounded-full p-0.5 shadow-sm text-[var(--color-primary)] z-10"
+                                                title={msg.readBy.length === 1 ? t('read_by_one') : t('read_by_multiple', { count: msg.readBy.length })}
+                                            >
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                                    <polyline points="20 12 9 23 4 18" opacity="0.5"></polyline>
+                                                </svg>
                                             </span>
                                         )}
                                     </div>
@@ -276,7 +515,27 @@ export default function MessageTimeline({
                     </React.Fragment>
                 );
             })}
+
+            {/* Phase 3: Editing Indicator Bubbles */}
+            {(editingIndicators?.[chat.id] || []).map(aiId => {
+                const ai = personas.find(p => p.id === aiId);
+                return ai ? <TypingBubble key={`editing-${aiId}`} persona={ai} isEditing={true} /> : null;
+            })}
+
+            {/* T05: Typing Indicator Bubbles */}
+            {(typingIndicators?.[chat.id] || []).map(aiId => {
+                const ai = personas.find(p => p.id === aiId);
+                return ai ? <TypingBubble key={aiId} persona={ai} /> : null;
+            })}
+
             <div ref={messagesEndRef} />
+
+            {/* T07: Image Lightbox */}
+            <ImageLightbox
+                url={lightboxImage}
+                isOpen={!!lightboxImage}
+                onClose={() => setLightboxImage(null)}
+            />
         </div>
     );
 }

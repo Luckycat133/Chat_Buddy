@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { X, Plus, Check, BarChart3, Users } from 'lucide-react';
+import { X, Plus, Check, BarChart3, Users, Clock } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
 
 export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
-    const { language } = useLanguage();
+    const { t } = useLanguage();
     const [question, setQuestion] = useState('');
     const [options, setOptions] = useState(['', '']);
     const [isMultiChoice, setIsMultiChoice] = useState(false);
     const [isAnonymous, setIsAnonymous] = useState(false);
+    const [expiresIn, setExpiresIn] = useState(''); // Hours
 
     const addOption = () => {
         if (options.length < 10) {
@@ -43,6 +44,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
             })),
             isMultiChoice,
             isAnonymous,
+            expiresAt: expiresIn ? new Date(Date.now() + parseInt(expiresIn) * 60 * 60 * 1000).toISOString() : null,
             createdAt: new Date().toISOString(),
             chatId
         };
@@ -54,7 +56,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
     return (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
             <div
-                className="bg-white rounded-xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden animate-scale-in"
+                className="bg-[var(--color-bg-white)] rounded-xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -64,7 +66,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
                     </button>
                     <h3 className="font-medium text-[17px] flex items-center gap-2">
                         <BarChart3 size={20} />
-                        {language === 'zh' ? '创建投票' : 'Create Poll'}
+                        {t('poll_create_title')}
                     </h3>
                     <button
                         onClick={handleCreate}
@@ -76,7 +78,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
                                 : "bg-gray-200 text-gray-400"
                         )}
                     >
-                        {language === 'zh' ? '创建' : 'Create'}
+                        {t('poll_create_btn')}
                     </button>
                 </div>
 
@@ -85,13 +87,13 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
                     {/* Question */}
                     <div className="mb-4">
                         <label className="text-sm font-medium text-[var(--color-text-muted)] mb-1 block">
-                            {language === 'zh' ? '问题' : 'Question'}
+                            {t('poll_question_label')}
                         </label>
                         <input
                             type="text"
                             value={question}
                             onChange={(e) => setQuestion(e.target.value)}
-                            placeholder={language === 'zh' ? '输入投票问题...' : 'Enter your question...'}
+                            placeholder={t('poll_question_placeholder')}
                             maxLength={100}
                             className="w-full px-4 py-3 bg-[var(--color-bg-app)] rounded-lg text-[15px] outline-none focus:ring-2 ring-[var(--color-primary)]/30"
                         />
@@ -100,7 +102,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
                     {/* Options */}
                     <div className="mb-4">
                         <label className="text-sm font-medium text-[var(--color-text-muted)] mb-1 block">
-                            {language === 'zh' ? '选项' : 'Options'}
+                            {t('poll_options_label')}
                         </label>
                         <div className="space-y-2">
                             {options.map((option, index) => (
@@ -112,7 +114,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
                                         type="text"
                                         value={option}
                                         onChange={(e) => updateOption(index, e.target.value)}
-                                        placeholder={`${language === 'zh' ? '选项' : 'Option'} ${index + 1}`}
+                                        placeholder={t('poll_option_n_placeholder', { n: index + 1 })}
                                         maxLength={50}
                                         className="flex-1 px-3 py-2 bg-[var(--color-bg-app)] rounded-lg text-[14px] outline-none focus:ring-2 ring-[var(--color-primary)]/30"
                                     />
@@ -133,7 +135,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
                                 className="mt-2 flex items-center gap-2 text-[var(--color-primary)] text-sm hover:bg-[var(--color-primary)]/10 px-3 py-2 rounded-lg transition-colors"
                             >
                                 <Plus size={18} />
-                                {language === 'zh' ? '添加选项' : 'Add option'}
+                                {t('poll_add_option')}
                             </button>
                         )}
                     </div>
@@ -144,7 +146,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
                             <div className="flex items-center gap-3">
                                 <Check size={20} className="text-[var(--color-text-muted)]" />
                                 <span className="text-[14px]">
-                                    {language === 'zh' ? '允许多选' : 'Allow multiple choices'}
+                                    {t('poll_allow_multi')}
                                 </span>
                             </div>
                             <input
@@ -159,7 +161,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
                             <div className="flex items-center gap-3">
                                 <Users size={20} className="text-[var(--color-text-muted)]" />
                                 <span className="text-[14px]">
-                                    {language === 'zh' ? '匿名投票' : 'Anonymous voting'}
+                                    {t('poll_anon_voting')}
                                 </span>
                             </div>
                             <input
@@ -169,6 +171,30 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
                                 className="w-5 h-5 rounded accent-[var(--color-primary)]"
                             />
                         </label>
+
+                        {/* T07: Timer/Expiration */}
+                        <div className="p-3 bg-[var(--color-bg-app)] rounded-lg">
+                            <div className="flex items-center gap-3 mb-2">
+                                <Clock size={20} className="text-[var(--color-text-muted)]" />
+                                <span className="text-[14px]">
+                                    {t('poll_timer_label')}
+                                </span>
+                            </div>
+                            <input
+                                type="number"
+                                min="0"
+                                max="168"
+                                value={expiresIn}
+                                onChange={(e) => setExpiresIn(e.target.value)}
+                                placeholder={t('poll_no_expiration')}
+                                className="w-full px-3 py-2 bg-[var(--color-bg-white)] rounded-lg text-[14px] outline-none focus:ring-2 ring-[var(--color-primary)]/30"
+                            />
+                            {expiresIn && (
+                                <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                                    {t('poll_ends_in_hours', { hours: expiresIn })}
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>

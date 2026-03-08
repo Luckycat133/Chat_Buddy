@@ -1,38 +1,76 @@
-import React, { useState, useEffect, Suspense } from 'react';
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import React, { Suspense, useRef, useEffect, useState, useMemo } from 'react';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { MessageSquare, Users, Settings, Camera, Bot, Sparkles } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useLanguage } from '../context/LanguageContext';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { SHORTCUT_DEFINITIONS, formatShortcut } from '../config/shortcuts';
+import { useOnboarding } from '../hooks/useOnboarding';
+import KeyboardShortcutsModal from './KeyboardShortcutsModal';
+import OnboardingTutorial from './OnboardingTutorial';
+import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
 
 const BackgroundLayer = React.lazy(() => import('../features/background/BackgroundLayer'));
 
 export default function Layout() {
     const { t } = useLanguage();
     const location = useLocation();
-    const [pageTransition, setPageTransition] = useState(false);
+    const navigate = useNavigate();
+    const mainRef = useRef(null);
+    const prevPathRef = useRef(location.pathname);
+    const [showShortcuts, setShowShortcuts] = useState(false);
+    const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+    const onboarding = useOnboarding();
 
-    // Simple page transition effect
     useEffect(() => {
-        setPageTransition(true);
-        const timer = setTimeout(() => setPageTransition(false), 350);
-        return () => clearTimeout(timer);
-    }, [location.pathname]);
+        if (prevPathRef.current !== location.pathname && mainRef.current) {
+            const main = mainRef.current;
+            main.classList.add('page-transitioning');
+
+            const timer = setTimeout(() => {
+                main.classList.remove('page-transitioning');
+            }, 280);
+
+            prevPathRef.current = location.pathname;
+
+            return () => {
+                clearTimeout(timer);
+                main.classList.remove('page-transitioning');
+            };
+        }
+    }, [location]);
+
+    // Keyboard shortcuts
+    const shortcuts = useMemo(() => [
+        ...SHORTCUT_DEFINITIONS.filter(s => s.route).map(s => ({
+            key: s.key, ctrl: true, action: () => navigate(s.route),
+        })),
+        { key: 'k', ctrl: true, action: () => setShowGlobalSearch(true) },
+        { key: '/', ctrl: true, action: () => setShowShortcuts(prev => !prev) },
+        { key: 'Escape', ctrl: false, action: () => {
+            if (showGlobalSearch) setShowGlobalSearch(false);
+            else if (showShortcuts) setShowShortcuts(false);
+            else window.history.back();
+        } },
+    ], [navigate, showShortcuts, showGlobalSearch]);
+
+    useKeyboardShortcuts(shortcuts);
 
     return (
-        <div className="flex h-screen bg-[var(--color-bg-app)] text-[var(--color-text-main)] overflow-hidden font-sans relative">
+        <div className="flex h-screen h-[100dvh] min-h-0 bg-[var(--color-bg-app)] text-[var(--color-text-main)] overflow-hidden font-sans relative">
             {/* Global Background Layer */}
             <Suspense fallback={null}>
                 <BackgroundLayer />
             </Suspense>
 
             {/* Ambient Backlight (Aurora) for depth */}
-            <div className="absolute top-0 left-0 w-full h-[60vh] opacity-40 pointer-events-none"
+            <div aria-hidden="true" className="absolute top-0 left-0 w-full h-[60vh] opacity-40 pointer-events-none"
                 style={{ background: 'radial-gradient(circle at 10% 10%, var(--color-primary-softer), transparent 70%)' }}></div>
-            <div className="absolute bottom-0 right-0 w-full h-[60vh] opacity-30 pointer-events-none"
+            <div aria-hidden="true" className="absolute bottom-0 right-0 w-full h-[60vh] opacity-30 pointer-events-none"
                 style={{ background: 'radial-gradient(circle at 90% 90%, var(--color-accent-lavender), transparent 70%)' }}></div>
 
             {/* Sidebar - Desktop - Floating Vertical Island */}
-            <aside className="hidden md:flex flex-col items-center py-6 my-4 ml-4 z-30 relative 
+            <aside aria-label="Sidebar" className="hidden md:flex flex-col items-center py-6 my-4 ml-4 z-30 relative
                 w-[88px] rounded-[var(--radius-xl)] glass-crystal shadow-floating
                 transition-transform duration-500 ease-out hover:scale-[1.01]">
 
@@ -67,36 +105,42 @@ export default function Layout() {
                     </div>
                 </div>
 
-                <nav className="flex-1 flex flex-col items-center gap-5 w-full px-3">
-                    <NavItem to="/" icon={<MessageSquare size={24} />} label={t('nav_chats')} delay={0} />
-                    <NavItem to="/agents" icon={<Bot size={24} />} label={t('nav_agents') || 'Agents'} delay={50} />
-                    <NavItem to="/friends" icon={<Users size={24} />} label={t('friends')} delay={100} />
-                    <NavItem to="/moments" icon={<Camera size={24} />} label={t('moments')} delay={150} />
+                <nav aria-label="Primary" className="flex-1 flex flex-col items-center gap-5 w-full px-3">
+                    <NavItem to="/" icon={<MessageSquare size={24} />} label={t('nav_chats')} delay={0} shortcutHint={formatShortcut(SHORTCUT_DEFINITIONS[0])} data-onboarding="chats" />
+                    <NavItem to="/agents" icon={<Bot size={24} />} label={t('nav_agents') || 'Agents'} delay={50} shortcutHint={formatShortcut(SHORTCUT_DEFINITIONS[1])} data-onboarding="agents" />
+                    <NavItem to="/friends" icon={<Users size={24} />} label={t('friends')} delay={100} shortcutHint={formatShortcut(SHORTCUT_DEFINITIONS[2])} />
+                    <NavItem to="/moments" icon={<Camera size={24} />} label={t('moments')} delay={150} shortcutHint={formatShortcut(SHORTCUT_DEFINITIONS[3])} />
                 </nav>
 
                 <div className="mt-auto pt-4 w-full px-3">
-                    <NavItem to="/settings" icon={<Settings size={24} />} label={t('nav_settings')} delay={200} />
+                    <NavItem to="/settings" icon={<Settings size={24} />} label={t('nav_settings')} delay={200} shortcutHint={formatShortcut(SHORTCUT_DEFINITIONS[4])} data-onboarding="settings" />
                 </div>
             </aside>
 
             {/* Main Content - Floating Island */}
-            <div className="flex flex-1 overflow-hidden relative p-4 pl-0">
-                <main className={cn(
-                    "w-full h-full flex flex-col relative rounded-[var(--radius-xl)] shadow-floating glass-crystal overflow-hidden",
-                    "transition-all duration-500 ease-out border border-[var(--color-border-light)]",
-                    pageTransition ? "opacity-0 scale-[0.98] blur-sm" : "opacity-100 scale-100 blur-0"
-                )}>
+            <div className="flex flex-1 min-h-0 overflow-hidden relative p-0 md:p-4 md:pl-0">
+                <main
+                    ref={mainRef}
+                    className={cn(
+                        "w-full h-full min-h-0 flex flex-col relative overflow-hidden transition-all duration-[280ms] ease-out",
+                        "bg-[var(--color-bg-chat)] md:bg-transparent",
+                        "md:rounded-[var(--radius-xl)] md:shadow-floating md:glass-crystal",
+                        "md:border md:border-[var(--color-border-light)]",
+                        "transition-all duration-[280ms] ease-out"
+                    )}
+                >
                     {/* Background sheen for the main container */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-bg-white)]/40 to-transparent pointer-events-none opacity-50"></div>
+                    <div aria-hidden="true" className="hidden md:block absolute inset-0 bg-gradient-to-br from-[var(--color-bg-white)]/40 to-transparent pointer-events-none opacity-50"></div>
 
-                    <Outlet />
+                    <Outlet key={location.pathname} />
                 </main>
             </div>
 
             {/* Mobile Bottom Tab Bar - Floating Dock (Hidden in Chat and Agent Workspace) */}
             {!location.pathname.startsWith('/chat/') && !location.pathname.match(/^\/agents\/[^/]+$/) && (
-                <nav className="md:hidden fixed bottom-6 left-6 right-6 glass-crystal rounded-[var(--radius-xl)] shadow-floating 
-                    flex justify-around items-center px-4 py-3 z-50 animate-fade-slide-up border border-white/50">
+                <nav aria-label="Mobile" className="md:hidden fixed bottom-6 left-6 right-6 glass-crystal rounded-[var(--radius-xl)] shadow-floating
+                    flex justify-around items-center px-4 py-3 z-50 animate-fade-slide-up border border-white/50"
+                    style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
 
                     <MobileNavItem to="/" icon={<MessageSquare size={24} />} label={t('nav_chats')} />
                     <MobileNavItem to="/agents" icon={<Bot size={24} />} label={t('nav_agents') || 'Agents'} />
@@ -105,11 +149,29 @@ export default function Layout() {
                     <MobileNavItem to="/settings" icon={<Settings size={24} />} label={t('nav_settings')} />
                 </nav>
             )}
+
+            {/* Keyboard Shortcuts Modal */}
+            {showShortcuts && <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />}
+
+            {/* Global Search (Ctrl+K) */}
+            {showGlobalSearch && <MessageSearchPanel onClose={() => setShowGlobalSearch(false)} />}
+
+            {/* Onboarding Tutorial */}
+            {onboarding.shouldShow && (
+                <OnboardingTutorial
+                    currentStep={onboarding.currentStep}
+                    totalSteps={onboarding.totalSteps}
+                    nextStep={onboarding.nextStep}
+                    prevStep={onboarding.prevStep}
+                    skip={onboarding.skip}
+                    complete={onboarding.complete}
+                />
+            )}
         </div>
     );
 }
 
-function NavItem({ to, icon, label, delay }) {
+function NavItem({ to, icon, label, delay, shortcutHint, ...rest }) {
     return (
         <NavLink
             to={to}
@@ -119,8 +181,9 @@ function NavItem({ to, icon, label, delay }) {
                     ? "text-white shadow-glow-strong scale-110"
                     : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] hover:shadow-lg hover:scale-105"
             )}
-            title={label}
+            title={shortcutHint ? `${label} (${shortcutHint})` : label}
             style={{ animationDelay: `${delay}ms` }}
+            {...rest}
         >
             {({ isActive }) => (
                 <>

@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { X, Send, Search, Check } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { cn } from '../../../utils/cn';
 
 export default function ForwardModal({ message, onClose, onForward }) {
     const { chats, personas } = useChat();
     const { t, language } = useLanguage();
+    const trapRef = useFocusTrap(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedChats, setSelectedChats] = useState([]);
 
@@ -57,17 +59,21 @@ export default function ForwardModal({ message, onClose, onForward }) {
     if (!message) return null;
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="presentation" onClick={onClose}>
             <div
-                className="bg-white rounded-xl w-full max-w-md max-h-[70vh] flex flex-col overflow-hidden animate-scale-in"
+                ref={trapRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="forward-modal-title"
+                className="bg-[var(--color-bg-white)] rounded-xl w-full max-w-md max-h-[70vh] flex flex-col overflow-hidden animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-                    <button onClick={onClose} className="text-[var(--color-text-muted)]">
+                    <button onClick={onClose} className="text-[var(--color-text-muted)]" aria-label="Close">
                         <X size={24} />
                     </button>
-                    <h3 className="font-medium text-[17px]">{t('forward_to') || 'Forward to'}</h3>
+                    <h3 id="forward-modal-title" className="font-medium text-[17px]">{t('forward_to') || 'Forward to'}</h3>
                     <button
                         onClick={handleForward}
                         disabled={selectedChats.length === 0}

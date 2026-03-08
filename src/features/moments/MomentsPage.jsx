@@ -1,39 +1,68 @@
-import React, { useState } from 'react';
-import { Camera, Sparkles, Image as ImageIcon, Video, Smile } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Camera, Sparkles, Image as ImageIcon, Smile, X } from 'lucide-react';
 import { useMoments } from './context/MomentsContext';
 import { useUser } from '../../context/UserContext';
 import { useLanguage } from '../../context/LanguageContext';
 import MomentCard from './components/MomentCard';
 import PostComposer from './components/PostComposer';
 import CommentsSheet from './components/CommentsSheet';
+import { SkeletonList, SkeletonMomentCard } from '../../components/Skeleton';
 import { cn } from '../../utils/cn';
 
 export default function MomentsPage() {
     const { posts } = useMoments();
     const { userProfile, getDisplayName } = useUser();
     const { t, language } = useLanguage();
+    const safePosts = Array.isArray(posts) ? posts : [];
+    const safeUserProfile = (userProfile && typeof userProfile === 'object') ? userProfile : { avatar: null };
 
     const [showComposer, setShowComposer] = useState(false);
     const [selectedPost, setSelectedPost] = useState(null);
     const [scrolled, setScrolled] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [activeHashtag, setActiveHashtag] = useState(null);
+    const [visibleCount, setVisibleCount] = useState(10);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 400);
+        return () => clearTimeout(timer);
+    }, []);
+
+    const handleHashtagClick = (tag) => {
+        setActiveHashtag(tag);
+        setVisibleCount(10);
+    };
+
+    const clearHashtagFilter = () => {
+        setActiveHashtag(null);
+        setVisibleCount(10);
+    };
 
     // Sort posts by date, newest first
-    const sortedPosts = [...posts].sort((a, b) =>
+    const sortedPosts = [...safePosts].sort((a, b) =>
         new Date(b.createdAt) - new Date(a.createdAt)
     );
+
+    // Filter by hashtag
+    const filteredPosts = activeHashtag
+        ? sortedPosts.filter(p => p.content?.toLowerCase().includes(activeHashtag.toLowerCase()))
+        : sortedPosts;
+
+    // Paginated slice
+    const paginatedPosts = filteredPosts.slice(0, visibleCount);
 
     const handleScroll = (e) => {
         setScrolled(e.target.scrollTop > 50);
     };
 
     return (
-        <div
-            className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto custom-scrollbar relative"
-            onScroll={handleScroll}
-        >
+        <div className="h-full w-full flex flex-col bg-[var(--color-bg-app)] relative">
             {/* Header Background Gradient */}
             <div className="fixed top-0 left-0 right-0 h-[300px] pointer-events-none opacity-20"
                 style={{ background: 'radial-gradient(ellipse at top, var(--color-primary-glow) 0%, transparent 70%)' }} />
+
+            {/* Scrollable content area */}
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-20 md:pb-0" onScroll={handleScroll}>
 
             {/* Floating Glass Header */}
             <div className={cn(
@@ -49,7 +78,7 @@ export default function MomentsPage() {
                     className="flex items-center gap-2 bg-[var(--color-bg-white)] hover:bg-[var(--color-bg-hover)] px-4 py-2 rounded-full cursor-pointer transition-all border border-[var(--color-border)] shadow-sm active:scale-95 group">
                     <Camera size={18} className="text-[var(--color-primary)] group-hover:scale-110 transition-transform" />
                     <span className="text-sm font-bold text-[var(--color-text-main)] hidden md:block">
-                        {language === 'zh' ? '发布动态' : 'Share Moment'}
+                        {t('share_moment')}
                     </span>
                 </div>
             </div>
@@ -66,8 +95,8 @@ export default function MomentsPage() {
                 >
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-[var(--color-bg-active)] overflow-hidden">
-                            {userProfile.avatar ? (
-                                <img src={userProfile.avatar} alt="You" className="w-full h-full object-cover" />
+                            {safeUserProfile.avatar ? (
+                                <img src={safeUserProfile.avatar} alt="You" className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-[var(--color-primary)] font-bold">
                                     {getDisplayName(language).charAt(0)}
@@ -75,7 +104,7 @@ export default function MomentsPage() {
                             )}
                         </div>
                         <div className="flex-1 bg-[var(--color-bg-app)] rounded-full h-10 flex items-center px-4 text-[var(--color-text-muted)] text-sm group-hover:text-[var(--color-text-main)] transition-colors">
-                            {language === 'zh' ? '分享当下的想法...' : 'Share your thoughts...'}
+                            {t('share_thoughts')}
                         </div>
                         <div className="flex gap-3 text-[var(--color-text-muted)]">
                             <ImageIcon size={20} className="hover:text-[var(--color-primary)] transition-colors" />
@@ -84,39 +113,73 @@ export default function MomentsPage() {
                     </div>
                 </div>
 
-                {sortedPosts.length === 0 ? (
+                {/* Hashtag Filter Pill */}
+                {activeHashtag && (
+                    <div className="flex items-center gap-2 mb-4 px-1">
+                        <span className="text-sm font-medium text-[var(--color-primary)]">{activeHashtag}</span>
+                        <button
+                            onClick={clearHashtagFilter}
+                            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                )}
+
+                {isLoading ? (
+                    <SkeletonList count={3} skeleton={SkeletonMomentCard} className="space-y-6" />
+                ) : filteredPosts.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 animate-fade-in text-center">
                         <div className="w-20 h-20 rounded-[var(--radius-xl)] bg-[var(--color-bg-active)] flex items-center justify-center mb-4 shadow-inner">
                             <Camera size={32} className="text-[var(--color-text-muted)]" />
                         </div>
                         <h3 className="text-lg font-bold text-[var(--color-text-main)] mb-1">
-                            {t('no_posts') || 'Your timeline is empty'}
+                            {activeHashtag
+                                ? (language === 'zh' ? `没有包含 ${activeHashtag} 的动态` : `No posts with ${activeHashtag}`)
+                                : (t('no_posts') || 'Your timeline is empty')
+                            }
                         </h3>
-                        <p className="text-[var(--color-text-muted)] text-sm max-w-xs">
-                            {t('be_first') || 'Be the first to capture and share a moment with your AI friends.'}
-                        </p>
+                        {!activeHashtag && (
+                            <p className="text-[var(--color-text-muted)] text-sm max-w-xs">
+                                {t('be_first') || 'Be the first to capture and share a moment with your AI friends.'}
+                            </p>
+                        )}
                     </div>
                 ) : (
-                    <div className="space-y-6">
-                        {sortedPosts.map((post, index) => (
-                            <div key={post.id} style={{ animationDelay: `${index * 100}ms` }} className="animate-fade-slide-up">
-                                <MomentCard
-                                    post={post}
-                                    onCommentClick={setSelectedPost}
-                                />
-                            </div>
-                        ))}
-                    </div>
+                    <>
+                        <div className="space-y-6">
+                            {paginatedPosts.map((post, index) => (
+                                <div key={post.id} style={{ animationDelay: `${index * 100}ms` }} className="animate-fade-slide-up">
+                                    <MomentCard
+                                        post={post}
+                                        onCommentClick={setSelectedPost}
+                                        onHashtagClick={handleHashtagClick}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        {filteredPosts.length > visibleCount && (
+                            <button
+                                onClick={() => setVisibleCount(v => v + 10)}
+                                className="w-full mt-6 py-3 rounded-xl bg-[var(--color-bg-white)] border border-[var(--color-border)] text-[var(--color-text-muted)] text-[14px] font-medium hover:bg-[var(--color-bg-hover)] transition-colors"
+                            >
+                                {t('load_more') || 'Load more'}
+                            </button>
+                        )}
+                    </>
                 )}
             </div>
 
-            {/* Post Composer Modal */}
+            </div>
+
+            {/* Post Composer Modal (outside scroll container) */}
             <PostComposer
                 isOpen={showComposer}
                 onClose={() => setShowComposer(false)}
             />
 
-            {/* Comments Sheet */}
+            {/* Comments Sheet (outside scroll container) */}
             {selectedPost && (
                 <CommentsSheet
                     post={selectedPost}

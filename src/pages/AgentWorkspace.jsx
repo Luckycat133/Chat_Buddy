@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Plus, Clock, Search } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Plus } from 'lucide-react';
 import { useChat } from '../features/chat/context/ChatContext';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
@@ -14,7 +14,7 @@ export default function AgentWorkspace() {
     const { t, language } = useLanguage();
 
     const [selectedChatId, setSelectedChatId] = useState(null);
-    const [searchTerm, setSearchTerm] = useState('');
+    const localizedNewTopicName = t('agent_new_topic') || (language === 'zh' ? '新话题' : 'New Topic');
 
     // Find agent details
     const agent = personas.find(p => p.id === agentId);
@@ -34,24 +34,29 @@ export default function AgentWorkspace() {
     // Handle creating a new chat
     const handleNewChat = () => {
         if (!agent) return;
-        // Always create a new chat for "topics" in this workspace
-        // Use a generic name or "New Chat" which will be updated by first message logic usually,
-        // or we can prompt for a topic? For now, simple "Topic X" style or just "New Chat".
-        // Let's verify createChat signature: createChat(name, participants, avatar)
-        // If we want multiple chats, we must ensure distinctness or just rely on IDs.
-        // The implementation says "Create new chat if none exists" in AgentsPage,
-        // but createChat itself likely generates a unique ID.
-        const chatName = language === 'zh' ? '新话题' : 'New Topic';
-        const newId = createChat(chatName, [agentId], agent.avatar);
+        const newId = createChat(localizedNewTopicName, [agentId], agent.avatar);
         setSelectedChatId(newId);
     };
 
+    const normalizeTopicTitle = (name) => {
+        const trimmed = String(name || '').trim();
+        if (!trimmed) return '';
+        if (trimmed === '新话题' || trimmed === 'New Topic') {
+            return localizedNewTopicName;
+        }
+        return trimmed;
+    };
+
     if (!agent) {
-        return <div className="flex items-center justify-center h-full text-gray-500">Agent not found</div>;
+        return (
+            <div className="flex items-center justify-center h-full text-[var(--color-text-muted)]">
+                {t('agent_not_found') || 'Agent not found'}
+            </div>
+        );
     }
 
     const displayName = language === 'zh' ? (agent.name_zh || agent.name) : agent.name;
-    const activeChat = selectedChatId ? chats.find(c => c.id === selectedChatId) : null;
+    const _activeChat = selectedChatId ? chats.find(c => c.id === selectedChatId) : null;
 
     return (
         <div className="flex h-full w-full bg-[var(--color-bg-app)] overflow-hidden">
@@ -69,11 +74,11 @@ export default function AgentWorkspace() {
                         </button>
                         <div className="flex-1 min-w-0">
                             <h1 className="font-display font-bold text-lg truncate flex items-center gap-2 text-[var(--color-text-main)]">
-                                <span className={cn("w-2.5 h-2.5 rounded-full shadow-glow", agent.color?.split(' ')[0] || 'bg-gray-400')}></span>
+                                <span className={cn("w-2.5 h-2.5 rounded-full shadow-glow", agent.color?.split(' ')[0] || 'bg-[var(--color-bg-active)]')}></span>
                                 {displayName}
                             </h1>
                             <p className="text-xs text-[var(--color-text-muted)] truncate font-medium">
-                                {language === 'zh' ? '专属工作区' : 'Workspace'}
+                                {t('agent_workspace_label') || (language === 'zh' ? '专属工作区' : 'Workspace')}
                             </p>
                         </div>
                     </div>
@@ -83,7 +88,7 @@ export default function AgentWorkspace() {
                         className="w-full py-3 bg-[var(--gradient-aurora)] hover:shadow-glow-strong text-white rounded-[var(--radius-lg)] font-bold flex items-center justify-center gap-2 transition-all duration-300 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 text-[15px]"
                     >
                         <Plus size={20} />
-                        {language === 'zh' ? '新建话题' : 'New Topic'}
+                        {localizedNewTopicName}
                     </button>
                 </div>
 
@@ -94,8 +99,8 @@ export default function AgentWorkspace() {
                             <div className="w-16 h-16 rounded-3xl bg-[var(--color-bg-hover)] flex items-center justify-center mb-4 animate-float">
                                 <MessageSquare size={24} className="opacity-40" />
                             </div>
-                            <p className="font-medium mb-1">{language === 'zh' ? '还没有对话记录' : 'No conversations yet'}</p>
-                            <p className="text-xs opacity-70">{language === 'zh' ? '点击上方按钮开始新话题' : 'Click above to start a topic'}</p>
+                            <p className="font-medium mb-1">{t('agent_no_conversations') || (language === 'zh' ? '还没有对话记录' : 'No conversations yet')}</p>
+                            <p className="text-xs opacity-70">{t('agent_start_topic_hint') || (language === 'zh' ? '点击上方按钮开始新话题' : 'Click above to start a topic')}</p>
                         </div>
                     ) : (
                         agentChats.map((chat, index) => {
@@ -120,7 +125,7 @@ export default function AgentWorkspace() {
                                             "font-bold text-[15px] truncate pr-2 flex-1 transition-colors",
                                             isActive ? "text-[var(--color-primary-active)]" : "text-[var(--color-text-main)] group-hover:text-[var(--color-primary)]"
                                         )}>
-                                            {chat.name || displayName}
+                                            {normalizeTopicTitle(chat.name) || displayName}
                                         </h3>
                                         <span className="text-[11px] text-[var(--color-text-light)] whitespace-nowrap pt-0.5 font-medium">{time}</span>
                                     </div>
@@ -129,7 +134,7 @@ export default function AgentWorkspace() {
                                             "text-xs line-clamp-1 min-h-[1.5em] flex-1",
                                             isActive ? "text-[var(--color-text-secondary)]" : "text-[var(--color-text-muted)]"
                                         )}>
-                                            {lastMsg ? lastMsg.content : (language === 'zh' ? '(空对话)' : '(Empty)')}
+                                            {lastMsg ? lastMsg.content : (t('agent_empty_chat') || (language === 'zh' ? '(空对话)' : '(Empty)'))}
                                         </p>
                                     </div>
                                 </div>
@@ -157,16 +162,16 @@ export default function AgentWorkspace() {
                     <div className="flex flex-col items-center gap-6 relative z-10 animate-scale-spring">
                         <div className={cn(
                             "w-24 h-24 rounded-[var(--radius-2xl)] flex items-center justify-center shadow-floating glass-crystal",
-                            !agent.avatar && (agent.color?.split(' ')[0] || 'bg-gray-200')
+                            !agent.avatar && (agent.color?.split(' ')[0] || 'bg-[var(--color-bg-active)]')
                         )}>
                             <img src={agent.avatar} alt="Agent" className="w-20 h-20 object-contain drop-shadow-md" />
                         </div>
                         <div className="text-center">
                             <h2 className="text-2xl font-display font-bold text-[var(--color-text-main)] mb-2">
-                                {language === 'zh' ? `与 ${displayName} 开始对话` : `Start chatting with ${displayName}`}
+                                {(t('agent_start_chat_with', { name: displayName }) || (language === 'zh' ? `与 ${displayName} 开始对话` : `Start chatting with ${displayName}`))}
                             </h2>
                             <p className="text-[var(--color-text-muted)]">
-                                {language === 'zh' ? '选择一个话题或创建新话题' : 'Select a topic or create a new one'}
+                                {t('agent_select_or_create_topic') || (language === 'zh' ? '选择一个话题或创建新话题' : 'Select a topic or create a new one')}
                             </p>
                         </div>
                     </div>

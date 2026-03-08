@@ -1,12 +1,14 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { X, Search, MessageSquare, ChevronRight } from 'lucide-react';
 import { useChat } from '../context/ChatContext';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { cn } from '../../../utils/cn';
 
 export default function MessageSearchPanel({ onClose, onSelectMessage, currentChatId }) {
     const { chats, personas } = useChat();
-    const { language } = useLanguage();
+    const { t, language } = useLanguage();
+    const trapRef = useFocusTrap(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedTerm, setDebouncedTerm] = useState('');
     const [searchScope, setSearchScope] = useState(currentChatId ? 'current' : 'all'); // 'all' or 'current'
@@ -18,6 +20,13 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
         }, 300);
         return () => clearTimeout(timer);
     }, [searchTerm]);
+
+    const getChatName = useCallback((chat) => {
+        if (!chat || !chat.participants) return 'Chat';
+        const otherId = chat.participants.find(p => p !== 'user-me');
+        const persona = personas?.find(p => p.id === otherId);
+        return persona ? (language === 'zh' ? persona.name_zh || persona.name : persona.name) : 'Chat';
+    }, [personas, language]);
 
     // Search through all messages
     const searchResults = useMemo(() => {
@@ -51,9 +60,6 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
 
                 if (!matchesType) return;
 
-                // For specialized types, we might want to match generic terms or just show all if search is generic
-                // But typically search matches content.
-                // If it's a file, we search filename.
                 let contentToMatch = content;
                 if (content.includes('[FILE]')) {
                     contentToMatch = content.replace('[FILE]', '').trim();
@@ -80,14 +86,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
 
         // Sort by timestamp, newest first
         return results.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 50);
-    }, [debouncedTerm, chats, personas, language, searchScope, currentChatId, fileType]);
-
-    const getChatName = (chat) => {
-        if (!chat || !chat.participants) return 'Chat';
-        const otherId = chat.participants.find(p => p !== 'user-me');
-        const persona = personas?.find(p => p.id === otherId);
-        return persona ? (language === 'zh' ? persona.name_zh || persona.name : persona.name) : 'Chat';
-    };
+    }, [debouncedTerm, chats, personas, language, searchScope, currentChatId, fileType, getChatName]);
 
     const highlightMatch = (text, term) => {
         if (!term || !text) return text;
@@ -122,7 +121,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                     minute: '2-digit'
                 });
             } else if (days === 1) {
-                return language === 'zh' ? '昨天' : 'Yesterday';
+                return t('search_yesterday');
             } else if (days < 7) {
                 return date.toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { weekday: 'short' });
             } else {
@@ -137,10 +136,19 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+        <div
+            ref={trapRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="message-search-title"
+            className="fixed inset-0 z-50 bg-[var(--color-bg-white)] flex flex-col"
+        >
             {/* Header */}
+            <h2 id="message-search-title" className="sr-only">
+                {t('search_messages_title')}
+            </h2>
             <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
-                <button onClick={onClose} className="text-[var(--color-text-muted)]">
+                <button onClick={onClose} className="text-[var(--color-text-muted)]" aria-label="Close">
                     <X size={24} />
                 </button>
 
@@ -150,7 +158,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                         type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder={language === 'zh' ? '搜索聊天记录...' : 'Search messages...'}
+                        placeholder={t('search_messages_placeholder')}
                         autoFocus
                         className="w-full pl-10 pr-4 py-2 bg-[var(--color-bg-app)] rounded-lg text-[15px] outline-none focus:ring-2 ring-[var(--color-primary)]/30"
                     />
@@ -158,26 +166,26 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
             </div>
 
             {/* Filters */}
-            <div className="px-4 py-2 bg-white border-b border-[var(--color-border-light)] flex flex-wrap gap-2">
+            <div className="px-4 py-2 bg-[var(--color-bg-white)] border-b border-[var(--color-border-light)] flex flex-wrap gap-2">
                 {currentChatId && (
                     <div className="flex bg-[var(--color-bg-app)] rounded-lg p-0.5">
                         <button
                             onClick={() => setSearchScope('current')}
                             className={cn(
                                 "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                                searchScope === 'current' ? "bg-white shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                                searchScope === 'current' ? "bg-[var(--color-bg-white)] shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
                             )}
                         >
-                            {language === 'zh' ? '当前聊天' : 'Current Chat'}
+                            {t('search_current_chat')}
                         </button>
                         <button
                             onClick={() => setSearchScope('all')}
                             className={cn(
                                 "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                                searchScope === 'all' ? "bg-white shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                                searchScope === 'all' ? "bg-[var(--color-bg-white)] shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
                             )}
                         >
-                            {language === 'zh' ? '所有聊天' : 'All Chats'}
+                            {t('search_all_chats')}
                         </button>
                     </div>
                 )}
@@ -189,14 +197,14 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                             onClick={() => setFileType(type)}
                             className={cn(
                                 "px-3 py-1 text-xs font-medium rounded-md transition-all whitespace-nowrap",
-                                fileType === type ? "bg-white shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                                fileType === type ? "bg-[var(--color-bg-white)] shadow-sm text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
                             )}
                         >
-                            {type === 'all' ? (language === 'zh' ? '全部' : 'All') :
-                                type === 'text' ? (language === 'zh' ? '文本' : 'Text') :
-                                    type === 'image' ? (language === 'zh' ? '图片' : 'Image') :
-                                        type === 'file' ? (language === 'zh' ? '文件' : 'File') :
-                                            (language === 'zh' ? '语音' : 'Audio')}
+                            {type === 'all' ? t('search_type_all') :
+                                type === 'text' ? t('search_type_text') :
+                                    type === 'image' ? t('search_type_image') :
+                                        type === 'file' ? t('search_type_file') :
+                                            t('search_type_audio')}
                         </button>
                     ))}
                 </div>
@@ -207,18 +215,18 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                 {searchTerm.length < 2 ? (
                     <div className="p-8 text-center text-[var(--color-text-muted)]">
                         <MessageSquare size={48} className="mx-auto mb-4 opacity-50" />
-                        <p>{language === 'zh' ? '输入关键词搜索' : 'Enter keywords to search'}</p>
-                        <p className="text-sm mt-1">{language === 'zh' ? '至少2个字符' : 'At least 2 characters'}</p>
+                        <p>{t('search_enter_keywords')}</p>
+                        <p className="text-sm mt-1">{t('search_min_chars')}</p>
                     </div>
                 ) : searchResults.length === 0 ? (
                     <div className="p-8 text-center text-[var(--color-text-muted)]">
                         <Search size={48} className="mx-auto mb-4 opacity-50" />
-                        <p>{language === 'zh' ? '未找到结果' : 'No results found'}</p>
+                        <p>{t('search_no_results')}</p>
                     </div>
                 ) : (
                     <>
                         <div className="px-4 py-2 bg-[var(--color-bg-app)] text-sm text-[var(--color-text-muted)]">
-                            {language === 'zh' ? `找到 ${searchResults.length} 条结果` : `${searchResults.length} results found`}
+                            {t('search_results_count', { count: searchResults.length })}
                         </div>
                         {searchResults.map((result) => (
                             <button

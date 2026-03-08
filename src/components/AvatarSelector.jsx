@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Camera, Upload, Check } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
+import AvatarUploadModal from './AvatarUploadModal';
 
 // Preset avatars from public/avatars
 // Default user avatars first, then character avatars
@@ -45,11 +46,11 @@ export default function AvatarSelector({ isOpen, onClose, currentAvatar, onSelec
     const { t } = useLanguage();
     const [selectedAvatar, setSelectedAvatar] = useState(currentAvatar);
     const [isUploading, setIsUploading] = useState(false);
+    const [showAdvancedUploader, setShowAdvancedUploader] = useState(false);
     const fileInputRef = useRef(null);
 
-    useEffect(() => {
-        setSelectedAvatar(currentAvatar);
-    }, [currentAvatar, isOpen]);
+    // No effect needed: when !isOpen the component returns null (unmounts),
+    // so when isOpen becomes true it remounts with fresh useState(currentAvatar).
 
     if (!isOpen) return null;
 
@@ -133,7 +134,7 @@ export default function AvatarSelector({ isOpen, onClose, currentAvatar, onSelec
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white rounded-xl w-[90%] max-w-md max-h-[80vh] overflow-hidden animate-scale-in">
+            <div className="bg-[var(--color-bg-white)] rounded-xl w-[90%] max-w-md max-h-[80vh] overflow-hidden animate-scale-in">
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                     <button onClick={handleCancel} className="text-[var(--color-text-muted)]">
@@ -189,6 +190,12 @@ export default function AvatarSelector({ isOpen, onClose, currentAvatar, onSelec
                         <Upload size={20} />
                         {isUploading ? (t('uploading') || 'Uploading...') : (t('upload_avatar') || 'Upload Photo')}
                     </button>
+                    <button
+                        onClick={() => setShowAdvancedUploader(true)}
+                        className="w-full mt-2 py-2 rounded-lg border border-[var(--color-border)] text-[var(--color-text-main)] text-sm hover:bg-[var(--color-bg-hover)] transition-colors"
+                    >
+                        {t('crop_avatar') || 'Crop Avatar'}
+                    </button>
                 </div>
 
                 {/* Preset Avatars */}
@@ -225,6 +232,18 @@ export default function AvatarSelector({ isOpen, onClose, currentAvatar, onSelec
                     </div>
                 </div>
             </div>
+
+            {showAdvancedUploader && (
+                <AvatarUploadModal
+                    isOpen={showAdvancedUploader}
+                    onClose={() => setShowAdvancedUploader(false)}
+                    currentAvatar={selectedAvatar}
+                    onUpload={(base64) => {
+                        setSelectedAvatar(base64);
+                        setShowAdvancedUploader(false);
+                    }}
+                />
+            )}
         </div>
     );
 }

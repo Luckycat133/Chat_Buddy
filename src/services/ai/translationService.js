@@ -11,7 +11,7 @@
 
 import { callAI } from '../../features/chat/services/chatService';
 import { buildExpertPrompt } from '../../data/translationExperts';
-import { buildTermsPrompt, findMatchingTerms, getCombinedGlossary } from '../../data/glossary';
+import { buildTermsPrompt, findMatchingTerms } from '../../data/glossary';
 
 // ========== Domain Detection ==========
 
@@ -22,8 +22,6 @@ import { buildTermsPrompt, findMatchingTerms, getCombinedGlossary } from '../../
  */
 export function detectDomain(text) {
     if (!text || typeof text !== 'string') return 'general';
-
-    const textLower = text.toLowerCase();
 
     // Technical indicators
     const technicalPatterns = [
@@ -88,11 +86,17 @@ function buildYAMLRequest(text, options = {}) {
         .replace(/\\/g, '\\\\')
         .replace(/"/g, '\\"')
         .replace(/\n/g, '\\n');
+    const escapedContext = context
+        ? context
+            .replace(/\\/g, '\\\\')
+            .replace(/"/g, '\\"')
+            .replace(/\n/g, '\\n')
+        : '';
 
     let yaml = `- id: "${id}"\n  source: "${escapedText}"`;
 
-    if (context) {
-        yaml += `\n  context: "${context}"`;
+    if (escapedContext) {
+        yaml += `\n  context: "${escapedContext}"`;
     }
 
     return yaml;
@@ -203,14 +207,9 @@ export async function translateWithReflection(text, options = {}) {
     });
 
     // Step 5: Construct user message
-    const userMessage = `Please translate the following text according to your workflow:
+    const userMessage = `Translate using your two-step workflow and return YAML only:
 
-${yamlRequest}
-
-Remember: 
-1. First create step1 (literal translation)
-2. Then create step2 (polished translation)
-3. Output in the YAML format specified`;
+${yamlRequest}`;
 
     // Step 6: Call LLM
     console.log('[TranslationService] Calling LLM for translation...');
@@ -245,9 +244,7 @@ Remember:
  * @returns {Promise<string>} Translated text
  */
 export async function translateSimple(text, targetLang = 'Chinese') {
-    const systemPrompt = `You are a professional ${targetLang} translator. 
-Translate the following text accurately and naturally. 
-Return ONLY the translation, no explanations.`;
+    const systemPrompt = `You are a professional ${targetLang} translator. Return only the translated text.`;
 
     const response = await callAI(
         [{ role: 'user', content: text }],
@@ -266,20 +263,32 @@ Return ONLY the translation, no explanations.`;
  * Batch translation for multiple paragraphs
  * @param {Array<string>} texts - Array of text segments
  * @param {Object} options - Translation options
+ * @param {number} options.concurrency - Parallel workers for batch translation (default: 3)
  * @returns {Promise<Array>} Array of translation results
  */
 export async function translateBatch(texts, options = {}) {
-    // For now, translate sequentially
-    // TODO: Implement parallel translation with shared context
-    const results = [];
+    if (!Array.isArray(texts) || texts.length === 0) return [];
 
-    for (let i = 0; i < texts.length; i++) {
-        const result = await translateWithReflection(texts[i], {
-            ...options,
-            id: String(i)
-        });
-        results.push(result);
+    const concurrency = Math.max(1, Math.min(Number(options.concurrency) || 3, texts.length));
+    const workerOptions = { ...options };
+    delete workerOptions.concurrency;
+
+    const results = new Array(texts.length);
+    let cursor = 0;
+
+    async function worker() {
+        while (true) {
+            const index = cursor++;
+            if (index >= texts.length) return;
+            results[index] = await translateWithReflection(texts[index], {
+                ...workerOptions,
+                id: String(index)
+            });
+        }
     }
+
+    const workers = Array.from({ length: concurrency }, () => worker());
+    await Promise.all(workers);
 
     return results;
 }

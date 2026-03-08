@@ -1,21 +1,30 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useChat } from './context/ChatContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { useDocuments } from '../../context/DocumentContext';
+import { useSocial } from '../../context/SocialContext';
 import { formatFileSize } from '../../utils/fileUtils';
 
 // Sub-components (always loaded)
 import ChatHeader from './components/window/ChatHeader';
 import MessageTimeline from './components/window/MessageTimeline';
 import ChatComposer from './components/window/ChatComposer';
-import MessageMenu from './components/MessageMenu';
+import { getCharacterThemeStyle } from './components/CharacterTheme';
+import { checkWindowOpenGreeting } from '../../core/presence/GreetingService';
 
 // Lazy-loaded modals/panels (loaded on demand)
 const ForwardModal = lazy(() => import('./components/ForwardModal'));
 const GiftPanel = lazy(() => import('./components/GiftPanel'));
 const RedPacketPanel = lazy(() => import('./components/RedPacketPanel'));
 const RockPaperScissors = lazy(() => import('./components/RockPaperScissors'));
+const NumberGuessGame = lazy(() => import('./components/NumberGuessGame'));
+const GameSelectorPanel = lazy(() => import('./components/GameSelectorPanel'));
+const TriviaQuiz = lazy(() => import('./components/TriviaQuiz'));
+const IdiomChainGame = lazy(() => import('./components/IdiomChainGame'));
+const ExportModal = lazy(() => import('./components/ExportModal'));
+const MessageMenu = lazy(() => import('./components/MessageMenu'));
+const BookmarkPanel = lazy(() => import('./components/BookmarkPanel'));
 const GroupPoll = lazy(() => import('./components/GroupPoll'));
 const MessageSearchPanel = lazy(() => import('./components/MessageSearchPanel'));
 
@@ -31,16 +40,20 @@ const ModalLoadingFallback = () => (
 
 export default function ChatWindow({ chatId: propChatId }) {
     const { id: paramChatId } = useParams();
+    const location = useLocation();
+    const navigate = useNavigate();
     const id = propChatId || paramChatId;
-    const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, deleteMessage, pinMessage, votePoll } = useChat();
+    const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, editingIndicators, deleteMessage, pinMessage, votePoll, presenceMap, moodMap, triggerGreeting, bookmarkMessage, unbookmarkMessage, markMessagesAsRead } = useChat();
     const { t, language } = useLanguage();
     const { addDocument } = useDocuments();
+    const { updateTaskProgress } = useSocial();
 
     // Feature modals state
     const [showForwardModal, setShowForwardModal] = useState(false);
     const [showGiftPanel, setShowGiftPanel] = useState(false);
     const [showRedPacketPanel, setShowRedPacketPanel] = useState(false);
-    const [showGame, setShowGame] = useState(false);
+    const [showGameSelector, setShowGameSelector] = useState(false);
+    const [activeGame, setActiveGame] = useState(null); // 'rps' | 'number_guess'
     const [showPoll, setShowPoll] = useState(false);
     const [messageToForward, setMessageToForward] = useState(null);
     const [showSearchPanel, setShowSearchPanel] = useState(false); // Lifted state
@@ -49,10 +62,41 @@ export default function ChatWindow({ chatId: propChatId }) {
     // Interaction states
     const [selectedMessage, setSelectedMessage] = useState(null);
     const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+    const [canRecallMessage, setCanRecallMessage] = useState(false);
     const [quotedMessage, setQuotedMessage] = useState(null);
     const [toast, setToast] = useState(null);
 
+    // T07: Bookmark states
+    const [showBookmarkPanel, setShowBookmarkPanel] = useState(false);
+    const [bookmarkedMessageIds, setBookmarkedMessageIds] = useState(new Set());
+
+    // T07: Export modal state
+    const [showExportModal, setShowExportModal] = useState(false);
+    const greetedChatIdRef = useRef(null);
+
     const chat = chats.find(c => c.id === id);
+    const isSearchRoute = location.pathname === `/chat/${id}/search`;
+
+    // T05: Window-open greeting check
+    useEffect(() => {
+        if (!chat?.id || chat.participants.length !== 2) return;
+        if (greetedChatIdRef.current === chat.id) return;
+        greetedChatIdRef.current = chat.id;
+
+        const otherId = chat.participants.find(p => p !== 'user-me');
+        const otherPersona = personas.find(p => p.id === otherId);
+        if (!otherPersona) return;
+
+        const greeting = checkWindowOpenGreeting(chat, otherPersona, language);
+        if (!greeting) return;
+
+        // Slight delay to feel natural after opening.
+        const timer = setTimeout(() => {
+            triggerGreeting(chat.id, greeting.message, greeting.personaId);
+        }, 1000);
+
+        return () => clearTimeout(timer);
+    }, [chat, chat?.id, personas, language, triggerGreeting]);
 
     // Auto-hide toast
     useEffect(() => {
@@ -62,7 +106,24 @@ export default function ChatWindow({ chatId: propChatId }) {
         }
     }, [toast]);
 
+    // T07: Mark messages as read when chat is opened
+    useEffect(() => {
+        if (chat?.id) {
+            markMessagesAsRead(chat.id, 'user-me');
+        }
+    }, [chat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Keep route state and panel visibility in sync.
+    useEffect(() => {
+        setShowSearchPanel(isSearchRoute);
+    }, [isSearchRoute]);
+
     if (!chat) return <div className="flex items-center justify-center h-full bg-[var(--color-bg-app)] text-[var(--color-text-muted)]">{t('select_chat')}</div>;
+
+    // Determine character for theming (DM only)
+    const isDM = chat.participants.length === 2;
+    const otherParticipantId = isDM ? chat.participants.find(p => p !== 'user-me') : null;
+    const characterStyle = otherParticipantId ? getCharacterThemeStyle(otherParticipantId) : {};
 
     // --- Handlers ---
 
@@ -72,6 +133,9 @@ export default function ChatWindow({ chatId: propChatId }) {
         e.preventDefault();
         setSelectedMessage(msg);
         setMenuPosition({ x: e.clientX, y: e.clientY });
+        // Compute canRecall in event handler where Date.now() is allowed
+        const elapsed = msg?.timestamp ? Date.now() - new Date(msg.timestamp).getTime() : Infinity;
+        setCanRecallMessage(elapsed < 2 * 60 * 1000);
     };
 
     const handleFileSelect = (fileData) => {
@@ -81,24 +145,30 @@ export default function ChatWindow({ chatId: propChatId }) {
     };
 
     const handleGiftSent = (gift) => {
-        // Core logic: sendMessage(chat.id, `[GIFT:${gift.emoji}:${gift.name}:${gift.name_en}]`);
-        // But let's keep logic close to UI or in Service? 
-        // For now, duplicate simple string construction or move to helper
         sendMessage(chat.id, `[GIFT:${gift.emoji}:${gift.name}:${gift.name_en}]`);
+        updateTaskProgress('task_gift', 1);
         setShowGiftPanel(false);
-        showToast(language === 'zh' ? '礼物已赠送' : 'Gift sent');
+        showToast(t('gift_sent'));
     };
 
     const handleRedPacketSent = ({ amount, message }) => {
         sendMessage(chat.id, `[RED_PACKET:${amount}:${message}]`);
         setShowRedPacketPanel(false);
-        showToast(language === 'zh' ? '红包已发送' : 'Red packet sent');
+        showToast(t('red_packet_sent'));
     };
 
-    const handleGameResult = ({ result, score }) => {
-        const resultText = result === 'win' ? 'Win' : result === 'lose' ? 'Lose' : 'Draw';
-        sendMessage(chat.id, `[GAME:RPS:${resultText}:${score.player}-${score.ai}]`);
-        setShowGame(false);
+    const handleGameResult = ({ result, score, attempts, rounds }) => {
+        if (activeGame === 'rps') {
+            const resultText = result === 'win' ? 'Win' : result === 'lose' ? 'Lose' : 'Draw';
+            sendMessage(chat.id, `[GAME:RPS:${resultText}:${score.player}-${score.ai}]`);
+        } else if (activeGame === 'number_guess') {
+            const resultText = result === 'win' ? `Win in ${attempts} tries` : 'Lose';
+            sendMessage(chat.id, `[GAME:NUM:${resultText}]`);
+        } else if (activeGame === 'idiom_chain') {
+            const completedRounds = rounds || 0;
+            sendMessage(chat.id, `[GAME:IDIOM:${result}:${completedRounds}]`);
+        }
+        setActiveGame(null);
     };
 
     const handleCreatePoll = (poll) => {
@@ -115,8 +185,40 @@ export default function ChatWindow({ chatId: propChatId }) {
         setShowForwardModal(false);
     };
 
+    const handleBookmark = (messageId, shouldBookmark) => {
+        if (shouldBookmark) {
+            const result = bookmarkMessage(chat.id, messageId);
+            if (result.success) {
+                showToast(t('message_bookmarked') || 'Message bookmarked');
+                setBookmarkedMessageIds(prev => new Set([...prev, messageId]));
+            } else {
+                showToast(t('already_bookmarked') || 'Already bookmarked');
+            }
+        } else {
+            const result = unbookmarkMessage(messageId);
+            if (result.success) {
+                showToast(t('bookmark_removed') || 'Bookmark removed');
+                setBookmarkedMessageIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(messageId);
+                    return next;
+                });
+            }
+        }
+    };
+
+    const handleNavigateToBookmark = (chatId, _messageId) => {
+        // Navigation logic - could scroll to message or switch chats
+        const targetChat = chats.find(c => c.id === chatId);
+        if (targetChat && targetChat.id !== chat.id) {
+            // Would need to navigate to different chat
+            // For now, just show toast
+            showToast(t('navigating') || 'Navigating...');
+        }
+    };
+
     return (
-        <div className="flex flex-col h-full bg-[var(--color-bg-chat)] relative flex-1">
+        <div className="flex flex-col h-full bg-[var(--color-bg-chat)] relative flex-1" style={characterStyle}>
             <Suspense fallback={null}>
                 <BackgroundLayer chatId={chat.id} />
             </Suspense>
@@ -124,16 +226,22 @@ export default function ChatWindow({ chatId: propChatId }) {
                 chat={chat}
                 personas={personas}
                 typingIndicators={typingIndicators}
+                presenceMap={presenceMap}
+                moodMap={moodMap}
                 onOpenBackground={() => setShowBackgroundSettings(true)}
-            // onOpenSearch={() => setShowSearchPanel(true)} // If we want to verify search works, we need to wire this or let it use URL
+                onOpenExport={() => setShowExportModal(true)}
+                onOpenBookmarks={() => setShowBookmarkPanel(true)}
             />
 
             <MessageTimeline
                 chat={chat}
                 currentUser={currentUser}
                 personas={personas}
+                typingIndicators={typingIndicators}
+                editingIndicators={editingIndicators}
+                presenceMap={presenceMap} // For potentially showing status in bubble?
                 onContextMenu={handleMessageContextMenu}
-                onVotePoll={(pollId, optId) => votePoll(chat.id, pollId, optId)}
+                onVotePoll={(pollId, optId, action) => votePoll(chat.id, pollId, optId, action)}
             />
 
             <ChatComposer
@@ -142,33 +250,50 @@ export default function ChatWindow({ chatId: propChatId }) {
                 personas={personas}
                 headerInfo={{ id: chat.participants[1], name: chat.name }} // Approx for sticker picker
                 quotedMessage={quotedMessage}
-                onSendMessage={(content, qId) => sendMessage(chat.id, content, qId)}
+                onSendMessage={(content, qId) => {
+                    sendMessage(chat.id, content, qId);
+                    if (content.startsWith('[STICKER:')) {
+                        updateTaskProgress('task_sticker', 1);
+                    } else if (!content.startsWith('[')) {
+                        updateTaskProgress('task_messages', 1);
+                    }
+                }}
+                onSendSticker={(stickerUrl) => {
+                    sendMessage(chat.id, `[STICKER:${stickerUrl}]`);
+                    updateTaskProgress('task_sticker', 1);
+                }}
                 onCancelQuote={() => setQuotedMessage(null)}
                 // Menu Actions
                 onOpenGift={() => setShowGiftPanel(true)}
                 onOpenRedPacket={() => setShowRedPacketPanel(true)}
-                onOpenGame={() => setShowGame(true)}
+                onOpenGame={() => setShowGameSelector(true)}
                 onOpenPoll={() => setShowPoll(true)}
-                onFileSelect={handleFileSelect}
+                onSendFile={handleFileSelect}
+                onError={showToast}
             />
 
             {/* Overlays */}
             {selectedMessage && (
-                <MessageMenu
-                    message={selectedMessage}
-                    isOwnMessage={selectedMessage.senderId === 'user-me'}
-                    isPinned={chat?.pinnedMessages?.includes(selectedMessage.id)}
-                    position={menuPosition}
-                    onClose={() => setSelectedMessage(null)}
-                    onCopy={() => showToast(t('message_copied'))}
-                    onQuote={setQuotedMessage}
-                    onDelete={(id) => { deleteMessage(chat.id, id); showToast(t('message_deleted')); }}
-                    onForward={(msg) => { setMessageToForward(msg); setShowForwardModal(true); }}
-                    onPin={(msgId, pin) => {
-                        pinMessage(chat.id, msgId, pin);
-                        showToast(pin ? (language === 'zh' ? '消息已置顶' : 'Message pinned') : (language === 'zh' ? '已取消置顶' : 'Unpinned'));
-                    }}
-                />
+                <Suspense fallback={null}>
+                    <MessageMenu
+                        message={selectedMessage}
+                        isOwnMessage={selectedMessage.senderId === 'user-me'}
+                        isPinned={chat?.pinnedMessages?.includes(selectedMessage.id)}
+                        isBookmarked={bookmarkedMessageIds.has(selectedMessage.id)}
+                        position={menuPosition}
+                        canRecall={canRecallMessage}
+                        onClose={() => setSelectedMessage(null)}
+                        onCopy={() => showToast(t('message_copied'))}
+                        onQuote={setQuotedMessage}
+                        onDelete={(id) => { deleteMessage(chat.id, id); showToast(t('message_deleted')); }}
+                        onForward={(msg) => { setMessageToForward(msg); setShowForwardModal(true); }}
+                        onPin={(msgId, pin) => {
+                            pinMessage(chat.id, msgId, pin);
+                            showToast(pin ? t('message_pinned') : t('message_unpinned'));
+                        }}
+                        onBookmark={handleBookmark}
+                    />
+                </Suspense>
             )}
 
             {showForwardModal && (
@@ -202,24 +327,68 @@ export default function ChatWindow({ chatId: propChatId }) {
                 </Suspense>
             )}
 
-            {showGame && (
+            {showGameSelector && (
+                <Suspense fallback={<ModalLoadingFallback />}>
+                    <GameSelectorPanel
+                        aiName={chat.name}
+                        onClose={() => setShowGameSelector(false)}
+                        onSelectGame={(gameId) => {
+                            setShowGameSelector(false);
+                            setActiveGame(gameId);
+                        }}
+                    />
+                </Suspense>
+            )}
+
+            {activeGame === 'rps' && (
                 <Suspense fallback={<ModalLoadingFallback />}>
                     <RockPaperScissors
                         aiName={chat.name}
-                        onClose={() => setShowGame(false)}
+                        onClose={() => setActiveGame(null)}
                         onResult={handleGameResult}
                     />
                 </Suspense>
             )}
 
-            {showPoll && (
+            {activeGame === 'number_guess' && (
                 <Suspense fallback={<ModalLoadingFallback />}>
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                        <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-lg w-full max-w-md mx-4 overflow-hidden shadow-2xl animate-scale-in">
-                            <GroupPoll onClose={() => setShowPoll(false)} onCreatePoll={handleCreatePoll} />
-                        </div>
-                    </div>
+                    <NumberGuessGame
+                        aiName={chat.name}
+                        onClose={() => setActiveGame(null)}
+                        onResult={handleGameResult}
+                    />
                 </Suspense>
+            )}
+
+            {activeGame === 'trivia' && (
+                <Suspense fallback={<ModalLoadingFallback />}>
+                    <TriviaQuiz
+                        aiName={chat.name}
+                        chatId={chat.id}
+                        personaId={chat.participants.find(p => p !== 'user-me')}
+                        onClose={() => setActiveGame(null)}
+                    />
+                </Suspense>
+            )}
+
+            {activeGame === 'idiom_chain' && (
+                <Suspense fallback={<ModalLoadingFallback />}>
+                    <IdiomChainGame
+                        aiName={chat.name}
+                        onResult={handleGameResult}
+                        onClose={() => setActiveGame(null)}
+                    />
+                </Suspense>
+            )}
+
+            {showPoll && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-lg w-full max-w-md mx-4 overflow-hidden shadow-2xl animate-scale-in">
+                        <Suspense fallback={<ModalLoadingFallback />}>
+                            <GroupPoll onClose={() => setShowPoll(false)} onCreatePoll={handleCreatePoll} />
+                        </Suspense>
+                    </div>
+                </div>
             )}
 
             {/* Search Panel */}
@@ -227,8 +396,18 @@ export default function ChatWindow({ chatId: propChatId }) {
                 <Suspense fallback={<ModalLoadingFallback />}>
                     <MessageSearchPanel
                         currentChatId={chat.id}
-                        onClose={() => setShowSearchPanel(false)}
-                        onSelectMessage={() => setShowSearchPanel(false)}
+                        onClose={() => {
+                            setShowSearchPanel(false);
+                            if (isSearchRoute) {
+                                navigate(`/chat/${chat.id}`, { replace: true });
+                            }
+                        }}
+                        onSelectMessage={() => {
+                            setShowSearchPanel(false);
+                            if (isSearchRoute) {
+                                navigate(`/chat/${chat.id}`, { replace: true });
+                            }
+                        }}
                     />
                 </Suspense>
             )}
@@ -243,8 +422,31 @@ export default function ChatWindow({ chatId: propChatId }) {
                 </Suspense>
             )}
 
+            {/* T07: Bookmark Panel */}
+            {showBookmarkPanel && (
+                <Suspense fallback={<ModalLoadingFallback />}>
+                    <BookmarkPanel
+                        isOpen={showBookmarkPanel}
+                        onClose={() => setShowBookmarkPanel(false)}
+                        onNavigateToMessage={handleNavigateToBookmark}
+                        personas={personas}
+                    />
+                </Suspense>
+            )}
+
+            {/* T07: Export Modal */}
+            {showExportModal && (
+                <Suspense fallback={<ModalLoadingFallback />}>
+                    <ExportModal
+                        chat={chat}
+                        personas={personas}
+                        onClose={() => setShowExportModal(false)}
+                    />
+                </Suspense>
+            )}
+
             {toast && (
-                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/70 text-white text-sm rounded-lg z-50 animate-fade-in">
+                <div className="toast">
                     {toast}
                 </div>
             )}

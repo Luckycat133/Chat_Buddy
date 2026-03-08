@@ -136,6 +136,7 @@ export function getCharacterThemeStyle(personaId) {
     '--character-glow': theme.glow,
     '--character-primary': theme.primary,
     '--character-accent': theme.accent,
+    '--character-gradient': theme.gradient,
   };
 }
 

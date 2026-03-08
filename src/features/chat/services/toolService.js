@@ -4,10 +4,10 @@
  */
 
 import { callAI } from './chatService';
+import { getAIClient, getAIConfiguration } from '../../../services/api/aiClient';
 import {
     KNOWLEDGE_NODES,
     QUIZ_BANK,
-    getPrerequisites,
     findTopicByKeyword,
     checkMissingPrerequisites
 } from '../../../data/knowledgeGraph';
@@ -15,13 +15,11 @@ import {
     getLearnerProfile,
     markAsMastered,
     markAsInProgress,
-    recordStruggle,
-    recordQuizAttempt,
-    getLearningSummary
+    recordStruggle
 } from '../../../data/learnerProfile';
 
 // Import math.js for symbolic math
-import { evaluate, derivative, simplify, parse } from 'mathjs';
+import { evaluate, derivative, simplify } from 'mathjs';
 
 // Import immersive translation service
 import { translateWithReflection, detectDomain } from '../../../services/ai/translationService';
@@ -38,13 +36,16 @@ import {
     RECENCY_OPTIONS
 } from '../../../services/perplexityService';
 
+// T12: Memory Exchange for inter-character memory tool
+import { requestMemory } from '../../../core/memory/MemoryExchange';
+
 /**
  * Execute a named tool with provided arguments
  * @param {string} toolName 
  * @param {Object} args 
  * @returns {Promise<string>} Tool output
  */
-export async function executeTool(toolName, args) {
+export async function executeTool(toolName, args, extras = {}) {
     console.log(`[ToolService] Executing ${toolName} with args:`, args);
 
     // Simulate minimal network delay for UX
@@ -64,7 +65,7 @@ export async function executeTool(toolName, args) {
 
             // ========== Programming Tools ==========
             case 'run_code':
-                return executeJavaScript(args.code);
+                return executeInSandbox(args.code, args.language || 'javascript');
             case 'search_docs':
                 return mockSearchDocs(args.query);
             case 'analyze_code':
@@ -72,7 +73,7 @@ export async function executeTool(toolName, args) {
 
             // ========== Writing Tools ==========
             case 'check_grammar':
-                return "Grammar check passed.";
+                return executeGrammarCheck(args.text);
             case 'translate':
                 return executeAITranslate(args.text, args.targetLanguage);
 
@@ -86,7 +87,7 @@ export async function executeTool(toolName, args) {
             case 'web_search':
                 return executeWebSearch(args.query);
             case 'analyze_data':
-                return "Data analysis complete. (Simulated)";
+                return executeDataAnalysis(args);
 
             // ========== Scholar Research Tools (Perplexity Sonar) ==========
             case 'sonar_search':
@@ -106,9 +107,17 @@ export async function executeTool(toolName, args) {
 
             // ========== Creative Tools ==========
             case 'generate_image':
-                return "[Image Generation] - API request simulation";
+                return executeGenerateImage(args);
             case 'color_palette':
-                return "Recommended Palette: #FF5733, #C70039, #900C3F, #581845";
+                return executeColorPalette(args);
+
+            // ========== T12: Memory Exchange Tool ==========
+            case 'MEMORY_REQUEST':
+                return executeMemoryRequest(args, extras.personas || [], extras.requesterId || '__unknown__');
+
+            // ========== T13: Agent Collaboration Tool ==========
+            case 'delegate_task':
+                return executeDelegateTask(args, extras.personas || [], extras.delegationDepth || 0);
 
             default:
                 return `Error: Tool '${toolName}' not found.`;
@@ -166,7 +175,7 @@ function executeMathTool(expression) {
             try {
                 const deriv = derivative(expression, 'x').toString();
                 output += `\nDerivative: ${deriv}`;
-            } catch (e) {
+            } catch (_e) {
                 // Derivative not applicable
             }
         }
@@ -177,7 +186,7 @@ function executeMathTool(expression) {
             if (simplified !== expression) {
                 output += `\nSimplified: ${simplified}`;
             }
-        } catch (e) {
+        } catch (_e) {
             // Simplification not applicable
         }
 
@@ -254,27 +263,78 @@ function trackProgressTool(topicKeyword, status, misconception) {
 
 // ========== Programming Tool Implementations ==========
 
+// T13: Singleton sandbox worker for isolated code execution
+let _sandboxWorker = null;
+let _workerRequestCounter = 0;
+const _workerCallbacks = new Map(); // requestId → { resolve, reject }
+
+function getSandboxWorker() {
+    if (_sandboxWorker) return _sandboxWorker;
+    _sandboxWorker = new Worker('/sandbox.worker.js');
+    _sandboxWorker.onmessage = (event) => {
+        const { type, requestId, status, output } = event.data;
+        if (type === 'STATUS') {
+            console.log('[SandboxWorker]', output);
+            return;
+        }
+        if (type === 'RESULT' && _workerCallbacks.has(requestId)) {
+            const { resolve } = _workerCallbacks.get(requestId);
+            _workerCallbacks.delete(requestId);
+            resolve({ status, output });
+        }
+    };
+    _sandboxWorker.onerror = (err) => {
+        console.error('[SandboxWorker] Uncaught error:', err);
+        // Reject all pending and reset
+        _workerCallbacks.forEach(({ reject }) => reject(new Error('Worker crashed')));
+        _workerCallbacks.clear();
+        _sandboxWorker = null;
+    };
+    return _sandboxWorker;
+}
+
 /**
- * Safe client-side JS execution
+ * T13: Execute code in the isolated sandbox worker with a 10-second timeout.
+ * Supports 'javascript' and 'python'.
  */
-function executeJavaScript(code) {
+async function executeInSandbox(code, language = 'javascript') {
     if (!code) return "Error: No code provided";
 
-    let logs = [];
-    const mockConsole = {
-        log: (...args) => logs.push(args.join(' ')),
-        error: (...args) => logs.push('ERROR: ' + args.join(' ')),
-        warn: (...args) => logs.push('WARN: ' + args.join(' '))
-    };
+    const requestId = ++_workerRequestCounter;
+    const TIMEOUT_MS = language === 'python' ? 30000 : 10000; // Python WASM needs more time
 
-    try {
-        const userFunc = new Function('console', code);
-        const result = userFunc(mockConsole);
-        const output = logs.length > 0 ? logs.join('\n') : (result !== undefined ? String(result) : 'Success (No output)');
-        return `[Execution Result]\n${output}`;
-    } catch (e) {
-        return `[Execution Error]\n${e.name}: ${e.message}`;
-    }
+    return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+            if (_workerCallbacks.has(requestId)) {
+                _workerCallbacks.delete(requestId);
+                // Kill and recreate worker to stop infinite loops
+                try { _sandboxWorker?.terminate(); } catch (_) { /* */ }
+                _sandboxWorker = null;
+                resolve(`[Execution Timeout] Code exceeded ${TIMEOUT_MS / 1000}s limit and was terminated.`);
+            }
+        }, TIMEOUT_MS);
+
+        _workerCallbacks.set(requestId, {
+            resolve: ({ status, output }) => {
+                clearTimeout(timeout);
+                const label = status === 'error' ? '[Execution Error]' : '[Execution Result]';
+                resolve(`${label}\n${output}`);
+            },
+            reject: (err) => {
+                clearTimeout(timeout);
+                resolve(`[Execution Error]\n${err.message}`);
+            },
+        });
+
+        try {
+            getSandboxWorker().postMessage({ type: 'EXECUTE', requestId, language, code });
+        } catch (err) {
+            clearTimeout(timeout);
+            _workerCallbacks.delete(requestId);
+            _sandboxWorker = null;
+            resolve(`[Execution Error]\n${err.message}`);
+        }
+    });
 }
 
 // ========== Research Tool Implementations ==========
@@ -315,6 +375,209 @@ async function executeAITranslate(text, targetLang = 'Chinese') {
     return result || "[Translation Failed]";
 }
 
+// ========== Writing Tool Implementations ==========
+
+/**
+ * AI-driven grammar checking with detailed feedback
+ */
+async function executeGrammarCheck(text) {
+    if (!text) return "[Grammar Check Error] No text provided";
+
+    const systemPrompt = `You are a professional grammar checker and writing coach.
+Analyze the provided text for:
+1. Grammar errors (subject-verb agreement, tense issues, etc.)
+2. Spelling mistakes
+3. Punctuation errors
+4. Style improvements (clarity, conciseness, word choice)
+
+For each issue found:
+- Quote the problematic text
+- Provide the correction
+- Briefly explain why
+
+If no issues found, simply confirm: "No grammar issues found. The text looks good!"
+
+Format your response clearly with markdown.`;
+
+    try {
+        const result = await callAI(
+            [{ role: 'user', content: text }],
+            { systemPrompt, maxTokens: 600, temperature: 0.2 }
+        );
+
+        return `## Grammar Check Results
+
+${result}`;
+    } catch (error) {
+        console.error('[Grammar Check Error]', error);
+        return `[Grammar Check Error] ${error.message}`;
+    }
+}
+
+/**
+ * AI-based data analysis with summary statistics and insights
+ */
+async function executeDataAnalysis(args) {
+    const { data, type = 'general' } = args;
+    if (!data) return "[Data Analysis Error] No data provided";
+
+    const systemPrompt = `You are a data analyst. Analyze the provided data and provide:
+1. Summary statistics (count, average, min, max if numeric)
+2. Key patterns or trends
+3. Notable observations
+4. Suggestions for further analysis
+
+Format your response clearly with markdown. Be concise but thorough.`;
+
+    try {
+        const dataStr = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        const result = await callAI(
+            [{ role: 'user', content: `Analyze this ${type} data:\n${dataStr}` }],
+            { systemPrompt, maxTokens: 800, temperature: 0.3 }
+        );
+
+        return `## Data Analysis Results
+
+${result}`;
+    } catch (error) {
+        console.error('[Data Analysis Error]', error);
+        return `[Data Analysis Error] ${error.message}`;
+    }
+}
+
+/**
+ * AI-based image generation description (simulated since no image API available)
+ */
+async function executeGenerateImage(args) {
+    const { prompt, size = '1024x1024' } = args;
+    if (!prompt) return "[Image Generation Error] No prompt provided";
+
+    // Attempt real image generation via OpenAI-compatible endpoint first.
+    try {
+        const aiClient = getAIClient();
+        const cfg = getAIConfiguration();
+        const imageModel = args.model || cfg.imageModel || cfg.model || 'gpt-image-1';
+
+        const response = await aiClient.post('/images/generations', {
+            model: imageModel,
+            prompt,
+            size,
+            response_format: 'b64_json'
+        });
+
+        const data = await response.json().catch(() => null);
+        if (response.ok && Array.isArray(data?.data) && data.data.length > 0) {
+            const first = data.data[0];
+            const imageUrl = first.url || (first.b64_json ? `data:image/png;base64,${first.b64_json}` : null);
+            if (imageUrl) {
+                return `## Image Generation Result
+
+**Prompt:** "${prompt}"
+**Model:** ${imageModel}
+**Size:** ${size}
+
+${imageUrl.startsWith('data:')
+        ? '[Image generated as base64 data URL. Use compatible renderer to preview.]'
+        : `Generated image URL: ${imageUrl}`}`;
+            }
+        }
+    } catch {
+        // Fall through to simulation mode.
+    }
+
+    const systemPrompt = `You are an image generation describer. The user wants to generate an image with the prompt: "${prompt}".
+
+Describe what the generated image would look like in vivid detail:
+1. Main subject and composition
+2. Colors and lighting
+3. Style and mood
+4. Any notable details
+
+Then acknowledge that this is a simulated response and suggest connecting an actual image generation API for real images.`;
+
+    try {
+        const result = await callAI(
+            [{ role: 'user', content: `Describe what an image with prompt "${prompt}" would look like` }],
+            { systemPrompt, maxTokens: 400, temperature: 0.7 }
+        );
+
+        return `## Image Generation Request
+
+**Prompt:** "${prompt}"
+**Requested Size:** ${size}
+
+---
+
+${result}
+
+---
+
+💡 *Note: This is a simulated description. To generate actual images, connect an image generation API (like DALL-E, Midjourney, or Stable Diffusion) in your settings.*`;
+    } catch (error) {
+        console.error('[Image Generation Error]', error);
+        return `[Image Generation Error] ${error.message}`;
+    }
+}
+
+/**
+ * AI-based color palette generation
+ */
+async function executeColorPalette(args) {
+    const { mood, baseColor, count = 5 } = args;
+
+    // Predefined palettes as fallback
+    const palettes = {
+        warm: ['#FF6B6B', '#FF8E53', '#FFCD56', '#FFD93D', '#FFC857'],
+        cool: ['#4ECDC4', '#44A08D', '#96C93D', '#00B4DB', '#0083B0'],
+        dark: ['#2C3E50', '#34495E', '#7F8C8D', '#95A5A6', '#BDC3C7'],
+        pastel: ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF'],
+        vibrant: ['#FF006E', '#FB5607', '#FFBE0B', '#8338EC', '#3A86FF'],
+        nature: ['#2D5016', '#538D22', '#73A942', '#AAD576', '#D4F1AC'],
+        ocean: ['#006D77', '#83C5BE', '#EDF6F9', '#FFDDD2', '#E29578'],
+        sunset: ['#FF595E', '#FFCA3A', '#8AC926', '#1982C4', '#6A4C93']
+    };
+
+    const systemPrompt = `Generate a ${count}-color palette${mood ? ` for a "${mood}" mood` : ''}${baseColor ? ` based on ${baseColor}` : ''}.
+
+For each color, provide:
+- Hex code
+- Color name
+- Suggested usage (e.g., primary, accent, background)
+
+Format:
+**Color Name**: #HEXCODE - Usage description
+
+Also include a brief description of the overall palette mood and best use cases.`;
+
+    try {
+        const result = await callAI(
+            [{ role: 'user', content: 'Generate a color palette' }],
+            { systemPrompt, maxTokens: 500, temperature: 0.6 }
+        );
+
+        // Also provide a fallback palette if AI fails
+        const fallback = palettes[mood] || palettes.warm;
+
+        return `## Color Palette Generated
+
+${result}
+
+---
+
+**Quick Reference Palette:** ${fallback.slice(0, count).join(', ')}
+
+💡 *Tip: Use these colors consistently across your design for visual harmony.*`;
+    } catch (error) {
+        console.error('[Color Palette Error]', error);
+        const fallback = palettes[mood] || palettes.warm;
+        return `## Color Palette (${mood || 'warm'})
+
+${fallback.slice(0, count).join(', ')}
+
+*Error generating detailed palette: ${error.message}*`;
+    }
+}
+
 // ========== Legacy Mock Implementations ==========
 
 function mockSearchDocs(query) {
@@ -323,7 +586,7 @@ function mockSearchDocs(query) {
 2. API Reference: Method signatures for ${query}`;
 }
 
-function mockAnalyzeCode(code) {
+function mockAnalyzeCode(_code) {
     return `[Static Analysis]
 - Complexity: Low
 - Maintainability: High
@@ -648,6 +911,67 @@ function executeCiteSources(sources, format = 'apa') {
     return output;
 }
 
+// ========== T12: Memory Exchange Implementation ==========
+
+/**
+ * Execute a MEMORY_REQUEST tool call.
+ * @param {Object} args - { target, topic }
+ * @param {Array} personas - All loaded personas
+ */
+async function executeMemoryRequest(args, personas, requesterId = '__unknown__') {
+    const { target, topic } = args;
+    if (!target || !topic) {
+        return '[MEMORY_REQUEST Error] Missing required fields: target and topic.';
+    }
+    return requestMemory(requesterId, target, topic, personas);
+}
+
+// ========== T13: Agent Collaboration Implementation ==========
+
+/**
+ * Delegate a sub-task to another agent and return its response.
+ * Max delegation depth: 2 — prevents infinite agent loops.
+ *
+ * @param {Object} args        - { agentId, prompt }
+ * @param {Array}  personas    - Full persona list to look up the target agent
+ * @param {number} depth       - Current delegation depth (passed by AIPipeline)
+ * @returns {Promise<string>}  - Delegated agent's response
+ */
+async function executeDelegateTask(args, personas, depth = 0) {
+    const { agentId, prompt } = args;
+
+    if (!agentId || !prompt) {
+        return '[Delegate Error] Missing required fields: agentId and prompt.';
+    }
+    if (depth >= 2) {
+        return '[Delegate Error] Maximum delegation depth reached (2). Cannot delegate further.';
+    }
+
+    const targetAgent = personas.find(p => p.id === agentId);
+    if (!targetAgent) {
+        return `[Delegate Error] Agent "${agentId}" not found.`;
+    }
+
+    console.log(`[ToolService] Delegating to ${targetAgent.name}: "${prompt.slice(0, 80)}..."`);
+
+    try {
+        const systemPrompt = targetAgent.systemPrompt ||
+            `You are ${targetAgent.name}, a specialized AI assistant. ${targetAgent.personality || ''}`;
+
+        const result = await callAI(
+            [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: prompt }
+            ],
+            { agentId, maxTokens: 800, temperature: 0.7 }
+        );
+
+        if (!result) return `[Delegate Error] ${targetAgent.name} did not respond.`;
+
+        return `[Delegated response from ${targetAgent.name}]\n${result}`;
+    } catch (e) {
+        return `[Delegate Error] ${targetAgent.name} failed: ${e.message}`;
+    }
+}
+
 export default executeTool;
-
-

@@ -11,6 +11,26 @@ export default function FileUploader({ onFileSelect, onClose }) {
     const [error, setError] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
 
+    const processFile = useCallback(async (file) => {
+        setIsProcessing(true);
+        try {
+            const validation = validateFile(file);
+            if (!validation.valid) {
+                setError(t(validation.errors[0]));
+                setIsProcessing(false);
+                return;
+            }
+
+            const fileData = await processFileForChat(file);
+            onFileSelect?.(fileData);
+            onClose?.();
+        } catch (err) {
+            setError(t(err.message) || t('error'));
+        } finally {
+            setIsProcessing(false);
+        }
+    }, [t, onFileSelect, onClose]);
+
     const handleDragOver = useCallback((e) => {
         e.preventDefault();
         setIsDragging(true);
@@ -30,7 +50,7 @@ export default function FileUploader({ onFileSelect, onClose }) {
         if (files.length > 0) {
             await processFile(files[0]);
         }
-    }, []);
+    }, [processFile]);
 
     const handleFileSelect = useCallback(async (e) => {
         setError(null);
@@ -38,36 +58,16 @@ export default function FileUploader({ onFileSelect, onClose }) {
         if (files.length > 0) {
             await processFile(files[0]);
         }
-    }, []);
-
-    const processFile = async (file) => {
-        setIsProcessing(true);
-        try {
-            const validation = validateFile(file);
-            if (!validation.valid) {
-                setError(t(validation.errors[0]));
-                setIsProcessing(false);
-                return;
-            }
-
-            const fileData = await processFileForChat(file);
-            onFileSelect?.(fileData);
-            onClose?.();
-        } catch (err) {
-            setError(t(err.message) || t('error'));
-        } finally {
-            setIsProcessing(false);
-        }
-    };
+    }, [processFile]);
 
     return (
-        <div className="absolute bottom-full mb-2 left-0 w-72 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
+        <div className="absolute bottom-full mb-2 left-0 w-72 bg-[var(--color-bg-white)] rounded-lg shadow-xl border border-[var(--color-border)] overflow-hidden z-50">
             {/* Header */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
-                <span className="font-medium text-sm text-gray-700">{t('upload_file')}</span>
+            <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-border-light)]">
+                <span className="font-medium text-sm text-[var(--color-text-main)]">{t('upload_file')}</span>
                 <button
                     onClick={onClose}
-                    className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                    className="p-1 hover:bg-[var(--color-bg-hover)] rounded text-[var(--color-text-muted)]"
                 >
                     <X size={16} />
                 </button>
@@ -83,7 +83,7 @@ export default function FileUploader({ onFileSelect, onClose }) {
                     "m-3 p-6 border-2 border-dashed rounded-lg transition-colors cursor-pointer text-center",
                     isDragging
                         ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5"
-                        : "border-gray-200 hover:border-gray-300"
+                        : "border-[var(--color-border)] hover:border-[var(--color-border-light)]"
                 )}
             >
                 <input
@@ -97,13 +97,13 @@ export default function FileUploader({ onFileSelect, onClose }) {
                 {isProcessing ? (
                     <div className="flex flex-col items-center gap-2">
                         <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-                        <p className="text-sm text-gray-500">{t('uploading')}</p>
+                        <p className="text-sm text-[var(--color-text-muted)]">{t('uploading')}</p>
                     </div>
                 ) : (
                     <>
-                        <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm text-gray-600 mb-1">{t('drag_drop_file')}</p>
-                        <p className="text-xs text-gray-400">{t('or_click_to_upload')}</p>
+                        <Upload className="w-8 h-8 mx-auto mb-2 text-[var(--color-text-muted)]" />
+                        <p className="text-sm text-[var(--color-text-main)] mb-1">{t('drag_drop_file')}</p>
+                        <p className="text-xs text-[var(--color-text-muted)]">{t('or_click_to_upload')}</p>
                     </>
                 )}
             </div>
@@ -118,7 +118,7 @@ export default function FileUploader({ onFileSelect, onClose }) {
 
             {/* Supported formats */}
             <div className="px-3 pb-3">
-                <p className="text-xs text-gray-400 text-center">
+                <p className="text-xs text-[var(--color-text-muted)] text-center">
                     {t('supported_formats')}
                 </p>
             </div>

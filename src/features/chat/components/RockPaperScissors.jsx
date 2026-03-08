@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { X, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useSocial } from '../../../context/SocialContext';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { cn } from '../../../utils/cn';
+
+const WIN_POINTS_PER_ROUND = 10;
 
 // Game choices
 const CHOICES = [
@@ -17,49 +21,63 @@ const OUTCOMES = {
 };
 
 export default function RockPaperScissors({ aiName, onClose, onResult }) {
-    const { t, language } = useLanguage();
+    const { t } = useLanguage();
+    const { addPoints, updateTaskProgress } = useSocial();
+    const trapRef = useFocusTrap(true);
     const [playerChoice, setPlayerChoice] = useState(null);
     const [aiChoice, setAiChoice] = useState(null);
     const [result, setResult] = useState(null);
     const [countdown, setCountdown] = useState(null);
     const [score, setScore] = useState({ player: 0, ai: 0 });
     const [round, setRound] = useState(1);
+    const [roundPointsMsg, setRoundPointsMsg] = useState(null);
+    const [gameTaskDone, setGameTaskDone] = useState(false);
 
-    // AI makes its choice after player
+    // Countdown and game resolution effect - only runs the timer
+    // Initial countdown is set by handleChoice (event handler)
     useEffect(() => {
-        if (playerChoice && !aiChoice) {
-            setCountdown(3);
-        }
-    }, [playerChoice, aiChoice]);
+        if (countdown === null || countdown <= 0) return;
 
-    // Countdown and reveal
-    useEffect(() => {
-        if (countdown === null) return;
+        const timer = setTimeout(() => {
+            const nextCount = countdown - 1;
+            if (nextCount > 0) {
+                setCountdown(nextCount);
+            } else {
+                setCountdown(0);
 
-        if (countdown > 0) {
-            const timer = setTimeout(() => setCountdown(countdown - 1), 500);
-            return () => clearTimeout(timer);
-        } else {
-            // AI picks randomly
-            const randomChoice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
-            setAiChoice(randomChoice);
+                // AI picks randomly
+                const randomChoice = CHOICES[Math.floor(Math.random() * CHOICES.length)];
+                setAiChoice(randomChoice);
 
-            // Determine result
-            const outcome = OUTCOMES[playerChoice.id][randomChoice.id];
-            setResult(outcome);
+                // Determine result
+                const outcome = OUTCOMES[playerChoice.id][randomChoice.id];
+                setResult(outcome);
 
-            // Update score
-            if (outcome === 'win') {
-                setScore(prev => ({ ...prev, player: prev.player + 1 }));
-            } else if (outcome === 'lose') {
-                setScore(prev => ({ ...prev, ai: prev.ai + 1 }));
+                // Update score and award points for wins
+                if (outcome === 'win') {
+                    setScore(prev => ({ ...prev, player: prev.player + 1 }));
+                    addPoints(WIN_POINTS_PER_ROUND);
+                    setRoundPointsMsg(t('rps_win_points', { pts: WIN_POINTS_PER_ROUND }));
+                    setTimeout(() => setRoundPointsMsg(null), 2000);
+                } else if (outcome === 'lose') {
+                    setScore(prev => ({ ...prev, ai: prev.ai + 1 }));
+                }
+
+                // Mark game task complete on first play
+                if (!gameTaskDone) {
+                    updateTaskProgress('task_game', 1);
+                    setGameTaskDone(true);
+                }
             }
-        }
-    }, [countdown, playerChoice]);
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [countdown, playerChoice]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleChoice = (choice) => {
         if (playerChoice) return; // Already chose
         setPlayerChoice(choice);
+        setCountdown(3); // Start countdown from event handler (pure)
     };
 
     const handlePlayAgain = () => {
@@ -78,9 +96,9 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
 
     const getResultMessage = () => {
         if (!result) return '';
-        if (result === 'win') return language === 'zh' ? '你赢了! 🎉' : 'You win! 🎉';
-        if (result === 'lose') return language === 'zh' ? `${aiName} 赢了!` : `${aiName} wins!`;
-        return language === 'zh' ? '平局!' : 'Draw!';
+        if (result === 'win') return t('you_win');
+        if (result === 'lose') return t('ai_wins', { name: aiName });
+        return t('game_draw');
     };
 
     const getResultColor = () => {
@@ -91,17 +109,21 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="presentation" onClick={onClose}>
             <div
-                className="bg-white rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
+                ref={trapRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="rps-game-title"
+                className="bg-[var(--color-bg-white)] rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-hover)]">
-                    <h3 className="font-bold text-white text-lg">
-                        {language === 'zh' ? '✊ 石头剪刀布 ✌️' : '✊ Rock Paper Scissors ✌️'}
+                    <h3 id="rps-game-title" className="font-bold text-white text-lg">
+                        ✊ {t('rock_paper_scissors')} ✌️
                     </h3>
-                    <button onClick={onClose} className="text-white/80 hover:text-white">
+                    <button onClick={onClose} className="text-white/80 hover:text-white" aria-label="Close">
                         <X size={24} />
                     </button>
                 </div>
@@ -113,7 +135,7 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
                         <p className="text-2xl font-bold text-[var(--color-primary)]">{score.player}</p>
                     </div>
                     <div className="text-center">
-                        <p className="text-sm text-[var(--color-text-muted)]">{language === 'zh' ? '第' : 'Round'} {round} {language === 'zh' ? '轮' : ''}</p>
+                        <p className="text-sm text-[var(--color-text-muted)]">{t('round_label', { round })}</p>
                         <p className="text-lg font-medium">VS</p>
                     </div>
                     <div className="text-center">
@@ -153,8 +175,15 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
 
                     {/* Result */}
                     {result && (
-                        <div className={cn("text-center text-xl font-bold mb-4", getResultColor())}>
-                            {getResultMessage()}
+                        <div className="text-center mb-4">
+                            <div className={cn("text-xl font-bold", getResultColor())}>
+                                {getResultMessage()}
+                            </div>
+                            {roundPointsMsg && (
+                                <div className="text-sm text-green-500 font-medium mt-1 animate-fade-slide-up">
+                                    {roundPointsMsg}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -162,7 +191,7 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
                     {!playerChoice && (
                         <div>
                             <p className="text-center text-sm text-[var(--color-text-muted)] mb-4">
-                                {language === 'zh' ? '选择你的出招' : 'Make your choice'}
+                                {t('make_your_choice')}
                             </p>
                             <div className="flex justify-center gap-4">
                                 {CHOICES.map(choice => (
@@ -186,13 +215,13 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
                                 className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-[var(--color-primary-hover)] transition-colors"
                             >
                                 <RotateCcw size={18} />
-                                {language === 'zh' ? '再来一局' : 'Play Again'}
+                                {t('play_again')}
                             </button>
                             <button
                                 onClick={handleFinish}
-                                className="flex-1 py-3 bg-[var(--color-bg-app)] text-[var(--color-text-main)] rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                                className="flex-1 py-3 bg-[var(--color-bg-app)] text-[var(--color-text-main)] rounded-lg font-medium hover:bg-[var(--color-bg-active)] transition-colors"
                             >
-                                {language === 'zh' ? '结束' : 'Finish'}
+                                {t('finish')}
                             </button>
                         </div>
                     )}

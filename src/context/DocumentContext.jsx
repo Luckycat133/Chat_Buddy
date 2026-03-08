@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import {
-    loadIndex,
     buildRAGContext,
     addDocumentToIndex,
     removeDocumentFromIndex
 } from '../utils/ragUtils';
+import documentStorage from '../services/storage/DocumentStorageService';
 
 const DocumentContext = createContext();
 
@@ -17,14 +17,32 @@ export const useDocuments = () => {
 };
 
 export const DocumentProvider = ({ children }) => {
-    // Document metadata storage
-    const [documents, setDocuments] = useLocalStorage('chat-buddy-documents', []);
+    // Document metadata now primarily stored in IndexedDB (with legacy migration).
+    const [documents, setDocuments] = useState([]);
 
     // RAG enabled state
     const [ragEnabled, setRagEnabled] = useLocalStorage('chat-buddy-rag-enabled', true);
 
-    // Indexed chunks (loaded from localStorage)
-    const [indexedChunks, setIndexedChunks] = useState(() => loadIndex());
+    // Indexed chunks now primarily stored in IndexedDB.
+    const [indexedChunks, setIndexedChunks] = useState([]);
+
+    useEffect(() => {
+        let disposed = false;
+
+        async function hydrate() {
+            await documentStorage.migrateFromLocalStorage();
+            const [storedDocs, storedIndex] = await Promise.all([
+                documentStorage.loadDocuments(),
+                documentStorage.loadIndex()
+            ]);
+            if (disposed) return;
+            setDocuments(Array.isArray(storedDocs) ? storedDocs : []);
+            setIndexedChunks(Array.isArray(storedIndex) ? storedIndex : []);
+        }
+
+        hydrate();
+        return () => { disposed = true; };
+    }, []);
 
     // Add a new document
     const addDocument = useCallback((fileData) => {
@@ -39,23 +57,37 @@ export const DocumentProvider = ({ children }) => {
         };
 
         // Add to documents list
-        setDocuments(prev => [newDoc, ...prev]);
+        setDocuments(prev => {
+            const next = [newDoc, ...prev];
+            documentStorage.saveDocuments(next);
+            return next;
+        });
 
         // Index for RAG
-        const updatedIndex = addDocumentToIndex(newDoc);
-        setIndexedChunks(updatedIndex);
+        setIndexedChunks(prev => {
+            const updatedIndex = addDocumentToIndex(newDoc, prev, { persist: false });
+            documentStorage.saveIndex(updatedIndex);
+            return updatedIndex;
+        });
 
         return newDoc;
-    }, [setDocuments]);
+    }, []);
 
     // Remove a document
     const removeDocument = useCallback((documentId) => {
-        setDocuments(prev => prev.filter(d => d.id !== documentId));
+        setDocuments(prev => {
+            const next = prev.filter(d => d.id !== documentId);
+            documentStorage.saveDocuments(next);
+            return next;
+        });
 
         // Remove from index
-        const updatedIndex = removeDocumentFromIndex(documentId);
-        setIndexedChunks(updatedIndex);
-    }, [setDocuments]);
+        setIndexedChunks(prev => {
+            const updatedIndex = removeDocumentFromIndex(documentId, prev, { persist: false });
+            documentStorage.saveIndex(updatedIndex);
+            return updatedIndex;
+        });
+    }, []);
 
     // Search documents for RAG context
     const searchForContext = useCallback((query) => {

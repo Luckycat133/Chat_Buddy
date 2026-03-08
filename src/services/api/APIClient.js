@@ -67,22 +67,37 @@ class APIClient {
 
     _buildUrl(endpoint) {
         if (endpoint.startsWith('http')) return endpoint;
-        return `${this.baseURL}${endpoint}`;
+
+        const base = (this.baseURL || '').trim();
+        if (!base) return endpoint;
+
+        const normalizedBase = base.replace(/\/+$/, '');
+        const normalizedEndpoint = endpoint
+            ? `/${String(endpoint).replace(/^\/+/, '')}`
+            : '';
+
+        // If base URL already points to the completions endpoint,
+        // avoid appending it twice.
+        if (/\/chat\/completions$/i.test(normalizedBase) && normalizedEndpoint === '/chat/completions') {
+            return normalizedBase;
+        }
+
+        return `${normalizedBase}${normalizedEndpoint}`;
     }
 
     async _fetchWithRetry(url, config, retriesLeft) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+        let abortListener = null;
+
+        // Merge signals if provided
+        if (config.signal) {
+            abortListener = () => controller.abort();
+            config.signal.addEventListener('abort', abortListener, { once: true });
+        }
+
         try {
-            // Setup timeout
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), this.timeout);
-
-            // Merge signals if provided
-            if (config.signal) {
-                config.signal.addEventListener('abort', () => controller.abort());
-            }
-
             const response = await fetch(url, { ...config, signal: controller.signal });
-            clearTimeout(id);
 
             // Handle 429 Rate Limiting with Backoff
             if (response.status === 429 && retriesLeft > 0) {
@@ -110,6 +125,11 @@ class APIClient {
                 return this._fetchWithRetry(url, config, retriesLeft - 1);
             }
             throw error;
+        } finally {
+            clearTimeout(timeoutId);
+            if (config.signal && abortListener) {
+                config.signal.removeEventListener('abort', abortListener);
+            }
         }
     }
 }

@@ -24,125 +24,129 @@ export default function About() {
     ];
 
     return (
-        <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto pb-16 md:pb-0">
-            {/* App Info Header */}
-            <div className="bg-white px-4 py-6 mb-2 text-center">
-                <div className="w-20 h-20 rounded-2xl overflow-hidden mx-auto mb-3 shadow-lg logo-animated">
-                    <img
-                        src="/logo.png"
-                        alt="Chat Buddy"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.parentElement.innerHTML = '<div class="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-white text-3xl font-bold">CB</div>';
-                        }}
-                    />
-                </div>
-                <h1 className="text-xl font-semibold text-[var(--color-text-main)]">
-                    Chat Buddy
-                </h1>
-                <p className="text-[var(--color-primary)] font-medium mt-1">
-                    v0.3.0
-                </p>
-                <p className="text-sm text-[var(--color-text-muted)] mt-2">
-                    {t('about_tagline')}
-                </p>
-            </div>
+        <div className="page-container custom-scrollbar">
+            {/* Ambient Background Glow */}
+            <div className="page-ambient-glow" />
 
-            {/* Features */}
-            <div className="bg-white px-4 py-4 mb-2">
-                <h2 className="font-medium text-[var(--color-text-main)] mb-3 flex items-center gap-2">
-                    <Info size={18} className="text-[var(--color-primary)]" />
-                    {t('about_features')}
-                </h2>
-                <div className="space-y-3">
-                    {features.map((feature, index) => (
-                        <div key={index} className="flex items-center gap-3">
-                            <span className="text-[var(--color-primary)]">{feature.icon}</span>
-                            <span className="text-sm text-[var(--color-text-main)]">{feature.text}</span>
+            <div className="page-content space-y-6">
+                {/* App Info Header */}
+                <div className="page-header animate-fade-slide-down">
+                    <div className="page-header-icon logo-animated overflow-hidden !p-0">
+                        <img
+                            src="/logo.png"
+                            alt="Chat Buddy"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.parentElement.innerHTML = '<div class="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xl font-bold">CB</div>';
+                            }}
+                        />
+                    </div>
+                    <div>
+                        <h1 className="page-header-title">
+                            Chat Buddy
+                        </h1>
+                        <p className="page-header-desc">
+                            v0.3.0 • {t('about_tagline')}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Features */}
+                    <section className="card p-6 animate-fade-slide-up" style={{ animationDelay: '100ms' }}>
+                        <h2 className="text-lg font-bold text-[var(--color-text-main)] mb-4 flex items-center gap-2">
+                            <Info size={20} className="text-[var(--color-primary)]" />
+                            {t('about_features')}
+                        </h2>
+                        <div className="space-y-4">
+                            {features.map((feature, index) => (
+                                <div key={index} className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-bg-app)]/50 border border-[var(--color-border-light)]">
+                                    <span className="text-[var(--color-primary)]">{feature.icon}</span>
+                                    <span className="text-sm font-medium text-[var(--color-text-main)]">{feature.text}</span>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-            </div>
+                    </section>
 
-            {/* Changelog Summary */}
-            <div className="bg-white px-4 py-4 mb-2">
-                <h2 className="font-medium text-[var(--color-text-main)] mb-3 flex items-center gap-2">
-                    <FileText size={18} className="text-[var(--color-primary)]" />
-                    {t('changelog_title')}
-                </h2>
-                <div className="space-y-3">
-                    {changelog.map((item, index) => (
-                        <div key={index} className="border-l-2 border-[var(--color-primary)] pl-3">
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-[var(--color-primary)]">
-                                    {item.version}
+                    {/* Tech Stack */}
+                    <section className="card p-6 animate-fade-slide-up" style={{ animationDelay: '150ms' }}>
+                        <h2 className="text-lg font-bold text-[var(--color-text-main)] mb-4 flex items-center gap-2">
+                            <Code size={20} className="text-[var(--color-primary)]" />
+                            {t('tech_stack')}
+                        </h2>
+                        <div className="flex flex-wrap gap-2">
+                            {['React 18', 'Vite', 'TailwindCSS', 'DeepSeek API', 'LocalStorage'].map((tech) => (
+                                <span
+                                    key={tech}
+                                    className="badge badge-primary px-3 py-1.5"
+                                >
+                                    {tech}
                                 </span>
-                                <span className="text-xs text-[var(--color-text-muted)]">
-                                    {item.date}
-                                </span>
+                            ))}
+                        </div>
+                        <div className="mt-8">
+                            <h3 className="text-sm font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+                                {t('links')}
+                            </h3>
+                            <div className="space-y-3">
+                                <a
+                                    href="https://github.com/user/chat-buddy-remake"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 text-sm text-[var(--color-primary)] hover:underline transition-all"
+                                >
+                                    <ExternalLink size={16} />
+                                    GitHub Repository
+                                </a>
+                                <a
+                                    href="https://github.com/user/chat-buddy-remake/blob/main/CHANGELOG.md"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-all"
+                                >
+                                    <FileText size={16} />
+                                    {t('full_changelog')}
+                                </a>
                             </div>
-                            <p className="text-sm text-[var(--color-text-muted)] mt-1">
-                                {item.changes}
-                            </p>
                         </div>
-                    ))}
-                </div>
-            </div>
+                    </section>
 
-            {/* Tech Stack */}
-            <div className="bg-white px-4 py-4 mb-2">
-                <h2 className="font-medium text-[var(--color-text-main)] mb-3 flex items-center gap-2">
-                    <Code size={18} className="text-[var(--color-primary)]" />
-                    {t('tech_stack')}
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                    {['React 18', 'Vite', 'TailwindCSS', 'DeepSeek API', 'LocalStorage'].map((tech) => (
-                        <span
-                            key={tech}
-                            className="px-3 py-1 bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs rounded-full"
-                        >
-                            {tech}
-                        </span>
-                    ))}
+                    {/* Changelog Summary */}
+                    <section className="card p-6 md:col-span-2 animate-fade-slide-up" style={{ animationDelay: '200ms' }}>
+                        <h2 className="text-lg font-bold text-[var(--color-text-main)] mb-4 flex items-center gap-2">
+                            <FileText size={20} className="text-[var(--color-primary)]" />
+                            {t('changelog_title')}
+                        </h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {changelog.slice(0, 6).map((item, index) => (
+                                <div key={index} className="p-4 rounded-xl border border-[var(--color-border-light)] bg-[var(--color-bg-app)]/30">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="badge badge-primary">
+                                            {item.version}
+                                        </span>
+                                        <span className="text-[10px] font-medium text-[var(--color-text-muted)]">
+                                            {item.date}
+                                        </span>
+                                    </div>
+                                    <p className="text-sm text-[var(--color-text-secondary)] line-clamp-3">
+                                        {item.changes}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
                 </div>
-            </div>
 
-            {/* Links */}
-            <div className="bg-white px-4 py-4 mb-2">
-                <h2 className="font-medium text-[var(--color-text-main)] mb-3">
-                    {t('links')}
-                </h2>
-                <div className="space-y-2">
-                    <a
-                        href="https://github.com/user/chat-buddy-remake"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-[var(--color-primary)] hover:underline"
-                    >
-                        <ExternalLink size={16} />
-                        GitHub Repository
-                    </a>
-                    <a
-                        href="https://github.com/user/chat-buddy-remake/blob/main/CHANGELOG.md"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-[var(--color-primary)] hover:underline"
-                    >
-                        <FileText size={16} />
-                        {t('full_changelog')}
-                    </a>
-                </div>
-            </div>
-
-            {/* Footer */}
-            <div className="px-4 py-6 text-center">
-                <p className="text-sm text-[var(--color-text-muted)]">
-                    {t('made_with_love')}
-                </p>
-                <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                    © 2025 Chat Buddy Remake
-                </p>
+                {/* Footer */}
+                <footer className="py-10 text-center animate-fade-in" style={{ animationDelay: '300ms' }}>
+                    <p className="text-sm text-[var(--color-text-muted)] flex items-center justify-center gap-1">
+                        Chat Buddy Remake <span className="text-[var(--color-danger)]">❤️</span>
+                    </p>
+                    <p className="text-xs text-[var(--color-text-light)] mt-1">
+                        © 2026 Chat Buddy Remake Project
+                    </p>
+                </footer>
             </div>
         </div>
     );

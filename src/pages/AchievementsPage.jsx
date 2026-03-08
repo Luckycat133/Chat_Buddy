@@ -1,24 +1,28 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Trophy, Lock, Star, Gift, Flame, MessageSquare, Users, Camera, Settings as SettingsIcon } from 'lucide-react';
+import { ArrowLeft, Trophy, Lock, Star, Gift, Flame, MessageSquare, Users, Camera, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSocial } from '../context/SocialContext';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
+import DailyTaskPanel from '../components/DailyTaskPanel';
 
 export default function AchievementsPage() {
     const navigate = useNavigate();
-    const { getAchievements, points, streakDays } = useSocial();
-    const { language } = useLanguage();
+    const { getAchievements, points, streakDays, getDailyTaskProgress } = useSocial();
+    const { t, language } = useLanguage();
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [showDailyTasks, setShowDailyTasks] = useState(false);
+
+    const taskProgress = getDailyTaskProgress();
 
     const achievements = getAchievements();
     const unlockedCount = achievements.filter(a => a.unlocked).length;
 
     const categories = [
-        { id: 'all', name: '全部', name_en: 'All', icon: Trophy },
-        { id: 'social', name: '社交', name_en: 'Social', icon: MessageSquare },
-        { id: 'streak', name: '签到', name_en: 'Streak', icon: Flame },
-        { id: 'gift', name: '礼物', name_en: 'Gifts', icon: Gift },
+        { id: 'all', key: 'cat_all', icon: Trophy },
+        { id: 'social', key: 'cat_social', icon: MessageSquare },
+        { id: 'streak', key: 'cat_streak', icon: Flame },
+        { id: 'gift', key: 'cat_gifts', icon: Gift },
     ];
 
     const getCategoryForAchievement = (id) => {
@@ -51,33 +55,55 @@ export default function AchievementsPage() {
                             <ArrowLeft size={24} />
                         </button>
                         <h1 className="text-xl font-bold text-white">
-                            {language === 'zh' ? '成就系统' : 'Achievements'}
+                            {t('achievement_system')}
                         </h1>
                     </div>
+
+                    {/* Daily Tasks Banner */}
+                    <button
+                        onClick={() => setShowDailyTasks(true)}
+                        className="w-full mb-4 flex items-center justify-between bg-white/20 hover:bg-white/30 transition-colors rounded-xl px-4 py-2.5 text-white"
+                    >
+                        <div className="flex items-center gap-2">
+                            <ClipboardList size={18} />
+                            <span className="text-sm font-semibold">{t('daily_tasks')}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="flex gap-1">
+                                {Array.from({ length: taskProgress.total }).map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className={cn('w-2 h-2 rounded-full', i < taskProgress.completed ? 'bg-white' : 'bg-white/30')}
+                                    />
+                                ))}
+                            </div>
+                            <span className="text-xs opacity-80">{taskProgress.completed}/{taskProgress.total}</span>
+                        </div>
+                    </button>
 
                     {/* Stats */}
                     <div className="grid grid-cols-3 gap-4 text-center text-white">
                         <div className="bg-white/20 rounded-xl p-3">
                             <Trophy className="mx-auto mb-1" size={24} />
                             <p className="text-2xl font-bold">{unlockedCount}/{achievements.length}</p>
-                            <p className="text-xs opacity-80">{language === 'zh' ? '已解锁' : 'Unlocked'}</p>
+                            <p className="text-xs opacity-80">{t('unlocked')}</p>
                         </div>
                         <div className="bg-white/20 rounded-xl p-3">
                             <Star className="mx-auto mb-1" size={24} />
                             <p className="text-2xl font-bold">{points}</p>
-                            <p className="text-xs opacity-80">{language === 'zh' ? '总积分' : 'Points'}</p>
+                            <p className="text-xs opacity-80">{t('total_points')}</p>
                         </div>
                         <div className="bg-white/20 rounded-xl p-3">
                             <Flame className="mx-auto mb-1" size={24} />
                             <p className="text-2xl font-bold">{streakDays}</p>
-                            <p className="text-xs opacity-80">{language === 'zh' ? '连续天数' : 'Streak'}</p>
+                            <p className="text-xs opacity-80">{t('streak_days')}</p>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Categories */}
-            <div className="flex overflow-x-auto px-4 py-3 gap-2 border-b border-[var(--color-border)] bg-white">
+            <div className="flex overflow-x-auto px-4 py-3 gap-2 border-b border-[var(--color-border)] bg-[var(--color-bg-white)]">
                 {categories.map(cat => {
                     const Icon = cat.icon;
                     return (
@@ -92,11 +118,13 @@ export default function AchievementsPage() {
                             )}
                         >
                             <Icon size={16} />
-                            {language === 'zh' ? cat.name : cat.name_en}
+                            {t(cat.key)}
                         </button>
                     );
                 })}
             </div>
+
+            {showDailyTasks && <DailyTaskPanel onClose={() => setShowDailyTasks(false)} />}
 
             {/* Achievements List */}
             <div className="flex-1 overflow-y-auto p-4">
@@ -109,8 +137,8 @@ export default function AchievementsPage() {
                                 className={cn(
                                     "p-4 rounded-xl flex items-center gap-4 transition-all",
                                     achievement.unlocked
-                                        ? "bg-white shadow-sm"
-                                        : "bg-gray-100 opacity-60"
+                                        ? "bg-[var(--color-bg-white)] shadow-sm"
+                                        : "bg-[var(--color-bg-active)] opacity-60"
                                 )}
                             >
                                 {/* Icon */}
@@ -118,12 +146,12 @@ export default function AchievementsPage() {
                                     "w-14 h-14 rounded-xl flex items-center justify-center",
                                     achievement.unlocked
                                         ? "bg-gradient-to-br from-yellow-400 to-orange-500"
-                                        : "bg-gray-300"
+                                        : "bg-[var(--color-bg-active)]"
                                 )}>
                                     {achievement.unlocked ? (
                                         <Icon size={28} className="text-white" />
                                     ) : (
-                                        <Lock size={24} className="text-gray-500" />
+                                        <Lock size={24} className="text-[var(--color-text-muted)]" />
                                     )}
                                 </div>
 
@@ -131,7 +159,7 @@ export default function AchievementsPage() {
                                 <div className="flex-1">
                                     <h3 className={cn(
                                         "font-medium text-[15px]",
-                                        achievement.unlocked ? "text-[var(--color-text-main)]" : "text-gray-500"
+                                        achievement.unlocked ? "text-[var(--color-text-main)]" : "text-[var(--color-text-muted)]"
                                     )}>
                                         {language === 'zh' ? achievement.name : achievement.name_en}
                                     </h3>
@@ -148,10 +176,10 @@ export default function AchievementsPage() {
                                 {/* Points */}
                                 <div className={cn(
                                     "text-center",
-                                    achievement.unlocked ? "text-[var(--color-primary)]" : "text-gray-400"
+                                    achievement.unlocked ? "text-[var(--color-primary)]" : "text-[var(--color-text-light)]"
                                 )}>
                                     <p className="text-lg font-bold">+{achievement.points}</p>
-                                    <p className="text-xs">{language === 'zh' ? '积分' : 'pts'}</p>
+                                    <p className="text-xs">{t('pts')}</p>
                                 </div>
                             </div>
                         );

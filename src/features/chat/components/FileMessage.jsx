@@ -11,12 +11,12 @@ export default function FileMessage({ fileData, isOwn, onDownload, onPreview }) 
     return (
         <div className={cn(
             "flex items-center gap-3 p-3 rounded-lg min-w-[200px] max-w-[280px]",
-            isOwn ? "bg-[var(--color-primary)]/90" : "bg-white shadow-sm"
+            isOwn ? "bg-[var(--color-primary)]/90" : "bg-[var(--color-bg-white)] shadow-sm"
         )}>
             {/* File icon */}
             <div className={cn(
                 "w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0",
-                isOwn ? "bg-white/20" : "bg-gray-100"
+                isOwn ? "bg-white/20" : "bg-[var(--color-bg-active)]"
             )}>
                 {typeInfo.icon}
             </div>
@@ -25,13 +25,13 @@ export default function FileMessage({ fileData, isOwn, onDownload, onPreview }) 
             <div className="flex-1 min-w-0">
                 <p className={cn(
                     "text-sm font-medium truncate",
-                    isOwn ? "text-white" : "text-gray-800"
+                    isOwn ? "text-white" : "text-[var(--color-text-main)]"
                 )}>
                     {fileData.name}
                 </p>
                 <p className={cn(
                     "text-xs",
-                    isOwn ? "text-white/70" : "text-gray-500"
+                    isOwn ? "text-white/70" : "text-[var(--color-text-muted)]"
                 )}>
                     {formatFileSize(fileData.size)}
                 </p>
@@ -44,7 +44,7 @@ export default function FileMessage({ fileData, isOwn, onDownload, onPreview }) 
                         onClick={() => onPreview(fileData)}
                         className={cn(
                             "p-1.5 rounded transition-colors",
-                            isOwn ? "hover:bg-white/20 text-white" : "hover:bg-gray-100 text-gray-600"
+                            isOwn ? "hover:bg-white/20 text-white" : "hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
                         )}
                         title={t('preview')}
                     >
@@ -55,7 +55,7 @@ export default function FileMessage({ fileData, isOwn, onDownload, onPreview }) 
                     onClick={() => onDownload?.(fileData)}
                     className={cn(
                         "p-1.5 rounded transition-colors",
-                        isOwn ? "hover:bg-white/20 text-white" : "hover:bg-gray-100 text-gray-600"
+                        isOwn ? "hover:bg-white/20 text-white" : "hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
                     )}
                     title={t('download')}
                 >
@@ -83,18 +83,18 @@ export function GeneratedFileMessage({ fileData, onDownload }) {
             </div>
 
             {/* File name */}
-            <p className="text-sm font-medium text-gray-800 mb-1 truncate">
+            <p className="text-sm font-medium text-[var(--color-text-main)] mb-1 truncate">
                 {fileData.filename}
             </p>
 
             {/* Size */}
-            <p className="text-xs text-gray-500 mb-3">
+            <p className="text-xs text-[var(--color-text-muted)] mb-3">
                 {formatFileSize(fileData.size)}
             </p>
 
             {/* Preview snippet */}
             {fileData.content && (
-                <pre className="text-xs bg-white/80 rounded p-2 mb-3 max-h-24 overflow-auto text-gray-600 font-mono">
+                <pre className="text-xs bg-[var(--color-bg-white)]/80 rounded p-2 mb-3 max-h-24 overflow-auto text-[var(--color-text-muted)] font-mono">
                     {fileData.content.slice(0, 200)}
                     {fileData.content.length > 200 && '...'}
                 </pre>

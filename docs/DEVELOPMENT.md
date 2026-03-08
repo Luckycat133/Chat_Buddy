@@ -24,6 +24,19 @@ cp .env.example .env
 npm run dev
 ```
 
+### Native dependency troubleshooting (macOS Apple Silicon)
+
+If `build/test/dev` fails with native-module errors (`rollup`, `lightningcss`, `@tailwindcss/oxide`, `esbuild`), run:
+
+```bash
+rm -rf node_modules/@rollup/rollup-darwin-arm64 \
+       node_modules/lightningcss \
+       node_modules/lightningcss-darwin-arm64 \
+       node_modules/@tailwindcss/oxide \
+       node_modules/@tailwindcss/oxide-darwin-arm64
+npm install
+```
+
 ### Environment Variables
 
 ```env
@@ -56,7 +69,7 @@ VITE_AI_MODEL=deepseek-chat
 
 ### Adding Translations
 
-1. Add keys to `src/data/locales/en.js` and `zh.js`
+1. Add keys to `src/data/locales.js` (`en` / `zh` sections)
 2. Use: `const { t } = useLanguage(); t('key')`
 
 ---
@@ -77,6 +90,19 @@ npm install
 cp .env.example .env
 # 编辑 .env 填入 API 密钥
 npm run dev
+```
+
+### 原生依赖故障排查（macOS Apple Silicon）
+
+若 `build/test/dev` 因原生模块报错（`rollup`、`lightningcss`、`@tailwindcss/oxide`、`esbuild`），执行：
+
+```bash
+rm -rf node_modules/@rollup/rollup-darwin-arm64 \
+       node_modules/lightningcss \
+       node_modules/lightningcss-darwin-arm64 \
+       node_modules/@tailwindcss/oxide \
+       node_modules/@tailwindcss/oxide-darwin-arm64
+npm install
 ```
 
 ### 环境变量
@@ -111,5 +137,5 @@ VITE_AI_MODEL=deepseek-chat
 
 ### 添加翻译
 
-1. 在 `src/data/locales/en.js` 和 `zh.js` 添加 key
+1. 在 `src/data/locales.js` 的 `en` / `zh` 分区添加 key
 2. 使用：`const { t } = useLanguage(); t('key')`

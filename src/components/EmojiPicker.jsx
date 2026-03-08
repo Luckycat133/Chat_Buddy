@@ -81,35 +81,35 @@ export default function EmojiPicker({ onSelect, onClose }) {
     return (
         <div
             ref={pickerRef}
-            className="absolute bottom-full mb-2 left-0 w-72 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50"
+            className="absolute bottom-full mb-2 left-0 w-72 bg-[var(--color-bg-white)] rounded-lg shadow-xl border border-[var(--color-border)] overflow-hidden z-50"
         >
             {/* Header */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-100">
-                <span className="font-medium text-sm text-gray-700">{t('emoji')}</span>
+            <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-border-light)]">
+                <span className="font-medium text-sm text-[var(--color-text-main)]">{t('emoji')}</span>
                 <button
                     onClick={onClose}
-                    className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                    className="p-1 hover:bg-[var(--color-bg-hover)] rounded text-[var(--color-text-muted)]"
                 >
                     <X size={16} />
                 </button>
             </div>
 
             {/* Search */}
-            <div className="px-3 py-2 border-b border-gray-100">
+            <div className="px-3 py-2 border-b border-[var(--color-border-light)]">
                 <div className="relative">
-                    <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder={t('search')}
-                        className="w-full pl-7 pr-3 py-1.5 text-sm bg-gray-50 rounded border-none focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
+                        className="w-full pl-7 pr-3 py-1.5 text-sm bg-[var(--color-bg-app)] rounded border-none focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]"
                     />
                 </div>
             </div>
 
             {/* Category tabs */}
-            <div className="flex border-b border-gray-100 px-1 overflow-x-auto scrollbar-hide">
+            <div className="flex border-b border-[var(--color-border-light)] px-1 overflow-x-auto scrollbar-hide">
                 {categories.map(cat => {
                     const Icon = CATEGORY_ICONS[cat];
                     return (
@@ -120,7 +120,7 @@ export default function EmojiPicker({ onSelect, onClose }) {
                                 "p-2 flex-shrink-0 transition-colors",
                                 activeCategory === cat
                                     ? "text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]"
-                                    : "text-gray-400 hover:text-gray-600"
+                                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
                             )}
                             title={t(CATEGORY_KEYS[cat])}
                         >
@@ -133,7 +133,7 @@ export default function EmojiPicker({ onSelect, onClose }) {
             {/* Emoji grid */}
             <div className="h-48 overflow-y-auto p-2">
                 {displayEmojis.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                    <div className="flex items-center justify-center h-full text-[var(--color-text-muted)] text-sm">
                         {activeCategory === 'recent' ? t('no_messages') : t('loading')}
                     </div>
                 ) : (
@@ -142,7 +142,7 @@ export default function EmojiPicker({ onSelect, onClose }) {
                             <button
                                 key={`${emoji}-${index}`}
                                 onClick={() => handleEmojiClick(emoji)}
-                                className="w-8 h-8 flex items-center justify-center text-xl hover:bg-gray-100 rounded transition-colors"
+                                className="w-8 h-8 flex items-center justify-center text-xl hover:bg-[var(--color-bg-hover)] rounded transition-colors"
                             >
                                 {emoji}
                             </button>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ChevronRight, Trash2, Megaphone, BarChart3, Download } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Megaphone, BarChart3, Download, X, Check, Search } from 'lucide-react';
 import { useChat } from './context/ChatContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { cn } from '../../utils/cn';
@@ -20,6 +20,7 @@ export default function GroupDetails() {
     // Feature modals
     const [showAnnouncement, setShowAnnouncement] = useState(false);
     const [showPoll, setShowPoll] = useState(false);
+    const [showAddMember, setShowAddMember] = useState(false);
 
     if (!chat) return <div className="flex items-center justify-center h-full bg-[var(--color-bg-app)] text-[var(--color-text-muted)]">{t('chat_not_found')}</div>;
 
@@ -45,7 +46,7 @@ export default function GroupDetails() {
     const handleSaveAnnouncement = (announcementData) => {
         updateChat(id, { announcement: announcementData });
         // Optionally send a system message
-        sendMessage(id, language === 'zh' ? `[公告] ${announcementData.content}` : `[Announcement] ${announcementData.content}`);
+        sendMessage(id, `${t('announcement_prefix')} ${announcementData.content}`);
     };
 
     const handleDeleteAnnouncement = () => {
@@ -61,7 +62,7 @@ export default function GroupDetails() {
         let content = `${chat.name} - Chat History\nExported: ${new Date().toLocaleString()}\n\n`;
 
         chat.messages.forEach(msg => {
-            const sender = msg.senderId === 'user-me' ? (language === 'zh' ? '我' : 'Me') : personas.find(p => p.id === msg.senderId)?.name || 'Unknown';
+            const sender = msg.senderId === 'user-me' ? t('me') : personas.find(p => p.id === msg.senderId)?.name || 'Unknown';
             const time = new Date(msg.timestamp).toLocaleString();
             content += `[${time}] ${sender}: ${msg.content}\n`;
         });
@@ -83,6 +84,19 @@ export default function GroupDetails() {
         sendMessage(id, `[POLL:${poll.id}]`);
     };
 
+    const handleAddMembers = (newParticipantIds) => {
+        const currentParticipants = chat.participants || [];
+        const updatedParticipants = [...new Set([...currentParticipants, ...newParticipantIds])];
+        updateChat(id, { participants: updatedParticipants });
+        // Send system message about new members
+        const newPersonas = newParticipantIds.map(pid => personas.find(p => p.id === pid)).filter(Boolean);
+        const names = newPersonas.map(p => language === 'zh' ? (p.name_zh || p.name) : p.name).join(', ');
+        if (names) {
+            sendMessage(id, `[System] ${names} joined the group`);
+        }
+    };
+
+    const isDirectChat = chat.participants.length === 2;
     const aiParticipants = chat.participants.filter(pid => pid !== 'user-me');
 
     return (
@@ -96,7 +110,7 @@ export default function GroupDetails() {
             </div>
 
             {/* Members Grid */}
-            <div className="bg-white p-4 mb-2">
+            <div className="bg-[var(--color-bg-white)] p-4 mb-2">
                 <div className="flex flex-wrap gap-4">
                     {aiParticipants.map(pid => {
                         const persona = personas.find(p => p.id === pid);
@@ -105,7 +119,7 @@ export default function GroupDetails() {
                         return (
                             <div key={pid} className="flex flex-col items-center w-14 cursor-pointer" onClick={() => {
                                 const currentNickname = chat.nicknames?.[pid] || pName;
-                                const newNickname = window.prompt(language === 'zh' ? '设置群昵称' : 'Set group nickname', currentNickname);
+                                const newNickname = window.prompt(t('set_group_nickname'), currentNickname);
                                 if (newNickname !== null) {
                                     const currentNicknames = chat.nicknames || {};
                                     updateChat(id, { nicknames: { ...currentNicknames, [pid]: newNickname } });
@@ -120,19 +134,27 @@ export default function GroupDetails() {
                             </div>
                         );
                     })}
-                    {/* Add button */}
-                    <div className="flex flex-col items-center w-14">
-                        <div className="w-12 h-12 rounded-[4px] border-2 border-dashed border-[#C7C7CC] flex items-center justify-center mb-1 cursor-pointer">
-                            <span className="text-[24px] text-[#C7C7CC]">+</span>
+                    {!isDirectChat && (
+                        <div className="flex flex-col items-center w-14">
+                            <div
+                                className="w-12 h-12 rounded-[4px] border-2 border-dashed border-[#C7C7CC] flex items-center justify-center mb-1 cursor-pointer hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors"
+                                onClick={() => setShowAddMember(true)}
+                            >
+                                <span className="text-[24px] text-[#C7C7CC]">+</span>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
             {/* Group Name */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mb-2">
                 <div className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)]">
-                    <span className="text-[16px] text-[var(--color-text-main)] mr-4">{t('group_name_label')}</span>
+                    <span className="text-[16px] text-[var(--color-text-main)] mr-4">
+                        {isDirectChat
+                            ? (t('chat_name_label') || (language === 'zh' ? '聊天名称' : 'Chat Name'))
+                            : t('group_name_label')}
+                    </span>
                     <input
                         type="text"
                         value={name}
@@ -145,50 +167,52 @@ export default function GroupDetails() {
             </div>
 
             {/* Group Features */}
-            <div className="bg-white mb-2">
-                <div
-                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-gray-50"
-                    onClick={() => setShowAnnouncement(true)}
-                >
-                    <Megaphone size={20} className="text-[var(--color-primary)] mr-3" />
-                    <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
-                        {language === 'zh' ? '群公告' : 'Group Announcement'}
-                    </span>
-                    {chat.announcement && (
-                        <span className="text-xs text-[var(--color-text-muted)] mr-2 truncate max-w-[100px]">
-                            {chat.announcement.content}
+            {!isDirectChat && (
+                <div className="bg-[var(--color-bg-white)] mb-2">
+                    <div
+                        className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-[var(--color-bg-hover)]"
+                        onClick={() => setShowAnnouncement(true)}
+                    >
+                        <Megaphone size={20} className="text-[var(--color-primary)] mr-3" />
+                        <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
+                            {t('group_announcement')}
                         </span>
-                    )}
-                    <ChevronRight size={20} className="text-[#C7C7CC]" />
+                        {chat.announcement && (
+                            <span className="text-xs text-[var(--color-text-muted)] mr-2 truncate max-w-[100px]">
+                                {chat.announcement.content}
+                            </span>
+                        )}
+                        <ChevronRight size={20} className="text-[#C7C7CC]" />
+                    </div>
+                    <div
+                        className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-[var(--color-bg-hover)]"
+                        onClick={() => setShowPoll(true)}
+                    >
+                        <BarChart3 size={20} className="text-[var(--color-primary)] mr-3" />
+                        <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
+                            {t('group_poll')}
+                        </span>
+                        <ChevronRight size={20} className="text-[#C7C7CC]" />
+                    </div>
                 </div>
-                <div
-                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-gray-50"
-                    onClick={() => setShowPoll(true)}
-                >
-                    <BarChart3 size={20} className="text-[var(--color-primary)] mr-3" />
-                    <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
-                        {language === 'zh' ? '群投票' : 'Group Poll'}
-                    </span>
-                    <ChevronRight size={20} className="text-[#C7C7CC]" />
-                </div>
-            </div>
+            )}
 
             {/* Export */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mb-2">
                 <div
-                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-gray-50"
+                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] cursor-pointer active:bg-[var(--color-bg-hover)]"
                     onClick={handleExportChat}
                 >
                     <Download size={20} className="text-[var(--color-text-main)] mr-3" />
                     <span className="flex-1 text-[16px] text-[var(--color-text-main)]">
-                        {language === 'zh' ? '导出聊天记录' : 'Export Chat History'}
+                        {t('export_chat_history')}
                     </span>
                     <ChevronRight size={20} className="text-[#C7C7CC]" />
                 </div>
             </div>
 
             {/* AI Permissions */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mb-2">
                 <ToggleItem
                     label={t('allow_reactions')}
                     checked={permissions.allowReactions}
@@ -202,31 +226,33 @@ export default function GroupDetails() {
             </div>
 
             {/* Group Admin Settings */}
-            <div className="bg-white mb-2">
+            <div className="bg-[var(--color-bg-white)] mb-2">
                 <ToggleItem
-                    label={language === 'zh' ? '消息免打扰' : 'Mute Notifications'}
+                    label={t('mute_notifications')}
                     checked={chat.isMuted || false}
                     onChange={(v) => updateChat(id, { isMuted: v })}
                 />
-                <ToggleItem
-                    label={language === 'zh' ? '仅管理员可发言' : 'Admin Only Chat'}
-                    checked={chat.adminOnly || false}
-                    onChange={(v) => updateChat(id, { adminOnly: v })}
-                />
+                {!isDirectChat && (
+                    <ToggleItem
+                        label={t('admin_only_chat')}
+                        checked={chat.adminOnly || false}
+                        onChange={(v) => updateChat(id, { adminOnly: v })}
+                    />
+                )}
             </div>
 
             {/* Danger Zone */}
-            <div className="bg-white mb-6">
+            <div className="bg-[var(--color-bg-white)] mb-6">
                 <button
                     onClick={() => {
-                        if (window.confirm(language === 'zh' ? '确定要清空聊天记录吗？' : 'Are you sure you want to clear chat history?')) {
+                        if (window.confirm(t('confirm_clear_history'))) {
                             clearChatMessages(id);
-                            alert(language === 'zh' ? '聊天记录已清空' : 'Chat history cleared');
+                            alert(t('chat_history_cleared'));
                         }
                     }}
                     className="w-full px-4 py-3 text-center text-[var(--color-text-main)] text-[16px] border-b border-[var(--color-border-light)]"
                 >
-                    {language === 'zh' ? '清空聊天记录' : 'Clear Chat History'}
+                    {t('clear_chat_history')}
                 </button>
                 <button
                     onClick={handleDeleteChat}
@@ -238,7 +264,7 @@ export default function GroupDetails() {
 
             {/* Modals */}
             {
-                showAnnouncement && (
+                !isDirectChat && showAnnouncement && (
                     <GroupAnnouncement
                         announcement={chat.announcement}
                         isAdmin={true} // Assuming current user is admin for now
@@ -250,7 +276,7 @@ export default function GroupDetails() {
             }
 
             {
-                showPoll && (
+                !isDirectChat && showPoll && (
                     <GroupPoll
                         chatId={id}
                         onClose={() => setShowPoll(false)}
@@ -258,7 +284,136 @@ export default function GroupDetails() {
                     />
                 )
             }
+
+            {/* Add Member Modal */}
+            {!isDirectChat && showAddMember && (
+                <AddMemberModal
+                    currentParticipants={chat.participants || []}
+                    allPersonas={personas}
+                    onClose={() => setShowAddMember(false)}
+                    onAddMembers={handleAddMembers}
+                />
+            )}
         </div >
+    );
+}
+
+// AddMemberModal Component
+function AddMemberModal({ currentParticipants, allPersonas, onClose, onAddMembers }) {
+    const { t, language } = useLanguage();
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Filter out already participating AIs
+    const availablePersonas = allPersonas.filter(p =>
+        p.id.startsWith('ai-') && !currentParticipants.includes(p.id)
+    );
+
+    const filteredPersonas = availablePersonas.filter(p => {
+        const name = language === 'zh' ? (p.name_zh || p.name) : p.name;
+        return name.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+
+    const toggleSelection = (id) => {
+        setSelectedIds(prev =>
+            prev.includes(id)
+                ? prev.filter(x => x !== id)
+                : [...prev, id]
+        );
+    };
+
+    const handleAdd = () => {
+        if (selectedIds.length === 0) return;
+        onAddMembers(selectedIds);
+        onClose();
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+            <div
+                className="bg-[var(--color-bg-white)] rounded-xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden animate-scale-in"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
+                    <button onClick={onClose} className="text-[var(--color-text-muted)]">
+                        <X size={24} />
+                    </button>
+                    <h3 className="font-medium text-[17px]">{t('add_member_title')}</h3>
+                    <button
+                        onClick={handleAdd}
+                        disabled={selectedIds.length === 0}
+                        className={cn(
+                            "px-4 py-1.5 rounded-full text-sm font-medium transition-all",
+                            selectedIds.length > 0
+                                ? "bg-[var(--color-primary)] text-white"
+                                : "bg-gray-200 text-gray-400"
+                        )}
+                    >
+                        {t('add_member_btn')}{selectedIds.length > 0 && ` (${selectedIds.length})`}
+                    </button>
+                </div>
+
+                {/* Search */}
+                <div className="p-3 bg-[var(--color-bg-app)]">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
+                        <input
+                            type="text"
+                            placeholder={t('search')}
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-[var(--color-bg-white)] border-none rounded-lg py-2 pl-10 pr-3 text-sm placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
+                        />
+                    </div>
+                </div>
+
+                {/* Persona List */}
+                <div className="flex-1 overflow-y-auto">
+                    {filteredPersonas.length === 0 ? (
+                        <div className="p-8 text-center text-[var(--color-text-muted)]">
+                            {availablePersonas.length === 0 ? t('no_available_members') : t('no_friends_found')}
+                        </div>
+                    ) : (
+                        filteredPersonas.map((persona) => {
+                            const isSelected = selectedIds.includes(persona.id);
+                            const pName = language === 'zh' ? (persona.name_zh || persona.name) : persona.name;
+
+                            return (
+                                <div
+                                    key={persona.id}
+                                    onClick={() => toggleSelection(persona.id)}
+                                    className="flex items-center px-4 py-3 border-b border-[var(--color-border-light)] active:bg-[var(--color-bg-hover)] cursor-pointer"
+                                >
+                                    {/* Checkbox */}
+                                    <div className={cn(
+                                        "w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center flex-shrink-0",
+                                        isSelected
+                                            ? "bg-[var(--color-primary)] border-[var(--color-primary)]"
+                                            : "border-[var(--color-border)]"
+                                    )}>
+                                        {isSelected && <Check size={12} className="text-white" strokeWidth={3} />}
+                                    </div>
+
+                                    {/* Avatar */}
+                                    <div className="w-10 h-10 rounded-[4px] overflow-hidden flex-shrink-0 bg-[#E0E0E0] mr-3">
+                                        <img src={persona.avatar} alt={pName} className="w-full h-full object-cover" />
+                                    </div>
+
+                                    {/* Name & Personality */}
+                                    <div className="flex-1 min-w-0">
+                                        <span className="text-[16px] text-[var(--color-text-main)] block">{pName}</span>
+                                        <span className="text-[12px] text-[var(--color-text-muted)] truncate block">
+                                            {persona.personality}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            </div>
+        </div>
     );
 }
 

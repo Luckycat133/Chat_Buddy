@@ -1,10 +1,12 @@
-import React, { useState, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Pin, Circle, Trash2, MessageSquarePlus, Sparkles, X } from 'lucide-react';
 import { useChat } from './context/ChatContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { cn } from '../../utils/cn';
 import { formatChatListTime } from '../../utils/formatTime';
+import { SkeletonList, SkeletonChatCard } from '../../components/Skeleton';
+import HighlightText from '../../components/HighlightText';
 
 // ========== Memoized Chat List Item (iOS 26 Card Style) ==========
 const ChatListItem = memo(function ChatListItem({
@@ -13,10 +15,11 @@ const ChatListItem = memo(function ChatListItem({
     isActive,
     isTyping,
     time,
-    language,
     t,
     onContextMenu,
-    index
+    presenceMap,
+    index,
+    searchTerm
 }) {
     return (
         <Link
@@ -26,8 +29,8 @@ const ChatListItem = memo(function ChatListItem({
                 "flex items-center gap-4 p-3 rounded-[var(--radius-lg)] transition-all duration-400 group relative",
                 "border border-transparent",
                 isActive
-                    ? "bg-white shadow-glow scale-[1.02] ring-2 ring-[var(--color-primary)]/10"
-                    : "bg-white/40 hover:bg-white/80 hover:shadow-md hover:scale-[1.01]"
+                    ? "bg-[var(--color-bg-white)] shadow-glow scale-[1.02] ring-2 ring-[var(--color-primary)]/10"
+                    : "bg-[var(--color-bg-white)]/40 hover:bg-[var(--color-bg-white)]/80 hover:shadow-md hover:scale-[1.01]"
             )}
             style={{ animationDelay: `${index * 50}ms` }}
         >
@@ -52,9 +55,11 @@ const ChatListItem = memo(function ChatListItem({
                     )}
                 </div>
                 {/* Online Dot (if social) */}
-                {meta.type === 'social' && (
-                    <div className="absolute top-0 right-0 w-3.5 h-3.5 bg-[var(--color-success)] rounded-full 
-                        border-2 border-white shadow-sm" />
+                {meta.type === 'social' && meta.id && (
+                    <div className={cn(
+                        "absolute top-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm presence-dot",
+                        `presence-dot--${presenceMap?.[meta.id] || 'offline'}`
+                    )} />
                 )}
             </div>
 
@@ -68,7 +73,9 @@ const ChatListItem = memo(function ChatListItem({
                         {chat.isPinned && (
                             <Pin size={12} className="text-[var(--color-primary)] fill-current rotate-45" />
                         )}
-                        <span className="truncate">{meta.name}</span>
+                        <span className="truncate">
+                            <HighlightText text={meta.name} highlight={searchTerm} />
+                        </span>
                     </h3>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         {chat.isUnread && (
@@ -84,7 +91,7 @@ const ChatListItem = memo(function ChatListItem({
                 )}>
                     {isTyping ? (
                         <span className="flex items-center gap-1">
-                            {language === 'zh' ? '正在输入...' : 'Typing...'}
+                            {t('is_typing')}
                         </span>
                     ) : (chat.lastMessage ? chat.lastMessage.content : t('no_messages'))}
                 </p>
@@ -94,7 +101,8 @@ const ChatListItem = memo(function ChatListItem({
 });
 
 // ========== Empty State Component ==========
-function EmptyState({ language, onCreateChat }) {
+function EmptyState({ onCreateChat }) {
+    const { t } = useLanguage();
     return (
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 animate-fade-slide-up">
             {/* Floating animated icon */}
@@ -111,12 +119,10 @@ function EmptyState({ language, onCreateChat }) {
             </div>
 
             <h3 className="text-xl font-bold text-[var(--color-text-main)] mb-2 text-center font-display">
-                {language === 'zh' ? '开始你的AI伙伴之旅' : 'Start Your AI Adventure'}
+                {t('start_ai_adventure')}
             </h3>
             <p className="text-sm text-[var(--color-text-muted)] text-center max-w-xs mb-8 leading-relaxed">
-                {language === 'zh'
-                    ? '与独特的AI角色成为朋友，享受有趣的对话体验！'
-                    : 'Make friends with unique AI characters and enjoy fun conversations!'}
+                {t('start_ai_adventure_desc')}
             </p>
 
             <button
@@ -124,7 +130,7 @@ function EmptyState({ language, onCreateChat }) {
                 className="btn-primary flex items-center gap-2 px-6 py-3 text-[15px]"
             >
                 <MessageSquarePlus size={20} />
-                {language === 'zh' ? '开始聊天' : 'Start Chatting'}
+                {t('start_chatting')}
             </button>
         </div>
     );
@@ -140,7 +146,7 @@ function ContextMenuItem({ icon, label, onClick, active, colorClass = "text-[var
         >
             <div className={cn(
                 "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
-                active ? "bg-[var(--color-bg-active)]" : "bg-gray-50 group-hover:bg-white"
+                active ? "bg-[var(--color-bg-active)]" : "bg-[var(--color-bg-app)] group-hover:bg-[var(--color-bg-white)]"
             )}>
                 <span className={cn(active ? colorClass : "text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]")}>
                     {icon}
@@ -154,17 +160,24 @@ function ContextMenuItem({ icon, label, onClick, active, colorClass = "text-[var
 
 // ========== Main ChatList Component ==========
 export default function ChatList() {
-    const { chats, personas, typingIndicators, pinChat, markChatUnread, deleteChat } = useChat();
+    const { chats, personas, typingIndicators, presenceMap, pinChat, markChatUnread, deleteChat } = useChat();
     const { t, language } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
     const [searchFocused, setSearchFocused] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const location = useLocation();
     const navigate = useNavigate();
 
-    const [activeTab, setActiveTab] = useState('all'); // 'all', 'social', 'task'
+    const [activeTab, setActiveTab] = useState('all'); // 'all', 'social'
 
     // Context menu state
     const [contextMenu, setContextMenu] = useState(null); // { chatId, x, y }
+
+    // Simulate initial loading for skeleton display
+    useEffect(() => {
+        const timer = setTimeout(() => setIsLoading(false), 300);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Memoize getChatMetadata to avoid recalculation
     const getChatMetadata = useCallback((chat) => {
@@ -184,23 +197,29 @@ export default function ChatList() {
                 }
                 // Determine type based on AI agent type
                 type = ai.agentType === 'task-specialist' ? 'task' : 'social';
+            } else if (typeof aiId === 'string' && aiId.startsWith('agent-')) {
+                // Keep historical/removed task agents out of normal chat list.
+                type = 'task';
             }
         }
-        return { name: displayName || t('unknown_chat'), avatar: displayAvatar, type };
+        return { 
+            name: displayName || t('unknown_chat'), 
+            avatar: displayAvatar, 
+            type,
+            id: chat.participants.find(p => p !== 'user-me')
+        };
     }, [personas, language, t]);
 
     // Memoize filtered and sorted chats
     const filteredChats = useMemo(() => {
+        const normalizedSearch = searchTerm.trim().toLowerCase();
         return chats
             .map(chat => ({ chat, meta: getChatMetadata(chat) }))
             .filter(({ meta }) => {
-                // EXCLUDE TASK AGENTS from main list ('all') unless in 'task' tab
-                if (meta.type === 'task' && activeTab !== 'task') return false;
-
-                const matchesSearch = meta.name.toLowerCase().includes(searchTerm.toLowerCase());
-                // activeTab logic simpler now since we only have 'all' effectively for non-task
+                const isSocialChat = meta.type === 'social';
                 const matchesTab = activeTab === 'all' || meta.type === activeTab;
-                return matchesSearch && matchesTab;
+                const matchesSearch = meta.name.toLowerCase().includes(normalizedSearch);
+                return isSocialChat && matchesSearch && matchesTab;
             })
             .sort((a, b) => {
                 if (a.chat.isPinned && !b.chat.isPinned) return -1;
@@ -282,7 +301,7 @@ export default function ChatList() {
 
                     {/* Filter Tabs - Inside the Glass Shell */}
                     <div className="flex gap-2 mt-2 px-1 pb-1 overflow-x-auto scrollbar-hide">
-                        {['all', 'social', 'task'].map((tab) => (
+                        {['all', 'social'].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -298,7 +317,6 @@ export default function ChatList() {
                             >
                                 {tab === 'all' && t('all_chats')}
                                 {tab === 'social' && t('social_companions')}
-                                {tab === 'task' && t('task_agents')}
                             </button>
                         ))}
                     </div>
@@ -307,8 +325,10 @@ export default function ChatList() {
 
             {/* Chat List - Floating Cards Container */}
             <div className="flex-1 overflow-y-auto px-2 space-y-3 pb-32 md:pb-4 custom-scrollbar">
-                {filteredChats.length === 0 ? (
-                    <EmptyState language={language} onCreateChat={handleCreateChat} />
+                {isLoading ? (
+                    <SkeletonList count={4} skeleton={SkeletonChatCard} />
+                ) : filteredChats.length === 0 ? (
+                    <EmptyState onCreateChat={handleCreateChat} />
                 ) : (
                     filteredChats.map(({ chat, meta }, index) => {
                         const lastMsg = chat.lastMessage;
@@ -325,10 +345,11 @@ export default function ChatList() {
                                 isActive={isActive}
                                 isTyping={isTyping}
                                 time={time}
-                                language={language}
                                 t={t}
                                 onContextMenu={handleContextMenu}
+                                presenceMap={presenceMap}
                                 index={index}
+                                searchTerm={searchTerm}
                             />
                         );
                     })

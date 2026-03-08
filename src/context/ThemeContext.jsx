@@ -1,7 +1,23 @@
-import React, { createContext, useContext, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useState, useRef } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { computeAccentPalette } from '../utils/colorUtils';
 
 const ThemeContext = createContext();
+
+// Trigger smooth theme transition with fallback
+function withThemeTransition(applyFn) {
+    const doc = document.documentElement;
+    // Use View Transitions API if available
+    if (document.startViewTransition) {
+        document.startViewTransition(() => applyFn());
+        return;
+    }
+    // Fallback: CSS class-based transition
+    doc.classList.add('theme-transitioning');
+    applyFn();
+    const tid = setTimeout(() => doc.classList.remove('theme-transitioning'), 600);
+    return () => clearTimeout(tid);
+}
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
@@ -23,44 +39,115 @@ const CHAT_BACKGROUNDS = [
 ];
 
 const DEFAULT_THEME = {
-    mode: 'light', // 'light' | 'dark'
+    mode: 'system', // 'light' | 'dark' | 'system'
+    oledEnabled: false,
     chatBackground: 'default',
     customBackground: null, // base64 image
-    accentColor: null // custom primary color
+    accentColor: null, // custom primary color
+    animationIntensity: 'standard', // 'none' | 'subtle' | 'standard' | 'intense'
+    bubbleStyle: 'rounded', // 'rounded' | 'square' | 'tail' | 'minimal'
 };
 
 export const ThemeProvider = ({ children }) => {
     const [theme, setTheme] = useLocalStorage('chat-buddy-theme', DEFAULT_THEME);
 
-    // Apply dark mode class to document
-    useEffect(() => {
-        if (theme.mode === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }, [theme.mode]);
+    // Track OS color scheme preference
+    const [systemPrefersDark, setSystemPrefersDark] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    });
 
-    // Apply custom accent color
     useEffect(() => {
-        if (theme.accentColor) {
-            document.documentElement.style.setProperty('--color-primary', theme.accentColor);
+        const mql = window.matchMedia('(prefers-color-scheme: dark)');
+        const handler = (e) => setSystemPrefersDark(e.matches);
+        mql.addEventListener('change', handler);
+        return () => mql.removeEventListener('change', handler);
+    }, []);
+
+    // Resolve effective mode: system → actual light/dark
+    const resolvedMode = theme.mode === 'system'
+        ? (systemPrefersDark ? 'dark' : 'light')
+        : theme.mode;
+
+    // Apply dark mode class to document with transition
+    const prevMode = useRef(resolvedMode);
+    useEffect(() => {
+        const apply = () => {
+            if (resolvedMode === 'dark') {
+                document.documentElement.classList.add('dark');
+                if (theme.oledEnabled) {
+                    document.documentElement.classList.add('oled');
+                } else {
+                    document.documentElement.classList.remove('oled');
+                }
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.remove('oled');
+            }
+        };
+        // Only animate if mode actually changed (not on initial mount)
+        if (prevMode.current !== resolvedMode) {
+            withThemeTransition(apply);
         } else {
-            document.documentElement.style.removeProperty('--color-primary');
+            apply();
+        }
+        prevMode.current = resolvedMode;
+    }, [resolvedMode, theme.oledEnabled]);
+
+    // Apply custom accent color (all 6 derived CSS vars)
+    useEffect(() => {
+        const el = document.documentElement;
+        if (theme.accentColor) {
+            const palette = computeAccentPalette(theme.accentColor);
+            el.style.setProperty('--color-primary', palette.primary);
+            el.style.setProperty('--color-primary-hover', palette.hover);
+            el.style.setProperty('--color-primary-active', palette.active);
+            el.style.setProperty('--color-primary-light', palette.light);
+            el.style.setProperty('--color-primary-softer', palette.softer);
+            el.style.setProperty('--color-primary-glow', palette.glow);
+        } else {
+            el.style.removeProperty('--color-primary');
+            el.style.removeProperty('--color-primary-hover');
+            el.style.removeProperty('--color-primary-active');
+            el.style.removeProperty('--color-primary-light');
+            el.style.removeProperty('--color-primary-softer');
+            el.style.removeProperty('--color-primary-glow');
         }
     }, [theme.accentColor]);
 
+    // Apply animation intensity class
+    useEffect(() => {
+        const doc = document.documentElement;
+        doc.classList.remove('anim-none', 'anim-subtle', 'anim-standard', 'anim-intense');
+        doc.classList.add(`anim-${theme.animationIntensity || 'standard'}`);
+    }, [theme.animationIntensity]);
+
     // ========== Theme Mode ==========
 
+    // Cycle: system → light → dark → system
     const toggleDarkMode = useCallback(() => {
-        setTheme(prev => ({
-            ...prev,
-            mode: prev.mode === 'dark' ? 'light' : 'dark'
-        }));
+        setTheme(prev => {
+            const next = prev.mode === 'system' ? 'light'
+                : prev.mode === 'light' ? 'dark' : 'system';
+            return { ...prev, mode: next };
+        });
     }, [setTheme]);
 
     const setDarkMode = useCallback((isDark) => {
         setTheme(prev => ({ ...prev, mode: isDark ? 'dark' : 'light' }));
+    }, [setTheme]);
+
+    // Set explicit mode: 'light' | 'dark' | 'system'
+    const setThemeMode = useCallback((mode) => {
+        setTheme(prev => ({ ...prev, mode }));
+    }, [setTheme]);
+
+    const toggleOLEDMode = useCallback(() => {
+        setTheme(prev => ({ ...prev, oledEnabled: !prev.oledEnabled }));
+    }, [setTheme]);
+
+    const setOLEDMode = useCallback((enabled) => {
+        setTheme(prev => ({ ...prev, oledEnabled: Boolean(enabled) }));
     }, [setTheme]);
 
     // ========== Chat Background ==========
@@ -101,14 +188,30 @@ export const ThemeProvider = ({ children }) => {
         setTheme(prev => ({ ...prev, accentColor: null }));
     }, [setTheme]);
 
+    // ========== Animation & Bubble Style ==========
+
+    const setAnimationIntensity = useCallback((intensity) => {
+        setTheme(prev => ({ ...prev, animationIntensity: intensity }));
+    }, [setTheme]);
+
+    const setBubbleStyle = useCallback((style) => {
+        setTheme(prev => ({ ...prev, bubbleStyle: style }));
+    }, [setTheme]);
+
     const value = {
         // Current theme
         theme,
-        isDarkMode: theme.mode === 'dark',
+        isDarkMode: resolvedMode === 'dark',
+        themeMode: theme.mode, // raw: 'light' | 'dark' | 'system'
+        resolvedMode,          // effective: 'light' | 'dark'
+        oledEnabled: Boolean(theme.oledEnabled),
 
         // Theme mode
         toggleDarkMode,
         setDarkMode,
+        setThemeMode,
+        toggleOLEDMode,
+        setOLEDMode,
 
         // Backgrounds
         chatBackgrounds: CHAT_BACKGROUNDS,
@@ -118,7 +221,13 @@ export const ThemeProvider = ({ children }) => {
 
         // Accent color
         setAccentColor,
-        resetAccentColor
+        resetAccentColor,
+
+        // Animation & bubble
+        animationIntensity: theme.animationIntensity || 'standard',
+        setAnimationIntensity,
+        bubbleStyle: theme.bubbleStyle || 'rounded',
+        setBubbleStyle,
     };
 
     return (
