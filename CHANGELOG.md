@@ -17,6 +17,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > Planned features not yet assigned to a specific version.
 
+### Added — UI Accessibility & Interaction Improvements (2026-03-08)
+
+- **ARIA Accessibility Enhancements** (`src/components/Layout.jsx`, `src/pages/Settings.jsx`)
+  - Added `role="navigation"` to sidebar and mobile navigation
+  - Added `role="main"` to Settings page content area
+  - Added `role="switch"` and `aria-checked` to ControlCard components
+  - Added `role="dialog"`, `aria-modal="true"`, and `aria-labelledby` to modals
+  - Added `aria-label` and `aria-current="page"` to navigation items
+- **Active State Indicator** (`src/components/Layout.jsx`)
+  - Added left-side white indicator bar for active navigation item
+  - Improved visual feedback for current page selection
+- **Semantic HTML Improvements** (`src/pages/Settings.jsx`)
+  - Converted ControlCard and SettingItem from `<div>` to `<button>` elements
+  - Added `focus-visible` styles for keyboard navigation
+  - Added hover transform effect (translate-x) for SettingItem
+- **CSS Accessibility** (`src/index.css`)
+  - Added `prefers-reduced-motion` media query support
+  - Enhanced focus outline styles for better keyboard navigation visibility
+
 ---
 
 ## [0.3.3-patch-2] — UI Completeness & Agent Tools (2026-03-06)

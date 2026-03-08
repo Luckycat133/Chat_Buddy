@@ -2086,8 +2086,22 @@ html:not(.dark) .character-glow::before {
   align-items: center;
   padding: var(--space-4);
   cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-default);
+  transition: all var(--duration-fast) var(--ease-default);
   border-bottom: 1px solid var(--color-border-light);
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  width: 100%;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+.setting-item:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+  border-radius: var(--radius-md);
 }
 
 .setting-item:last-child {
@@ -2149,6 +2163,14 @@ html:not(.dark) .character-glow::before {
   background: var(--color-bg-white);
   box-shadow: var(--shadow-xs);
   opacity: 1;
+  text-align: left;
+  font-family: inherit;
+  width: 100%;
+}
+
+.control-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .control-card:hover {
@@ -2196,6 +2218,26 @@ html:not(.dark) .character-glow::before {
 
 .control-card:hover .control-card-sublabel {
   color: var(--color-text-secondary);
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .setting-item,
+  .control-card {
+    transition: none !important;
+  }
+
+  .setting-item:hover,
+  .control-card:hover {
+    transform: none !important;
+  }
 }
 
 /* ========================================
