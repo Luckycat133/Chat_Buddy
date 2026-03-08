@@ -322,6 +322,8 @@ export const AGENT_SKILLS = {
     }
 };
 
+const _combinedSkillPromptCache = new Map();
+
 /**
  * Get skills by category
  * @param {string} category - Category name
@@ -346,13 +348,41 @@ export function getSkillById(skillId) {
  * @returns {string} Combined prompt enhancement
  */
 export function combineSkillPrompts(skillIds) {
+    if (!Array.isArray(skillIds) || skillIds.length === 0) return '';
+
+    const cacheKey = skillIds.join('|');
+    const cached = _combinedSkillPromptCache.get(cacheKey);
+    if (cached) return cached;
+
     const prompts = skillIds
         .map(id => AGENT_SKILLS[id]?.promptEnhancement)
         .filter(Boolean);
 
     if (prompts.length === 0) return '';
 
-    return prompts.join('\n\n---\n\n');
+    const compactPrompts = prompts.map(compactPromptText).filter(Boolean);
+    if (compactPrompts.length === 0) return '';
+
+    const combined = `附加技能规则：\n${compactPrompts.map((p, i) => `${i + 1}. ${p}`).join('\n')}`;
+    _combinedSkillPromptCache.set(cacheKey, combined);
+    return combined;
+}
+
+/**
+ * Compress verbose skill prompt text for lower token cost at runtime.
+ * Keeps the first few actionable rules and strips markdown/bullet noise.
+ * @param {string} text
+ * @returns {string}
+ */
+function compactPromptText(text = '') {
+    return text
+        .split('\n')
+        .map(line => line.trim())
+        .filter(Boolean)
+        .filter(line => !line.startsWith('##'))
+        .map(line => line.replace(/^[-*]\s*/, '').replace(/^\d+\.\s*/, ''))
+        .slice(0, 5)
+        .join('；');
 }
 
 /**

@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useCallback } from 'react';
-import { useLocalStorage } from '../../../hooks/useLocalStorage';
 
 const ChatActionContext = createContext();
 
@@ -10,7 +9,7 @@ export const useChatActions = () => {
     return context;
 };
 
-export const ChatActionProvider = ({ children, chatsRef, setChats, scheduledMessagesRef }) => {
+export const ChatActionProvider = ({ children, setChats, scheduledMessagesRef }) => {
 
     // Logic: Send Message
     const sendMessage = useCallback((chatId, content, senderId = 'user-me') => {

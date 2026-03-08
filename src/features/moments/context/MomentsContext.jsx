@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useEffect, useRef, useCallback } from 'react';
 import { INITIAL_PERSONAS } from '../../../data/personas';
 import { MomentsStateProvider, useMomentsState } from './MomentsState';
 import { MomentsActionProvider, useMomentsActions } from './MomentsActions';
-import { evaluateInterestMatch } from '../services/momentsService';
+import { evaluateInterestMatch, getTodayEvents } from '../services/momentsService';
 
 const MomentsContext = createContext();
 
@@ -52,7 +52,7 @@ export const useMoments = () => {
         ...actions,
         getAuthor,
         getImageApiConfig,
-        getAIAccessibleContent
+        getAIAccessibleContent,
     };
 };
 
@@ -80,8 +80,9 @@ const InternalMomentsProvider = ({ children }) => {
 
 // Component to run AI hooks (needs access to both State and Actions)
 const MomentsAIOrchestrator = () => {
-    const { posts, lastAIPostTime } = useMomentsState();
-    const { generateDynamicAIPost, generateAIComment, toggleLike, addReaction } = useMomentsActions();
+    const { posts, lastAIPostTime, lastStoryEventDate } = useMomentsState();
+    const { generateDynamicAIPost, generateAIComment, toggleLike, addReaction, generateStoryPost } = useMomentsActions();
+    const { setMomentsData } = useMomentsState();
 
     useMomentsAI({
         posts,
@@ -90,6 +91,13 @@ const MomentsAIOrchestrator = () => {
         generateAIComment,
         toggleLike,
         addReaction
+    });
+
+    useStoryEvents({
+        posts,
+        lastStoryEventDate,
+        generateStoryPost,
+        setMomentsData,
     });
 
     return null;
@@ -120,7 +128,7 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
     }, []);
 
     // Trigger AI interactions on a specific post
-    const triggerAIInteractions = useCallback(async (postId, currentPosts) => {
+    const _triggerAIInteractions = useCallback(async (postId, currentPosts) => {
         const post = currentPosts.find(p => p.id === postId);
         if (!post) return;
 
@@ -286,5 +294,52 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
                 setTimeout(() => generateDynamicAIPost(persona.id), index * 2000);
             });
         }
-    }, []); // Run once 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run once
+}
+
+// -----------------------------------------------------------------------------
+// STORY EVENTS HOOK (birthday & seasonal holiday posts)
+// -----------------------------------------------------------------------------
+function useStoryEvents({ posts, lastStoryEventDate, generateStoryPost, setMomentsData }) {
+    useEffect(() => {
+        const today = new Date().toDateString();
+        if (lastStoryEventDate === today) return; // Already ran today
+
+        const { birthdays, holiday } = getTodayEvents();
+        if (birthdays.length === 0 && !holiday) return;
+
+        // Mark today as processed first to prevent re-runs on hot reload
+        setMomentsData(prev => ({ ...prev, lastStoryEventDate: today }));
+
+        const alreadyPostedToday = (aiId) => {
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            return posts.some(
+                p => p.authorId === aiId && new Date(p.createdAt) >= todayStart
+            );
+        };
+
+        // Birthday posts
+        birthdays.forEach((aiId, i) => {
+            if (alreadyPostedToday(aiId)) return;
+            setTimeout(() => {
+                generateStoryPost(aiId, 'birthday', null);
+            }, (i + 1) * 3000);
+        });
+
+        // Holiday posts — pick 2 random personas
+        if (holiday) {
+            const candidates = [...INITIAL_PERSONAS]
+                .sort(() => Math.random() - 0.5)
+                .slice(0, 2)
+                .filter(p => !alreadyPostedToday(p.id));
+            candidates.forEach((persona, i) => {
+                setTimeout(() => {
+                    generateStoryPost(persona.id, 'holiday', holiday.nameEn);
+                }, (birthdays.length + i + 1) * 3000);
+            });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run once on mount
 }

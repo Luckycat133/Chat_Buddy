@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Gift, Calendar, Flame, Trophy } from 'lucide-react';
 import { useSocial } from '../context/SocialContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 import { cn } from '../utils/cn';
 
 export default function CheckInPanel({ onClose }) {
-    const { checkIn, hasCheckedInToday, streakDays, points, getAchievements } = useSocial();
-    const { language } = useLanguage();
+    const { checkIn, hasCheckedInToday, streakDays, points, getAchievements, updateTaskProgress } = useSocial();
+    const { t, language } = useLanguage();
     const [checkInResult, setCheckInResult] = useState(null);
     const [showAnimation, setShowAnimation] = useState(false);
-    const [recentAchievements, setRecentAchievements] = useState([]);
 
+    const trapRef = useFocusTrap(true);
     const hasChecked = hasCheckedInToday();
 
-    // Get recently unlocked achievements
-    useEffect(() => {
+    // Compute recently unlocked achievements directly (avoids setState in useEffect)
+    const recentAchievements = useMemo(() => {
         const achievements = getAchievements().filter(a => a.unlocked);
         const today = new Date().toISOString().split('T')[0];
-        const recent = achievements.filter(a =>
+        return achievements.filter(a =>
             a.unlockedAt && a.unlockedAt.startsWith(today)
         );
-        setRecentAchievements(recent);
     }, [getAchievements]);
 
     const handleCheckIn = () => {
@@ -29,6 +29,7 @@ export default function CheckInPanel({ onClose }) {
         if (result.success) {
             setShowAnimation(true);
             setTimeout(() => setShowAnimation(false), 2000);
+            updateTaskProgress('task_checkin', 1);
         }
     };
 
@@ -59,9 +60,13 @@ export default function CheckInPanel({ onClose }) {
     const weekDays = getWeekDays();
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" role="presentation" onClick={onClose}>
             <div
-                className="bg-white rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
+                ref={trapRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="checkin-panel-title"
+                className="bg-[var(--color-bg-white)] rounded-xl w-full max-w-sm overflow-hidden animate-scale-in"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -74,10 +79,10 @@ export default function CheckInPanel({ onClose }) {
                     )}
                     <div className="relative p-4 text-white">
                         <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-lg">
-                                {language === 'zh' ? '每日签到' : 'Daily Check-in'}
+                            <h3 id="checkin-panel-title" className="font-bold text-lg">
+                                {t('daily_checkin')}
                             </h3>
-                            <button onClick={onClose} className="text-white/80 hover:text-white">
+                            <button onClick={onClose} className="text-white/80 hover:text-white" aria-label="Close">
                                 <X size={24} />
                             </button>
                         </div>
@@ -86,13 +91,13 @@ export default function CheckInPanel({ onClose }) {
                         <div className="flex items-center gap-2 mt-4">
                             <Flame className="text-yellow-300" size={24} />
                             <span className="text-xl font-bold">{streakDays}</span>
-                            <span>{language === 'zh' ? '天连续签到' : 'day streak'}</span>
+                            <span>{t('streak_checkin_label')}</span>
                         </div>
 
                         {/* Points */}
                         <div className="flex items-center gap-2 mt-2">
                             <Trophy className="text-yellow-300" size={20} />
-                            <span>{language === 'zh' ? '总积分' : 'Total Points'}:</span>
+                            <span>{t('total_points')}:</span>
                             <span className="font-bold">{points}</span>
                         </div>
                     </div>
@@ -112,8 +117,8 @@ export default function CheckInPanel({ onClose }) {
                                     day.checked
                                         ? "bg-[var(--color-primary)] text-white"
                                         : day.isPast
-                                            ? "bg-gray-200 text-gray-400"
-                                            : "bg-white text-[var(--color-text-main)]"
+                                            ? "bg-[var(--color-bg-active)] text-[var(--color-text-light)]"
+                                            : "bg-[var(--color-bg-white)] text-[var(--color-text-main)]"
                                 )}>
                                     {day.checked ? '✓' : day.date}
                                 </div>
@@ -126,13 +131,13 @@ export default function CheckInPanel({ onClose }) {
                 {checkInResult?.success && (
                     <div className="px-4 py-3 bg-green-50 text-green-700 text-center">
                         <p className="font-medium">
-                            🎉 {language === 'zh' ? '签到成功!' : 'Check-in successful!'}
+                            🎉 {t('checkin_success')}
                         </p>
                         <p className="text-sm">
-                            +{checkInResult.points} {language === 'zh' ? '积分' : 'points'}
+                            {t('plus_points', { points: checkInResult.points })}
                             {checkInResult.streak > 1 && (
                                 <span className="ml-2">
-                                    🔥 {checkInResult.streak} {language === 'zh' ? '天连续' : 'day streak'}
+                                    🔥 {checkInResult.streak} {t('streak_label')}
                                 </span>
                             )}
                         </p>
@@ -143,7 +148,7 @@ export default function CheckInPanel({ onClose }) {
                 {recentAchievements.length > 0 && (
                     <div className="px-4 py-3 border-t border-[var(--color-border)]">
                         <p className="text-sm font-medium mb-2">
-                            {language === 'zh' ? '🏆 今日成就' : '🏆 Today\'s Achievements'}
+                            🏆 {t('today_achievements')}
                         </p>
                         {recentAchievements.map(a => (
                             <div key={a.id} className="text-sm text-[var(--color-primary)]">
@@ -161,15 +166,12 @@ export default function CheckInPanel({ onClose }) {
                         className={cn(
                             "w-full py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2",
                             hasChecked
-                                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                ? "bg-[var(--color-bg-active)] text-[var(--color-text-light)] cursor-not-allowed"
                                 : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]"
                         )}
                     >
                         <Calendar size={20} />
-                        {hasChecked
-                            ? (language === 'zh' ? '今日已签到' : 'Already checked in')
-                            : (language === 'zh' ? '立即签到' : 'Check in now')
-                        }
+                        {hasChecked ? t('already_checked_in') : t('check_in_now')}
                     </button>
                 </div>
             </div>

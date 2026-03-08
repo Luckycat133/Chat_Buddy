@@ -4,52 +4,129 @@ import { useLanguage } from '../context/LanguageContext';
 import { useUser } from '../context/UserContext';
 import { useNotification } from '../context/NotificationContext';
 import { useTheme } from '../context/ThemeContext';
-import { useBackground } from '../features/background/BackgroundContext';
 import { useSocial } from '../context/SocialContext';
 import {
     ChevronRight, Bell, Lock, Globe, Info, Moon, HelpCircle,
     Volume2, VolumeX, BellOff, Trophy, Calendar, Search, Image,
-    Settings as SettingsIcon, Shield, Laptop, LogOut
+    Settings as SettingsIcon, Shield, Laptop, LogOut,
+    Server, Download, Upload, Sparkles, MessageSquare, RotateCcw, ClipboardList, Brain,
+    Database, Cpu, Network, GraduationCap
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import CheckInPanel from '../components/CheckInPanel';
+import DailyTaskPanel from '../components/DailyTaskPanel';
+import { useOnboarding } from '../hooks/useOnboarding';
+import AccentColorPicker from '../components/AccentColorPicker';
 import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
+import { exportAllData, importData } from '../config/apiConfig';
+import CharacterMemoryPanel from '../components/CharacterMemoryPanel';
+import { INITIAL_PERSONAS } from '../data/personas';
 
 const BackgroundSettingsModal = React.lazy(() => import('../features/background/BackgroundSettingsModal'));
+const ApiConfigPanel = React.lazy(() => import('../components/ApiConfigPanel'));
+const KnowledgeBasePanel = React.lazy(() => import('../components/KnowledgeBasePanel'));
+const ModelSwitcherPanel = React.lazy(() => import('../components/ModelSwitcherPanel'));
+const KnowledgeGraphPanel = React.lazy(() => import('../components/KnowledgeGraphPanel'));
+const LearningReportPanel = React.lazy(() => import('../components/LearningReportPanel'));
 
 export default function Settings() {
     const { language, toggleLanguage, t } = useLanguage();
     const { userProfile, getDisplayName } = useUser();
-    const { settings, toggleSound, toggleDoNotDisturb, toggleBrowserPush } = useNotification();
-    const { isDarkMode, toggleDarkMode } = useTheme();
-    const { points, streakDays, hasCheckedInToday } = useSocial();
+    const { settings, toggleSound, toggleDoNotDisturb } = useNotification();
+    const { isDarkMode, themeMode, toggleDarkMode, oledEnabled, toggleOLEDMode, animationIntensity, setAnimationIntensity, bubbleStyle, setBubbleStyle } = useTheme();
+    const { points, streakDays, getDailyTaskProgress } = useSocial();
+    const taskProgress = getDailyTaskProgress();
+    const { reset: resetTutorial } = useOnboarding();
     const navigate = useNavigate();
 
     const [showCheckIn, setShowCheckIn] = useState(false);
+    const [showDailyTasks, setShowDailyTasks] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [showBackgroundModal, setShowBackgroundModal] = useState(false);
+    const [showApiConfig, setShowApiConfig] = useState(false);
+    const [importMsg, setImportMsg] = useState(null);
+    const [memoryCharacter, setMemoryCharacter] = useState(null); // T12: Memory panel
+    const [showMemorySelector, setShowMemorySelector] = useState(false);
+    // T14/T15 panels
+    const [showKnowledgeBase, setShowKnowledgeBase] = useState(false);
+    const [showModelSwitcher, setShowModelSwitcher] = useState(false);
+    const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
+    const [showLearningReport, setShowLearningReport] = useState(false);
+    const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+    const fileInputRef = React.useRef(null);
+    const { resetProfile } = useUser();
+
+    const handleExport = () => {
+        exportAllData();
+    };
+
+    const handleImport = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            const count = await importData(file);
+            setImportMsg({ type: 'success', text: t('import_success', { count }) });
+        } catch (err) {
+            setImportMsg({ type: 'error', text: t('import_failed', { error: err.message }) });
+        }
+        e.target.value = '';
+    };
+
+    const handleLogout = () => {
+        if (window.confirm(t('confirm_logout'))) {
+            // Clear all localStorage data
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('chat-buddy:') || key.startsWith('chat-buddy-')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            // Reset user profile
+            resetProfile();
+            // Show success message
+            alert(t('logout_success'));
+            // Navigate to home
+            navigate('/');
+            // Reload page to reset all state
+            window.location.reload();
+        }
+    };
+
+    const handleClearAllData = () => {
+        if (window.confirm(t('privacy_clear_confirm'))) {
+            // Clear all localStorage data
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('chat-buddy:') || key.startsWith('chat-buddy-')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            // Reset user profile
+            resetProfile();
+            // Close modal
+            setShowPrivacyModal(false);
+            // Show success message
+            alert(t('data_cleared'));
+            // Reload page
+            window.location.reload();
+        }
+    };
 
     return (
-        <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto custom-scrollbar relative">
+        <div className="page-container custom-scrollbar">
             {/* Ambient Background Glow */}
-            <div className="fixed inset-0 pointer-events-none opacity-20"
-                style={{
-                    background: 'radial-gradient(circle at 10% 20%, var(--color-primary-glow) 0%, transparent 40%), radial-gradient(circle at 90% 80%, var(--color-accent-blue-glow) 0%, transparent 40%)'
-                }}
-            />
+            <div className="page-ambient-glow" />
 
-            <div className="max-w-5xl mx-auto px-6 py-8 relative z-10 space-y-8 pb-24">
+            <div className="page-content space-y-8">
                 {/* Header */}
-                <div className="flex items-center gap-3 animate-fade-slide-down">
-                    <div className="p-3 bg-[var(--color-bg-white)] rounded-2xl shadow-sm border border-[var(--color-border)]">
-                        <SettingsIcon size={24} className="text-[var(--color-primary)]" />
+                <div className="page-header animate-fade-slide-down">
+                    <div className="page-header-icon">
+                        <SettingsIcon size={24} />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-display font-bold text-[var(--color-text-main)]">
-                            {language === 'zh' ? '控制中心' : 'Control Center'}
+                        <h1 className="page-header-title">
+                            {t('settings_control_center')}
                         </h1>
-                        <p className="text-[var(--color-text-muted)] text-sm">
-                            {language === 'zh' ? '管理你的 AI 伙伴和偏好设置' : 'Manage your AI companions and preferences'}
+                        <p className="page-header-desc">
+                            {t('settings_control_center_desc')}
                         </p>
                     </div>
                 </div>
@@ -58,21 +135,19 @@ export default function Settings() {
                     {/* Left Column: Pilot House (Profile) */}
                     <div className="space-y-6">
                         <section className="animate-fade-slide-up" style={{ animationDelay: '100ms' }}>
-                            <div className="flex items-center gap-2 mb-3 px-1">
-                                <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                    {language === 'zh' ? '驾驶舱' : 'Pilot House'}
-                                </span>
+                            <div className="section-title">
+                                {t('settings_pilot_house')}
                             </div>
 
                             <div
-                                className="glass-crystal rounded-[var(--radius-2xl)] p-6 shadow-floating relative overflow-hidden group cursor-pointer transition-all hover:scale-[1.02]"
+                                className="glass-crystal profile-card rounded-[var(--radius-2xl)] p-6 shadow-floating"
                                 onClick={() => navigate('/profile')}
                             >
                                 {/* Active Status Ring Animation */}
-                                <div className="absolute top-4 right-4 w-3 h-3 bg-[var(--color-success)] rounded-full shadow-[0_0_10px_var(--color-success)] animate-pulse" />
+                                <div className="absolute top-4 right-4 status-dot animate-pulse" />
 
                                 <div className="flex flex-col items-center text-center">
-                                    <div className="w-24 h-24 rounded-[var(--radius-xl)] bg-[var(--color-bg-active)] mb-4 relative shadow-lg group-hover:shadow-glow transition-all">
+                                    <div className="profile-avatar mb-4">
                                         {userProfile.avatar ? (
                                             <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover rounded-[var(--radius-xl)]" />
                                         ) : (
@@ -80,31 +155,39 @@ export default function Settings() {
                                                 {getDisplayName(language).charAt(0).toUpperCase()}
                                             </div>
                                         )}
-                                        <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-[var(--radius-xl)]" />
+                                        <div className="profile-avatar-ring" />
                                     </div>
 
-                                    <h2 className="text-xl font-bold text-[var(--color-text-main)] mb-1">
+                                    <h2 className="profile-name mb-1">
                                         {getDisplayName(language)}
                                     </h2>
-                                    <p className="text-sm text-[var(--color-text-muted)] bg-[var(--color-bg-white)] px-3 py-1 rounded-full border border-[var(--color-border)] mb-4">
+                                    <p className="profile-id mb-4">
                                         ID: {userProfile.id}
                                     </p>
 
-                                    <div className="grid grid-cols-2 gap-3 w-full">
-                                        <div className="bg-[var(--color-bg-white)]/50 p-3 rounded-xl border border-[var(--color-border-light)] hover:bg-[var(--color-bg-white)] transition-colors"
+                                    <div className="grid grid-cols-3 gap-2 w-full">
+                                        <div className="stat-card"
                                             onClick={(e) => { e.stopPropagation(); setShowCheckIn(true); }}>
-                                            <div className="text-xs text-[var(--color-text-muted)] mb-1">{language === 'zh' ? '连续签到' : 'Streak'}</div>
-                                            <div className="font-display font-bold text-lg text-[#FF9800] flex items-center justify-center gap-1">
+                                            <div className="stat-card-label">{t('streak_stat')}</div>
+                                            <div className="stat-card-value stat-value-streak">
                                                 <Calendar size={14} />
                                                 {streakDays}
                                             </div>
                                         </div>
-                                        <div className="bg-[var(--color-bg-white)]/50 p-3 rounded-xl border border-[var(--color-border-light)] hover:bg-[var(--color-bg-white)] transition-colors"
+                                        <div className="stat-card"
                                             onClick={(e) => { e.stopPropagation(); navigate('/achievements'); }}>
-                                            <div className="text-xs text-[var(--color-text-muted)] mb-1">{language === 'zh' ? '积分' : 'Points'}</div>
-                                            <div className="font-display font-bold text-lg text-[#FFD700] flex items-center justify-center gap-1">
+                                            <div className="stat-card-label">{t('total_points')}</div>
+                                            <div className="stat-card-value stat-value-points">
                                                 <Trophy size={14} />
                                                 {points}
+                                            </div>
+                                        </div>
+                                        <div className="stat-card"
+                                            onClick={(e) => { e.stopPropagation(); setShowDailyTasks(true); }}>
+                                            <div className="stat-card-label">{t('daily_tasks')}</div>
+                                            <div className="stat-card-value stat-value-streak">
+                                                <ClipboardList size={14} />
+                                                {taskProgress.completed}/{taskProgress.total}
                                             </div>
                                         </div>
                                     </div>
@@ -113,41 +196,46 @@ export default function Settings() {
                         </section>
 
                         <section className="animate-fade-slide-up" style={{ animationDelay: '200ms' }}>
-                            <div className="flex items-center gap-2 mb-3 px-1">
-                                <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                    {language === 'zh' ? '通用' : 'General'}
-                                </span>
+                            <div className="section-title">
+                                {t('preferences')}
                             </div>
-                            <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-[var(--radius-xl)] overflow-hidden shadow-sm">
+                            <div className="settings-group">
                                 <SettingItem
                                     icon={<Globe size={18} />}
-                                    color="bg-[#2196F3]"
+                                    color="bg-[var(--color-icon-blue)]"
                                     label={t('interface_language')}
                                     rightContent={
-                                        <span className="font-medium text-[var(--color-text-main)] bg-[var(--color-bg-app)] px-3 py-1 rounded-lg text-sm border border-[var(--color-border-light)]">
-                                            {language === 'en' ? 'English' : '简体中文'}
+                                        <span className="lang-badge">
+                                            {t(language === 'en' ? 'lang_english' : 'lang_chinese')}
                                         </span>
                                     }
                                     onClick={toggleLanguage}
                                 />
                                 <SettingItem
                                     icon={<Lock size={18} />}
-                                    color="bg-[#4CAF50]"
+                                    color="bg-[var(--color-icon-green)]"
                                     label={t('privacy') || 'Privacy & Security'}
-                                    onClick={() => { }}
+                                    onClick={() => setShowPrivacyModal(true)}
                                 />
                                 <SettingItem
                                     icon={<HelpCircle size={18} />}
-                                    color="bg-[#9C27B0]"
+                                    color="bg-[var(--color-icon-purple)]"
                                     label={t('help') || 'Help Center'}
                                     onClick={() => navigate('/help')}
+                                />
+                                <SettingItem
+                                    icon={<RotateCcw size={18} />}
+                                    color="bg-[var(--color-icon-teal)]"
+                                    label={t('reset_tutorial')}
+                                    subLabel={t('reset_tutorial_desc')}
+                                    onClick={resetTutorial}
                                 />
                                 <SettingItem
                                     icon={<LogOut size={18} />}
                                     color="bg-[var(--color-danger)]"
                                     label={t('logout') || 'Log Out'}
-                                    className="text-[var(--color-danger)]"
-                                    onClick={() => { }} // Handle logout
+                                    labelClassName="text-[var(--color-danger)]"
+                                    onClick={handleLogout}
                                 />
                             </div>
                         </section>
@@ -156,83 +244,190 @@ export default function Settings() {
                     {/* Right Column: System Controls */}
                     <div className="lg:col-span-2 space-y-6">
                         <section className="animate-fade-slide-up" style={{ animationDelay: '150ms' }}>
-                            <div className="flex items-center gap-2 mb-3 px-1">
-                                <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                    {language === 'zh' ? '系统偏好' : 'System Preferences'}
-                                </span>
+                            <div className="section-title">
+                                {t('appearance')}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <ControlCard
                                     icon={<Moon size={24} />}
-                                    color="bg-[#3F51B5]"
-                                    label={language === 'zh' ? '深色模式' : 'Dark Mode'}
-                                    subLabel={isDarkMode ? 'On' : 'Off'}
+                                    color="bg-[var(--color-icon-indigo)]"
+                                    label={t('theme_mode')}
+                                    subLabel={t(`theme_${themeMode}`)}
                                     active={isDarkMode}
                                     onClick={toggleDarkMode}
                                 />
                                 <ControlCard
+                                    icon={<Laptop size={24} />}
+                                    color="bg-[var(--color-icon-gray)]"
+                                    label={t('oled_mode') || 'OLED Pure Black'}
+                                    subLabel={oledEnabled
+                                        ? (t('oled_mode_on') || 'Enabled')
+                                        : (t('oled_mode_off') || 'Disabled')}
+                                    active={oledEnabled}
+                                    onClick={toggleOLEDMode}
+                                />
+                                <ControlCard
                                     icon={<Image size={24} />}
-                                    color="bg-[#00BCD4]"
-                                    label={language === 'zh' ? '个性化背景' : 'Backgrounds'}
-                                    subLabel={language === 'zh' ? '自定义外观' : 'Customize Look'}
+                                    color="bg-[var(--color-icon-teal)]"
+                                    label={t('backgrounds')}
+                                    subLabel={t('customize_look')}
                                     active={true}
                                     onClick={() => setShowBackgroundModal(true)}
                                 />
                                 <ControlCard
+                                    icon={<Sparkles size={24} />}
+                                    color="bg-[var(--color-icon-orange)]"
+                                    label={t('animation_intensity')}
+                                    subLabel={t(`anim_${animationIntensity}`)}
+                                    active={animationIntensity !== 'none'}
+                                    onClick={() => {
+                                        const cycle = ['none', 'subtle', 'standard', 'intense'];
+                                        const idx = cycle.indexOf(animationIntensity);
+                                        setAnimationIntensity(cycle[(idx + 1) % cycle.length]);
+                                    }}
+                                />
+                                <ControlCard
+                                    icon={<MessageSquare size={24} />}
+                                    color="bg-[var(--color-icon-purple)]"
+                                    label={t('bubble_style')}
+                                    subLabel={t(`bubble_${bubbleStyle}`)}
+                                    active={true}
+                                    onClick={() => {
+                                        const cycle = ['rounded', 'square', 'tail', 'minimal'];
+                                        const idx = cycle.indexOf(bubbleStyle);
+                                        setBubbleStyle(cycle[(idx + 1) % cycle.length]);
+                                    }}
+                                />
+                                <ControlCard
                                     icon={settings.soundEnabled ? <Volume2 size={24} /> : <VolumeX size={24} />}
-                                    color="bg-[#E91E63]"
-                                    label={language === 'zh' ? '提示音' : 'Sound'}
-                                    subLabel={settings.soundEnabled ? 'Enabled' : 'Muted'}
+                                    color="bg-[var(--color-icon-pink)]"
+                                    label={t('sound')}
+                                    subLabel={settings.soundEnabled ? t('sound_enabled') : t('sound_muted')}
                                     active={settings.soundEnabled}
                                     onClick={toggleSound}
                                 />
                                 <ControlCard
                                     icon={<BellOff size={24} />}
-                                    color="bg-[#607D8B]"
-                                    label={language === 'zh' ? '免打扰' : 'Do Not Disturb'}
-                                    subLabel={settings.doNotDisturb ? 'Active' : 'Off'}
+                                    color="bg-[var(--color-icon-gray)]"
+                                    label={t('do_not_disturb')}
+                                    subLabel={settings.doNotDisturb ? t('dnd_active') : t('dnd_off')}
                                     active={settings.doNotDisturb}
                                     onClick={toggleDoNotDisturb}
                                 />
                             </div>
+
+                            {/* Accent Color Picker */}
+                            <div className="mt-4">
+                                <AccentColorPicker />
+                            </div>
                         </section>
 
                         <section className="animate-fade-slide-up" style={{ animationDelay: '250ms' }}>
-                            <div className="flex items-center gap-2 mb-3 px-1">
-                                <span className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                                    {language === 'zh' ? '高级工具' : 'Advanced Tools'}
-                                </span>
+                            <div className="section-title">
+                                {t('advanced_tools')}
                             </div>
-                            <div className="bg-[var(--color-bg-white)] border border-[var(--color-border)] rounded-[var(--radius-xl)] overflow-hidden shadow-sm">
+                            <div className="settings-group">
+                                <SettingItem
+                                    icon={<Server size={18} />}
+                                    color="bg-[var(--color-icon-blue)]"
+                                    label={t('api_config')}
+                                    subLabel={t('api_config_desc')}
+                                    onClick={() => setShowApiConfig(true)}
+                                />
                                 <SettingItem
                                     icon={<Search size={18} />}
-                                    color="bg-[#795548]"
-                                    label={language === 'zh' ? '全局搜索' : 'Global Search'}
-                                    subLabel={language === 'zh' ? '搜索所有聊天记录' : 'Search across all chats'}
+                                    color="bg-[var(--color-icon-brown)]"
+                                    label={t('global_search')}
+                                    subLabel={t('search_all_chats')}
                                     onClick={() => setShowSearch(true)}
                                 />
                                 <SettingItem
-                                    icon={<Shield size={18} />}
-                                    color="bg-[#607D8B]"
-                                    label={language === 'zh' ? '数据导出' : 'Export Data'}
-                                    subLabel={language === 'zh' ? '备份你的回忆' : 'Backup your memories'}
-                                    onClick={() => { }}
+                                    icon={<Brain size={18} />}
+                                    color="bg-[var(--color-icon-purple)]"
+                                    label="Character Memory"
+                                    subLabel="View & manage what characters remember"
+                                    onClick={() => setShowMemorySelector(true)}
                                 />
                                 <SettingItem
-                                    icon={<Laptop size={18} />}
-                                    color="bg-[#FF5722]"
-                                    label={language === 'zh' ? '设备管理' : 'Device Management'}
-                                    rightContent={<span className="text-xs font-bold text-[var(--color-text-muted)]">3 Active</span>}
-                                    onClick={() => { }}
+                                    icon={<Database size={18} />}
+                                    color="bg-emerald-500"
+                                    label={t('kb_title')}
+                                    subLabel={t('kb_settings_desc')}
+                                    onClick={() => setShowKnowledgeBase(true)}
+                                />
+                                <SettingItem
+                                    icon={<Cpu size={18} />}
+                                    color="bg-indigo-500"
+                                    label={t('model_switcher_title')}
+                                    subLabel={t('model_switcher_settings_desc')}
+                                    onClick={() => setShowModelSwitcher(true)}
+                                />
+                                <SettingItem
+                                    icon={<Network size={18} />}
+                                    color="bg-violet-500"
+                                    label={t('kg_title')}
+                                    subLabel={t('kg_settings_desc')}
+                                    onClick={() => setShowKnowledgeGraph(true)}
+                                />
+                                <SettingItem
+                                    icon={<GraduationCap size={18} />}
+                                    color="bg-amber-500"
+                                    label={t('learning_report_title')}
+                                    subLabel={t('learning_report_settings_desc')}
+                                    onClick={() => setShowLearningReport(true)}
+                                />
+                                <SettingItem
+                                    icon={<Trophy size={18} />}
+                                    color="bg-yellow-500"
+                                    label={t('leaderboard_title')}
+                                    subLabel={t('leaderboard_settings_desc')}
+                                    onClick={() => navigate('/leaderboard')}
+                                />
+                                <SettingItem
+                                    icon={<Download size={18} />}
+                                    color="bg-[var(--color-icon-gray)]"
+                                    label={t('export_data_title')}
+                                    subLabel={t('export_data_desc')}
+                                    onClick={handleExport}
+                                />
+                                <SettingItem
+                                    icon={<Upload size={18} />}
+                                    color="bg-[var(--color-icon-orange)]"
+                                    label={t('import_data')}
+                                    subLabel={t('import_data_desc')}
+                                    onClick={() => fileInputRef.current?.click()}
+                                />
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".json"
+                                    onChange={handleImport}
+                                    className="hidden"
                                 />
                             </div>
+                            {importMsg && (
+                                <div className={cn(
+                                    "import-msg",
+                                    importMsg.type === 'success' ? "import-msg-success" : "import-msg-error"
+                                )}>
+                                    <span>{importMsg.text}</span>
+                                    {importMsg.type === 'success' && (
+                                        <button
+                                            onClick={() => window.location.reload()}
+                                            className="btn-primary ml-2 px-3 py-1 text-xs"
+                                        >
+                                            {t('reload_now')}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
                         </section>
 
                         <section className="animate-fade-slide-up" style={{ animationDelay: '300ms' }}>
-                            <div className="p-4 rounded-xl border border-[var(--color-border-light)] text-center">
-                                <p className="text-xs text-[var(--color-text-muted)]">
-                                    Chat Buddy v0.2.3 • Built with ❤️ by Agent Coder
+                            <div className="version-footer">
+                                <p>
+                                    Chat Buddy v0.3.1 • Built with ❤️ by Agent Coder
                                 </p>
                             </div>
                         </section>
@@ -242,11 +437,141 @@ export default function Settings() {
 
             {/* Modals */}
             {showCheckIn && <CheckInPanel onClose={() => setShowCheckIn(false)} />}
+            {showDailyTasks && <DailyTaskPanel onClose={() => setShowDailyTasks(false)} />}
             {showSearch && <MessageSearchPanel onClose={() => setShowSearch(false)} />}
+            {showApiConfig && (
+                <Suspense fallback={null}>
+                    <ApiConfigPanel onClose={() => setShowApiConfig(false)} />
+                </Suspense>
+            )}
             {showBackgroundModal && (
                 <Suspense fallback={null}>
                     <BackgroundSettingsModal isOpen={true} onClose={() => setShowBackgroundModal(false)} />
                 </Suspense>
+            )}
+            {showKnowledgeBase && (
+                <Suspense fallback={null}>
+                    <KnowledgeBasePanel onClose={() => setShowKnowledgeBase(false)} />
+                </Suspense>
+            )}
+            {showModelSwitcher && (
+                <Suspense fallback={null}>
+                    <ModelSwitcherPanel onClose={() => setShowModelSwitcher(false)} />
+                </Suspense>
+            )}
+            {showKnowledgeGraph && (
+                <Suspense fallback={null}>
+                    <KnowledgeGraphPanel onClose={() => setShowKnowledgeGraph(false)} />
+                </Suspense>
+            )}
+            {showLearningReport && (
+                <Suspense fallback={null}>
+                    <LearningReportPanel onClose={() => setShowLearningReport(false)} />
+                </Suspense>
+            )}
+
+            {/* T12: Memory character selector */}
+            {showMemorySelector && (
+                <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowMemorySelector(false)} />
+                    <div className="relative w-full max-w-sm glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-5">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                                <Brain size={16} className="text-[var(--color-primary)]" />
+                                Select Character
+                            </h3>
+                            <button onClick={() => setShowMemorySelector(false)} className="btn btn-ghost btn-icon">
+                                <span style={{ fontSize: '18px', lineHeight: 1 }}>✕</span>
+                            </button>
+                        </div>
+                        <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar">
+                            {INITIAL_PERSONAS.filter(p => p.id.startsWith('ai-')).map(p => (
+                                <button
+                                    key={p.id}
+                                    onClick={() => { setMemoryCharacter(p); setShowMemorySelector(false); }}
+                                    className="w-full flex items-center gap-3 p-3 rounded-[var(--radius-lg)] bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                >
+                                    <img src={p.avatar} alt={p.name} className="w-9 h-9 rounded-full object-cover" />
+                                    <div>
+                                        <p className="text-sm font-medium text-[var(--color-text-primary)]">{p.name}</p>
+                                        <p className="text-xs text-[var(--color-text-secondary)] truncate">{p.personality}</p>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* T12: Memory panel for selected character */}
+            {memoryCharacter && (
+                <CharacterMemoryPanel
+                    character={memoryCharacter}
+                    onClose={() => setMemoryCharacter(null)}
+                />
+            )}
+
+            {/* Phase 1: Privacy Modal */}
+            {showPrivacyModal && (
+                <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPrivacyModal(false)} />
+                    <div className="relative w-full max-w-md glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-6">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                                <Shield size={20} className="text-[var(--color-primary)]" />
+                                {t('privacy_title')}
+                            </h3>
+                            <button onClick={() => setShowPrivacyModal(false)} className="btn btn-ghost btn-icon">
+                                <span style={{ fontSize: '18px', lineHeight: 1 }}>✕</span>
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {/* Data Management Section */}
+                            <div className="p-4 bg-white/5 rounded-[var(--radius-lg)]">
+                                <h4 className="text-sm font-medium text-[var(--color-text-primary)] mb-3 flex items-center gap-2">
+                                    <Database size={16} className="text-[var(--color-primary)]" />
+                                    {t('privacy_data_management')}
+                                </h4>
+
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={() => { setShowPrivacyModal(false); handleExport(); }}
+                                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors text-left"
+                                    >
+                                        <Download size={18} className="text-[var(--color-icon-blue)]" />
+                                        <div>
+                                            <p className="text-sm font-medium text-[var(--color-text-primary)]">{t('privacy_export_data')}</p>
+                                            <p className="text-xs text-[var(--color-text-secondary)]">{t('export_data_desc')}</p>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={handleClearAllData}
+                                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors text-left"
+                                    >
+                                        <LogOut size={18} className="text-red-500" />
+                                        <div>
+                                            <p className="text-sm font-medium text-red-500">{t('privacy_clear_data')}</p>
+                                            <p className="text-xs text-red-400/70">{t('danger_zone')}</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Privacy Info */}
+                            <div className="p-4 bg-white/5 rounded-[var(--radius-lg)]">
+                                <h4 className="text-sm font-medium text-[var(--color-text-primary)] mb-2 flex items-center gap-2">
+                                    <Info size={16} className="text-[var(--color-icon-teal)]" />
+                                    {t('about')}
+                                </h4>
+                                <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
+                                    {t('faq_a5')}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
@@ -258,30 +583,19 @@ function ControlCard({ icon, color, label, subLabel, active, onClick }) {
     return (
         <div
             onClick={onClick}
-            className={cn(
-                "p-5 rounded-[var(--radius-xl)] border cursor-pointer transition-all duration-300 relative overflow-hidden group hover:scale-[1.02]",
-                active
-                    ? "bg-[var(--color-bg-white)] border-[var(--color-border-aurora)] shadow-md"
-                    : "bg-[var(--color-bg-app)] border-transparent opacity-80 hover:opacity-100"
-            )}
+            className={cn("control-card", active && "active")}
         >
-            <div className="flex items-start justify-between mb-3">
-                <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm", color)}>
+            <div className="control-card-header">
+                <div className={cn("control-card-icon", color)}>
                     {icon}
                 </div>
-                <div className={cn(
-                    "w-12 h-7 rounded-full transition-all relative",
-                    active ? "bg-[var(--color-success)]" : "bg-[var(--color-border)]"
-                )}>
-                    <div className={cn(
-                        "absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-all",
-                        active ? "left-6" : "left-1"
-                    )} />
+                <div className={cn("toggle", active && "active")}>
+                    <div className="toggle-thumb" />
                 </div>
             </div>
             <div>
-                <h3 className="font-bold text-[var(--color-text-main)] text-lg">{label}</h3>
-                <p className="text-sm text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)] transition-colors">
+                <h3 className="control-card-label">{label}</h3>
+                <p className="control-card-sublabel">
                     {subLabel}
                 </p>
             </div>
@@ -289,20 +603,20 @@ function ControlCard({ icon, color, label, subLabel, active, onClick }) {
     );
 }
 
-function SettingItem({ icon, color, label, subLabel, rightContent, onClick, className }) {
+function SettingItem({ icon, color, label, subLabel, rightContent, onClick, labelClassName }) {
     return (
         <div
             onClick={onClick}
-            className="flex items-center p-4 hover:bg-[var(--color-bg-hover)] cursor-pointer transition-colors border-b border-[var(--color-border-light)] last:border-0"
+            className="setting-item"
         >
-            <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-sm mr-4", color)}>
+            <div className={cn("setting-item-icon", color)}>
                 {icon}
             </div>
-            <div className="flex-1">
-                <h4 className={cn("font-bold text-[15px] text-[var(--color-text-main)]", className)}>{label}</h4>
-                {subLabel && <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{subLabel}</p>}
+            <div className="setting-item-content">
+                <h4 className={cn("setting-item-label", labelClassName)}>{label}</h4>
+                {subLabel && <p className="setting-item-sublabel">{subLabel}</p>}
             </div>
-            {rightContent || <ChevronRight size={18} className="text-[var(--color-text-light)]" />}
+            {rightContent || <ChevronRight size={18} className="setting-item-chevron" />}
         </div>
     );
 }

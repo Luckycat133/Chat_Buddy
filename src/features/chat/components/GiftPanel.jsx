@@ -2,11 +2,13 @@ import React, { useState, useCallback } from 'react';
 import { X, Gift, Heart, Star, Diamond, Crown, Flower2 } from 'lucide-react';
 import { useSocial } from '../../../context/SocialContext';
 import { useLanguage } from '../../../context/LanguageContext';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 import { cn } from '../../../utils/cn';
 
 export default function GiftPanel({ recipientId, recipientName, onClose, onGiftSent }) {
     const { gifts, sendGift, points, getIntimacy, getIntimacyLevel } = useSocial();
-    const { language } = useLanguage();
+    const { t, language } = useLanguage();
+    const trapRef = useFocusTrap(true);
     const [selectedGift, setSelectedGift] = useState(null);
     const [sending, setSending] = useState(false);
     const [result, setResult] = useState(null);
@@ -47,22 +49,26 @@ export default function GiftPanel({ recipientId, recipientName, onClose, onGiftS
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center" onClick={onClose}>
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end justify-center" role="presentation" onClick={onClose}>
             <div
-                className="bg-white rounded-t-2xl w-full max-w-lg animate-slide-up"
+                ref={trapRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="gift-panel-title"
+                className="bg-[var(--color-bg-white)] rounded-t-2xl w-full max-w-lg animate-slide-up"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                     <div>
-                        <h3 className="font-medium text-[17px]">
-                            {language === 'zh' ? `送礼物给 ${recipientName}` : `Send gift to ${recipientName}`}
+                        <h3 id="gift-panel-title" className="font-medium text-[17px]">
+                            {t('send_gift_to', { name: recipientName })}
                         </h3>
                         <p className="text-sm text-[var(--color-text-muted)]">
-                            {language === 'zh' ? '积分' : 'Points'}: {points}
+                            {t('points')}: {points}
                         </p>
                     </div>
-                    <button onClick={onClose} className="text-[var(--color-text-muted)]">
+                    <button onClick={onClose} className="text-[var(--color-text-muted)]" aria-label="Close">
                         <X size={24} />
                     </button>
                 </div>
@@ -128,8 +134,8 @@ export default function GiftPanel({ recipientId, recipientName, onClose, onGiftS
                         result.success ? "text-green-600 bg-green-50" : "text-red-600 bg-red-50"
                     )}>
                         {result.success
-                            ? (language === 'zh' ? '🎉 礼物发送成功!' : '🎉 Gift sent successfully!')
-                            : (language === 'zh' ? '❌ 积分不足' : '❌ Insufficient points')
+                            ? `🎉 ${t('gift_sent_success')}`
+                            : `❌ ${t('insufficient_points')}`
                         }
                     </div>
                 )}
@@ -149,14 +155,14 @@ export default function GiftPanel({ recipientId, recipientName, onClose, onGiftS
                         {sending ? (
                             <>
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                {language === 'zh' ? '发送中...' : 'Sending...'}
+                                {t('sending_ellipsis')}
                             </>
                         ) : (
                             <>
                                 <Gift size={20} />
                                 {selectedGift
-                                    ? (language === 'zh' ? `发送 ${selectedGift.emoji} (${selectedGift.cost}积分)` : `Send ${selectedGift.emoji} (${selectedGift.cost} pts)`)
-                                    : (language === 'zh' ? '选择礼物' : 'Select a gift')
+                                    ? t('send_gift_cost', { emoji: selectedGift.emoji, cost: selectedGift.cost })
+                                    : t('select_gift')
                                 }
                             </>
                         )}

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Image as ImageIcon, MapPin, Eye, ChevronDown, Check } from 'lucide-react';
 import { useMoments } from '../context/MomentsContext';
 import { useUser } from '../../../context/UserContext';
@@ -26,7 +26,7 @@ const VISIBILITY_OPTIONS = [
 ];
 
 export default function PostComposer({ isOpen, onClose }) {
-    const { createPost } = useMoments();
+    const { createPost, draft, saveDraft, clearDraft } = useMoments();
     const { userProfile, getDisplayName } = useUser();
     const { t, language } = useLanguage();
 
@@ -38,7 +38,38 @@ export default function PostComposer({ isOpen, onClose }) {
     const [customLocation, setCustomLocation] = useState('');
     const [visibility, setVisibility] = useState('public');
     const [showVisibilityPicker, setShowVisibilityPicker] = useState(false);
+    const [draftBanner, setDraftBanner] = useState(false);
     const fileInputRef = useRef(null);
+    const draftTimerRef = useRef(null);
+
+    // Restore draft on open
+    useEffect(() => {
+        if (!isOpen) return;
+        if (draft && (draft.content || draft.images?.length > 0)) {
+            setContent(draft.content || '');
+            setImages(draft.images || []);
+            setLocation(draft.location || '');
+            setDraftBanner(true);
+            setTimeout(() => setDraftBanner(false), 3000);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isOpen]);
+
+    // Auto-save draft on content/images/location change
+    const triggerDraftSave = useCallback(() => {
+        if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+        draftTimerRef.current = setTimeout(() => {
+            saveDraft({ content, images, location });
+        }, 500);
+    }, [content, images, location, saveDraft]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        if (content || images.length > 0 || location) {
+            triggerDraftSave();
+        }
+        return () => { if (draftTimerRef.current) clearTimeout(draftTimerRef.current); };
+    }, [content, images, location, isOpen, triggerDraftSave]);
 
     const handleImageSelect = (e) => {
         const files = Array.from(e.target.files);
@@ -98,6 +129,8 @@ export default function PostComposer({ isOpen, onClose }) {
             hiddenFrom: null
         });
 
+        clearDraft();
+
         // Reset and close
         setContent('');
         setImages([]);
@@ -105,6 +138,14 @@ export default function PostComposer({ isOpen, onClose }) {
         setVisibility('public');
         setIsPosting(false);
         onClose();
+    };
+
+    const handleDiscard = () => {
+        clearDraft();
+        setContent('');
+        setImages([]);
+        setLocation('');
+        setDraftBanner(false);
     };
 
     const selectLocation = (loc) => {
@@ -128,7 +169,7 @@ export default function PostComposer({ isOpen, onClose }) {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+        <div className="fixed inset-0 z-50 bg-[var(--color-bg-white)] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                 <button
@@ -191,7 +232,7 @@ export default function PostComposer({ isOpen, onClose }) {
                             }}
                             className={cn(
                                 "w-full flex items-center gap-3 px-4 py-3 text-left transition-colors",
-                                visibility === opt.value ? "bg-[var(--color-primary)]/10" : "hover:bg-white"
+                                visibility === opt.value ? "bg-[var(--color-primary)]/10" : "hover:bg-[var(--color-bg-hover)]"
                             )}
                         >
                             <span className="text-[18px]">{opt.icon}</span>
@@ -203,6 +244,21 @@ export default function PostComposer({ isOpen, onClose }) {
                             )}
                         </button>
                     ))}
+                </div>
+            )}
+
+            {/* Draft Banner */}
+            {draftBanner && (
+                <div className="mx-4 mb-2 flex items-center justify-between bg-[var(--color-primary)]/10 rounded-lg px-3 py-2">
+                    <span className="text-[13px] text-[var(--color-primary)]">
+                        {t('draft_restored') || 'Draft restored'}
+                    </span>
+                    <button
+                        onClick={handleDiscard}
+                        className="text-[12px] text-[var(--color-text-muted)] underline ml-3"
+                    >
+                        {t('discard_draft') || 'Discard'}
+                    </button>
                 </div>
             )}
 
@@ -259,7 +315,7 @@ export default function PostComposer({ isOpen, onClose }) {
 
             {/* Location Picker Modal */}
             {showLocationPicker && (
-                <div className="absolute inset-0 bg-white z-10 flex flex-col">
+                <div className="absolute inset-0 bg-[var(--color-bg-white)] z-10 flex flex-col">
                     <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                         <button onClick={() => setShowLocationPicker(false)} className="text-[var(--color-text-muted)]">
                             <X size={24} />

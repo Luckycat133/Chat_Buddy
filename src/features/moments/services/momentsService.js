@@ -18,45 +18,11 @@ export const AI_LOCATIONS = {
 
 export const DEFAULT_LOCATIONS = ['Home', '家里', 'Somewhere nice ✨', '某个美好的地方 ✨'];
 
-// API Call
-export async function callMomentsAI(messages, maxTokens = 200, apiKeyOverride = null, apiUrlOverride = null) {
-    const apiUrl = apiUrlOverride || import.meta.env.VITE_AI_API_URL || 'https://api.perplexity.ai';
-    const apiKey = apiKeyOverride || import.meta.env.VITE_AI_API_KEY;
-    const model = import.meta.env.VITE_AI_MODEL || 'llama-3.1-sonar-small-128k-chat';
+// API Call — delegates to shared chatService for unified config / retry / timeout
+import { callAI } from '../../chat/services/chatService';
 
-    if (!apiKey) {
-        console.warn('[MomentsAI] No API key configured');
-        return null;
-    }
-
-    try {
-        const response = await fetch(`${apiUrl}/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model,
-                messages,
-                temperature: 0.9,
-                max_tokens: maxTokens
-            })
-        });
-
-        const data = await response.json();
-        if (data.error) {
-            console.error('[MomentsAI] API Error:', data.error);
-            return null;
-        }
-        if (data.choices && data.choices.length > 0) {
-            return data.choices[0].message.content.trim();
-        }
-        return null;
-    } catch (error) {
-        console.error('[MomentsAI] API Call Failed:', error);
-        return null;
-    }
+export async function callMomentsAI(messages, maxTokens = 200) {
+    return callAI(messages, { temperature: 0.9, maxTokens, agentId: 'moments' });
 }
 
 // Helpers
@@ -84,15 +50,12 @@ Interests: ${persona.interests?.join(', ')}
 Current time context: ${timeContext}
 Location: ${location}
 
-Generate a social media post (like WeChat Moments) that this character would share.
-The post should:
-- Be 1-3 sentences, natural and in character
-- Sometimes in Chinese, sometimes in English, sometimes mixed (based on character)
-- Include relevant emojis
-- Reflect the time of day naturally
-- Match the character's personality perfectly
+Write one Moments-style post this character would share:
+- 1-3 sentences, natural and in character
+- Chinese / English / mixed when suitable
+- include fitting emojis and time-of-day vibe
 
-Output ONLY the post content, nothing else.`;
+Output only the post text.`;
 }
 
 export function generateCommentSystemPrompt(persona, postAuthorName, postContent, existingComments = '', replyToComment = null) {
@@ -106,12 +69,77 @@ ${existingComments ? `Recent comments:\n${existingComments}` : ''}
 
 ${replyToComment ? `You are replying to ${replyToComment.authorName}'s comment: "${replyToComment.content}"` : ''}
 
-Generate a short, natural comment (1 sentence max) that fits your personality.
-Output ONLY the comment text.`;
+Write a natural in-character comment (max 1 sentence).
+Output only the comment text.`;
 }
 
 export function evaluateInterestMatch(postContent, interests) {
     if (!interests || !interests.length) return false;
     const contentLower = postContent.toLowerCase();
     return interests.some(interest => contentLower.includes(interest.toLowerCase()));
+}
+
+// -----------------------------------------------------------------------------
+// Story Events
+// -----------------------------------------------------------------------------
+
+export function generateBirthdayPostSystemPrompt(persona) {
+    return `You are ${persona.name} (${persona.name_zh}).
+Personality: ${persona.personality}
+Style: ${persona.style}
+Interests: ${persona.interests?.join(', ')}
+
+Today is your birthday. Write a 1-3 sentence in-character celebratory post.
+Use birthday emojis 🎂🎉🎊 and keep it genuine.
+Output only the post text.`;
+}
+
+export function generateHolidayPostSystemPrompt(persona, holidayName) {
+    return `You are ${persona.name} (${persona.name_zh}).
+Personality: ${persona.personality}
+Style: ${persona.style}
+Interests: ${persona.interests?.join(', ')}
+
+Today is ${holidayName}. Write a 1-3 sentence in-character holiday greeting.
+Include fitting holiday emojis.
+Output only the post text.`;
+}
+
+const SEASONAL_EVENTS = [
+    { month: 1, day: 1, nameEn: "New Year's Day", nameZh: '新年' },
+    { month: 2, day: 14, nameEn: "Valentine's Day", nameZh: '情人节' },
+    { month: 10, day: 31, nameEn: 'Halloween', nameZh: '万圣节' },
+    { month: 12, day: 25, nameEn: 'Christmas', nameZh: '圣诞节' },
+];
+
+// Birthday map: persona id → 'MM-DD'
+const PERSONA_BIRTHDAYS = {
+    'ai-1': '01-23',      // Luna
+    'ai-2': '06-15',      // Max
+    'ai-3': '04-08',      // Bella
+    'ai-4': '09-22',      // Oliver
+    'ai-5': '11-05',      // Sophie
+    'ai-miku': '08-31',   // Hatsune Miku (canonical)
+    'ai-rem': '02-02',    // Rem
+    'ai-rin': '02-03',    // Rin Tohsaka
+    'ai-naruto': '10-10', // Naruto Uzumaki
+    'ai-l': '10-31',      // L
+    'ai-zerotwo': '02-27',// Zero Two
+    'ai-asuna': '09-30',  // Asuna
+    'ai-gojo': '12-07',   // Gojo Satoru
+};
+
+export function getTodayEvents() {
+    const now = new Date();
+    const month = now.getMonth() + 1; // 1-based
+    const day = now.getDate();
+    const mmdd = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+    const birthdays = Object.entries(PERSONA_BIRTHDAYS)
+        .filter(([, bd]) => bd === mmdd)
+        .map(([id]) => id);
+
+    const holiday = SEASONAL_EVENTS.find(e => e.month === month && e.day === day) || null;
+
+    return { birthdays, holiday };
 }

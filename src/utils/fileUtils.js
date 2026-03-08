@@ -145,10 +145,11 @@ export function extractTextContent(fileData) {
 
     try {
         switch (type) {
-            case 'json':
+            case 'json': {
                 // Pretty print JSON for better readability
                 const parsed = JSON.parse(content);
                 return JSON.stringify(parsed, null, 2);
+            }
             case 'csv':
                 // CSV is already text
                 return content;

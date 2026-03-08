@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "skills": {
+    "crucible-editor": {
+      "source": "forsonny/the-crucible-writing-system-for-claude",
+      "sourceType": "github",
+      "computedHash": "0776b60222eac9935787405984f65d7ca58ad9a72f7e3d94631c26943c8d6be8"
+    },
+    "crucible-outliner": {
+      "source": "forsonny/the-crucible-writing-system-for-claude",
+      "sourceType": "github",
+      "computedHash": "1216820129e6e4a771ca274b8211f3fdf01c6b297cb072a61492365c18b6da00"
+    },
+    "crucible-planner": {
+      "source": "forsonny/the-crucible-writing-system-for-claude",
+      "sourceType": "github",
+      "computedHash": "55b3ce93052c0a5a9d780e5f23d1371bfd9d1ba5c096d7aef86ff863a89adfd8"
+    },
+    "crucible-writer": {
+      "source": "forsonny/the-crucible-writing-system-for-claude",
+      "sourceType": "github",
+      "computedHash": "94db8a821f6449433ecdb882f4759eb7553edb308220f151131ddcdc2b6972c1"
+    },
+    "e2e-testing-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "5b76a0209fee373a3cdf22d241fb6bf275e19fc69f92915e07c6448538a14e9d"
+    },
+    "javascript-testing-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "34219092e71607f9257720b3b43ecd37c8af0d3dbf695e3263f4c68ab0b019e2"
+    },
+    "react-doctor": {
+      "source": "millionco/react-doctor",
+      "sourceType": "github",
+      "computedHash": "efa8db174b3c60e27b34d76842e3a9a7c0e5e602fd4d66eec897372d0ce3f30b"
+    },
+    "shadcn-ui": {
+      "source": "jezweb/claude-skills",
+      "sourceType": "github",
+      "computedHash": "4f74aeb3aa54c707658a6d942995a3093cfee945281bb2850908013a36b7fd09"
+    },
+    "tailwind-theme-builder": {
+      "source": "jezweb/claude-skills",
+      "sourceType": "github",
+      "computedHash": "fd84027a0d97134a73054d010f3ebc0352de7d6f24567086444aa7884c24bcde"
+    },
+    "tailwind-v4-shadcn": {
+      "source": "secondsky/claude-skills",
+      "sourceType": "github",
+      "computedHash": "dedaff41ff3331cfe9734eee4203a1e85c6a013eec46df83d9c00e3d36e421f9"
+    },
+    "ux-audit": {
+      "source": "jezweb/claude-skills",
+      "sourceType": "github",
+      "computedHash": "c698ff4ad969cd80cc48d01ceff48e10fd4e15ca01defd196631798d01cc7d3b"
+    },
+    "vercel-react-best-practices": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "computedHash": "4365be772fd3b41994a72ad478472c6d680678e7f3859860ab010e9c46e48ee0"
+    },
+    "web-design-methodology": {
+      "source": "jezweb/claude-skills",
+      "sourceType": "github",
+      "computedHash": "be45fcb236e81ff46480bb5510e9637364dfcd0bcf59a3186d5f637b7cc1522d"
+    },
+    "web-design-patterns": {
+      "source": "jezweb/claude-skills",
+      "sourceType": "github",
+      "computedHash": "e0e003053224be2a95a504b50e455137eb8d78cfcebda263b4414b989014869a"
+    }
+  }
+}

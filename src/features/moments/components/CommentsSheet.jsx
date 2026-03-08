@@ -63,9 +63,9 @@ export default function CommentsSheet({ post, onClose }) {
         const diffDays = Math.floor(diffMs / 86400000);
 
         if (diffMins < 1) return t('just_now') || 'Just now';
-        if (diffMins < 60) return `${diffMins}${language === 'zh' ? '分钟前' : 'm'}`;
-        if (diffHours < 24) return `${diffHours}${language === 'zh' ? '小时前' : 'h'}`;
-        if (diffDays < 7) return `${diffDays}${language === 'zh' ? '天前' : 'd'}`;
+        if (diffMins < 60) return t('time_min_ago', { n: diffMins });
+        if (diffHours < 24) return t('time_hour_ago', { n: diffHours });
+        if (diffDays < 7) return t('time_day_ago', { n: diffDays });
         return date.toLocaleDateString();
     };
 
@@ -74,7 +74,7 @@ export default function CommentsSheet({ post, onClose }) {
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
             <div
-                className="bg-white rounded-t-2xl w-full max-w-lg max-h-[70vh] flex flex-col animate-slide-up"
+                className="bg-[var(--color-bg-white)] rounded-t-2xl w-full max-w-lg max-h-[70vh] flex flex-col animate-slide-up"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -127,7 +127,7 @@ export default function CommentsSheet({ post, onClose }) {
                                                     {comment.replyTo && (
                                                         <>
                                                             <span className="text-[12px] text-[var(--color-text-muted)]">
-                                                                {language === 'zh' ? '回复' : 'replied'}
+                                                                {t('replied_verb')}
                                                             </span>
                                                             <span className="font-medium text-[14px] text-[var(--color-primary)]">
                                                                 {comment.replyTo.authorName}
@@ -175,7 +175,7 @@ export default function CommentsSheet({ post, onClose }) {
                 {replyTo && (
                     <div className="px-4 py-2 bg-[var(--color-bg-app)] border-t border-[var(--color-border)] flex items-center justify-between">
                         <span className="text-[13px] text-[var(--color-text-muted)]">
-                            {language === 'zh' ? '回复' : 'Replying to'}{' '}
+                            {t('replying_to')}{' '}
                             <span className="font-medium text-[var(--color-primary)]">{replyTo.authorName}</span>
                         </span>
                         <button onClick={cancelReply} className="text-[var(--color-text-muted)]">
@@ -202,7 +202,7 @@ export default function CommentsSheet({ post, onClose }) {
                         onChange={(e) => setCommentText(e.target.value)}
                         placeholder={
                             replyTo
-                                ? (language === 'zh' ? `回复 ${replyTo.authorName}...` : `Reply to ${replyTo.authorName}...`)
+                                ? `${t('replying_to')} ${replyTo.authorName}...`
                                 : (t('add_comment') || 'Add a comment...')
                         }
                         className="flex-1 px-3 py-2 bg-[var(--color-bg-app)] rounded-full text-[14px] outline-none"

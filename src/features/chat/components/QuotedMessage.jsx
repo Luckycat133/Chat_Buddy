@@ -16,13 +16,13 @@ export default function QuotedMessage({ quotedMessage, senderName, onClick }) {
             onClick={onClick}
             className={cn(
                 "px-2 py-1 mb-1 border-l-2 border-[var(--color-primary)] bg-black/5 rounded-r",
-                "text-xs text-gray-600 cursor-pointer hover:bg-black/10 transition-colors"
+                "text-xs text-[var(--color-text-muted)] cursor-pointer hover:bg-black/10 transition-colors"
             )}
         >
             <span className="font-medium text-[var(--color-primary)]">
                 {senderName}
             </span>
-            <p className="text-gray-500 truncate">{displayContent}</p>
+            <p className="text-[var(--color-text-light)] truncate">{displayContent}</p>
         </div>
     );
 }

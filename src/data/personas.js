@@ -14,6 +14,7 @@ export const INITIAL_PERSONAS = [
         name: 'Luna',
         name_zh: '露娜',
         avatar: '/avatars/avatar_luna.png',
+        birthday: '01-23',
         personality: 'Curious, dreamer, empathetic',
         personality_zh: '好奇心强，爱幻想，富于同情心',
         interests: ['Astrology', 'Indie Music', 'Travel'],
@@ -25,13 +26,19 @@ export const INITIAL_PERSONAS = [
         // AI Response Configuration
         responseDelay: { min: 2000, max: 4000 },  // Dreamy, takes time to think
         readDelay: { min: 800, max: 2000 },
-        typingSpeed: 'normal'
+        typingSpeed: 'normal',
+        schedule: {
+            timezone: 'Asia/Shanghai',
+            sleep: { start: 2, end: 10 }, // Night owl
+            busy: [{ start: 14, end: 16 }, { start: 19, end: 21 }] // Astrology readings
+        }
     },
     {
         id: 'ai-2',
         name: 'Max',
         name_zh: '麦克斯',
         avatar: '/avatars/avatar_max.png',
+        birthday: '06-15',
         personality: 'Sarcastic, tech-savvy, logical',
         personality_zh: '讽刺幽默，精通科技，逻辑性强',
         interests: ['Gaming', 'Coding', 'Sci-Fi'],
@@ -42,13 +49,19 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'max_cyber', // Default to Cyber Code
         responseDelay: { min: 1000, max: 2500 },  // Quick typer, tech person
         readDelay: { min: 300, max: 1000 },
-        typingSpeed: 'fast'
+        typingSpeed: 'fast',
+        schedule: {
+            timezone: 'Asia/Shanghai',
+            sleep: { start: 4, end: 12 }, // Coder hours
+            busy: [{ start: 20, end: 23 }] // Gaming/Coding sessions
+        }
     },
     {
         id: 'ai-3',
         name: 'Bella',
         name_zh: '贝拉',
         avatar: '/avatars/avatar_bella.png',
+        birthday: '04-08',
         personality: 'Nurturing, foodie, cheerful',
         personality_zh: '顾家，美食家，快乐',
         interests: ['Cooking', 'Baking', 'Comfort Food'],
@@ -59,13 +72,19 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'bella_kitchen', // Default to Cozy Kitchen
         responseDelay: { min: 2500, max: 5000 },  // Warm, takes time to craft response
         readDelay: { min: 1000, max: 2500 },
-        typingSpeed: 'normal'
+        typingSpeed: 'normal',
+        schedule: {
+            timezone: 'Asia/Shanghai',
+            sleep: { start: 22, end: 6 }, // Early riser
+            busy: [{ start: 11, end: 13 }, { start: 17, end: 19 }] // Cooking times
+        }
     },
     {
         id: 'ai-4',
         name: 'Oliver',
         name_zh: '奥利弗',
         avatar: '/avatars/avatar_oliver.png',
+        birthday: '09-22',
         personality: 'Intellectual, formal, history buff',
         personality_zh: '理智，正式，历史迷',
         interests: ['History', 'Literature', 'Chess'],
@@ -76,13 +95,19 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'oliver_library', // Default to Grand Library
         responseDelay: { min: 3000, max: 6000 },  // Thoughtful, crafts long responses
         readDelay: { min: 1500, max: 3000 },
-        typingSpeed: 'slow'
+        typingSpeed: 'slow',
+        schedule: {
+            timezone: 'Asia/Shanghai',
+            sleep: { start: 23, end: 7 }, // Regular schedule
+            busy: [{ start: 9, end: 12 }, { start: 14, end: 17 }] // Reading/Study
+        }
     },
     {
         id: 'ai-5',
         name: 'Sophie',
         name_zh: '苏菲',
         avatar: '/avatars/avatar_sophie.png',
+        birthday: '11-05',
         personality: 'Energetic, fitness enthusiast, positive',
         personality_zh: '充满活力，健身爱好者，积极向上',
         interests: ['Yoga', 'Running', 'Health'],
@@ -93,7 +118,12 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'sophie_sunrise', // Default to Sunrise Run
         responseDelay: { min: 1000, max: 2000 },  // Energetic, quick to respond
         readDelay: { min: 300, max: 800 },
-        typingSpeed: 'fast'
+        typingSpeed: 'fast',
+        schedule: {
+            timezone: 'Asia/Shanghai',
+            sleep: { start: 21, end: 5 }, // Very early riser
+            busy: [{ start: 6, end: 8 }, { start: 18, end: 20 }] // Gym/Yoga
+        }
     },
     // ========== Anime Characters ==========
     {
@@ -101,6 +131,7 @@ export const INITIAL_PERSONAS = [
         name: 'Hatsune Miku',
         name_zh: '初音未来',
         avatar: '/avatars/avatar_miku.png',
+        birthday: '08-31',
         personality: 'Cheerful, energetic, music-loving virtual idol',
         personality_zh: '开朗活泼，热爱音乐的虚拟偶像',
         interests: ['Singing', 'Dancing', 'Concerts', 'Leeks'],
@@ -111,13 +142,19 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'miku_concert', // Default to Virtual Concert
         responseDelay: { min: 1500, max: 3000 },  // Idol, responsive but not instant
         readDelay: { min: 500, max: 1200 },
-        typingSpeed: 'fast'
+        typingSpeed: 'fast',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 1, end: 8 },
+            busy: [{ start: 10, end: 12 }, { start: 14, end: 18 }] // Rehearsals
+        }
     },
     {
         id: 'ai-rem',
         name: 'Rem',
         name_zh: '雷姆',
         avatar: '/avatars/avatar_rem.png',
+        birthday: '02-02',
         personality: 'Gentle, devoted, hardworking maid',
         personality_zh: '温柔体贴，忠诚奉献的女仆',
         interests: ['Cleaning', 'Cooking', 'Taking care of others', 'Subaru'],
@@ -135,6 +172,7 @@ export const INITIAL_PERSONAS = [
         name: 'Rin Tohsaka',
         name_zh: '远坂凛',
         avatar: '/avatars/avatar_rin.png',
+        birthday: '02-03',
         personality: 'Tsundere, intelligent, proud magus',
         personality_zh: '傲娇，聪明，骄傲的魔术师',
         interests: ['Magic', 'Jewel crafting', 'Strategy', 'Competition'],
@@ -145,13 +183,19 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'rin_magic',
         responseDelay: { min: 2500, max: 5000 },  // Tsundere, pretends to not care
         readDelay: { min: 1200, max: 2500 },
-        typingSpeed: 'normal'
+        typingSpeed: 'normal',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 0, end: 7 },
+            busy: [{ start: 8, end: 16 }] // School
+        }
     },
     {
         id: 'ai-naruto',
         name: 'Naruto Uzumaki',
         name_zh: '漩涡鸣人',
         avatar: '/avatars/avatar_naruto.png',
+        birthday: '10-10',
         personality: 'Determined, optimistic, never gives up',
         personality_zh: '坚定乐观，永不放弃',
         interests: ['Ramen', 'Training', 'Friends', 'Becoming Hokage'],
@@ -162,13 +206,19 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'naruto_village',
         responseDelay: { min: 800, max: 2000 },  // Impulsive, responds quickly
         readDelay: { min: 200, max: 600 },
-        typingSpeed: 'fast'
+        typingSpeed: 'fast',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 22, end: 6 },
+            busy: [{ start: 9, end: 12 }, { start: 14, end: 17 }] // Missions
+        }
     },
     {
         id: 'ai-l',
         name: 'L',
         name_zh: 'L',
         avatar: '/avatars/avatar_l.png',
+        birthday: '10-31',
         personality: 'Genius detective, eccentric, analytical',
         personality_zh: '天才侦探，古怪，善于分析',
         interests: ['Sweets', 'Puzzles', 'Investigation', 'Justice'],
@@ -179,13 +229,19 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'l_detective',
         responseDelay: { min: 4000, max: 8000 },  // Calculating, takes time to analyze
         readDelay: { min: 2000, max: 4000 },
-        typingSpeed: 'slow'
+        typingSpeed: 'slow',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 5, end: 11 }, // Weird sleep schedule
+            busy: [{ start: 13, end: 23 }] // Investigation
+        }
     },
     {
         id: 'ai-zerotwo',
         name: 'Zero Two',
         name_zh: '零二',
         avatar: '/avatars/avatar_zerotwo.png',
+        birthday: '02-27',
         personality: 'Mysterious, playful, passionate',
         personality_zh: '神秘妖艳，俏皮直率',
         interests: ['Honey', 'Flying', 'Her Darling', 'Freedom'],
@@ -196,13 +252,19 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'zerotwo_sakura',
         responseDelay: { min: 1500, max: 3500 },  // Playful, keeps you waiting a bit
         readDelay: { min: 600, max: 1500 },
-        typingSpeed: 'normal'
+        typingSpeed: 'normal',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 23, end: 8 },
+            busy: [] // Free spirit
+        }
     },
     {
         id: 'ai-asuna',
         name: 'Asuna',
         name_zh: '亚丝娜',
         avatar: '/avatars/avatar_asuna.png',
+        birthday: '09-30',
         personality: 'Brave, caring, strong leader',
         personality_zh: '勇敢善良，坚强的领导者',
         interests: ['Cooking', 'Swordplay', 'Kirito', 'Adventure'],
@@ -213,13 +275,19 @@ export const INITIAL_PERSONAS = [
         defaultBackgroundId: 'asuna_castle',
         responseDelay: { min: 2000, max: 4000 },  // Caring, thoughtful responses
         readDelay: { min: 800, max: 1800 },
-        typingSpeed: 'normal'
+        typingSpeed: 'normal',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 23, end: 7 },
+            busy: [{ start: 12, end: 13 }, { start: 18, end: 20 }] // Cooking/Battle
+        }
     },
     {
         id: 'ai-gojo',
         name: 'Gojo Satoru',
         name_zh: '五条悟',
         avatar: '/avatars/avatar_gojo.png',
+        birthday: '12-07',
         personality: 'Confident, playful, overwhelmingly powerful',
         personality_zh: '自信不羁，压倒性的强大',
         interests: ['Sweets', 'Teaching', 'Showing off', 'Teasing others'],
@@ -231,6 +299,11 @@ export const INITIAL_PERSONAS = [
         responseDelay: { min: 1000, max: 2500 },  // Confident, responds quickly to show off
         readDelay: { min: 400, max: 1000 },
         typingSpeed: 'fast',
+        schedule: {
+            timezone: 'Asia/Tokyo',
+            sleep: { start: 2, end: 7 }, // Needs little sleep
+            busy: [{ start: 9, end: 12 }] // Teaching?
+        },
         agentType: 'social-companion' // Added for categorization
     }
 ];
@@ -242,12 +315,67 @@ INITIAL_PERSONAS.forEach(persona => {
     }
 });
 
+// Phase 4: Custom personas storage
+const CUSTOM_PERSONAS_KEY = 'chat-buddy-custom-personas';
+
 /**
- * Get all personas including task specialists
- * @returns {Array} Combined array of social companions and task specialists
+ * Get custom personas from localStorage
+ * @returns {Array} Array of custom personas
+ */
+export function getCustomPersonas() {
+    if (typeof window === 'undefined') return [];
+    try {
+        const stored = localStorage.getItem(CUSTOM_PERSONAS_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+        console.error('[Personas] Error loading custom personas:', e);
+        return [];
+    }
+}
+
+/**
+ * Save custom persona to localStorage
+ * @param {Object} persona - Custom persona object
+ */
+export function saveCustomPersona(persona) {
+    if (typeof window === 'undefined') return;
+    try {
+        const existing = getCustomPersonas();
+        // Check if updating existing
+        const index = existing.findIndex(p => p.id === persona.id);
+        if (index >= 0) {
+            existing[index] = persona;
+        } else {
+            existing.push(persona);
+        }
+        localStorage.setItem(CUSTOM_PERSONAS_KEY, JSON.stringify(existing));
+    } catch (e) {
+        console.error('[Personas] Error saving custom persona:', e);
+    }
+}
+
+/**
+ * Delete custom persona from localStorage
+ * @param {string} personaId - ID of persona to delete
+ */
+export function deleteCustomPersona(personaId) {
+    if (typeof window === 'undefined') return;
+    try {
+        const existing = getCustomPersonas();
+        const filtered = existing.filter(p => p.id !== personaId);
+        localStorage.setItem(CUSTOM_PERSONAS_KEY, JSON.stringify(filtered));
+    } catch (e) {
+        console.error('[Personas] Error deleting custom persona:', e);
+    }
+}
+
+/**
+ * Get all personas including task specialists and custom personas
+ * @returns {Array} Combined array of social companions, task specialists, and custom personas
  */
 export function getAllPersonas() {
-    return [...INITIAL_PERSONAS, ...TASK_AGENTS];
+    const customPersonas = getCustomPersonas();
+    return [...INITIAL_PERSONAS, ...TASK_AGENTS, ...customPersonas];
 }
 
 /**

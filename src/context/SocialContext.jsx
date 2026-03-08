@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useRef } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const SocialContext = createContext();
@@ -18,8 +18,19 @@ const DEFAULT_SOCIAL_DATA = {
     points: 0,
     gifts: [], // [{ id, recipientId, giftType, sentAt }]
     streakDays: 0,
-    lastCheckIn: null
+    lastCheckIn: null,
+    dailyTasks: { date: '', completed: [], progress: {} }
 };
+
+// Daily task definitions
+const DAILY_TASKS = [
+    { id: 'task_checkin', icon: '📅', points: 0, target: 1, unit: 'checkin' },
+    { id: 'task_messages', icon: '💬', points: 20, target: 5, unit: 'messages' },
+    { id: 'task_game', icon: '🎮', points: 30, target: 1, unit: 'game' },
+    { id: 'task_sticker', icon: '😄', points: 15, target: 1, unit: 'sticker' },
+    { id: 'task_gift', icon: '🎁', points: 10, target: 1, unit: 'gift' },
+    { id: 'task_chat3', icon: '👥', points: 50, target: 3, unit: 'characters' },
+];
 
 // Achievement definitions
 const ACHIEVEMENTS = [
@@ -46,8 +57,13 @@ const GIFTS = [
     { id: 'crown', name: '皇冠', name_en: 'Crown', emoji: '👑', intimacyBoost: 100, cost: 200 },
 ];
 
+const CHAT_INTIMACY_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes
+
 export const SocialProvider = ({ children }) => {
     const [socialData, setSocialData] = useLocalStorage('chat-buddy-social', DEFAULT_SOCIAL_DATA);
+
+    // T06: Cooldown map for chat-based intimacy gain
+    const chatIntimacyCooldowns = useRef(new Map());
 
     // ========== Intimacy System ==========
 
@@ -64,6 +80,15 @@ export const SocialProvider = ({ children }) => {
             }
         }));
     }, [setSocialData]);
+
+    // T06: Chat-based intimacy gain with cooldown
+    const addChatIntimacy = useCallback((personaId) => {
+        const now = Date.now();
+        const lastGain = chatIntimacyCooldowns.current.get(personaId) || 0;
+        if (now - lastGain < CHAT_INTIMACY_COOLDOWN_MS) return;
+        chatIntimacyCooldowns.current.set(personaId, now);
+        addIntimacy(personaId, 1);
+    }, [addIntimacy]);
 
     const getIntimacyLevel = useCallback((personaId) => {
         const intimacy = getIntimacy(personaId);
@@ -198,6 +223,64 @@ export const SocialProvider = ({ children }) => {
         }));
     }, [setSocialData]);
 
+    // ========== Daily Task System ==========
+
+    const _getOrResetDailyTasks = useCallback((prev) => {
+        const today = new Date().toISOString().split('T')[0];
+        if (prev.dailyTasks?.date === today) return prev.dailyTasks;
+        return { date: today, completed: [], progress: {} };
+    }, []);
+
+    const getDailyTasks = useCallback(() => {
+        const today = new Date().toISOString().split('T')[0];
+        const dt = (socialData.dailyTasks?.date === today)
+            ? socialData.dailyTasks
+            : { date: today, completed: [], progress: {} };
+
+        return DAILY_TASKS.map(task => ({
+            ...task,
+            progress: dt.progress[task.id] || 0,
+            completed: dt.completed.includes(task.id),
+            claimed: dt.completed.includes(task.id),
+        }));
+    }, [socialData.dailyTasks]);
+
+    // Update task progress. Automatically completes and awards points when target reached.
+    const updateTaskProgress = useCallback((taskId, increment = 1) => {
+        const task = DAILY_TASKS.find(t => t.id === taskId);
+        if (!task) return;
+
+        setSocialData(prev => {
+            const dt = _getOrResetDailyTasks(prev);
+
+            // Already completed
+            if (dt.completed.includes(taskId)) return prev;
+
+            const current = dt.progress[taskId] || 0;
+            const next = Math.min(current + increment, task.target);
+            const justCompleted = next >= task.target;
+
+            const newDt = {
+                ...dt,
+                progress: { ...dt.progress, [taskId]: next },
+                completed: justCompleted ? [...dt.completed, taskId] : dt.completed,
+            };
+
+            return {
+                ...prev,
+                dailyTasks: newDt,
+                points: justCompleted && task.points > 0 ? prev.points + task.points : prev.points,
+            };
+        });
+    }, [setSocialData, _getOrResetDailyTasks]);
+
+    const getDailyTaskProgress = useCallback(() => {
+        const tasks = getDailyTasks();
+        const completed = tasks.filter(t => t.completed).length;
+        const totalPoints = tasks.filter(t => t.completed).reduce((sum, t) => sum + t.points, 0);
+        return { completed, total: tasks.length, totalPoints };
+    }, [getDailyTasks]);
+
     const value = {
         // Data
         socialData,
@@ -207,6 +290,7 @@ export const SocialProvider = ({ children }) => {
         // Intimacy
         getIntimacy,
         addIntimacy,
+        addChatIntimacy,
         getIntimacyLevel,
 
         // Achievements
@@ -225,7 +309,13 @@ export const SocialProvider = ({ children }) => {
         getGiftHistory,
 
         // Points
-        addPoints
+        addPoints,
+
+        // Daily Tasks
+        dailyTaskDefs: DAILY_TASKS,
+        getDailyTasks,
+        updateTaskProgress,
+        getDailyTaskProgress,
     };
 
     return (

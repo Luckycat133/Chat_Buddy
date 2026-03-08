@@ -31,7 +31,7 @@ export default function UserProfile() {
     return (
         <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-y-auto pb-16 md:pb-0">
             {/* Header */}
-            <div className="bg-white sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
+            <div className="bg-[var(--color-bg-white)] sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                 <button onClick={() => navigate(-1)} className="flex items-center text-[var(--color-primary)]">
                     <ChevronLeft size={24} />
                 </button>
@@ -76,7 +76,7 @@ export default function UserProfile() {
 
             {/* Signature Card */}
             <div className="mx-4 -mt-8 relative z-10">
-                <div className="bg-white rounded-xl shadow-lg p-4">
+                <div className="bg-[var(--color-bg-white)] rounded-xl shadow-lg p-4">
                     <h3 className="text-[var(--color-text-muted)] text-sm mb-2">
                         {t('signature') || 'Signature'}
                     </h3>
@@ -92,7 +92,7 @@ export default function UserProfile() {
 
             {/* Statistics */}
             <div className="mx-4 mt-4">
-                <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+                <div className="bg-[var(--color-bg-white)] rounded-xl shadow-sm overflow-hidden">
                     <div className="grid grid-cols-2 divide-x divide-[var(--color-border-light)]">
                         <div className="p-4 flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-[var(--color-primary-light)] flex items-center justify-center">
@@ -101,7 +101,7 @@ export default function UserProfile() {
                             <div>
                                 <p className="text-2xl font-bold text-[var(--color-text-main)]">{totalMessages}</p>
                                 <p className="text-[var(--color-text-muted)] text-sm">
-                                    {language === 'zh' ? '消息' : 'Messages'}
+                                    {t('messages_stat')}
                                 </p>
                             </div>
                         </div>
@@ -112,7 +112,7 @@ export default function UserProfile() {
                             <div>
                                 <p className="text-2xl font-bold text-[var(--color-text-main)]">{totalChats}</p>
                                 <p className="text-[var(--color-text-muted)] text-sm">
-                                    {language === 'zh' ? '对话' : 'Chats'}
+                                    {t('chats_stat')}
                                 </p>
                             </div>
                         </div>
@@ -122,13 +122,13 @@ export default function UserProfile() {
 
             {/* Member Since */}
             <div className="mx-4 mt-4 mb-8">
-                <div className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
+                <div className="bg-[var(--color-bg-white)] rounded-xl shadow-sm p-4 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-[var(--color-primary-light)] flex items-center justify-center">
                         <Calendar size={20} className="text-[var(--color-primary)]" />
                     </div>
                     <div>
                         <p className="text-[var(--color-text-muted)] text-sm">
-                            {language === 'zh' ? '加入时间' : 'Member Since'}
+                            {t('member_since')}
                         </p>
                         <p className="text-[var(--color-text-main)] font-medium">
                             {formatDate(userProfile.createdAt)}

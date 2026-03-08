@@ -4,6 +4,21 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const LanguageContext = createContext();
 
+/**
+ * Detect browser language, returning 'zh' if Chinese, 'en' otherwise.
+ */
+function detectBrowserLanguage() {
+    try {
+        const browserLang = navigator.language || navigator.userLanguage || 'en';
+        return browserLang.startsWith('zh') ? 'zh' : 'en';
+    } catch {
+        return 'en';
+    }
+}
+
+// Sentinel value: if localStorage has no saved language, use browser detection
+const LANG_NOT_SET = '__not_set__';
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const useLanguage = () => {
     const context = useContext(LanguageContext);
@@ -12,24 +27,49 @@ export const useLanguage = () => {
 };
 
 export const LanguageProvider = ({ children }) => {
-    // Default to English or browser preference, but let's stick to 'en' default for simplicity unless persisted
-    const [language, setLanguage] = useLocalStorage('chat-buddy-lang', 'en');
+    const [storedLang, setStoredLang] = useLocalStorage('chat-buddy-lang', LANG_NOT_SET);
+    const [aiLanguage, setAiLanguage] = useLocalStorage('chat-buddy-ai-lang', 'auto');
 
-    // Toggle function
+    // Resolve actual UI language: browser detection on first visit, stored preference thereafter
+    const language = storedLang === LANG_NOT_SET ? detectBrowserLanguage() : storedLang;
+
+    // When user explicitly sets language, persist it
+    const setLanguage = (lang) => {
+        setStoredLang(lang);
+    };
+
     const toggleLanguage = () => {
-        setLanguage(prev => prev === 'en' ? 'zh' : 'en');
+        setLanguage(language === 'en' ? 'zh' : 'en');
     };
 
-    // Translation helper
-    const t = (key) => {
-        return LOCALES[language][key] || key;
+    /**
+     * Translation helper with optional parameter interpolation.
+     * Usage:
+     *   t('hello')                          → "Hello"
+     *   t('send_gift_to', { name: 'Luna' }) → "Send gift to Luna"
+     *
+     * Template syntax in locale strings: {name}, {count}, etc.
+     */
+    const t = (key, params) => {
+        const template = (LOCALES[language] && LOCALES[language][key]) || key;
+        if (!params) return template;
+        return template.replace(/\{(\w+)\}/g, (_, k) => params[k] !== undefined ? params[k] : `{${k}}`);
     };
+
+    /**
+     * Resolve AI conversation language.
+     * 'auto' = same as UI language.
+     */
+    const resolvedAiLanguage = aiLanguage === 'auto' ? language : aiLanguage;
 
     const value = {
         language,
         setLanguage,
         toggleLanguage,
-        t
+        t,
+        aiLanguage,
+        setAiLanguage,
+        resolvedAiLanguage,
     };
 
     return (

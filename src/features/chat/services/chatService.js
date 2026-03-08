@@ -3,51 +3,166 @@
  * Uses centralized APIClient for HTTP requests.
  */
 
-import { getAIClient, getAIConfiguration, CHAT_MODELS } from '../../../services/api/aiClient';
+import { getAIClient, getAIConfiguration } from '../../../services/api/aiClient';
 
-// Alias for backward compatibility in this file
-const MODELS = CHAT_MODELS;
+function toTextContent(value) {
+    if (typeof value === 'string') return value;
+    if (!value) return '';
 
-/**
- * RouteLLM-style model selection based on query complexity
- * @param {string} query - User query
- * @param {Object} options - Additional routing hints
- * @returns {string} Selected model name
- */
-export function selectModelByComplexity(query, options = {}) {
-    // Force online model for search
-    if (options.needsSearch) return MODELS.online;
-
-    // Force large model for specific agents
-    if (options.agentId === 'agent-sensei' || options.agentId === 'agent-scholar') {
-        return MODELS.large;
+    if (Array.isArray(value)) {
+        return value
+            .map(item => toTextContent(item))
+            .filter(Boolean)
+            .join('');
     }
 
-    // Simple pattern matching for complexity
-    const simplePatterns = [
-        /^(你好|hi|hello|嗨)/i,
-        /^什么是.{1,10}\?*$/,
-        /^.{1,20}的定义/,
-        /^(how are you|how's it going)/i
-    ];
-
-    const complexPatterns = [
-        /为什么|why|explain|分析|比较|对比|区别/i,
-        /帮我写|write.*code|debug|实现/i,
-        /步骤|如何|怎么|how to|教我/i,
-        /论证|推理|证明|derive|proof/i
-    ];
-
-    const isSimple = simplePatterns.some(p => p.test(query));
-    const isComplex = complexPatterns.some(p => p.test(query)) || query.length > 100;
-
-    if (isSimple && !isComplex) {
-        console.log('[RouteLLM] Routing to SMALL model');
-        return MODELS.small;
+    if (typeof value === 'object') {
+        if (typeof value.text === 'string') return value.text;
+        if (typeof value.content === 'string') return value.content;
+        if (typeof value.output_text === 'string') return value.output_text;
     }
 
-    console.log('[RouteLLM] Routing to LARGE model');
-    return MODELS.large;
+    return '';
+}
+
+function extractAssistantContent(data) {
+    const choice = data?.choices?.[0];
+    const msg = choice?.message;
+
+    const candidates = [
+        msg?.content,
+        choice?.text,
+        choice?.delta?.content,
+        data?.output_text,
+        msg?.reasoning_content,
+    ];
+
+    for (const candidate of candidates) {
+        const text = toTextContent(candidate).trim();
+        if (text) return text;
+    }
+
+    // OpenAI Responses-style fallback for compatible gateways.
+    if (Array.isArray(data?.output)) {
+        const outputText = data.output
+            .map((item) => {
+                const direct = toTextContent(item?.content);
+                if (direct) return direct;
+                if (Array.isArray(item?.content)) {
+                    return item.content.map(part => toTextContent(part)).join('');
+                }
+                return '';
+            })
+            .join('')
+            .trim();
+        if (outputText) return outputText;
+    }
+
+    return '';
+}
+
+function extractToolCallMarker(data) {
+    const choice = data?.choices?.[0];
+    const msg = choice?.message;
+    const toolCalls = Array.isArray(msg?.tool_calls) ? msg.tool_calls : null;
+    const functionCall = msg?.function_call || null;
+
+    if (toolCalls && toolCalls.length > 0) {
+        return `[TOOL_CALL_NATIVE:${JSON.stringify(toolCalls)}]`;
+    }
+
+    if (functionCall) {
+        return `[TOOL_CALL_NATIVE:${JSON.stringify([{ type: 'function', function: functionCall }])}]`;
+    }
+
+    return null;
+}
+
+function extractDeltaContent(data) {
+    const choice = data?.choices?.[0];
+    if (!choice) return '';
+    const delta = choice.delta || {};
+    return toTextContent(delta.content || delta.text || '');
+}
+
+async function parseSSEStream(response, onDelta) {
+    const reader = response.body?.getReader?.();
+    if (!reader) return null;
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullText = '';
+    let nativeToolCalls = null;
+
+    while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split(/\r?\n\r?\n/);
+        buffer = events.pop() || '';
+
+        for (const event of events) {
+            const dataLines = event
+                .split(/\r?\n/)
+                .filter(line => line.startsWith('data:'))
+                .map(line => line.slice(5).trim());
+
+            if (dataLines.length === 0) continue;
+            const dataPayload = dataLines.join('\n');
+
+            if (dataPayload === '[DONE]') {
+                continue;
+            }
+
+            try {
+                const json = JSON.parse(dataPayload);
+                const delta = extractDeltaContent(json);
+                if (delta) {
+                    fullText += delta;
+                    onDelta?.(delta, fullText, json);
+                }
+
+                const marker = extractToolCallMarker(json);
+                if (marker) {
+                    nativeToolCalls = marker;
+                }
+            } catch {
+                // Ignore malformed SSE frames from intermediate providers.
+            }
+        }
+    }
+
+    const tail = decoder.decode();
+    if (tail) buffer += tail;
+
+    if (!fullText && nativeToolCalls) return nativeToolCalls;
+    return fullText.trim() || null;
+}
+
+async function parseResponseBody(response) {
+    try {
+        return await response.json();
+    } catch {
+        return null;
+    }
+}
+
+function buildCompletionEndpoints(baseURL = '') {
+    const endpoints = ['/chat/completions'];
+    const normalized = String(baseURL || '').trim().replace(/\/+$/, '');
+
+    // If base URL has no explicit API version, try /v1 fallback for
+    // OpenAI-compatible providers that require it.
+    if (
+        normalized &&
+        !/\/v\d+$/i.test(normalized) &&
+        !/\/chat\/completions$/i.test(normalized)
+    ) {
+        endpoints.push('/v1/chat/completions');
+    }
+
+    return endpoints;
 }
 
 /**
@@ -95,7 +210,7 @@ export async function callAI(messages, options = {}) {
     const maxTokens = options.maxTokens;
     const temperature = options.temperature ?? 0.8;
     // Allow overriding model (e.g. for Perplexity Sonar search)
-    const selectedModel = options.model || config.defaultModel;
+    const selectedModel = options.model || config.model;
 
     const requestBody = {
         model: selectedModel,
@@ -107,17 +222,65 @@ export async function callAI(messages, options = {}) {
         requestBody.max_tokens = maxTokens;
     }
 
-    try {
-        const response = await aiClient.post('/chat/completions', requestBody);
+    if (Array.isArray(options.tools) && options.tools.length > 0) {
+        requestBody.tools = options.tools;
+    }
 
-        const data = await response.json();
-        if (data.error) {
-            console.error('API Error:', data.error, options.agentId ? `(Agent: ${options.agentId})` : '');
+    if (options.toolChoice) {
+        requestBody.tool_choice = options.toolChoice;
+    } else if (options.tool_choice) {
+        requestBody.tool_choice = options.tool_choice;
+    }
+
+    if (options.stream) {
+        requestBody.stream = true;
+    }
+
+    try {
+        const endpoints = buildCompletionEndpoints(aiClient.baseURL);
+
+        for (let i = 0; i < endpoints.length; i++) {
+            const endpoint = endpoints[i];
+            const response = await aiClient.post(endpoint, requestBody);
+            let data = null;
+
+            if (!response.ok) {
+                data = await parseResponseBody(response);
+                // Retry with /v1 only on obvious route mismatch.
+                if ((response.status === 404 || response.status === 405) && i < endpoints.length - 1) {
+                    continue;
+                }
+                const msg = data?.error?.message || `HTTP ${response.status}`;
+                console.error('API Error:', msg, options.agentId ? `(Agent: ${options.agentId})` : '');
+                return null;
+            }
+
+            if (options.stream && response.headers?.get?.('content-type')?.includes('text/event-stream')) {
+                const streamed = await parseSSEStream(response, options.onStreamChunk);
+                if (streamed) return streamed;
+            }
+
+            data = await parseResponseBody(response);
+
+            if (data?.error) {
+                console.error('API Error:', data.error, options.agentId ? `(Agent: ${options.agentId})` : '');
+                return null;
+            }
+
+            const content = extractAssistantContent(data);
+            if (content) {
+                return content.trim();
+            }
+
+            const toolCallMarker = extractToolCallMarker(data);
+            if (toolCallMarker) {
+                return toolCallMarker;
+            }
+
+            // Endpoint is reachable but payload has no usable content.
             return null;
         }
-        if (data.choices && data.choices.length > 0) {
-            return data.choices[0].message.content.trim();
-        }
+
         return null;
     } catch (error) {
         console.error('API Call Failed:', error, options.agentId ? `(Agent: ${options.agentId})` : '');
@@ -148,17 +311,17 @@ export function cleanMessageContent(content) {
     // Remove SILENCE markers
     cleaned = cleaned.replace(/\[SILENCE\]/gi, '');
 
-    // Remove reference patterns like [1], [2], [1][2], [R, etc.
-    cleaned = cleaned.replace(/\[\d+\]/g, '');
-    cleaned = cleaned.replace(/\[R\b/g, '');
+    // Remove reference patterns like [1], [2], [R1].
+    cleaned = cleaned.replace(/\[(?:\d+|R\d+)\]/g, '');
 
     // Remove stray closing brackets (possibly orphaned)
     cleaned = cleaned.replace(/\]\]/g, ']');
     cleaned = cleaned.replace(/\]\s*$/g, '');
+    cleaned = cleaned.replace(/^\s*\[?\]/g, '');
 
     // Transform GAME:Poll messages for AI context instead of removing them
     cleaned = cleaned.replace(/\[GAME:Poll:\s*(.+?)\]/gi, (match, question) => {
-        return `[System: A poll has been created: "${question}". Please vote for an option.]`;
+        return `System: A poll has been created: "${question}". Please vote for an option.`;
     });
 
     // Note: [POLL:ID] messages are kept as is, handled in context preparation
@@ -207,45 +370,4 @@ export function calculateTypingDelay(messageLength, typingSpeed) {
 export function getRandomDelay(delayConfig) {
     const { min, max } = delayConfig;
     return min + Math.random() * (max - min);
-}
-
-/**
- * Compress context for token optimization
- * @param {Array} messages 
- * @param {Array} personas 
- * @returns {Object} { compressed, summary, recentMessages }
- */
-export function compressContext(messages, personas) {
-    if (messages.length <= 15) {
-        return { compressed: false, messages };
-    }
-
-    const oldMessages = messages.slice(0, -8);
-    const recentMessages = messages.slice(-8);
-
-    const participants = new Set();
-    const topics = [];
-
-    oldMessages.forEach(msg => {
-        if (msg.senderId !== 'user-me') {
-            const persona = personas.find(p => p.id === msg.senderId);
-            if (persona) participants.add(persona.name);
-        }
-        const words = msg.content.toLowerCase().split(/\s+/);
-        words.forEach(word => {
-            if (word.length > 5 && !['about', 'would', 'could', 'should', 'their', 'there', 'these', 'those'].includes(word)) {
-                if (!topics.includes(word) && topics.length < 5) {
-                    topics.push(word);
-                }
-            }
-        });
-    });
-
-    const summary = `[Earlier conversation summary: ${oldMessages.length} messages between ${Array.from(participants).join(', ') || 'participants'}. Topics discussed: ${topics.join(', ') || 'general chat'}]`;
-
-    return {
-        compressed: true,
-        summary,
-        recentMessages
-    };
 }
