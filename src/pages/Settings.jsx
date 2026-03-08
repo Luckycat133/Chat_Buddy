@@ -111,9 +111,9 @@ export default function Settings() {
     };
 
     return (
-        <div className="page-container custom-scrollbar">
+        <main className="page-container custom-scrollbar" role="main" aria-label={t('settings_control_center')}>
             {/* Ambient Background Glow */}
-            <div className="page-ambient-glow" />
+            <div className="page-ambient-glow" aria-hidden="true" />
 
             <div className="page-content space-y-8">
                 {/* Header */}
@@ -472,11 +472,19 @@ export default function Settings() {
 
             {/* T12: Memory character selector */}
             {showMemorySelector && (
-                <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4">
+                <div
+                    className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="memory-selector-title"
+                >
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowMemorySelector(false)} />
-                    <div className="relative w-full max-w-sm glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-5">
+                    <div
+                        className="relative w-full max-w-sm glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-5"
+                        role="document"
+                    >
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                            <h3 id="memory-selector-title" className="font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
                                 <Brain size={16} className="text-[var(--color-primary)]" />
                                 Select Character
                             </h3>
@@ -513,11 +521,16 @@ export default function Settings() {
 
             {/* Phase 1: Privacy Modal */}
             {showPrivacyModal && (
-                <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4">
+                <div
+                    className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="privacy-modal-title"
+                >
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPrivacyModal(false)} />
-                    <div className="relative w-full max-w-md glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-6">
+                    <div className="relative w-full max-w-md glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-6" role="document">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
+                            <h3 id="privacy-modal-title" className="font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
                                 <Shield size={20} className="text-[var(--color-primary)]" />
                                 {t('privacy_title')}
                             </h3>
@@ -573,7 +586,7 @@ export default function Settings() {
                     </div>
                 </div>
             )}
-        </div>
+        </main>
     );
 }
 
@@ -581,15 +594,18 @@ export default function Settings() {
 
 function ControlCard({ icon, color, label, subLabel, active, onClick }) {
     return (
-        <div
+        <button
             onClick={onClick}
             className={cn("control-card", active && "active")}
+            role="switch"
+            aria-checked={active}
+            aria-label={`${label}: ${subLabel}`}
         >
             <div className="control-card-header">
                 <div className={cn("control-card-icon", color)}>
                     {icon}
                 </div>
-                <div className={cn("toggle", active && "active")}>
+                <div className={cn("toggle", active && "active")} aria-hidden="true">
                     <div className="toggle-thumb" />
                 </div>
             </div>
@@ -599,15 +615,15 @@ function ControlCard({ icon, color, label, subLabel, active, onClick }) {
                     {subLabel}
                 </p>
             </div>
-        </div>
+        </button>
     );
 }
 
 function SettingItem({ icon, color, label, subLabel, rightContent, onClick, labelClassName }) {
     return (
-        <div
+        <button
             onClick={onClick}
-            className="setting-item"
+            className="setting-item w-full text-left transition-all duration-200 hover:translate-x-1 hover:shadow-sm"
         >
             <div className={cn("setting-item-icon", color)}>
                 {icon}
@@ -617,6 +633,6 @@ function SettingItem({ icon, color, label, subLabel, rightContent, onClick, labe
                 {subLabel && <p className="setting-item-sublabel">{subLabel}</p>}
             </div>
             {rightContent || <ChevronRight size={18} className="setting-item-chevron" />}
-        </div>
+        </button>
     );
 }

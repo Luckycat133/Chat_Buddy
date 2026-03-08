@@ -105,7 +105,7 @@ export default function Layout() {
                     </div>
                 </div>
 
-                <nav aria-label="Primary" className="flex-1 flex flex-col items-center gap-5 w-full px-3">
+                <nav aria-label="Primary" role="navigation" className="flex-1 flex flex-col items-center gap-5 w-full px-3">
                     <NavItem to="/" icon={<MessageSquare size={24} />} label={t('nav_chats')} delay={0} shortcutHint={formatShortcut(SHORTCUT_DEFINITIONS[0])} data-onboarding="chats" />
                     <NavItem to="/agents" icon={<Bot size={24} />} label={t('nav_agents') || 'Agents'} delay={50} shortcutHint={formatShortcut(SHORTCUT_DEFINITIONS[1])} data-onboarding="agents" />
                     <NavItem to="/friends" icon={<Users size={24} />} label={t('friends')} delay={100} shortcutHint={formatShortcut(SHORTCUT_DEFINITIONS[2])} />
@@ -138,7 +138,7 @@ export default function Layout() {
 
             {/* Mobile Bottom Tab Bar - Floating Dock (Hidden in Chat and Agent Workspace) */}
             {!location.pathname.startsWith('/chat/') && !location.pathname.match(/^\/agents\/[^/]+$/) && (
-                <nav aria-label="Mobile" className="md:hidden fixed bottom-6 left-6 right-6 glass-crystal rounded-[var(--radius-xl)] shadow-floating
+                <nav aria-label="Mobile" role="navigation" className="md:hidden fixed bottom-6 left-6 right-6 glass-crystal rounded-[var(--radius-xl)] shadow-floating
                     flex justify-around items-center px-4 py-3 z-50 animate-fade-slide-up border border-white/50"
                     style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
 
@@ -183,6 +183,7 @@ function NavItem({ to, icon, label, delay, shortcutHint, ...rest }) {
             )}
             title={shortcutHint ? `${label} (${shortcutHint})` : label}
             style={{ animationDelay: `${delay}ms` }}
+            aria-label={label}
             {...rest}
         >
             {({ isActive }) => (
@@ -193,11 +194,22 @@ function NavItem({ to, icon, label, delay, shortcutHint, ...rest }) {
                             style={{ background: 'var(--gradient-aurora)', backgroundSize: '150% 150%' }} />
                     )}
 
+                    {/* Active Indicator - Left Bar */}
+                    {isActive && (
+                        <div
+                            className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1 h-6 rounded-full bg-white shadow-glow"
+                            aria-hidden="true"
+                        />
+                    )}
+
                     {/* Icon */}
-                    <span className={cn(
-                        "relative z-10 transition-transform duration-300",
-                        isActive ? "scale-105 drop-shadow-sm" : "group-hover:scale-110"
-                    )}>
+                    <span
+                        className={cn(
+                            "relative z-10 transition-transform duration-300",
+                            isActive ? "scale-105 drop-shadow-sm" : "group-hover:scale-110"
+                        )}
+                        aria-current={isActive ? "page" : undefined}
+                    >
                         {icon}
                     </span>
 
@@ -216,33 +228,46 @@ function NavItem({ to, icon, label, delay, shortcutHint, ...rest }) {
 
 function MobileNavItem({ to, icon, label }) {
     return (
-        <NavLink to={to} className={({ isActive }) => cn(
-            "flex-1 flex flex-col items-center py-2 px-1 transition-all duration-300 rounded-xl relative",
-            isActive
-                ? "text-[var(--color-primary)]"
-                : "text-[var(--color-text-muted)] active:scale-95"
-        )}>
+        <NavLink
+            to={to}
+            className={({ isActive }) => cn(
+                "flex-1 flex flex-col items-center py-2 px-1 transition-all duration-300 rounded-xl relative",
+                isActive
+                    ? "text-[var(--color-primary)]"
+                    : "text-[var(--color-text-muted)] active:scale-95"
+            )}
+            aria-label={label}
+        >
             {({ isActive }) => (
                 <>
                     {/* Active indicator dot */}
                     {isActive && (
-                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full animate-scale-in"
-                            style={{ background: 'var(--gradient-aurora)' }} />
+                        <div
+                            className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full animate-scale-in"
+                            style={{ background: 'var(--gradient-aurora)' }}
+                            aria-hidden="true"
+                        />
                     )}
-                    <div className={cn(
-                        "transition-all duration-300 transform",
-                        isActive ? "-translate-y-1 scale-115" : ""
-                    )}>
+                    <div
+                        className={cn(
+                            "transition-all duration-300 transform",
+                            isActive ? "-translate-y-1 scale-115" : ""
+                        )}
+                        aria-current={isActive ? "page" : undefined}
+                    >
                         {icon}
                     </div>
-                    <span className={cn(
-                        "text-[10px] mt-0.5 font-medium transition-opacity duration-200",
-                        isActive ? "opacity-100" : "opacity-0"
-                    )}>
+                    <span
+                        className={cn(
+                            "text-[10px] mt-0.5 font-medium transition-opacity duration-200",
+                            isActive ? "opacity-100" : "opacity-0"
+                        )}
+                        aria-hidden={!isActive}
+                    >
                         {label}
                     </span>
                 </>
             )}
         </NavLink>
-    )
+    );
 }
