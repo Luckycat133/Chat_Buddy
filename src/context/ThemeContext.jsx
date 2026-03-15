@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useCallback, useEffect, useState, useRef, useMemo } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { computeAccentPalette } from '../utils/colorUtils';
 
@@ -198,7 +198,7 @@ export const ThemeProvider = ({ children }) => {
         setTheme(prev => ({ ...prev, bubbleStyle: style }));
     }, [setTheme]);
 
-    const value = {
+    const value = useMemo(() => ({
         // Current theme
         theme,
         isDarkMode: resolvedMode === 'dark',
@@ -228,7 +228,22 @@ export const ThemeProvider = ({ children }) => {
         setAnimationIntensity,
         bubbleStyle: theme.bubbleStyle || 'rounded',
         setBubbleStyle,
-    };
+    }), [
+        theme,
+        resolvedMode,
+        toggleDarkMode,
+        setDarkMode,
+        setThemeMode,
+        toggleOLEDMode,
+        setOLEDMode,
+        setChatBackground,
+        setCustomBackground,
+        getChatBackgroundStyle,
+        setAccentColor,
+        resetAccentColor,
+        setAnimationIntensity,
+        setBubbleStyle,
+    ]);
 
     return (
         <ThemeContext.Provider value={value}>

@@ -74,15 +74,22 @@ export default function CommentsSheet({ post, onClose }) {
     return (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
             <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="comments-sheet-title"
                 className="bg-[var(--color-bg-white)] rounded-t-2xl w-full max-w-lg max-h-[70vh] flex flex-col animate-slide-up"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-                    <button onClick={onClose} className="text-[var(--color-text-muted)]">
+                    <button
+                        onClick={onClose}
+                        aria-label={t('close') || 'Close'}
+                        className="text-[var(--color-text-muted)]"
+                    >
                         <X size={24} />
                     </button>
-                    <h3 className="font-medium text-[17px]">
+                    <h3 id="comments-sheet-title" className="font-medium text-[17px]">
                         {t('comments') || 'Comments'} ({post.comments.length})
                     </h3>
                     <div className="w-6" />

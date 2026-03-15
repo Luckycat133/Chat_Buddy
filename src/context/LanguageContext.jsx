@@ -1,4 +1,4 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useMemo, useCallback } from 'react';
 import { LOCALES } from '../data/locales';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
@@ -34,13 +34,13 @@ export const LanguageProvider = ({ children }) => {
     const language = storedLang === LANG_NOT_SET ? detectBrowserLanguage() : storedLang;
 
     // When user explicitly sets language, persist it
-    const setLanguage = (lang) => {
+    const setLanguage = useCallback((lang) => {
         setStoredLang(lang);
-    };
+    }, [setStoredLang]);
 
-    const toggleLanguage = () => {
-        setLanguage(language === 'en' ? 'zh' : 'en');
-    };
+    const toggleLanguage = useCallback(() => {
+        setStoredLang(language === 'en' ? 'zh' : 'en');
+    }, [language, setStoredLang]);
 
     /**
      * Translation helper with optional parameter interpolation.
@@ -50,11 +50,11 @@ export const LanguageProvider = ({ children }) => {
      *
      * Template syntax in locale strings: {name}, {count}, etc.
      */
-    const t = (key, params) => {
+    const t = useCallback((key, params) => {
         const template = (LOCALES[language] && LOCALES[language][key]) || key;
         if (!params) return template;
         return template.replace(/\{(\w+)\}/g, (_, k) => params[k] !== undefined ? params[k] : `{${k}}`);
-    };
+    }, [language]);
 
     /**
      * Resolve AI conversation language.
@@ -62,7 +62,7 @@ export const LanguageProvider = ({ children }) => {
      */
     const resolvedAiLanguage = aiLanguage === 'auto' ? language : aiLanguage;
 
-    const value = {
+    const value = useMemo(() => ({
         language,
         setLanguage,
         toggleLanguage,
@@ -70,7 +70,7 @@ export const LanguageProvider = ({ children }) => {
         aiLanguage,
         setAiLanguage,
         resolvedAiLanguage,
-    };
+    }), [language, setLanguage, toggleLanguage, t, aiLanguage, setAiLanguage, resolvedAiLanguage]);
 
     return (
         <LanguageContext.Provider value={value}>

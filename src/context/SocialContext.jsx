@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useCallback, useRef, useMemo } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const SocialContext = createContext();
@@ -281,7 +281,7 @@ export const SocialProvider = ({ children }) => {
         return { completed, total: tasks.length, totalPoints };
     }, [getDailyTasks]);
 
-    const value = {
+    const value = useMemo(() => ({
         // Data
         socialData,
         points: socialData.points,
@@ -316,7 +316,24 @@ export const SocialProvider = ({ children }) => {
         getDailyTasks,
         updateTaskProgress,
         getDailyTaskProgress,
-    };
+    }), [
+        socialData,
+        getIntimacy,
+        addIntimacy,
+        addChatIntimacy,
+        getIntimacyLevel,
+        unlockAchievement,
+        hasAchievement,
+        getAchievements,
+        checkIn,
+        hasCheckedInToday,
+        sendGift,
+        getGiftHistory,
+        addPoints,
+        getDailyTasks,
+        updateTaskProgress,
+        getDailyTaskProgress,
+    ]);
 
     return (
         <SocialContext.Provider value={value}>

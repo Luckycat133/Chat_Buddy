@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useChatService } from '../hooks/useChatService';
 import { useSocial } from '../../../context/SocialContext';
 import { useLanguage } from '../../../context/LanguageContext';
@@ -82,12 +82,12 @@ export const ChatProvider = ({ children }) => {
     // Construct the "Legacy" context shape
     // The old context exposed: { ...state, ...actions } mixed together
     // Our service does exactly that, so we can pass it directly.
-    const contextValue = {
+    const contextValue = useMemo(() => ({
         ...service,
         // Legacy props that were part of state providers
         chatsRef,
         scheduledMessagesRef
-    };
+    }), [service, chatsRef, scheduledMessagesRef]);
 
     return (
         <ChatContext.Provider value={contextValue}>

@@ -20,6 +20,7 @@ export default function Layout() {
     const prevPathRef = useRef(location.pathname);
     const [showShortcuts, setShowShortcuts] = useState(false);
     const [showGlobalSearch, setShowGlobalSearch] = useState(false);
+    const [logoError, setLogoError] = useState(false);
     const onboarding = useOnboarding();
 
     useEffect(() => {
@@ -82,26 +83,28 @@ export default function Layout() {
                             filter: 'blur(16px)',
                             transform: 'scale(1.1)'
                         }} />
-                    <div className="relative w-14 h-14 rounded-[var(--radius-lg)] overflow-hidden shadow-lg 
+                    <div className="relative w-14 h-14 rounded-[var(--radius-lg)] overflow-hidden shadow-lg
                         transition-all duration-500 group-hover:scale-105
                         ring-2 ring-[var(--color-border)] group-hover:ring-[var(--color-primary)]/40">
-                        <img
-                            src="/logo.png"
-                            alt="Chat Buddy"
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.parentElement.innerHTML = `
-                                    <div class="w-full h-full flex items-center justify-center text-white font-bold text-xl animate-aurora"
-                                        style="background: var(--gradient-aurora)">
-                                        <span class="flex items-center gap-0.5 transform group-hover:rotate-12 transition-transform duration-500">
-                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                                <path d="M12 3l1.5 4.5H18l-3.5 2.5 1.5 4.5L12 12l-4 2.5 1.5-4.5L6 7.5h4.5L12 3z"/>
-                                            </svg>
-                                        </span>
-                                    </div>`;
-                            }}
-                        />
+                        {logoError ? (
+                            <div
+                                className="w-full h-full flex items-center justify-center text-white font-bold text-xl animate-aurora"
+                                style={{ background: 'var(--gradient-aurora)' }}
+                            >
+                                <span className="flex items-center gap-0.5 transform group-hover:rotate-12 transition-transform duration-500">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                        <path d="M12 3l1.5 4.5H18l-3.5 2.5 1.5 4.5L12 12l-4 2.5 1.5-4.5L6 7.5h4.5L12 3z"/>
+                                    </svg>
+                                </span>
+                            </div>
+                        ) : (
+                            <img
+                                src="/logo.png"
+                                alt="Chat Buddy"
+                                className="w-full h-full object-cover"
+                                onError={() => setLogoError(true)}
+                            />
+                        )}
                     </div>
                 </div>
 

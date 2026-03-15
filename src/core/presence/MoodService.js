@@ -9,6 +9,8 @@
  * 5 moods: happy, calm, tired, excited, melancholy
  */
 
+import { getCurrentHour } from '../../utils/timezone';
+
 export const MOODS = {
     happy: {
         id: 'happy',
@@ -46,24 +48,6 @@ export const MOODS = {
         promptHint: 'Reflective, slightly wistful tone.'
     }
 };
-
-/**
- * Get the current hour in a given IANA timezone.
- * @param {string} timezone
- * @returns {number} 0-23
- */
-function getCurrentHour(timezone) {
-    try {
-        const formatter = new Intl.DateTimeFormat('en-US', {
-            hour: 'numeric',
-            hour12: false,
-            timeZone: timezone,
-        });
-        return parseInt(formatter.format(new Date()), 10);
-    } catch (_e) {
-        return new Date().getHours();
-    }
-}
 
 /**
  * Determine personality weight from persona personality string.

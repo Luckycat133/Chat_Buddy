@@ -111,6 +111,7 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
     const aiPostIntervalRef = useRef(null);
     const aiInteractionIntervalRef = useRef(null);
     const processedPostIdsRef = useRef(new Set());
+    const timeoutIdsRef = useRef([]);
 
     // Evaluate if AI should like a post
     const evaluateShouldLike = useCallback((post, aiId) => {
@@ -127,66 +128,6 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
         return Math.random() > 0.6;
     }, []);
 
-    // Trigger AI interactions on a specific post
-    const _triggerAIInteractions = useCallback(async (postId, currentPosts) => {
-        const post = currentPosts.find(p => p.id === postId);
-        if (!post) return;
-
-        const shuffledPersonas = [...INITIAL_PERSONAS].sort(() => Math.random() - 0.5);
-        const interactors = shuffledPersonas.slice(0, 3 + Math.floor(Math.random() * 4));
-
-        for (let i = 0; i < interactors.length; i++) {
-            const persona = interactors[i];
-            const delay = (i + 1) * (2000 + Math.random() * 4000);
-
-            setTimeout(async () => {
-                // Like
-                if (evaluateShouldLike(post, persona.id)) {
-                    toggleLike(postId, persona.id);
-                }
-                // React
-                if (Math.random() > 0.7) {
-                    const emojis = ['😂', '❤️', '👍', '🔥', '😮', '😢'];
-                    const emoji = emojis[Math.floor(Math.random() * emojis.length)];
-                    addReaction(postId, emoji, persona.id);
-                }
-                // Comment
-                if (Math.random() > 0.6) {
-                    // Need fresh posts snapshot for comment generation? 
-                    // `generateAIComment` uses `callMomentsAI`.
-                    // We need to pass the *current* posts to `generateAIComment`?
-                    // In `MomentsActions`, `generateAIComment` accepts a snapshot. 
-                    // But here we rely on the closure `posts` or we need access to fresh `posts` via ref?
-                    // The hook re-runs when `posts` changes, so `triggerAIInteractions` is recreated.
-                    // But `setTimeout` closure might capture OLD `triggerAIInteractions` scope...
-                    // Wait, `triggerAIInteractions` is called with `currentPosts`.
-                    // But `generateAIComment` implementation in Actions (which I defined in prev step) 
-                    // assumed it will be passed a snapshot OR uses state? 
-                    // In my previous step, I defined `generateAIComment` to take `postsSnapshot`.
-
-                    // Wait, looking at `MomentsActions.jsx` I wrote:
-                    // `const generateAIComment = useCallback(async (postId, aiId, replyToComment = null, postsSnapshot) => { ...`
-                    // So I MUST pass `posts` (which is passed to this hook) to it.
-
-                    // The issue is `posts` inside `setTimeout` will be STALE.
-                    // I need a ref to posts.
-
-                    // But `triggerAIInteractions` is only called from effects where we pass explicit post list or
-                    // we use a Ref.
-
-                    // Actually, let's keep it simple. It's okay if it's slightly stale for comments context,
-                    // or I should maintain a `postsRef`.
-
-                    // For now, assume `generateAIComment` handles it or I pass the `post` object directly?
-                    // `generateAIComment` finds the post by ID from `postsSnapshot`.
-
-                    // Let's use a ref for posts in this hook.
-
-                }
-            }, delay);
-        }
-    }, [evaluateShouldLike, toggleLike, addReaction]); // Missing `posts` dependency usually, but we handle it via Ref
-
     const postsRef = useRef(posts);
     useEffect(() => { postsRef.current = posts; }, [posts]);
 
@@ -200,7 +141,7 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
 
         interactors.forEach((persona, i) => {
             const delay = (i + 1) * (2000 + Math.random() * 4000);
-            setTimeout(async () => {
+            const timeoutId = setTimeout(async () => {
                 if (evaluateShouldLike(post, persona.id)) {
                     toggleLike(postId, persona.id);
                 }
@@ -213,6 +154,7 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
                     await generateAIComment(postId, persona.id, null, postsRef.current);
                 }
             }, delay);
+            timeoutIdsRef.current.push(timeoutId);
         });
     }, [evaluateShouldLike, toggleLike, addReaction, generateAIComment]);
 
@@ -224,7 +166,8 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
         if (latestPost.authorId === 'user-me' && !processedPostIdsRef.current.has(latestPost.id)) {
             // It's a new user post!
             processedPostIdsRef.current.add(latestPost.id);
-            setTimeout(() => triggerAIInteractionsWithRef(latestPost.id), 2000 + Math.random() * 5000);
+            const timeoutId = setTimeout(() => triggerAIInteractionsWithRef(latestPost.id), 2000 + Math.random() * 5000);
+            timeoutIdsRef.current.push(timeoutId);
         }
     }, [posts, triggerAIInteractionsWithRef]);
 
@@ -283,6 +226,9 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
         return () => {
             clearInterval(aiPostIntervalRef.current);
             clearInterval(aiInteractionIntervalRef.current);
+            // Clear all pending timeouts
+            timeoutIdsRef.current.forEach(id => clearTimeout(id));
+            timeoutIdsRef.current = [];
         };
     }, [checkAIPosts, triggerAIMutualInteraction]);
 
@@ -291,9 +237,15 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
         if (posts.length === 0) {
             const initialAIs = [...INITIAL_PERSONAS].sort(() => Math.random() - 0.5).slice(0, 4);
             initialAIs.forEach((persona, index) => {
-                setTimeout(() => generateDynamicAIPost(persona.id), index * 2000);
+                const timeoutId = setTimeout(() => generateDynamicAIPost(persona.id), index * 2000);
+                timeoutIdsRef.current.push(timeoutId);
             });
         }
+        return () => {
+            // Clear timeouts created in this effect
+            timeoutIdsRef.current.forEach(id => clearTimeout(id));
+            timeoutIdsRef.current = [];
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Run once
 }
@@ -302,6 +254,8 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
 // STORY EVENTS HOOK (birthday & seasonal holiday posts)
 // -----------------------------------------------------------------------------
 function useStoryEvents({ posts, lastStoryEventDate, generateStoryPost, setMomentsData }) {
+    const timeoutIdsRef = useRef([]);
+
     useEffect(() => {
         const today = new Date().toDateString();
         if (lastStoryEventDate === today) return; // Already ran today
@@ -323,9 +277,10 @@ function useStoryEvents({ posts, lastStoryEventDate, generateStoryPost, setMomen
         // Birthday posts
         birthdays.forEach((aiId, i) => {
             if (alreadyPostedToday(aiId)) return;
-            setTimeout(() => {
+            const timeoutId = setTimeout(() => {
                 generateStoryPost(aiId, 'birthday', null);
             }, (i + 1) * 3000);
+            timeoutIdsRef.current.push(timeoutId);
         });
 
         // Holiday posts — pick 2 random personas
@@ -335,11 +290,18 @@ function useStoryEvents({ posts, lastStoryEventDate, generateStoryPost, setMomen
                 .slice(0, 2)
                 .filter(p => !alreadyPostedToday(p.id));
             candidates.forEach((persona, i) => {
-                setTimeout(() => {
+                const timeoutId = setTimeout(() => {
                     generateStoryPost(persona.id, 'holiday', holiday.nameEn);
                 }, (birthdays.length + i + 1) * 3000);
+                timeoutIdsRef.current.push(timeoutId);
             });
         }
+
+        return () => {
+            // Clear all pending timeouts on unmount
+            timeoutIdsRef.current.forEach(id => clearTimeout(id));
+            timeoutIdsRef.current = [];
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Run once on mount
 }

@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AppProviders from './providers/AppProviders';
 import Layout from './components/Layout';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const ChatList = lazy(() => import('./features/chat/ChatList'));
 const ChatWindow = lazy(() => import('./features/chat/ChatWindow'));
@@ -29,34 +30,36 @@ const RouteLoadingFallback = () => (
 
 export default function App() {
   return (
-    <AppProviders>
-      <Router>
-        <Suspense fallback={<RouteLoadingFallback />}>
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route index element={<ChatList />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="chat/:id" element={<ChatWindow />} />
-              <Route path="chat/:id/search" element={<ChatWindow />} />
-              <Route path="chat/:id/details" element={<GroupDetails />} />
-              <Route path="create" element={<CreateChat />} />
-              <Route path="agents" element={<AgentsPage />} />
-              <Route path="agents/:agentId" element={<AgentWorkspace />} />
-              <Route path="friends" element={<FriendsPage />} />
-              <Route path="friends/groups" element={<FriendGroups />} />
-              <Route path="moments" element={<MomentsPage />} />
-              <Route path="achievements" element={<AchievementsPage />} />
-              <Route path="leaderboard" element={<LeaderboardPage />} />
-              <Route path="groups" element={<Navigate to="/" replace />} />
-              <Route path="settings" element={<Settings />} />
-              <Route path="profile" element={<UserProfile />} />
-              <Route path="profile/edit" element={<ProfileEditor />} />
-              <Route path="help" element={<Help />} />
-              <Route path="about" element={<About />} />
-            </Route>
-          </Routes>
-        </Suspense>
-      </Router>
-    </AppProviders>
+    <ErrorBoundary>
+      <AppProviders>
+        <Router>
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route index element={<ChatList />} />
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="chat/:id" element={<ChatWindow />} />
+                <Route path="chat/:id/search" element={<ChatWindow />} />
+                <Route path="chat/:id/details" element={<GroupDetails />} />
+                <Route path="create" element={<CreateChat />} />
+                <Route path="agents" element={<AgentsPage />} />
+                <Route path="agents/:agentId" element={<AgentWorkspace />} />
+                <Route path="friends" element={<FriendsPage />} />
+                <Route path="friends/groups" element={<FriendGroups />} />
+                <Route path="moments" element={<MomentsPage />} />
+                <Route path="achievements" element={<AchievementsPage />} />
+                <Route path="leaderboard" element={<LeaderboardPage />} />
+                <Route path="groups" element={<Navigate to="/" replace />} />
+                <Route path="settings" element={<Settings />} />
+                <Route path="profile" element={<UserProfile />} />
+                <Route path="profile/edit" element={<ProfileEditor />} />
+                <Route path="help" element={<Help />} />
+                <Route path="about" element={<About />} />
+              </Route>
+            </Routes>
+          </Suspense>
+        </Router>
+      </AppProviders>
+    </ErrorBoundary>
   );
 }
