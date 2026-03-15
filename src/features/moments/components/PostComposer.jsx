@@ -169,16 +169,22 @@ export default function PostComposer({ isOpen, onClose }) {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 bg-[var(--color-bg-white)] flex flex-col">
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="post-composer-title"
+            className="fixed inset-0 z-50 bg-[var(--color-bg-white)] flex flex-col"
+        >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                 <button
                     onClick={onClose}
+                    aria-label={t('close') || 'Close'}
                     className="text-[var(--color-text-muted)]"
                 >
                     <X size={24} />
                 </button>
-                <h3 className="font-medium text-[17px]">{t('new_post') || 'New Moment'}</h3>
+                <h3 id="post-composer-title" className="font-medium text-[17px]">{t('new_post') || 'New Moment'}</h3>
                 <button
                     onClick={handlePost}
                     disabled={isPosting || (!content.trim() && images.length === 0)}

@@ -18,6 +18,29 @@ export const SUPPORTED_FILE_TYPES = {
     'yml': { mime: 'text/yaml', icon: '📑', category: 'config' }
 };
 
+// Allowed MIME types mapped to their valid extensions
+// This maps both the primary MIME type and common variants
+export const ALLOWED_MIME_TYPES = {
+    'text/plain': ['txt', 'md', 'json', 'js', 'ts', 'py', 'html', 'css', 'xml', 'csv', 'yaml', 'yml'],
+    'text/markdown': ['md'],
+    'application/json': ['json'],
+    'application/javascript': ['js'],
+    'text/javascript': ['js'],
+    'application/typescript': ['ts'],
+    'text/typescript': ['ts'],
+    'text/x-python': ['py'],
+    'text/html': ['html'],
+    'text/css': ['css'],
+    'application/xml': ['xml'],
+    'text/xml': ['xml'],
+    'text/csv': ['csv'],
+    'text/yaml': ['yaml', 'yml'],
+    'application/x-yaml': ['yaml', 'yml']
+};
+
+// Set of allowed MIME types for quick lookup
+const ALLOWED_MIME_SET = new Set(Object.keys(ALLOWED_MIME_TYPES));
+
 // Maximum file size (5MB)
 export const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -78,17 +101,33 @@ export function readFileAsBase64(file) {
 }
 
 /**
- * Validate file for upload
+ * Validate file for upload with security checks
+ * Checks: file size, MIME type, extension, and MIME-extension consistency
  */
 export function validateFile(file) {
     const errors = [];
 
+    // Check file size
     if (file.size > MAX_FILE_SIZE) {
         errors.push('file_too_large');
     }
 
+    // Check file extension
+    const ext = getFileExtension(file.name);
     if (!isFileTypeSupported(file.name)) {
         errors.push('unsupported_file_type');
+    }
+
+    // Check MIME type is allowed
+    const mimeType = file.type || 'application/octet-stream';
+    if (!ALLOWED_MIME_SET.has(mimeType)) {
+        errors.push('unsupported_mime_type');
+    }
+
+    // Check extension matches MIME type
+    const validExtensions = ALLOWED_MIME_TYPES[mimeType];
+    if (validExtensions && ext && !validExtensions.includes(ext)) {
+        errors.push('extension_mime_mismatch');
     }
 
     return {
@@ -98,11 +137,78 @@ export function validateFile(file) {
 }
 
 /**
+ * Validate file content by checking for valid text encoding
+ * This helps detect files that claim to be text but contain binary content
+ */
+export async function validateFileContent(file) {
+    // Only validate text-based files
+    const textMimeTypes = ['text/', 'application/json', 'application/javascript',
+                           'application/typescript', 'application/xml', 'application/x-yaml'];
+    const isTextFile = textMimeTypes.some(type => file.type?.startsWith(type) || file.type === type);
+
+    if (!isTextFile) {
+        return { valid: true, errors: [] };
+    }
+
+    const errors = [];
+
+    try {
+        // Read first portion of file to check for null bytes (binary indicator)
+        const chunk = file.slice(0, 8192); // Read first 8KB
+        const buffer = await chunk.arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+
+        // Check for null bytes (common in binary files)
+        const hasNullBytes = bytes.some(byte => byte === 0);
+        if (hasNullBytes) {
+            errors.push('binary_content_detected');
+        }
+
+        // For JSON files, validate structure
+        if (file.name.endsWith('.json')) {
+            try {
+                const text = new TextDecoder().decode(buffer);
+                JSON.parse(text);
+            } catch {
+                errors.push('invalid_json_content');
+            }
+        }
+    } catch {
+        errors.push('content_read_error');
+    }
+
+    return {
+        valid: errors.length === 0,
+        errors
+    };
+}
+
+/**
+ * Comprehensive file validation combining all checks
+ * Use this for security-critical file uploads
+ */
+export async function validateFileComprehensive(file) {
+    const basicValidation = validateFile(file);
+
+    if (!basicValidation.valid) {
+        return basicValidation;
+    }
+
+    const contentValidation = await validateFileContent(file);
+
+    return {
+        valid: contentValidation.valid,
+        errors: [...basicValidation.errors, ...contentValidation.errors]
+    };
+}
+
+/**
  * Process file for chat
  * Returns file data object for storing in message
+ * Uses comprehensive validation for security
  */
 export async function processFileForChat(file) {
-    const validation = validateFile(file);
+    const validation = await validateFileComprehensive(file);
     if (!validation.valid) {
         throw new Error(validation.errors[0]);
     }
@@ -114,6 +220,7 @@ export async function processFileForChat(file) {
         name: file.name,
         size: file.size,
         type: getFileExtension(file.name),
+        mimeType: file.type,
         icon: typeInfo.icon,
         category: typeInfo.category,
         content: content,

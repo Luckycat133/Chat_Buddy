@@ -29,8 +29,10 @@ export default function MermaidRenderer({ content }) {
                     fontFamily: 'system-ui, -apple-system, sans-serif',
                 });
 
-                // Clear previous content
-                containerRef.current.innerHTML = '';
+                // Clear previous content safely
+                while (containerRef.current.firstChild) {
+                    containerRef.current.removeChild(containerRef.current.firstChild);
+                }
 
                 // Generate a unique ID for this diagram
                 const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
@@ -38,8 +40,11 @@ export default function MermaidRenderer({ content }) {
                 // Render the diagram
                 const { svg } = await mermaid.render(id, content.trim());
 
-                // Insert the SVG
-                containerRef.current.innerHTML = svg;
+                // Parse and insert SVG safely
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(svg, 'image/svg+xml');
+                const svgElement = doc.documentElement;
+                containerRef.current.appendChild(svgElement);
             } catch (err) {
                 console.error('Mermaid render error:', err);
                 setError(err.message || 'Failed to render diagram');

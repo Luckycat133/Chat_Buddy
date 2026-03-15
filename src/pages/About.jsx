@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 import { Info, Code, Heart, ExternalLink, FileText, Users } from 'lucide-react';
 
 export default function About() {
     const { t } = useLanguage();
+    const [logoError, setLogoError] = useState(false);
 
     const features = [
         { icon: <Users size={18} />, text: t('feature_personas') },
@@ -32,15 +33,18 @@ export default function About() {
                 {/* App Info Header */}
                 <div className="page-header animate-fade-slide-down">
                     <div className="page-header-icon logo-animated overflow-hidden !p-0">
-                        <img
-                            src="/logo.png"
-                            alt="Chat Buddy"
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.parentElement.innerHTML = '<div class="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xl font-bold">CB</div>';
-                            }}
-                        />
+                        {logoError ? (
+                            <div className="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xl font-bold">
+                                CB
+                            </div>
+                        ) : (
+                            <img
+                                src="/logo.png"
+                                alt="Chat Buddy"
+                                className="w-full h-full object-cover"
+                                onError={() => setLogoError(true)}
+                            />
+                        )}
                     </div>
                     <div>
                         <h1 className="page-header-title">

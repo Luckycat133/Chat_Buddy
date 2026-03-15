@@ -480,16 +480,22 @@ Guidelines:
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-[var(--color-bg-white)] rounded-2xl w-[90%] max-w-md max-h-[90vh] overflow-hidden animate-scale-in shadow-2xl">
+            <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="character-creator-title"
+                className="bg-[var(--color-bg-white)] rounded-2xl w-[90%] max-w-md max-h-[90vh] overflow-hidden animate-scale-in shadow-2xl"
+            >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                     <button
                         onClick={onClose}
+                        aria-label={language === 'zh' ? '关闭' : 'Close'}
                         className="p-2 rounded-full hover:bg-[var(--color-bg-hover)] transition-colors"
                     >
                         <X size={20} className="text-[var(--color-text-muted)]" />
                     </button>
-                    <h3 className="font-semibold text-[17px]">
+                    <h3 id="character-creator-title" className="font-semibold text-[17px]">
                         {language === 'zh' ? '创建自定义角色' : 'Create Custom Character'}
                     </h3>
                     <div className="w-10" />

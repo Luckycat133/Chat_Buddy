@@ -12,24 +12,7 @@
  *   'do-not-disturb' — Focused, not accepting interruptions
  */
 
-/**
- * Get the current hour in a given IANA timezone.
- * Falls back to local time if Intl is not available.
- * @param {string} timezone - e.g. 'Asia/Shanghai'
- * @returns {number} 0-23
- */
-function getCurrentHour(timezone) {
-    try {
-        const formatter = new Intl.DateTimeFormat('en-US', {
-            hour: 'numeric',
-            hour12: false,
-            timeZone: timezone,
-        });
-        return parseInt(formatter.format(new Date()), 10);
-    } catch (_e) {
-        return new Date().getHours();
-    }
-}
+import { getCurrentHour } from '../../utils/timezone';
 
 /**
  * Check if current hour falls within a range that may wrap around midnight.

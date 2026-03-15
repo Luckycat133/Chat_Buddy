@@ -6,6 +6,7 @@
  */
 import { storage } from '../services/storage/StorageService';
 import APIClient from '../services/api/APIClient';
+import { normalizeBaseUrlForDevProxy } from '../utils/apiUtils';
 
 const CONFIG_KEY = 'api-config';
 const PROFILES_KEY = 'api-profiles';
@@ -114,30 +115,6 @@ export function loadProfile(name) {
     const profile = getProfiles().find(p => p.name === name);
     if (profile) saveConfig(profile.config);
     return profile;
-}
-
-function normalizeBaseUrlForDevProxy(baseUrl) {
-    const raw = String(baseUrl || '').trim().replace(/\/+$/, '');
-    if (!raw) return '';
-
-    if (!import.meta.env.DEV || typeof window === 'undefined') return raw;
-
-    try {
-        const url = new URL(raw, window.location.origin);
-        const path = url.pathname === '/' ? '' : url.pathname;
-
-        if (url.origin === 'https://maas-api.cn-huabei-1.xf-yun.com') {
-            return `/proxy/xfyun${path}`;
-        }
-
-        if (url.origin === 'https://api.perplexity.ai') {
-            return `/proxy/perplexity${path}`;
-        }
-    } catch {
-        // Keep raw value
-    }
-
-    return raw;
 }
 
 // ─── Validation ─────────────────────────────────────────────

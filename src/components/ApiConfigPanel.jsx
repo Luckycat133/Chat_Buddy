@@ -138,13 +138,16 @@ export default function ApiConfigPanel({ onClose }) {
     >
       <div
         ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="api-config-title"
         className="bg-[var(--color-bg-white)] rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="sticky top-0 z-10 bg-[var(--color-bg-white)] flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
           <div>
-            <h2 className="text-lg font-bold text-[var(--color-text-main)]">
+            <h2 id="api-config-title" className="text-lg font-bold text-[var(--color-text-main)]">
               {t("api_config")}
             </h2>
             <p className="text-xs text-[var(--color-text-muted)]">
@@ -153,6 +156,7 @@ export default function ApiConfigPanel({ onClose }) {
           </div>
           <button
             onClick={onClose}
+            aria-label={t("close") || "Close"}
             className="p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors"
           >
             <X size={20} className="text-[var(--color-text-muted)]" />

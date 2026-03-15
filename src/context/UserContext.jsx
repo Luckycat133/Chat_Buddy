@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback } from 'react';
+import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 const UserContext = createContext();
@@ -63,14 +63,14 @@ export const UserProvider = ({ children }) => {
         return language === 'zh' ? '你' : 'You';
     }, [userProfile.nickname]);
 
-    const value = {
+    const value = useMemo(() => ({
         userProfile,
         updateNickname,
         updateAvatar,
         updateSignature,
         resetProfile,
         getDisplayName
-    };
+    }), [userProfile, updateNickname, updateAvatar, updateSignature, resetProfile, getDisplayName]);
 
     return (
         <UserContext.Provider value={value}>
