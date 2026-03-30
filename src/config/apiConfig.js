@@ -1,7 +1,7 @@
 /**
  * T02 — Unified API Configuration System
  *
- * Priority: localStorage (runtime) > .env (build-time) > defaults
+ * Priority: session apiKey + local runtime config > .env (build-time) > defaults
  * Supports multiple saved provider profiles.
  */
 import { storage } from '../services/storage/StorageService';
@@ -10,6 +10,67 @@ import { normalizeBaseUrlForDevProxy } from '../utils/apiUtils';
 
 const CONFIG_KEY = 'api-config';
 const PROFILES_KEY = 'api-profiles';
+const LOCAL_STORAGE_PREFIX = 'chat-buddy';
+const SESSION_API_KEY_KEY = `${LOCAL_STORAGE_PREFIX}:session-api-key`;
+
+const INDEXED_DB_SCHEMAS = [
+    {
+        dbName: 'chat-buddy-main',
+        version: 1,
+        storeName: 'kv',
+        ensureSchema: (db) => {
+            if (!db.objectStoreNames.contains('kv')) {
+                db.createObjectStore('kv', { keyPath: 'key' });
+            }
+        }
+    },
+    {
+        dbName: 'chat-buddy-images',
+        version: 1,
+        storeName: 'images',
+        ensureSchema: (db) => {
+            if (!db.objectStoreNames.contains('images')) {
+                db.createObjectStore('images', { keyPath: 'id' });
+            }
+        }
+    },
+    {
+        dbName: 'chat-buddy-memories',
+        version: 1,
+        storeName: 'memories',
+        ensureSchema: (db) => {
+            if (!db.objectStoreNames.contains('memories')) {
+                const store = db.createObjectStore('memories', { keyPath: 'id' });
+                store.createIndex('byCharacter', 'characterId', { unique: false });
+                store.createIndex('byCharacterAndImportance', ['characterId', 'importance'], { unique: false });
+            }
+        }
+    },
+    {
+        dbName: 'chat-buddy-agents',
+        version: 1,
+        storeName: 'custom-agents',
+        ensureSchema: (db) => {
+            if (!db.objectStoreNames.contains('custom-agents')) {
+                const store = db.createObjectStore('custom-agents', { keyPath: 'id' });
+                store.createIndex('byCreatedAt', 'createdAt', { unique: false });
+            }
+        }
+    },
+    {
+        dbName: 'chat-buddy-trivia',
+        version: 1,
+        storeName: 'quiz_history',
+        ensureSchema: (db) => {
+            if (!db.objectStoreNames.contains('quiz_history')) {
+                const store = db.createObjectStore('quiz_history', { keyPath: 'id' });
+                store.createIndex('chatId', 'chatId', { unique: false });
+                store.createIndex('personaId', 'personaId', { unique: false });
+                store.createIndex('generatedAt', 'generatedAt', { unique: false });
+            }
+        }
+    }
+];
 
 /** Sensible defaults — chat works out-of-the-box with just URL + key + model */
 const DEFAULT_CONFIG = {
@@ -21,6 +82,47 @@ const DEFAULT_CONFIG = {
     timeout: 60000,       // 60 s
     maxRetries: 3,
 };
+
+let sessionApiKeyCache = null;
+
+function getSessionStorage() {
+    if (typeof window === 'undefined') return null;
+    return window.sessionStorage;
+}
+
+function setSessionApiKey(apiKey) {
+    const value = typeof apiKey === 'string' ? apiKey : '';
+    sessionApiKeyCache = value;
+
+    try {
+        const sessionStorage = getSessionStorage();
+        if (!sessionStorage) return;
+
+        if (value) sessionStorage.setItem(SESSION_API_KEY_KEY, value);
+        else sessionStorage.removeItem(SESSION_API_KEY_KEY);
+    } catch {
+        // Best-effort only; callers still receive in-memory config.
+    }
+}
+
+function getSessionApiKey() {
+    if (sessionApiKeyCache !== null) return sessionApiKeyCache;
+
+    try {
+        const sessionStorage = getSessionStorage();
+        sessionApiKeyCache = sessionStorage?.getItem(SESSION_API_KEY_KEY) || '';
+        return sessionApiKeyCache;
+    } catch {
+        sessionApiKeyCache = '';
+        return sessionApiKeyCache;
+    }
+}
+
+function stripApiKey(config = {}) {
+    if (!config || typeof config !== 'object') return null;
+    const { apiKey: _apiKey, ...rest } = config;
+    return rest;
+}
 
 // ─── Config read ────────────────────────────────────────────
 
@@ -35,7 +137,17 @@ function getEnvConfig() {
 
 /** Runtime overrides persisted in localStorage */
 function getSavedConfig() {
-    return storage.get(CONFIG_KEY, null);
+    const saved = storage.get(CONFIG_KEY, null);
+    if (!saved || typeof saved !== 'object') return saved;
+
+    if (saved.apiKey) {
+        setSessionApiKey(saved.apiKey);
+        const sanitized = stripApiKey(saved);
+        storage.set(CONFIG_KEY, sanitized);
+        return sanitized;
+    }
+
+    return saved;
 }
 
 /**
@@ -45,6 +157,7 @@ function getSavedConfig() {
 export function getConfig() {
     const env = getEnvConfig();
     const saved = getSavedConfig();
+    const sessionApiKey = getSessionApiKey();
 
     // Strip empty-string env values so defaults still apply
     const cleanEnv = {};
@@ -52,11 +165,17 @@ export function getConfig() {
         if (v !== '') cleanEnv[k] = v;
     }
 
-    return {
+    const merged = {
         ...DEFAULT_CONFIG,
         ...cleanEnv,
         ...(saved || {}),
     };
+
+    if (sessionApiKey) {
+        merged.apiKey = sessionApiKey;
+    }
+
+    return merged;
 }
 
 /** Does the user have a usable API setup? */
@@ -72,31 +191,49 @@ export function isConfigured() {
  * (from aiClient.js) to pick up changes.
  */
 export function saveConfig(config) {
+    const { apiKey, ...restConfig } = config || {};
+
     // Only persist non-default, non-empty fields
     const toSave = {};
-    for (const [k, v] of Object.entries(config)) {
+    for (const [k, v] of Object.entries(restConfig)) {
         if (v !== '' && v !== null && v !== undefined) {
             toSave[k] = v;
         }
     }
     storage.set(CONFIG_KEY, toSave);
+    if (typeof apiKey === 'string') setSessionApiKey(apiKey);
 }
 
 /** Wipe runtime overrides (revert to .env / defaults) */
 export function clearConfig() {
     storage.remove(CONFIG_KEY);
+    setSessionApiKey('');
 }
 
 // ─── Provider profiles ──────────────────────────────────────
 
 export function getProfiles() {
-    return storage.get(PROFILES_KEY, []);
+    const profiles = storage.get(PROFILES_KEY, []);
+    if (!Array.isArray(profiles)) return [];
+
+    let changed = false;
+    const sanitizedProfiles = profiles.map((profile) => {
+        if (!profile?.config?.apiKey) return profile;
+        changed = true;
+        return {
+            ...profile,
+            config: stripApiKey(profile.config)
+        };
+    });
+
+    if (changed) storage.set(PROFILES_KEY, sanitizedProfiles);
+    return sanitizedProfiles;
 }
 
 export function saveProfile(name, config) {
     const profiles = getProfiles();
     const idx = profiles.findIndex(p => p.name === name);
-    const entry = { name, config, updatedAt: Date.now() };
+    const entry = { name, config: stripApiKey(config), updatedAt: Date.now() };
 
     if (idx >= 0) profiles[idx] = entry;
     else profiles.push(entry);
@@ -186,20 +323,138 @@ export async function validateConfig(config) {
 
 // ─── Data export / import ───────────────────────────────────
 
+function isBrowserIndexedDBAvailable() {
+    return typeof window !== 'undefined' && Boolean(window.indexedDB);
+}
+
+function openDatabase(schema) {
+    return new Promise((resolve, reject) => {
+        if (!isBrowserIndexedDBAvailable()) {
+            resolve(null);
+            return;
+        }
+
+        const request = indexedDB.open(schema.dbName, schema.version);
+        request.onupgradeneeded = (event) => {
+            schema.ensureSchema?.(event.target.result);
+        };
+        request.onsuccess = (event) => resolve(event.target.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function getAllStoreRecords(schema) {
+    const db = await openDatabase(schema);
+    if (!db || !db.objectStoreNames.contains(schema.storeName)) return [];
+
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(schema.storeName, 'readonly');
+        const store = tx.objectStore(schema.storeName);
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function clearStoreRecords(schema) {
+    const db = await openDatabase(schema);
+    if (!db || !db.objectStoreNames.contains(schema.storeName)) return;
+
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(schema.storeName, 'readwrite');
+        const store = tx.objectStore(schema.storeName);
+        const request = store.clear();
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function restoreStoreRecords(schema, records = []) {
+    const db = await openDatabase(schema);
+    if (!db || !db.objectStoreNames.contains(schema.storeName)) return 0;
+
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(schema.storeName, 'readwrite');
+        const store = tx.objectStore(schema.storeName);
+        let written = 0;
+        records.forEach((record) => {
+            store.put(record);
+            written += 1;
+        });
+        tx.oncomplete = () => resolve(written);
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+function getLocalStorageBackupData() {
+    const backup = {};
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith(LOCAL_STORAGE_PREFIX)) continue;
+        try {
+            backup[key] = JSON.parse(localStorage.getItem(key));
+        } catch {
+            backup[key] = localStorage.getItem(key);
+        }
+    }
+    return backup;
+}
+
+export async function clearAllAppData() {
+    Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('chat-buddy:') || key.startsWith('chat-buddy-')) {
+            localStorage.removeItem(key);
+        }
+    });
+    // Explicit legacy fallback key.
+    localStorage.removeItem('chat-buddy-chats');
+
+    if (!isBrowserIndexedDBAvailable()) return;
+
+    await Promise.all(
+        INDEXED_DB_SCHEMAS.map(async (schema) => {
+            try {
+                await clearStoreRecords(schema);
+            } catch {
+                // Best-effort clear.
+            }
+        })
+    );
+}
+
 /**
  * Export all Chat Buddy data as a JSON blob (chats, settings, profiles…).
  * Triggers a browser download.
  */
-export function exportAllData() {
-    const data = { _meta: { app: 'Chat Buddy', exportedAt: new Date().toISOString(), version: 1 } };
-
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('chat-buddy')) {
-            try { data[key] = JSON.parse(localStorage.getItem(key)); }
-            catch { data[key] = localStorage.getItem(key); }
-        }
+export async function exportAllData() {
+    const indexedDBData = {};
+    if (isBrowserIndexedDBAvailable()) {
+        await Promise.all(INDEXED_DB_SCHEMAS.map(async (schema) => {
+            try {
+                const records = await getAllStoreRecords(schema);
+                indexedDBData[schema.dbName] = {
+                    ...(indexedDBData[schema.dbName] || {}),
+                    [schema.storeName]: records
+                };
+            } catch {
+                indexedDBData[schema.dbName] = {
+                    ...(indexedDBData[schema.dbName] || {}),
+                    [schema.storeName]: []
+                };
+            }
+        }));
     }
+
+    const data = {
+        _meta: {
+            app: 'Chat Buddy',
+            exportedAt: new Date().toISOString(),
+            version: 2,
+            includesIndexedDB: true
+        },
+        localStorage: getLocalStorageBackupData(),
+        indexedDB: indexedDBData
+    };
 
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -210,6 +465,7 @@ export function exportAllData() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+    return data;
 }
 
 /**
@@ -219,14 +475,36 @@ export function exportAllData() {
 export function importData(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const data = JSON.parse(e.target.result);
                 if (!data._meta || data._meta.app !== 'Chat Buddy') {
                     reject(new Error('invalid_backup'));
                     return;
                 }
+
                 let count = 0;
+
+                // v2 format with localStorage/indexedDB split
+                if (data.localStorage || data.indexedDB) {
+                    for (const [key, value] of Object.entries(data.localStorage || {})) {
+                        localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+                        count++;
+                    }
+
+                    if (isBrowserIndexedDBAvailable() && data.indexedDB) {
+                        for (const schema of INDEXED_DB_SCHEMAS) {
+                            const records = data.indexedDB?.[schema.dbName]?.[schema.storeName];
+                            if (!Array.isArray(records)) continue;
+                            await clearStoreRecords(schema);
+                            count += await restoreStoreRecords(schema, records);
+                        }
+                    }
+                    resolve(count);
+                    return;
+                }
+
+                // v1 legacy format
                 for (const [key, value] of Object.entries(data)) {
                     if (key === '_meta') continue;
                     localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));

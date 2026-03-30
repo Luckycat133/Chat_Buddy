@@ -16,6 +16,11 @@ const mocks = vi.hoisted(() => {
         store.delete(key);
       }),
     },
+    chatStorage: {
+      migrateFromLocalStorage: vi.fn().mockResolvedValue(undefined),
+      loadChats: vi.fn().mockResolvedValue(null),
+      saveChats: vi.fn().mockResolvedValue(undefined),
+    },
     cleanMessageContent: vi.fn((content) => String(content || '').trim()),
     callAI: vi.fn(),
     extractGroupMemoriesAsync: vi.fn().mockResolvedValue(undefined),
@@ -31,6 +36,10 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('../../services/storage/StorageService', () => ({
   storage: mocks.storage,
+}));
+
+vi.mock('../../services/storage/ChatStorageService', () => ({
+  default: mocks.chatStorage,
 }));
 
 vi.mock('./AIPipeline', () => ({
@@ -96,6 +105,12 @@ describe('ChatEngine', () => {
     mocks.store.clear();
     mocks.storage.get.mockClear();
     mocks.storage.set.mockClear();
+    mocks.chatStorage.migrateFromLocalStorage.mockReset();
+    mocks.chatStorage.migrateFromLocalStorage.mockResolvedValue(undefined);
+    mocks.chatStorage.loadChats.mockReset();
+    mocks.chatStorage.loadChats.mockResolvedValue(null);
+    mocks.chatStorage.saveChats.mockReset();
+    mocks.chatStorage.saveChats.mockResolvedValue(undefined);
     mocks.cleanMessageContent.mockReset();
     mocks.cleanMessageContent.mockImplementation((content) => String(content || '').trim());
     mocks.callAI.mockReset();
@@ -315,6 +330,44 @@ describe('ChatEngine', () => {
     setTimeoutSpy.mockRestore();
   });
 
+  it('test_when_clear_chat_messages_with_pending_schedule_should_cancel_timeouts', () => {
+    // Given
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        participants: ['user-me', 'ai-1'],
+        messages: [{ id: 'm1', senderId: 'user-me', content: 'old', timestamp: '2020-01-01T00:00:00.000Z' }],
+      },
+    ]);
+    engine._handleAISchedule('chat-1', personas[0], 1);
+
+    // When
+    engine.clearChatMessages('chat-1');
+
+    // Then
+    expect(engine._scheduledMessages.size).toBe(0);
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
+  });
+
+  it('test_when_scheduled_callback_runs_after_chat_cleared_should_not_throw', () => {
+    // Given
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        participants: ['user-me', 'ai-1'],
+        messages: [{ id: 'm1', senderId: 'user-me', content: 'old', timestamp: '2020-01-01T00:00:00.000Z' }],
+      },
+    ]);
+    engine._handleAISchedule('chat-1', personas[0], 1);
+    engine.clearChatMessages('chat-1');
+
+    // When / Then
+    expect(() => vi.advanceTimersByTime(60_000)).not.toThrow();
+    expect(mocks.processTurn).not.toHaveBeenCalled();
+  });
+
   it('test_when_trigger_ai_response_in_group_should_respect_direct_mention_or_random_gate', () => {
     // Given
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
@@ -459,5 +512,370 @@ describe('ChatEngine', () => {
     expect(missingChat).toEqual({ success: false, error: 'Chat not found' });
     expect(missingMessage).toEqual({ success: false, error: 'Message not found' });
     expect(mocks.addBookmark).not.toHaveBeenCalled();
+  });
+
+  it('test_when_pin_and_unread_flags_change_should_update_chat_metadata', () => {
+    // Given
+    const engine = createEngineWithChats([
+      { id: 'chat-1', participants: ['user-me', 'ai-1'], messages: [], isPinned: false, isUnread: false },
+    ]);
+
+    // When
+    engine.pinChat('chat-1', true);
+    engine.markChatUnread('chat-1', true);
+
+    // Then
+    expect(engine.chats[0]).toMatchObject({ isPinned: true, isUnread: true });
+  });
+
+  it('test_when_helper_guards_and_fallbacks_run_should_return_safe_values', () => {
+    // Given
+    const engine = createEngineWithChats([]);
+
+    // When / Then
+    expect(engine._isTaskParticipant('user-me')).toBe(false);
+    expect(engine._isTaskParticipant('agent-custom')).toBe(true);
+    expect(engine._getDirectPeerId(null)).toBeNull();
+    expect(engine._getDirectPeerId({ participants: ['ai-1', 'ai-2'] })).toBeNull();
+    expect(engine._getDirectPeerId({ participants: ['user-me', 'ai-2'] })).toBe('ai-2');
+    expect(engine._getChatActivityTimestamp({ createdAt: '2024-01-01T00:00:00.000Z' })).toBe('2024-01-01T00:00:00.000Z');
+    expect(engine._getChatActivityTimestamp({})).toBe(new Date(0).toISOString());
+  });
+
+  it('test_when_init_finds_duplicate_social_direct_chats_should_merge_cluster_and_persist', () => {
+    // Given
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-old',
+        name: 'New Chat',
+        participants: ['user-me', 'ai-2'],
+        createdAt: '2026-02-20T00:00:00.000Z',
+        updatedAt: '2026-02-20T00:00:00.000Z',
+        messages: [{ id: 'm1', senderId: 'user-me', content: 'first', timestamp: '2026-02-20T00:00:00.000Z' }],
+      },
+      {
+        id: 'chat-new',
+        name: 'Max',
+        avatar: 'max.png',
+        participants: ['user-me', 'ai-2'],
+        createdAt: '2026-02-21T00:00:00.000Z',
+        updatedAt: '2026-02-21T00:00:00.000Z',
+        messages: [{ id: 'm2', senderId: 'ai-2', content: 'second', timestamp: '2026-02-21T00:00:00.000Z' }],
+      },
+      {
+        id: 'task-chat',
+        name: 'Task',
+        participants: ['user-me', 'ai-1'],
+        messages: [],
+      },
+    ]);
+
+    // Then
+    expect(engine.chats).toHaveLength(2);
+    const merged = engine.chats.find((chat) => chat.participants.includes('ai-2'));
+    expect(merged).toMatchObject({ name: 'Max', avatar: 'max.png' });
+    expect(merged.messages.map((message) => message.id)).toEqual(['m1', 'm2']);
+    expect(mocks.storage.set).toHaveBeenCalledWith('chat-buddy-chats', expect.any(Array));
+  });
+
+  it('test_when_indexeddb_snapshot_differs_should_replace_chats_with_hydrated_data', async () => {
+    // Given
+    mocks.chatStorage.loadChats.mockResolvedValueOnce([
+      {
+        id: 'chat-indexed',
+        participants: ['user-me', 'ai-2'],
+        messages: [{ id: 'm9', senderId: 'ai-2', content: 'hydrated', timestamp: '2026-02-24T00:00:00.000Z' }],
+      },
+    ]);
+    seedCanonicalChats([{ id: 'chat-local', participants: ['user-me', 'ai-1'], messages: [] }]);
+    const engine = new ChatEngine();
+    createdEngines.push(engine);
+
+    // When
+    engine.init(personas);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // Then
+    expect(mocks.chatStorage.migrateFromLocalStorage).toHaveBeenCalledWith(['chat-buddy-chats', 'chat-buddy:chat-buddy-chats']);
+    expect(engine.chats).toHaveLength(1);
+    expect(engine.chats[0]).toMatchObject({ id: 'chat-indexed' });
+    expect(mocks.storage.set).toHaveBeenCalledWith('chat-buddy-chats', expect.arrayContaining([expect.objectContaining({ id: 'chat-indexed' })]));
+  });
+
+  it('test_when_guarded_mutation_methods_receive_missing_targets_should_noop', () => {
+    // Given
+    const engine = createEngineWithChats([{ id: 'chat-1', participants: ['user-me', 'ai-1'], messages: [] }]);
+    mocks.storage.set.mockClear();
+
+    // When
+    expect(engine._handleToolStart('missing', 'ai-1', 'execute_math', { expression: '1+1' })).toBeNull();
+    engine.updateChat('missing', { name: 'ignored' });
+    engine.pinChat('missing', true);
+    engine.markChatUnread('missing', true);
+    engine.deleteChat('missing');
+    engine.clearChatMessages('missing');
+    engine.pinMessage('missing', 'm1', true);
+    engine.markMessagesAsRead('missing', 'user-me');
+    engine._handleToolEnd('missing', 'tool-id', 'ok', null);
+    engine._handleToolEnd('chat-1', null, 'ok', null);
+
+    // Then
+    expect(mocks.storage.set).not.toHaveBeenCalled();
+  });
+
+  it('test_when_pin_message_already_exists_and_messages_are_already_read_should_avoid_extra_mutation', () => {
+    // Given
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        participants: ['user-me', 'ai-1'],
+        pinnedMessages: ['m1'],
+        messages: [{ id: 'm1', senderId: 'ai-1', content: 'hi', readBy: ['user-me'] }],
+      },
+    ]);
+    mocks.storage.set.mockClear();
+
+    // When
+    engine.pinMessage('chat-1', 'm1', true);
+    engine.markMessagesAsRead('chat-1', 'user-me');
+    engine.pinMessage('chat-1', 'm1', false);
+    vi.advanceTimersByTime(0);
+
+    // Then
+    expect(engine.chats[0].pinnedMessages).toEqual([]);
+    expect(mocks.storage.set).toHaveBeenCalledTimes(1);
+  });
+
+  it('test_when_tool_event_finishes_with_error_or_unknown_tool_should_store_fallback_metadata', () => {
+    // Given
+    const engine = createEngineWithChats([
+      { id: 'chat-1', participants: ['user-me', 'ai-1'], messages: [] },
+    ]);
+
+    // When
+    const runCodeId = engine._handleToolStart('chat-1', 'ai-1', 'run_code', { language: 'js' });
+    const fallbackId = engine._handleToolStart('chat-1', 'ai-1', 'mystery_tool', {});
+    engine._handleToolEnd('chat-1', runCodeId, null, 'boom');
+
+    // Then
+    const runCodeMessage = engine.chats[0].messages.find((message) => message.id === runCodeId);
+    const fallbackMessage = engine.chats[0].messages.find((message) => message.id === fallbackId);
+    expect(runCodeMessage).toMatchObject({ status: 'error', inputSummary: 'Running js code…', outputDetail: 'boom' });
+    expect(fallbackMessage.inputSummary).toBe('Running tool: mystery_tool…');
+  });
+
+  it('test_when_schedule_delay_is_satisfied_should_trigger_ai_process_turn', () => {
+    // Given
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        participants: ['user-me', 'ai-1'],
+        messages: [{ id: 'm1', senderId: 'user-me', content: 'old', timestamp: '2020-01-01T00:00:00.000Z' }],
+      },
+    ]);
+
+    // When
+    engine._handleAISchedule('chat-1', personas[0], 1);
+    vi.advanceTimersByTime(60_000);
+
+    // Then
+    expect(mocks.processTurn).toHaveBeenCalledWith(engine.chats[0], personas, personas[0]);
+  });
+
+  it('test_when_group_chat_random_gate_fails_without_mentions_should_skip_ai_response', () => {
+    // Given
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
+    const engine = createEngineWithChats([
+      {
+        id: 'group-1',
+        participants: ['user-me', 'ai-1', 'ai-2'],
+        messages: [{ id: 'm1', senderId: 'user-me', content: 'hello everyone', timestamp: '2026-02-23T00:00:00.000Z' }],
+        lastMessage: { id: 'm1', senderId: 'user-me', content: 'hello everyone', timestamp: '2026-02-23T00:00:00.000Z' },
+      },
+    ]);
+    mocks.processTurn.mockClear();
+
+    // When
+    engine._triggerAIResponse(engine.chats[0]);
+
+    // Then
+    expect(mocks.processTurn).not.toHaveBeenCalled();
+    randomSpy.mockRestore();
+  });
+
+  it('test_when_ai_recall_targets_missing_or_already_recalled_messages_should_noop', () => {
+    // Given
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        participants: ['user-me', 'ai-1'],
+        messages: [{ id: 'm1', senderId: 'ai-1', content: 'done', recalled: true }],
+      },
+    ]);
+    mocks.storage.set.mockClear();
+
+    // When
+    engine._handleAIRecall('missing', 'ai-1');
+    engine._handleAIRecall('chat-1', 'ai-1');
+
+    // Then
+    expect(mocks.storage.set).not.toHaveBeenCalled();
+  });
+
+  it('test_when_delete_chat_runs_should_remove_chat_typing_state_and_schedules', () => {
+    // Given
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        participants: ['user-me', 'ai-1'],
+        messages: [{ id: 'm1', senderId: 'user-me', content: 'hello', timestamp: '2026-02-23T00:00:00.000Z' }],
+      },
+      {
+        id: 'chat-2',
+        participants: ['user-me', 'ai-2'],
+        messages: [],
+      },
+    ]);
+    engine.typingIndicators['chat-1'] = ['ai-1'];
+    engine._handleAISchedule('chat-1', personas[0], 1);
+
+    // When
+    engine.deleteChat('chat-1');
+
+    // Then
+    expect(engine.chats.map((chat) => chat.id)).toEqual(['chat-2']);
+    expect(engine.typingIndicators['chat-1']).toBeUndefined();
+    expect(engine._scheduledMessages.size).toBe(0);
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    clearTimeoutSpy.mockRestore();
+  });
+
+  it('test_when_clear_chat_messages_runs_should_reset_messages_last_message_and_pins', () => {
+    // Given
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        participants: ['user-me', 'ai-1'],
+        messages: [{ id: 'm1', senderId: 'user-me', content: 'hello', timestamp: '2026-02-23T00:00:00.000Z' }],
+        lastMessage: { id: 'm1', senderId: 'user-me', content: 'hello' },
+        pinnedMessages: ['m1'],
+      },
+    ]);
+
+    // When
+    engine.clearChatMessages('chat-1');
+
+    // Then
+    expect(engine.chats[0].messages).toEqual([]);
+    expect(engine.chats[0].lastMessage).toBeNull();
+    expect(engine.chats[0].pinnedMessages).toEqual([]);
+  });
+
+  it('test_when_create_chat_reuses_existing_social_direct_chat_should_return_existing_id_and_merge_metadata', () => {
+    // Given
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        name: 'New Chat',
+        avatar: null,
+        participants: ['user-me', 'ai-2'],
+        messages: [],
+        createdAt: '2026-02-20T00:00:00.000Z',
+        updatedAt: '2026-02-20T00:00:00.000Z',
+      },
+    ]);
+
+    // When
+    const reusedId = engine.createChat('Max Thread', ['ai-2'], 'max.png');
+
+    // Then
+    expect(reusedId).toBe('chat-1');
+    expect(engine.chats).toHaveLength(1);
+    expect(engine.chats[0]).toMatchObject({ name: 'Max Thread', avatar: 'max.png' });
+  });
+
+  it('test_when_bookmark_and_tool_event_helpers_run_should_update_message_metadata', () => {
+    // Given
+    mocks.addBookmark.mockReturnValue(true);
+    mocks.getBookmarks.mockReturnValue([{ messageId: 'm1' }]);
+    mocks.isBookmarked.mockReturnValue(true);
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        name: 'Task Chat',
+        participants: ['user-me', 'ai-1'],
+        messages: [{ id: 'm1', senderId: 'ai-1', content: 'hello', timestamp: '2026-02-23T00:00:00.000Z' }],
+      },
+    ]);
+
+    // When
+    const bookmarkResult = engine.bookmarkMessage('chat-1', 'm1');
+    const toolMsgId = engine._handleToolStart('chat-1', 'ai-1', 'execute_math', { expression: '1+1' });
+    engine._handleToolEnd('chat-1', toolMsgId, 'x'.repeat(600), null);
+    const unbookmarkResult = engine.unbookmarkMessage('m1');
+
+    // Then
+    expect(bookmarkResult).toEqual({ success: true, isBookmarked: true });
+    expect(engine.getBookmarkedMessages()).toEqual([{ messageId: 'm1' }]);
+    expect(engine.isMessageBookmarked('m1')).toBe(true);
+    expect(unbookmarkResult).toEqual({ success: true, isBookmarked: false });
+    const toolMessage = engine.chats[0].messages.find((msg) => msg.id === toolMsgId);
+    expect(toolMessage).toMatchObject({ type: 'tool_event', status: 'success' });
+    expect(toolMessage.outputDetail.endsWith('…')).toBe(true);
+  });
+
+  it('test_when_ephemeral_ai_state_changes_should_serialize_and_recall_latest_message', () => {
+    // Given
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        participants: ['user-me', 'ai-1'],
+        messages: [
+          { id: 'm1', senderId: 'ai-1', content: 'older', timestamp: '2026-02-23T00:00:00.000Z', readBy: [] },
+          { id: 'm2', senderId: 'ai-1', content: 'latest', timestamp: '2026-02-23T00:01:00.000Z', readBy: [] },
+        ],
+      },
+    ]);
+
+    // When
+    engine._handleAITyping('chat-1', 'ai-1', true);
+    engine._handleAIEditing('chat-1', 'ai-1', true);
+    engine._handleAIRecall('chat-1', 'ai-1');
+    const state = engine.getState();
+    engine._handleAITyping('chat-1', 'ai-1', false);
+    engine._handleAIEditing('chat-1', 'ai-1', false);
+
+    // Then
+    expect(state.typingIndicators['chat-1']).toEqual(['ai-1']);
+    expect(state.editingIndicators['chat-1']).toEqual(['ai-1']);
+    expect(engine.chats[0].messages.find((message) => message.id === 'm2')).toMatchObject({ recalled: true });
+    expect(engine.typingIndicators['chat-1']).toBeUndefined();
+    expect(engine.editingIndicators['chat-1']).toBeUndefined();
+  });
+
+  it('test_when_persona_registration_and_callbacks_change_should_update_runtime_state', () => {
+    // Given
+    const engine = createEngineWithChats([]);
+    const listener = vi.fn();
+    const onUserMessage = vi.fn();
+    const unsubscribe = engine.subscribe(listener, { emitCurrent: true });
+
+    // When
+    engine.addPersona({ id: 'agent-new', name: 'Nova' });
+    engine.addPersona({ id: 'agent-new', name: 'Nova Prime' });
+    const unregister = engine.registerOnUserMessage(onUserMessage);
+    engine.setContextProvider(() => ({ intimacyLevel: 3 }));
+    unregister();
+    engine.removePersona('agent-new');
+    unsubscribe();
+
+    // Then
+    expect(listener).toHaveBeenCalled();
+    expect(engine.personas.find((persona) => persona.id === 'agent-new')).toBeUndefined();
+    expect(engine._onUserMessageCallbacks).toEqual([]);
+    expect(engine._contextProvider?.()).toEqual({ intimacyLevel: 3 });
   });
 });

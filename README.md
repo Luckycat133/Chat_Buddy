@@ -184,6 +184,8 @@ npm run build
 
 > **Supported Providers**: DeepSeek, Perplexity, OpenAI, and other OpenAI-compatible APIs.
 
+> **Security Note**: If you enter credentials in the in-app Settings panel, the API key is kept only for the current browser session. Saved provider profiles keep the base URL and model, but not the key.
+
 ---
 
 ## Usage Guide
@@ -206,6 +208,7 @@ npm run build
 
 - **Language**: Switch between English and Chinese
 - **Theme**: Macaroon Orange (default)
+- **API Configuration**: Saved provider settings keep the endpoint and model; API keys entered in Settings are session-only
 - **Help**: View FAQ and usage tips
 - **About**: Check version and changelog
 

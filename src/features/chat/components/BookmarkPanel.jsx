@@ -4,9 +4,15 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { getBookmarks, removeBookmark } from '../services/BookmarkService';
 import { formatTimeSeparator } from '../../../utils/formatTime';
 
-export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, personas }) {
+export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, onBookmarkRemoved, personas }) {
     const { t, language } = useLanguage();
     const [bookmarks, setBookmarks] = React.useState([]);
+
+    const handleBookmarkKeyDown = (event, bookmark) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        handleNavigate(bookmark);
+    };
 
     // Load bookmarks when panel opens
     React.useEffect(() => {
@@ -19,6 +25,7 @@ export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, pe
         e.stopPropagation();
         removeBookmark(messageId);
         setBookmarks(getBookmarks());
+        onBookmarkRemoved?.(messageId);
     };
 
     const handleNavigate = (bookmark) => {
@@ -43,9 +50,11 @@ export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, pe
     return (
         <div className="fixed inset-0 z-50 flex justify-end">
             {/* Backdrop */}
-            <div
+            <button
+                type="button"
                 className="absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity"
                 onClick={onClose}
+                aria-label={t('close') || 'Close'}
             />
 
             {/* Panel */}
@@ -93,6 +102,9 @@ export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, pe
                                 <div
                                     key={bookmark.messageId}
                                     onClick={() => handleNavigate(bookmark)}
+                                    onKeyDown={(event) => handleBookmarkKeyDown(event, bookmark)}
+                                    role="button"
+                                    tabIndex={0}
                                     className="group p-4 bg-[var(--color-bg-app)] rounded-xl border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 hover:shadow-md transition-all cursor-pointer"
                                 >
                                     {/* Chat name and time */}
@@ -123,6 +135,7 @@ export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, pe
                                             <ArrowRight size={12} />
                                         </span>
                                         <button
+                                            type="button"
                                             onClick={(e) => handleRemove(e, bookmark.messageId)}
                                             className="text-xs text-[var(--color-text-muted)] hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50"
                                         >

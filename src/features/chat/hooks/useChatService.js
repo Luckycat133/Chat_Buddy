@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { chatEngine } from '../../../core/chat/ChatEngine';
 import { getAllPersonas } from '../../../data/personas';
 import { memoryStore } from '../../../core/memory/MemoryStore'; // T12: Decay on startup
@@ -22,23 +22,22 @@ export function useChatService() {
     });
 
     // Use ALL personas for the full list
-    const allPersonas = getAllPersonas();
+    const allPersonas = useMemo(() => getAllPersonas(), []);
 
     useEffect(() => {
         // Initialize engine with ALL personas (includes Task Agents)
         chatEngine.init(allPersonas);
 
-        // T12: Apply memory decay on startup (fire-and-forget)
-        memoryStore.applyDecay().catch(() => { });
-
         // Subscribe to updates
         const unsubscribe = chatEngine.subscribe((newState) => {
             setState(newState);
-        });
+        }, { emitCurrent: true });
+
+        // T12: Apply memory decay on startup (fire-and-forget)
+        memoryStore.applyDecay().catch(() => { });
 
         return () => unsubscribe();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Only run once on mount
+    }, [allPersonas]); // Only run once on mount (allPersonas is memoized)
 
     return {
         chats: state.chats,

@@ -56,14 +56,18 @@ function HighlightedMentions({ content, participants, currentUserId, onMentionCl
 
     // Split content by mentions and render with highlighting
     const parts = content.split(mentionPattern);
+    let cursor = 0;
 
-    return parts.map((part, index) => {
+    return parts.map((part, partIndex) => {
+        const key = `mention-${cursor}-${part}`;
+        cursor += part.length;
         // Check if this part is a mention (odd indices in the split result)
-        if (index % 2 === 1) {
+        if (partIndex % 2 === 1) {
             const isCurrentUser = participants?.find(p => p.name === part)?.id === currentUserId;
             return (
-                <span
-                    key={index}
+                <button
+                    key={key}
+                    type="button"
                     onClick={(e) => handleMentionClick(e, part)}
                     className={cn(
                         'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-medium cursor-pointer',
@@ -75,7 +79,7 @@ function HighlightedMentions({ content, participants, currentUserId, onMentionCl
                     title={isCurrentUser ? t('mention_you') : `@${part}`}
                 >
                     @{part}
-                </span>
+                </button>
             );
         }
         return part;
@@ -137,14 +141,18 @@ export default function MessageTimeline({
     editingIndicators, // Phase 3: Editing state
     onContextMenu,
     onVotePoll,
-    onMentionClick // T07: Mention click handler
+    onMentionClick, // T07: Mention click handler
+    focusMessageId,
+    onFocusHandled
 }) {
     const { t, language } = useLanguage();
     const { bubbleStyle } = useTheme();
     const messagesEndRef = useRef(null);
+    const messageRefs = useRef(new Map());
 
     // T07: Lightbox state for images
     const [lightboxImage, setLightboxImage] = useState(null);
+    const [highlightedMessageId, setHighlightedMessageId] = useState(null);
     const mentionParticipants = chat?.participants?.map((pid) => (
         pid === 'user-me' ? currentUser : personas?.find((p) => p.id === pid)
     )).filter(Boolean) || [];
@@ -152,6 +160,45 @@ export default function MessageTimeline({
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
     }, [chat?.messages]);
+
+    const setMessageRef = useCallback((messageId, node) => {
+        if (!messageId) return;
+        if (node) {
+            messageRefs.current.set(messageId, node);
+            return;
+        }
+        messageRefs.current.delete(messageId);
+    }, []);
+
+    useEffect(() => {
+        if (!focusMessageId) return;
+
+        let rafId = null;
+        let timeoutId = null;
+
+        const focusTargetMessage = () => {
+            const targetNode = messageRefs.current.get(focusMessageId);
+            if (!targetNode) return false;
+
+            targetNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setHighlightedMessageId(focusMessageId);
+            onFocusHandled?.(focusMessageId);
+
+            timeoutId = window.setTimeout(() => {
+                setHighlightedMessageId((prev) => (prev === focusMessageId ? null : prev));
+            }, 2200);
+            return true;
+        };
+
+        if (!focusTargetMessage()) {
+            rafId = window.requestAnimationFrame(focusTargetMessage);
+        }
+
+        return () => {
+            if (rafId !== null) window.cancelAnimationFrame(rafId);
+            if (timeoutId !== null) window.clearTimeout(timeoutId);
+        };
+    }, [focusMessageId, onFocusHandled]);
 
 
     const getSenderName = (senderId) => {
@@ -187,6 +234,9 @@ export default function MessageTimeline({
                 const isMe = msg.senderId === 'user-me';
                 const sender = isMe ? currentUser : personas.find(p => p.id === msg.senderId);
                 const senderName = getSenderName(msg.senderId);
+                const prevMsg = index > 0 ? chat.messages[index - 1] : null;
+                const showTimeSeparator = shouldShowTimeSeparator(prevMsg?.timestamp, msg.timestamp, 5);
+                const isHighlighted = highlightedMessageId === msg.id;
 
                 // Phase 3: Handle recalled messages
                 if (msg.recalled) {
@@ -199,7 +249,14 @@ export default function MessageTimeline({
                                     </span>
                                 </div>
                             )}
-                            <div className="flex justify-center my-2">
+                            <div
+                                ref={(node) => setMessageRef(msg.id, node)}
+                                data-message-id={msg.id}
+                                className={cn(
+                                    "flex justify-center my-2 rounded-lg px-2 py-1 transition-all",
+                                    isHighlighted && "ring-2 ring-[var(--color-primary)]/70 bg-[var(--color-primary)]/10"
+                                )}
+                            >
                                 <span className="text-xs text-[var(--color-text-muted)] italic">
                                     {senderName} {t('message_recalled') || 'recalled a message'}
                                 </span>
@@ -276,8 +333,6 @@ export default function MessageTimeline({
                     content = content.replace(reactMatch[0], '').trim();
                 }
 
-                const prevMsg = index > 0 ? chat.messages[index - 1] : null;
-                const showTimeSeparator = shouldShowTimeSeparator(prevMsg?.timestamp, msg.timestamp, 5);
                 const quotedData = getQuotedMessageData(msg.quotedMessageId);
 
                 return (
@@ -291,10 +346,13 @@ export default function MessageTimeline({
                         )}
 
                         <div
+                            ref={(node) => setMessageRef(msg.id, node)}
+                            data-message-id={msg.id}
                             className={cn(
-                                "flex mb-4 group/msg",
+                                "flex mb-4 group/msg rounded-2xl transition-all",
                                 isMe ? "justify-end" : "justify-start",
-                                "bubble-enter"
+                                "bubble-enter",
+                                isHighlighted && "ring-2 ring-[var(--color-primary)]/70 bg-[var(--color-primary)]/10 px-1 py-1"
                             )}
                             onContextMenu={(e) => onContextMenu(e, msg)}
                         >
@@ -412,11 +470,14 @@ export default function MessageTimeline({
                                                         p: ({ children }) => {
                                                             // Process children to highlight mentions
                                                             const processChildren = (childList) => {
-                                                                return React.Children.map(childList, (child, idx) => {
+                                                                let textCursor = 0;
+                                                                return React.Children.toArray(childList).map((child) => {
                                                                     if (typeof child === 'string') {
+                                                                        const key = `text-${textCursor}-${child.length}`;
+                                                                        textCursor += child.length;
                                                                         return (
                                                                             <HighlightedMentions
-                                                                                key={idx}
+                                                                                key={key}
                                                                                 content={child}
                                                                                 participants={mentionParticipants}
                                                                                 currentUserId={currentUser?.id}
@@ -491,8 +552,8 @@ export default function MessageTimeline({
                                     </div>
 
                                     {/* Generated Files */}
-                                    {msg.generatedFiles?.map((file, idx) => (
-                                        <div key={idx} className="mt-2">
+                                    {msg.generatedFiles?.map((file) => (
+                                        <div key={`${msg.id}-${file.filename}-${file.content?.length || 0}`} className="mt-2">
                                             <GeneratedFileMessage
                                                 fileData={file}
                                                 onDownload={() => downloadFile(file.filename, file.content)}

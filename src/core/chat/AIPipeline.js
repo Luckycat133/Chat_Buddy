@@ -12,8 +12,11 @@ import { buildMemoryBlock, buildGroupContextBlock } from '../memory/MemoryInject
  * 3. Response Generation (Typing delays, Multi-message parsing)
  */
 export class AIPipeline {
-    constructor(callbacks) {
+    constructor(callbacks, options = {}) {
         this.callbacks = callbacks || {};
+        this.options = options;
+        this._random = options.random || Math.random;
+        this._enableRecallSimulation = options.enableRecallSimulation ?? true;
         // callbacks: { onTyping, onMessage, onLog }
     }
 
@@ -118,7 +121,8 @@ export class AIPipeline {
             // T12: Fire-and-forget memory extraction when context is compressed
             if (compressed) {
                 const oldMessages = chat.messages.slice(0, -8);
-                extractMemoriesAsync(oldMessages, ai.id, ai.name).catch(() => { });
+                const extraction = extractMemoriesAsync(oldMessages, ai.id, ai.name);
+                if (extraction?.catch) extraction.catch(() => { });
             }
 
             // 4. Generate System Prompt (T06: affinity/mood, T12: long-term memory injection)
@@ -172,37 +176,32 @@ export class AIPipeline {
         const memReqMatch = !toolMatch && response.match(/\[MEMORY_REQUEST:\s*target=([^,\]]+),\s*topic=([^\]]+)\]/);
 
         if (nativeToolCalls && nativeToolCalls.length > 0) {
-            const firstCall = nativeToolCalls[0];
-            this.log(`[Native Tool Call] ${firstCall.name}`, firstCall.args);
+            const toolHistory = [];
 
-            let toolMsgId = null;
-            try {
-                toolMsgId = this.callbacks.onToolStart?.(chatId, ai.id, firstCall.name, firstCall.args) ?? null;
-                const toolOutput = await executeTool(firstCall.name, firstCall.args, {
-                    personas,
-                    requesterId: ai.id,
-                    delegationDepth: depth
-                });
-                this.callbacks.onToolEnd?.(chatId, toolMsgId, toolOutput, null);
+            for (const toolCall of nativeToolCalls) {
+                this.log(`[Native Tool Call] ${toolCall.name}`, toolCall.args);
 
-                const newHistory = [
-                    ...initialHistory,
-                    { role: 'assistant', content: `[TOOL_CALL: ${firstCall.name} ${JSON.stringify(firstCall.args)}]` },
-                    { role: 'user', content: `[TOOL_RESULT for ${firstCall.name}]\n${toolOutput}\n\n[Please continue based on this result]` }
-                ];
-
-                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
-            } catch (e) {
-                this.log('[Native Tool Error]', e);
-                this.callbacks.onToolEnd?.(chatId, toolMsgId, null, e.message);
-
-                const newHistory = [
-                    ...initialHistory,
-                    { role: 'assistant', content: `[TOOL_CALL: ${firstCall.name} ${JSON.stringify(firstCall.args)}]` },
-                    { role: 'user', content: `[TOOL_ERROR]: ${e.message}` }
-                ];
-                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
+                let toolMsgId = null;
+                toolHistory.push({ role: 'assistant', content: `[TOOL_CALL: ${toolCall.name} ${JSON.stringify(toolCall.args)}]` });
+                try {
+                    toolMsgId = this.callbacks.onToolStart?.(chatId, ai.id, toolCall.name, toolCall.args) ?? null;
+                    const toolOutput = await executeTool(toolCall.name, toolCall.args, {
+                        personas,
+                        requesterId: ai.id,
+                        delegationDepth: depth
+                    });
+                    this.callbacks.onToolEnd?.(chatId, toolMsgId, toolOutput, null);
+                    toolHistory.push({ role: 'user', content: `[TOOL_RESULT for ${toolCall.name}]\n${toolOutput}\n\n[Please continue based on this result]` });
+                } catch (e) {
+                    const errorMessage = e?.message || String(e);
+                    this.log('[Native Tool Error]', e);
+                    this.callbacks.onToolEnd?.(chatId, toolMsgId, null, errorMessage);
+                    toolHistory.push({ role: 'user', content: `[TOOL_ERROR]: ${errorMessage}` });
+                }
             }
+
+            const newHistory = [...initialHistory, ...toolHistory];
+            await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
         } else if (toolMatch) {
             // --- Standard Tool Execution Path ---
             const [, toolName, argsStr] = toolMatch;
@@ -283,15 +282,26 @@ export class AIPipeline {
             return;
         }
 
-        // Phase 3: Simulate message recall (5% probability)
-        const shouldSimulateRecall = Math.random() < 0.05;
+        // Parse SCHEDULE first so control tags always take effect even when
+        // optional conversational polish features (like recall simulation) run.
+        const scheduleMatch = response.match(/\[SCHEDULE:(\d+)\]/);
+        let cleanResponse = response;
+        if (scheduleMatch) {
+            const minutes = parseInt(scheduleMatch[1], 10);
+            cleanResponse = cleanResponse.replace(scheduleMatch[0], '').trim();
+            this.callbacks.onSchedule?.(chatId, ai, minutes);
+        }
 
-        if (shouldSimulateRecall && !response.includes('[SILENCE]')) {
+        // Parse MULTI before optional recall so protocol markers remain deterministic.
+        const multiMatch = cleanResponse.match(/\[(?:MULTI|Multi|multi):(.+?)\]/i);
+        const shouldSimulateRecall = !multiMatch && this._shouldSimulateRecall(cleanResponse);
+
+        if (shouldSimulateRecall) {
             // Send initial message
-            await this._simulateTypingAndSend(chatId, ai, response);
+            await this._simulateTypingAndSend(chatId, ai, cleanResponse);
 
             // Wait 2-5 seconds
-            await this._wait(2000 + Math.random() * 3000);
+            await this._wait(2000 + this._random() * 3000);
 
             // Recall the last message
             this.callbacks.onRecall?.(chatId, ai.id);
@@ -299,7 +309,7 @@ export class AIPipeline {
             // Wait then send revised version
             await this._wait(1500);
             const revisedPrompt = `You just sent this message but decided to revise it:
-${response}
+${cleanResponse}
 
 Please send a revised/improved version. Be natural and conversational.`;
 
@@ -320,18 +330,6 @@ Please send a revised/improved version. Be natural and conversational.`;
             return;
         }
 
-        // Parse SCHEDULE
-        const scheduleMatch = response.match(/\[SCHEDULE:(\d+)\]/);
-        let cleanResponse = response;
-        if (scheduleMatch) {
-            const minutes = parseInt(scheduleMatch[1]);
-            cleanResponse = response.replace(scheduleMatch[0], '').trim();
-            this.callbacks.onSchedule?.(chatId, ai, minutes);
-        }
-
-        // Parse MULTI
-        const multiMatch = cleanResponse.match(/\[(?:MULTI|Multi|multi):(.+?)\]/i);
-
         if (multiMatch) {
             const parts = multiMatch[1].split('|').map(m => m.trim()).filter(Boolean);
             cleanResponse = cleanResponse.replace(multiMatch[0], '').trim();
@@ -340,7 +338,7 @@ Please send a revised/improved version. Be natural and conversational.`;
             for (let i = 0; i < parts.length; i++) {
                 if (i > 0) {
                     this.callbacks.onTyping?.(chatId, ai.id, true);
-                    await this._wait(800 + Math.random() * 1000);
+                    await this._wait(800 + this._random() * 1000);
                 }
                 await this._simulateTypingAndSend(chatId, ai, parts[i]);
             }
@@ -368,6 +366,12 @@ Please send a revised/improved version. Be natural and conversational.`;
 
     _wait(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    _shouldSimulateRecall(response) {
+        if (!this._enableRecallSimulation || typeof response !== 'string') return false;
+        if (!response.trim()) return false;
+        return this._random() < 0.05;
     }
 
     // --- Helpers Copied/Refactored from Context ---

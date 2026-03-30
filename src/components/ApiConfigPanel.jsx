@@ -111,7 +111,6 @@ export default function ApiConfigPanel({ onClose }) {
     if (!profileName.trim()) return;
     const updated = saveProfile(profileName.trim(), {
       baseUrl: config.baseUrl,
-      apiKey: config.apiKey,
       model: config.model,
       temperature: config.temperature,
     });
@@ -132,17 +131,19 @@ export default function ApiConfigPanel({ onClose }) {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+        aria-label={t("close") || "Close"}
+      />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="api-config-title"
-        className="bg-[var(--color-bg-white)] rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl animate-scale-in"
-        onClick={(e) => e.stopPropagation()}
+        className="relative z-10 bg-[var(--color-bg-white)] rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl animate-scale-in"
       >
         {/* Header */}
         <div className="sticky top-0 z-10 bg-[var(--color-bg-white)] flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
@@ -188,6 +189,9 @@ export default function ApiConfigPanel({ onClose }) {
               placeholder={t("api_key_placeholder")}
               className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-app)] border border-[var(--color-border)] text-[var(--color-text-main)] text-sm outline-none focus:border-[var(--color-primary)] transition-colors placeholder:text-[var(--color-text-light)]"
             />
+            <p className="text-xs text-[var(--color-text-muted)] mt-1.5">
+              {t("api_key_session_notice")}
+            </p>
           </FieldGroup>
 
           {/* Model */}
@@ -333,6 +337,9 @@ export default function ApiConfigPanel({ onClose }) {
                 <Plus size={16} className="text-[var(--color-primary)]" />
               </button>
             </div>
+            <p className="text-xs text-[var(--color-text-muted)] mb-3">
+              {t("provider_profiles_security_notice")}
+            </p>
 
             {showProfileInput && (
               <div className="flex gap-2 mb-3">
@@ -343,7 +350,6 @@ export default function ApiConfigPanel({ onClose }) {
                   placeholder={t("profile_name_placeholder")}
                   className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-app)] border border-[var(--color-border)] text-[var(--color-text-main)] text-sm outline-none focus:border-[var(--color-primary)] transition-colors placeholder:text-[var(--color-text-light)] flex-1"
                   onKeyDown={(e) => e.key === "Enter" && handleSaveProfile()}
-                  autoFocus
                 />
                 <button
                   onClick={handleSaveProfile}

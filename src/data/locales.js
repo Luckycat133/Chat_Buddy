@@ -516,6 +516,7 @@ export const LOCALES = {
         api_base_url_placeholder: 'https://api.openai.com/v1',
         api_key: 'API Key',
         api_key_placeholder: 'sk-...',
+        api_key_session_notice: 'Saved only for the current browser session. It is not stored in persistent settings or provider profiles.',
         model_name: 'Model Name',
         model_name_placeholder: 'gpt-4o / deepseek-chat / sonar-pro',
         temperature: 'Temperature',
@@ -531,6 +532,7 @@ export const LOCALES = {
         missing_fields: 'Please fill in all required fields',
         // Profiles
         provider_profiles: 'Provider Profiles',
+        provider_profiles_security_notice: 'Profiles store the provider URL and model only. Re-enter the API key for each session when needed.',
         save_as_profile: 'Save as Profile',
         profile_name: 'Profile Name',
         profile_name_placeholder: 'e.g. OpenAI, DeepSeek',
@@ -1501,6 +1503,7 @@ export const LOCALES = {
         api_base_url_placeholder: 'https://api.openai.com/v1',
         api_key: 'API 密钥',
         api_key_placeholder: 'sk-...',
+        api_key_session_notice: '仅在当前浏览器会话中保存，不会写入持久设置或服务方案。',
         model_name: '模型名称',
         model_name_placeholder: 'gpt-4o / deepseek-chat / sonar-pro',
         temperature: '温度',
@@ -1516,6 +1519,7 @@ export const LOCALES = {
         missing_fields: '请填写所有必填项',
         // 配置方案
         provider_profiles: '服务方案',
+        provider_profiles_security_notice: '服务方案只保存地址和模型，需要时请在每个会话中重新输入 API 密钥。',
         save_as_profile: '保存为方案',
         profile_name: '方案名称',
         profile_name_placeholder: '例如：OpenAI、DeepSeek',

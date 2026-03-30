@@ -66,12 +66,14 @@ class StorageService {
      */
     clear() {
         try {
-            // Only clear keys with our prefix to be safe citizens
+            // Only clear app keys to be safe citizens
             Object.keys(this.storage).forEach(k => {
-                if (k.startsWith(this.prefix)) {
+                if (k.startsWith(this.prefix) || k.startsWith('chat-buddy-')) {
                     this.storage.removeItem(k);
                 }
             });
+            // Explicitly clear known legacy canonical key.
+            this.storage.removeItem('chat-buddy-chats');
         } catch (error) {
             console.error('[StorageService] Error clearing storage:', error);
         }
