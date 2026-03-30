@@ -6,6 +6,7 @@
 import React, { useMemo } from 'react';
 import { X, GraduationCap, Download, TrendingUp, CheckCircle, Circle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { LOCALES } from '../data/locales';
 import { cn } from '../utils/cn';
 
 const PROGRESS_KEY = 'chat-buddy-sensei-progress';
@@ -44,19 +45,20 @@ function StatCard({ icon, label, value, color }) {
 }
 
 function exportReport(progress, language) {
+    const l = LOCALES[language] || LOCALES.en;
     const lines = [
-        language === 'zh' ? '📚 Sensei 学习报告' : '📚 Sensei Learning Report',
+        l.learning_export_title,
         `${new Date().toLocaleDateString()}`,
         '',
-        language === 'zh' ? `学习会话数: ${progress.sessions}` : `Sessions: ${progress.sessions}`,
-        language === 'zh' ? `总消息数: ${progress.totalMessages}` : `Total Messages: ${progress.totalMessages}`,
-        language === 'zh' ? `已掌握主题数: ${progress.topics.length}` : `Topics Covered: ${progress.topics.length}`,
+        `${l.learning_export_sessions}: ${progress.sessions}`,
+        `${l.learning_export_messages}: ${progress.totalMessages}`,
+        `${l.learning_export_topics_count}: ${progress.topics.length}`,
         '',
-        language === 'zh' ? '已学习主题:' : 'Topics Studied:',
-        ...progress.topics.map(t => `  • ${t.name} (${language === 'zh' ? '精通度' : 'Mastery'}: ${t.mastery || 0}%)`),
+        `${l.learning_export_topics_studied}:`,
+        ...progress.topics.map(t => `  \u2022 ${t.name} (${l.learning_export_mastery}: ${t.mastery || 0}%)`),
         '',
-        language === 'zh' ? '测验记录:' : 'Quiz Records:',
-        ...progress.quizzes.map(q => `  • ${q.topic}: ${q.score}/${q.total} (${q.date})`),
+        `${l.learning_export_quiz_records}:`,
+        ...progress.quizzes.map(q => `  \u2022 ${q.topic}: ${q.score}/${q.total} (${q.date})`),
     ];
     const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
