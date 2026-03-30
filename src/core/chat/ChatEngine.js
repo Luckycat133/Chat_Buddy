@@ -342,9 +342,24 @@ export class ChatEngine {
     /**
      * Subscribe to state changes
      */
-    subscribe(callback) {
+    subscribe(callback, options = {}) {
         this.listeners.add(callback);
+        if (options.emitCurrent) {
+            callback(this.getState());
+        }
         return () => this.listeners.delete(callback);
+    }
+
+    getState() {
+        return {
+            chats: this.chats,
+            typingIndicators: { ...this.typingIndicators },
+            editingIndicators: Object.fromEntries(
+                Object.entries(this.editingIndicators).map(([k, v]) => [k, [...v]])
+            ),
+            presenceMap: { ...this.presenceMap },
+            moodMap: { ...this.moodMap }
+        };
     }
 
     /**
@@ -393,15 +408,7 @@ export class ChatEngine {
 
     _notify() {
         // Emit a snapshot of the current state
-        const state = {
-            chats: this.chats,
-            typingIndicators: { ...this.typingIndicators },
-            editingIndicators: Object.fromEntries(
-                Object.entries(this.editingIndicators).map(([k, v]) => [k, [...v]])
-            ),
-            presenceMap: { ...this.presenceMap },
-            moodMap: { ...this.moodMap }
-        };
+        const state = this.getState();
         this.listeners.forEach(cb => cb(state));
     }
 
@@ -563,6 +570,7 @@ export class ChatEngine {
         const nextChats = this.chats.filter(c => c.id !== chatId);
         if (nextChats.length === this.chats.length) return;
 
+        this._clearScheduledMessagesForChat(chatId);
         this.chats = nextChats;
         delete this.typingIndicators[chatId];
         this.save();
@@ -572,6 +580,7 @@ export class ChatEngine {
         const chatIndex = this.chats.findIndex(c => c.id === chatId);
         if (chatIndex === -1) return;
 
+        this._clearScheduledMessagesForChat(chatId);
         const chat = this.chats[chatIndex];
         this.chats[chatIndex] = {
             ...chat,
@@ -888,6 +897,7 @@ export class ChatEngine {
             if (chat) {
                 // Determine if we should still send (check last msg time)
                 const lastMsg = chat.messages[chat.messages.length - 1];
+                if (!lastMsg?.timestamp) return;
                 const timeDiff = Date.now() - new Date(lastMsg.timestamp).getTime();
                 if (timeDiff > parsedMinutes * 60 * 1000 * 0.8) {
                     this.aiPipeline.processTurn(chat, this.personas, ai);
@@ -896,6 +906,15 @@ export class ChatEngine {
         }, parsedMinutes * 60 * 1000);
 
         this._scheduledMessages.set(scheduleKey, timeoutId);
+    }
+
+    _clearScheduledMessagesForChat(chatId) {
+        const prefix = `${chatId}:`;
+        for (const [key, timeoutId] of this._scheduledMessages.entries()) {
+            if (!key.startsWith(prefix)) continue;
+            clearTimeout(timeoutId);
+            this._scheduledMessages.delete(key);
+        }
     }
 
     _triggerAIResponse(chat) {

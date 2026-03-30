@@ -18,7 +18,7 @@ import DailyTaskPanel from '../components/DailyTaskPanel';
 import { useOnboarding } from '../hooks/useOnboarding';
 import AccentColorPicker from '../components/AccentColorPicker';
 import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
-import { exportAllData, importData } from '../config/apiConfig';
+import { clearAllAppData, exportAllData, importData } from '../config/apiConfig';
 import CharacterMemoryPanel from '../components/CharacterMemoryPanel';
 import { INITIAL_PERSONAS } from '../data/personas';
 
@@ -56,8 +56,18 @@ export default function Settings() {
     const fileInputRef = React.useRef(null);
     const { resetProfile } = useUser();
 
-    const handleExport = () => {
-        exportAllData();
+    const handleActivationKey = (event, action) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        action();
+    };
+
+    const handleExport = async () => {
+        try {
+            await exportAllData();
+        } catch (err) {
+            setImportMsg({ type: 'error', text: t('import_failed', { error: err.message }) });
+        }
     };
 
     const handleImport = async (e) => {
@@ -74,39 +84,25 @@ export default function Settings() {
 
     const handleLogout = () => {
         if (window.confirm(t('confirm_logout'))) {
-            // Clear all localStorage data
-            Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('chat-buddy:') || key.startsWith('chat-buddy-')) {
-                    localStorage.removeItem(key);
-                }
-            });
-            // Reset user profile
-            resetProfile();
-            // Show success message
-            alert(t('logout_success'));
-            // Navigate to home
-            navigate('/');
-            // Reload page to reset all state
-            window.location.reload();
+            clearAllAppData()
+                .finally(() => {
+                    resetProfile();
+                    alert(t('logout_success'));
+                    navigate('/');
+                    window.location.reload();
+                });
         }
     };
 
     const handleClearAllData = () => {
         if (window.confirm(t('privacy_clear_confirm'))) {
-            // Clear all localStorage data
-            Object.keys(localStorage).forEach(key => {
-                if (key.startsWith('chat-buddy:') || key.startsWith('chat-buddy-')) {
-                    localStorage.removeItem(key);
-                }
-            });
-            // Reset user profile
-            resetProfile();
-            // Close modal
-            setShowPrivacyModal(false);
-            // Show success message
-            alert(t('data_cleared'));
-            // Reload page
-            window.location.reload();
+            clearAllAppData()
+                .finally(() => {
+                    resetProfile();
+                    setShowPrivacyModal(false);
+                    alert(t('data_cleared'));
+                    window.location.reload();
+                });
         }
     };
 
@@ -142,6 +138,9 @@ export default function Settings() {
                             <div
                                 className="glass-crystal profile-card rounded-[var(--radius-2xl)] p-6 shadow-floating"
                                 onClick={() => navigate('/profile')}
+                                onKeyDown={(event) => handleActivationKey(event, () => navigate('/profile'))}
+                                role="button"
+                                tabIndex={0}
                             >
                                 {/* Active Status Ring Animation */}
                                 <div className="absolute top-4 right-4 status-dot animate-pulse" />
@@ -166,24 +165,48 @@ export default function Settings() {
                                     </p>
 
                                     <div className="grid grid-cols-3 gap-2 w-full">
-                                        <div className="stat-card"
-                                            onClick={(e) => { e.stopPropagation(); setShowCheckIn(true); }}>
+                                        <div
+                                            className="stat-card"
+                                            onClick={(e) => { e.stopPropagation(); setShowCheckIn(true); }}
+                                            onKeyDown={(event) => {
+                                                event.stopPropagation();
+                                                handleActivationKey(event, () => setShowCheckIn(true));
+                                            }}
+                                            role="button"
+                                            tabIndex={0}
+                                        >
                                             <div className="stat-card-label">{t('streak_stat')}</div>
                                             <div className="stat-card-value stat-value-streak">
                                                 <Calendar size={14} />
                                                 {streakDays}
                                             </div>
                                         </div>
-                                        <div className="stat-card"
-                                            onClick={(e) => { e.stopPropagation(); navigate('/achievements'); }}>
+                                        <div
+                                            className="stat-card"
+                                            onClick={(e) => { e.stopPropagation(); navigate('/achievements'); }}
+                                            onKeyDown={(event) => {
+                                                event.stopPropagation();
+                                                handleActivationKey(event, () => navigate('/achievements'));
+                                            }}
+                                            role="button"
+                                            tabIndex={0}
+                                        >
                                             <div className="stat-card-label">{t('total_points')}</div>
                                             <div className="stat-card-value stat-value-points">
                                                 <Trophy size={14} />
                                                 {points}
                                             </div>
                                         </div>
-                                        <div className="stat-card"
-                                            onClick={(e) => { e.stopPropagation(); setShowDailyTasks(true); }}>
+                                        <div
+                                            className="stat-card"
+                                            onClick={(e) => { e.stopPropagation(); setShowDailyTasks(true); }}
+                                            onKeyDown={(event) => {
+                                                event.stopPropagation();
+                                                handleActivationKey(event, () => setShowDailyTasks(true));
+                                            }}
+                                            role="button"
+                                            tabIndex={0}
+                                        >
                                             <div className="stat-card-label">{t('daily_tasks')}</div>
                                             <div className="stat-card-value stat-value-streak">
                                                 <ClipboardList size={14} />
@@ -438,7 +461,15 @@ export default function Settings() {
             {/* Modals */}
             {showCheckIn && <CheckInPanel onClose={() => setShowCheckIn(false)} />}
             {showDailyTasks && <DailyTaskPanel onClose={() => setShowDailyTasks(false)} />}
-            {showSearch && <MessageSearchPanel onClose={() => setShowSearch(false)} />}
+            {showSearch && (
+                <MessageSearchPanel
+                    onClose={() => setShowSearch(false)}
+                    onSelectMessage={(chatId, messageId) => {
+                        setShowSearch(false);
+                        navigate(`/chat/${chatId}`, { state: { targetMessageId: messageId } });
+                    }}
+                />
+            )}
             {showApiConfig && (
                 <Suspense fallback={null}>
                     <ApiConfigPanel onClose={() => setShowApiConfig(false)} />
@@ -478,7 +509,12 @@ export default function Settings() {
                     aria-modal="true"
                     aria-labelledby="memory-selector-title"
                 >
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowMemorySelector(false)} />
+                      <button
+                          type="button"
+                          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                          onClick={() => setShowMemorySelector(false)}
+                          aria-label={t('close') || 'Close'}
+                      />
                     <div
                         className="relative w-full max-w-sm glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-5"
                         role="document"
@@ -527,7 +563,12 @@ export default function Settings() {
                     aria-modal="true"
                     aria-labelledby="privacy-modal-title"
                 >
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPrivacyModal(false)} />
+                      <button
+                          type="button"
+                          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                          onClick={() => setShowPrivacyModal(false)}
+                          aria-label={t('close') || 'Close'}
+                      />
                     <div className="relative w-full max-w-md glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-6" role="document">
                         <div className="flex items-center justify-between mb-6">
                             <h3 id="privacy-modal-title" className="font-semibold text-[var(--color-text-primary)] flex items-center gap-2">

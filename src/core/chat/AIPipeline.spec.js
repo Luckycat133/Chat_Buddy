@@ -33,14 +33,22 @@ vi.mock("../memory/MemoryInjector", () => ({
 
 import { AIPipeline } from "./AIPipeline";
 
-function createPipeline() {
+function createPipeline(options = {}) {
   const callbacks = {
     onTyping: vi.fn(),
+    onEditing: vi.fn(),
     onMessage: vi.fn(),
     onSchedule: vi.fn(),
     onLog: vi.fn(),
+    onRecall: vi.fn(),
+    onToolStart: vi.fn(() => 'tool-msg-1'),
+    onToolEnd: vi.fn(),
   };
-  const pipeline = new AIPipeline(callbacks);
+  const pipeline = new AIPipeline(callbacks, {
+    enableRecallSimulation: false,
+    random: () => 0.99,
+    ...options,
+  });
   pipeline._wait = vi.fn().mockResolvedValue(undefined);
   return { pipeline, callbacks };
 }
@@ -129,6 +137,102 @@ describe("AIPipeline", () => {
     expect(callbacks.onMessage).toHaveBeenCalledWith(
       "chat-1",
       "final answer",
+      "ai-1",
+    );
+  });
+
+  it("test_when_native_tool_response_contains_multiple_calls_should_execute_each_call", async () => {
+    // Given
+    const { pipeline, callbacks } = createPipeline();
+    const nativePayload = JSON.stringify([
+      {
+        function: {
+          name: "execute_math",
+          arguments: JSON.stringify({ expression: "1+1" }),
+        },
+      },
+      {
+        function: {
+          name: "execute_math",
+          arguments: JSON.stringify({ expression: "2+2" }),
+        },
+      },
+    ]);
+    mocks.executeTool
+      .mockResolvedValueOnce("2")
+      .mockResolvedValueOnce("4");
+    mocks.callAI
+      .mockResolvedValueOnce(`[TOOL_CALL_NATIVE:${nativePayload}]`)
+      .mockResolvedValueOnce("native final");
+
+    // When
+    await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
+
+    // Then
+    expect(mocks.executeTool).toHaveBeenNthCalledWith(
+      1,
+      "execute_math",
+      { expression: "1+1" },
+      { personas, requesterId: "ai-1", delegationDepth: 0 },
+    );
+    expect(mocks.executeTool).toHaveBeenNthCalledWith(
+      2,
+      "execute_math",
+      { expression: "2+2" },
+      { personas, requesterId: "ai-1", delegationDepth: 0 },
+    );
+    const secondCallMessages = mocks.callAI.mock.calls[1][0];
+    expect(
+      secondCallMessages.filter((m) => m.role === "assistant" && m.content.includes("[TOOL_CALL: execute_math")).length,
+    ).toBe(2);
+    expect(callbacks.onMessage).toHaveBeenCalledWith(
+      "chat-1",
+      "native final",
+      "ai-1",
+    );
+    expect(callbacks.onToolStart).toHaveBeenNthCalledWith(
+      1,
+      "chat-1",
+      "ai-1",
+      "execute_math",
+      { expression: "1+1" },
+    );
+    expect(callbacks.onToolEnd).toHaveBeenNthCalledWith(
+      1,
+      "chat-1",
+      "tool-msg-1",
+      "2",
+      null,
+    );
+  });
+
+  it("test_when_native_tool_execution_throws_should_report_error_and_continue", async () => {
+    // Given
+    const { pipeline, callbacks } = createPipeline();
+    const nativePayload = JSON.stringify({
+      function: {
+        name: "execute_math",
+        arguments: JSON.stringify({ expression: "bad()" }),
+      },
+    });
+    mocks.executeTool.mockRejectedValueOnce(new Error("tool failed"));
+    mocks.callAI
+      .mockResolvedValueOnce(`[TOOL_CALL_NATIVE:${nativePayload}]`)
+      .mockResolvedValueOnce("after native error");
+
+    // When
+    await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
+
+    // Then
+    expect(callbacks.onToolEnd).toHaveBeenCalledWith(
+      "chat-1",
+      "tool-msg-1",
+      null,
+      "tool failed",
+    );
+    expect(callbacks.onMessage).toHaveBeenCalledWith(
+      "chat-1",
+      "after native error",
       "ai-1",
     );
   });
@@ -266,6 +370,31 @@ describe("AIPipeline", () => {
     );
   });
 
+  it("test_when_context_is_long_should_toggle_editing_before_typing", async () => {
+    // Given
+    const { pipeline, callbacks } = createPipeline();
+    mocks.callAI.mockResolvedValue("done");
+    const longChat = {
+      ...baseChat,
+      messages: [
+        {
+          id: "long-1",
+          senderId: "user-me",
+          content: "x".repeat(700),
+          timestamp: "2026-02-23T00:00:00.000Z",
+        },
+      ],
+    };
+
+    // When
+    await pipeline.processTurn(longChat, personas, { id: "ai-1" });
+
+    // Then
+    expect(callbacks.onEditing).toHaveBeenNthCalledWith(1, "chat-1", "ai-1", true);
+    expect(callbacks.onEditing).toHaveBeenNthCalledWith(2, "chat-1", "ai-1", false);
+    expect(callbacks.onTyping).toHaveBeenCalledWith("chat-1", "ai-1", true);
+  });
+
   it("test_when_memory_request_tool_throws_should_continue_with_tool_error_history", async () => {
     // Given
     const { pipeline, callbacks } = createPipeline();
@@ -325,6 +454,35 @@ describe("AIPipeline", () => {
     // Then
     expect(callbacks.onTyping).toHaveBeenCalledWith("chat-1", "ai-1", false);
     expect(callbacks.onMessage).not.toHaveBeenCalled();
+  });
+
+  it("test_when_recall_simulation_enabled_should_recall_and_send_revised_message", async () => {
+    // Given
+    const { pipeline, callbacks } = createPipeline({
+      enableRecallSimulation: true,
+      random: () => 0,
+    });
+    mocks.callAI
+      .mockResolvedValueOnce("draft reply")
+      .mockResolvedValueOnce("revised reply");
+
+    // When
+    await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
+
+    // Then
+    expect(callbacks.onRecall).toHaveBeenCalledWith("chat-1", "ai-1");
+    expect(callbacks.onMessage).toHaveBeenNthCalledWith(
+      1,
+      "chat-1",
+      "draft reply",
+      "ai-1",
+    );
+    expect(callbacks.onMessage).toHaveBeenNthCalledWith(
+      2,
+      "chat-1",
+      "revised reply",
+      "ai-1",
+    );
   });
 
   it("test_when_prepare_history_starts_with_assistant_should_prepend_summary_user_message", () => {
@@ -418,5 +576,132 @@ describe("AIPipeline", () => {
     expect(prompt).toContain("RULES: concise");
     expect(prompt.includes("RELATIONSHIP:")).toBe(false);
     expect(prompt.includes("CURRENT MOOD:")).toBe(false);
+  });
+
+  it("test_when_log_has_no_callback_should_fallback_to_console_log", () => {
+    // Given
+    const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const pipeline = new AIPipeline({}, { enableRecallSimulation: false });
+
+    // When
+    pipeline.log("hello", { x: 1 });
+
+    // Then
+    expect(consoleSpy).toHaveBeenCalledWith("hello", { x: 1 });
+    consoleSpy.mockRestore();
+  });
+
+  it("test_when_build_native_tools_for_ai_receives_disabled_or_missing_tools_should_return_null", () => {
+    // Given
+    const { pipeline } = createPipeline();
+
+    // When
+    const disabled = pipeline._buildNativeToolsForAI({ toolsEnabled: false, tools: [{ name: "x" }] });
+    const empty = pipeline._buildNativeToolsForAI({ toolsEnabled: true, tools: [] });
+
+    // Then
+    expect(disabled).toBeNull();
+    expect(empty).toBeNull();
+  });
+
+  it("test_when_build_native_tools_for_ai_receives_sparse_tool_metadata_should_fill_defaults", () => {
+    // Given
+    const { pipeline } = createPipeline();
+
+    // When
+    const tools = pipeline._buildNativeToolsForAI({
+      toolsEnabled: true,
+      tools: [{ name: "lookup" }],
+    });
+
+    // Then
+    expect(tools).toEqual([
+      {
+        type: "function",
+        function: {
+          name: "lookup",
+          description: "Tool: lookup",
+          parameters: {
+            type: "object",
+            properties: {},
+            additionalProperties: true,
+          },
+        },
+      },
+    ]);
+  });
+
+  it("test_when_parse_native_tool_marker_is_malformed_should_return_null_or_empty_args", () => {
+    // Given
+    const { pipeline } = createPipeline();
+
+    // When
+    const malformed = pipeline._parseNativeToolMarker("[TOOL_CALL_NATIVE:not-json]");
+    const parsed = pipeline._parseNativeToolMarker(
+      `[TOOL_CALL_NATIVE:${JSON.stringify({ function: { name: "lookup", arguments: "{oops}" } })}]`,
+    );
+
+    // Then
+    expect(malformed).toBeNull();
+    expect(parsed).toEqual([{ name: "lookup", args: {} }]);
+  });
+
+  it("test_when_parse_native_tool_marker_uses_object_arguments_should_preserve_object_payload", () => {
+    // Given
+    const { pipeline } = createPipeline();
+
+    // When
+    const parsed = pipeline._parseNativeToolMarker(
+      `[TOOL_CALL_NATIVE:${JSON.stringify({ function: { name: "lookup", arguments: { query: "moon" } } })}]`,
+    );
+
+    // Then
+    expect(parsed).toEqual([{ name: "lookup", args: { query: "moon" } }]);
+  });
+
+  it("test_when_detect_latest_user_language_checks_text_mix_should_return_expected_language", () => {
+    // Given
+    const { pipeline } = createPipeline();
+
+    // When
+    const english = pipeline._detectLatestUserLanguage([
+      { senderId: "user-me", content: "hello there" },
+    ]);
+    const chinese = pipeline._detectLatestUserLanguage([
+      { senderId: "user-me", content: "你好世界" },
+    ]);
+    const mixed = pipeline._detectLatestUserLanguage([
+      { senderId: "user-me", content: "你好he" },
+    ]);
+    const none = pipeline._detectLatestUserLanguage([
+      { senderId: "ai-1", content: "assistant only" },
+    ]);
+
+    // Then
+    expect(english).toBe("en");
+    expect(chinese).toBe("zh");
+    expect(mixed).toBe("zh");
+    expect(none).toBeNull();
+  });
+
+  it("test_when_should_simulate_recall_receives_blank_or_disabled_response_should_return_false", () => {
+    // Given
+    const { pipeline } = createPipeline({ enableRecallSimulation: true, random: () => 0 });
+    const disabled = new AIPipeline({}, { enableRecallSimulation: false, random: () => 0 });
+
+    // When / Then
+    expect(pipeline._shouldSimulateRecall("   ")).toBe(false);
+    expect(disabled._shouldSimulateRecall("hello")).toBe(false);
+  });
+
+  it("test_when_get_specialist_tools_has_no_tools_should_return_empty_string", () => {
+    // Given
+    const { pipeline } = createPipeline();
+
+    // When
+    const result = pipeline._getSpecialistTools({ tools: null });
+
+    // Then
+    expect(result).toBe("");
   });
 });

@@ -108,7 +108,7 @@ export function exportAsHTML(chat, personas, currentUserName = 'You') {
     };
 
     const escapeHTML = (str) => {
-        return str
+        return String(str ?? '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
@@ -116,21 +116,32 @@ export function exportAsHTML(chat, personas, currentUserName = 'You') {
             .replace(/'/g, '&#039;');
     };
 
+    const sanitizeAvatarUrl = (url) => {
+        const value = String(url || '').trim();
+        if (!value) return '';
+        if (/^https?:\/\//i.test(value)) return escapeHTML(value);
+        if (/^data:image\//i.test(value)) return escapeHTML(value);
+        return '';
+    };
+
     let messagesHTML = chat.messages.map(msg => {
         const isMe = msg.senderId === 'user-me';
         const sender = getSenderName(msg.senderId);
         const avatar = getAvatar(msg.senderId);
+        const safeSender = escapeHTML(sender);
+        const safeAvatar = sanitizeAvatarUrl(avatar);
+        const avatarPlaceholder = escapeHTML(sender?.charAt(0) || '?');
         const time = formatDate(msg.timestamp);
         const content = escapeHTML(msg.content).replace(/\n/g, '<br>');
 
         return `
         <div class="message ${isMe ? 'message-me' : 'message-other'}">
             <div class="message-avatar">
-                ${avatar ? `<img src="${avatar}" alt="${sender}">` : `<div class="avatar-placeholder">${sender.charAt(0)}</div>`}
+                ${safeAvatar ? `<img src="${safeAvatar}" alt="${safeSender}">` : `<div class="avatar-placeholder">${avatarPlaceholder}</div>`}
             </div>
             <div class="message-content">
                 <div class="message-header">
-                    <span class="sender">${sender}</span>
+                    <span class="sender">${safeSender}</span>
                     <span class="time">${time}</span>
                 </div>
                 <div class="message-body">${content}</div>
@@ -259,7 +270,7 @@ export function exportAsHTML(chat, personas, currentUserName = 'You') {
             <p>Exported on ${new Date().toLocaleString()}</p>
         </div>
         <div class="chat-info">
-            <p><strong>Participants:</strong> ${chat.participants.map(getSenderName).join(', ')}</p>
+            <p><strong>Participants:</strong> ${chat.participants.map((pid) => escapeHTML(getSenderName(pid))).join(', ')}</p>
             <p><strong>Total Messages:</strong> ${chat.messages.length}</p>
         </div>
         <div class="messages">

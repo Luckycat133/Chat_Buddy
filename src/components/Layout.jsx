@@ -80,7 +80,7 @@ export default function Layout() {
                     <div className="absolute inset-0 rounded-[var(--radius-lg)] opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                         style={{
                             background: 'var(--gradient-aurora)',
-                            filter: 'blur(16px)',
+                            filter: 'blur(8px)',
                             transform: 'scale(1.1)'
                         }} />
                     <div className="relative w-14 h-14 rounded-[var(--radius-lg)] overflow-hidden shadow-lg
@@ -108,7 +108,7 @@ export default function Layout() {
                     </div>
                 </div>
 
-                <nav aria-label="Primary" role="navigation" className="flex-1 flex flex-col items-center gap-5 w-full px-3">
+                <nav aria-label="Primary" className="flex-1 flex flex-col items-center gap-5 w-full px-3">
                     <NavItem to="/" icon={<MessageSquare size={24} />} label={t('nav_chats')} delay={0} shortcutHint={formatShortcut(SHORTCUT_DEFINITIONS[0])} data-onboarding="chats" />
                     <NavItem to="/agents" icon={<Bot size={24} />} label={t('nav_agents') || 'Agents'} delay={50} shortcutHint={formatShortcut(SHORTCUT_DEFINITIONS[1])} data-onboarding="agents" />
                     <NavItem to="/friends" icon={<Users size={24} />} label={t('friends')} delay={100} shortcutHint={formatShortcut(SHORTCUT_DEFINITIONS[2])} />
@@ -135,13 +135,13 @@ export default function Layout() {
                     {/* Background sheen for the main container */}
                     <div aria-hidden="true" className="hidden md:block absolute inset-0 bg-gradient-to-br from-[var(--color-bg-white)]/40 to-transparent pointer-events-none opacity-50"></div>
 
-                    <Outlet key={location.pathname} />
+                    <Outlet />
                 </main>
             </div>
 
             {/* Mobile Bottom Tab Bar - Floating Dock (Hidden in Chat and Agent Workspace) */}
             {!location.pathname.startsWith('/chat/') && !location.pathname.match(/^\/agents\/[^/]+$/) && (
-                <nav aria-label="Mobile" role="navigation" className="md:hidden fixed bottom-6 left-6 right-6 glass-crystal rounded-[var(--radius-xl)] shadow-floating
+                <nav aria-label="Mobile" className="md:hidden fixed bottom-6 left-6 right-6 glass-crystal rounded-[var(--radius-xl)] shadow-floating
                     flex justify-around items-center px-4 py-3 z-50 animate-fade-slide-up border border-white/50"
                     style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
 
@@ -157,7 +157,15 @@ export default function Layout() {
             {showShortcuts && <KeyboardShortcutsModal onClose={() => setShowShortcuts(false)} />}
 
             {/* Global Search (Ctrl+K) */}
-            {showGlobalSearch && <MessageSearchPanel onClose={() => setShowGlobalSearch(false)} />}
+            {showGlobalSearch && (
+                <MessageSearchPanel
+                    onClose={() => setShowGlobalSearch(false)}
+                    onSelectMessage={(chatId, messageId) => {
+                        setShowGlobalSearch(false);
+                        navigate(`/chat/${chatId}`, { state: { targetMessageId: messageId } });
+                    }}
+                />
+            )}
 
             {/* Onboarding Tutorial */}
             {onboarding.shouldShow && (

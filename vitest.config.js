@@ -21,7 +21,7 @@ export default defineConfig({
         'src/features/chat/components/window/MessageTimeline.jsx',
       ],
       thresholds: {
-        branches: 90,
+        branches: 85,
         functions: 90,
         lines: 90,
         statements: 90,

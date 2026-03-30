@@ -5,6 +5,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useDocuments } from '../../context/DocumentContext';
 import { useSocial } from '../../context/SocialContext';
 import { formatFileSize } from '../../utils/fileUtils';
+import { getBookmarks } from './services/BookmarkService';
 
 // Sub-components (always loaded)
 import ChatHeader from './components/window/ChatHeader';
@@ -56,7 +57,6 @@ export default function ChatWindow({ chatId: propChatId }) {
     const [activeGame, setActiveGame] = useState(null); // 'rps' | 'number_guess'
     const [showPoll, setShowPoll] = useState(false);
     const [messageToForward, setMessageToForward] = useState(null);
-    const [showSearchPanel, setShowSearchPanel] = useState(false); // Lifted state
     const [showBackgroundSettings, setShowBackgroundSettings] = useState(false);
 
     // Interaction states
@@ -65,6 +65,7 @@ export default function ChatWindow({ chatId: propChatId }) {
     const [canRecallMessage, setCanRecallMessage] = useState(false);
     const [quotedMessage, setQuotedMessage] = useState(null);
     const [toast, setToast] = useState(null);
+    const [focusedMessageId, setFocusedMessageId] = useState(null);
 
     // T07: Bookmark states
     const [showBookmarkPanel, setShowBookmarkPanel] = useState(false);
@@ -73,9 +74,11 @@ export default function ChatWindow({ chatId: propChatId }) {
     // T07: Export modal state
     const [showExportModal, setShowExportModal] = useState(false);
     const greetedChatIdRef = useRef(null);
+    const toastTimerRef = useRef(null);
 
     const chat = chats.find(c => c.id === id);
     const isSearchRoute = location.pathname === `/chat/${id}/search`;
+    const showSearchPanel = isSearchRoute;
 
     // T05: Window-open greeting check
     useEffect(() => {
@@ -98,25 +101,38 @@ export default function ChatWindow({ chatId: propChatId }) {
         return () => clearTimeout(timer);
     }, [chat, chat?.id, personas, language, triggerGreeting]);
 
-    // Auto-hide toast
-    useEffect(() => {
-        if (toast) {
-            const timer = setTimeout(() => setToast(null), 2000);
-            return () => clearTimeout(timer);
+    useEffect(() => () => {
+        if (toastTimerRef.current) {
+            clearTimeout(toastTimerRef.current);
         }
-    }, [toast]);
+    }, []);
 
     // T07: Mark messages as read when chat is opened
     useEffect(() => {
         if (chat?.id) {
             markMessagesAsRead(chat.id, 'user-me');
         }
-    }, [chat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [chat?.id, chat?.messages?.length, markMessagesAsRead]);
 
-    // Keep route state and panel visibility in sync.
+    // Keep bookmarked IDs in sync with bookmark storage for current chat.
     useEffect(() => {
-        setShowSearchPanel(isSearchRoute);
-    }, [isSearchRoute]);
+        if (!chat?.id) {
+            setBookmarkedMessageIds(new Set());
+            return;
+        }
+        const ids = getBookmarks()
+            .filter((bookmark) => bookmark.chatId === chat.id)
+            .map((bookmark) => bookmark.messageId);
+        setBookmarkedMessageIds(new Set(ids));
+    }, [chat?.id, showBookmarkPanel]);
+
+    // Receive target message from route state (global search / settings search / bookmark jumps).
+    useEffect(() => {
+        const targetMessageId = location.state?.targetMessageId;
+        if (targetMessageId) {
+            setFocusedMessageId(targetMessageId);
+        }
+    }, [location.state?.targetMessageId]);
 
     if (!chat) return <div className="flex items-center justify-center h-full bg-[var(--color-bg-app)] text-[var(--color-text-muted)]">{t('select_chat')}</div>;
 
@@ -127,7 +143,16 @@ export default function ChatWindow({ chatId: propChatId }) {
 
     // --- Handlers ---
 
-    const showToast = (msg) => setToast(msg);
+    const showToast = (msg) => {
+        if (toastTimerRef.current) {
+            clearTimeout(toastTimerRef.current);
+        }
+        setToast(msg);
+        toastTimerRef.current = setTimeout(() => {
+            setToast(null);
+            toastTimerRef.current = null;
+        }, 2000);
+    };
 
     const handleMessageContextMenu = (e, msg) => {
         e.preventDefault();
@@ -207,14 +232,29 @@ export default function ChatWindow({ chatId: propChatId }) {
         }
     };
 
-    const handleNavigateToBookmark = (chatId, _messageId) => {
-        // Navigation logic - could scroll to message or switch chats
-        const targetChat = chats.find(c => c.id === chatId);
-        if (targetChat && targetChat.id !== chat.id) {
-            // Would need to navigate to different chat
-            // For now, just show toast
-            showToast(t('navigating') || 'Navigating...');
+    const navigateToMessage = (chatId, messageId) => {
+        if (!chatId || !messageId) return;
+        if (chatId !== chat?.id) {
+            navigate(`/chat/${chatId}`, {
+                state: { targetMessageId: messageId }
+            });
+            return;
         }
+        setFocusedMessageId(messageId);
+    };
+
+    const handleNavigateToBookmark = (chatId, messageId) => {
+        navigateToMessage(chatId, messageId);
+    };
+
+    const handleFocusHandled = () => {
+        setFocusedMessageId(null);
+        if (!location.state?.targetMessageId) return;
+
+        const nextState = location.state ? { ...location.state } : {};
+        delete nextState.targetMessageId;
+        const hasState = Object.keys(nextState).length > 0;
+        navigate(location.pathname, { replace: true, state: hasState ? nextState : null });
     };
 
     return (
@@ -242,6 +282,8 @@ export default function ChatWindow({ chatId: propChatId }) {
                 presenceMap={presenceMap} // For potentially showing status in bubble?
                 onContextMenu={handleMessageContextMenu}
                 onVotePoll={(pollId, optId, action) => votePoll(chat.id, pollId, optId, action)}
+                focusMessageId={focusedMessageId}
+                onFocusHandled={handleFocusHandled}
             />
 
             <ChatComposer
@@ -397,16 +439,17 @@ export default function ChatWindow({ chatId: propChatId }) {
                     <MessageSearchPanel
                         currentChatId={chat.id}
                         onClose={() => {
-                            setShowSearchPanel(false);
-                            if (isSearchRoute) {
-                                navigate(`/chat/${chat.id}`, { replace: true });
-                            }
+                            navigate(`/chat/${chat.id}`, { replace: true });
                         }}
-                        onSelectMessage={() => {
-                            setShowSearchPanel(false);
+                        onSelectMessage={(targetChatId, messageId) => {
                             if (isSearchRoute) {
-                                navigate(`/chat/${chat.id}`, { replace: true });
+                                navigate(`/chat/${targetChatId}`, {
+                                    replace: true,
+                                    state: { targetMessageId: messageId }
+                                });
+                                return;
                             }
+                            navigateToMessage(targetChatId, messageId);
                         }}
                     />
                 </Suspense>
@@ -429,6 +472,13 @@ export default function ChatWindow({ chatId: propChatId }) {
                         isOpen={showBookmarkPanel}
                         onClose={() => setShowBookmarkPanel(false)}
                         onNavigateToMessage={handleNavigateToBookmark}
+                        onBookmarkRemoved={(messageId) => {
+                            setBookmarkedMessageIds(prev => {
+                                const next = new Set(prev);
+                                next.delete(messageId);
+                                return next;
+                            });
+                        }}
                         personas={personas}
                     />
                 </Suspense>

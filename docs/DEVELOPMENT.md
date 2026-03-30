@@ -45,6 +45,8 @@ VITE_AI_API_KEY=your_api_key
 VITE_AI_MODEL=deepseek-chat
 ```
 
+If you configure the provider inside the Settings panel instead of `.env`, the API key is kept only for the current browser session. Saved provider profiles keep the base URL and model, but do not persist the key.
+
 ### Scripts
 
 | Command | Description |
@@ -52,6 +54,11 @@ VITE_AI_MODEL=deepseek-chat
 | `npm run dev` | Start dev server |
 | `npm run build` | Production build |
 | `npm run lint` | Run ESLint |
+| `npm run test` | Run the Vitest suite once |
+| `npm run test:watch` | Start Vitest in watch mode |
+| `npm run test:coverage` | Run tests with V8 coverage |
+| `npm run stress` | Run the UI stress script |
+| `npm run prompt:bench` | Run the prompt regression benchmark |
 
 ### Project Structure
 
@@ -113,6 +120,8 @@ VITE_AI_API_KEY=你的API密钥
 VITE_AI_MODEL=deepseek-chat
 ```
 
+如果你不是通过 `.env`，而是在设置面板中配置提供商，API 密钥只会保留在当前浏览器会话中。保存的服务方案只保存地址和模型，不会持久化密钥。
+
 ### 脚本
 
 | 命令 | 说明 |
@@ -120,6 +129,11 @@ VITE_AI_MODEL=deepseek-chat
 | `npm run dev` | 启动开发服务器 |
 | `npm run build` | 生产构建 |
 | `npm run lint` | 运行 ESLint |
+| `npm run test` | 单次运行 Vitest 测试 |
+| `npm run test:watch` | 以监听模式运行 Vitest |
+| `npm run test:coverage` | 运行测试并生成 V8 覆盖率 |
+| `npm run stress` | 运行 UI 压力脚本 |
+| `npm run prompt:bench` | 运行 Prompt 回归基准 |
 
 ### 目录结构
 

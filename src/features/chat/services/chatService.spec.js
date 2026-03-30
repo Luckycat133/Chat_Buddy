@@ -265,6 +265,187 @@ describe('chatService.callAI', () => {
     expect(result).toContain('[TOOL_CALL_NATIVE:');
     expect(result).toContain('"execute_math"');
   });
+
+  it('test_when_response_contains_legacy_function_call_should_return_native_tool_marker', async () => {
+    // Given
+    server.use(
+      http.post('*/chat/completions', () =>
+        HttpResponse.json({
+          choices: [
+            {
+              message: {
+                function_call: { name: 'legacy_lookup', arguments: '{"query":"moon"}' },
+              },
+            },
+          ],
+        })
+      )
+    );
+
+    // When
+    const result = await callAI([{ role: 'user', content: 'legacy tool' }]);
+
+    // Then
+    expect(result).toContain('[TOOL_CALL_NATIVE:');
+    expect(result).toContain('legacy_lookup');
+  });
+
+  it('test_when_responses_api_output_exists_should_extract_fallback_text', async () => {
+    // Given
+    server.use(
+      http.post('*/chat/completions', () =>
+        HttpResponse.json({
+          output: [
+            { content: [{ type: 'output_text', text: 'hello ' }] },
+            { content: [{ type: 'text', text: 'world' }] },
+          ],
+        })
+      )
+    );
+
+    // When
+    const result = await callAI([{ role: 'user', content: 'responses output' }]);
+
+    // Then
+    expect(result).toBe('hello world');
+  });
+
+  it('test_when_streaming_sse_text_should_accumulate_chunks_and_emit_deltas', async () => {
+    // Given
+    const onStreamChunk = vi.fn();
+    const frames = [
+      'data: {"choices":[{"delta":{"content":"Hello "}}]}\n\n',
+      'data: {"choices":[{"delta":{"content":"world"}}]}\n\n',
+      'data: [DONE]\n\n',
+    ];
+    const stream = new ReadableStream({
+      start(controller) {
+        frames.forEach((frame) => controller.enqueue(new TextEncoder().encode(frame)));
+        controller.close();
+      },
+    });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
+
+    // When
+    const result = await callAI(
+      [{ role: 'user', content: 'stream please' }],
+      { stream: true, onStreamChunk }
+    );
+
+    // Then
+    expect(result).toBe('Hello world');
+    expect(onStreamChunk).toHaveBeenNthCalledWith(1, 'Hello ', 'Hello ', expect.any(Object));
+    expect(onStreamChunk).toHaveBeenNthCalledWith(2, 'world', 'Hello world', expect.any(Object));
+    fetchSpy.mockRestore();
+  });
+
+  it('test_when_streaming_sse_contains_only_tool_calls_should_return_native_tool_marker', async () => {
+    // Given
+    const frames = [
+      'data: {"choices":[{"message":{"tool_calls":[{"id":"call_1","type":"function","function":{"name":"web_search","arguments":"{\\"query\\":\\"news\\"}"}}]}}]}\n\n',
+      'data: [DONE]\n\n',
+    ];
+    const stream = new ReadableStream({
+      start(controller) {
+        frames.forEach((frame) => controller.enqueue(new TextEncoder().encode(frame)));
+        controller.close();
+      },
+    });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
+
+    // When
+    const result = await callAI([{ role: 'user', content: 'tool stream' }], { stream: true });
+
+    // Then
+    expect(result).toContain('[TOOL_CALL_NATIVE:');
+    expect(result).toContain('web_search');
+    fetchSpy.mockRestore();
+  });
+
+  it('test_when_streaming_sse_contains_malformed_frames_should_ignore_them_and_keep_valid_text', async () => {
+    // Given
+    const frames = [
+      'data: {not-json}\n\n',
+      'data: {"choices":[{"delta":{"content":"still works"}}]}\n\n',
+      'data: [DONE]\n\n',
+    ];
+    const stream = new ReadableStream({
+      start(controller) {
+        frames.forEach((frame) => controller.enqueue(new TextEncoder().encode(frame)));
+        controller.close();
+      },
+    });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
+
+    // When
+    const result = await callAI([{ role: 'user', content: 'mixed stream' }], { stream: true });
+
+    // Then
+    expect(result).toBe('still works');
+    fetchSpy.mockRestore();
+  });
+
+  it('test_when_http_error_body_is_not_json_should_fallback_to_status_text_logging', async () => {
+    // Given
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response('upstream exploded', { status: 500 }));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    // When
+    const result = await callAI([{ role: 'user', content: 'broken' }], { agentId: 'ai-9' });
+
+    // Then
+    expect(result).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith('API Error:', 'HTTP 500', '(Agent: ai-9)');
+    fetchSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it('test_when_network_throws_without_agent_id_should_log_empty_suffix_and_return_null', async () => {
+    // Given
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('offline'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    // When
+    const result = await callAI([{ role: 'user', content: 'hello' }]);
+
+    // Then
+    expect(result).toBeNull();
+    expect(errorSpy).toHaveBeenCalledWith('API Call Failed:', expect.any(Error), '');
+    fetchSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it('test_when_tool_choice_alias_and_stream_flag_are_provided_should_send_both_fields', async () => {
+    // Given
+    const capturedBodies = [];
+    server.use(
+      http.post('*/chat/completions', async ({ request }) => {
+        capturedBodies.push(await request.json());
+        return HttpResponse.json({
+          choices: [{ message: { content: 'alias ok' } }],
+        });
+      })
+    );
+
+    // When
+    const result = await callAI(
+      [{ role: 'user', content: 'hello' }],
+      { tool_choice: 'required', stream: true }
+    );
+
+    // Then
+    expect(result).toBe('alias ok');
+    expect(capturedBodies[0].tool_choice).toBe('required');
+    expect(capturedBodies[0].stream).toBe(true);
+  });
 });
 
 describe('chatService.cleanMessageContent', () => {
