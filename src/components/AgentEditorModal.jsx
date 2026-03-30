@@ -36,7 +36,7 @@ const CATEGORY_ORDER = ['programming', 'creative', 'research', 'education', 'emo
  * @param {Function} props.onClose
  */
 export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onClose }) {
-    const { language } = useLanguage();
+    const { language, t } = useLanguage();
 
     const [name, setName]           = useState('');
     const [nameZh, setNameZh]       = useState('');
@@ -149,23 +149,23 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                     <div className="grid grid-cols-2 gap-3">
                         <label className="block">
                             <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5 block">
-                                {language === 'zh' ? '名称' : 'Name'} *
+                                {t('agent_editor_name')} *
                             </span>
                             <input
                                 value={name}
                                 onChange={e => setName(e.target.value)}
-                                placeholder={language === 'zh' ? '例：我的助手' : 'e.g. My Agent'}
+                                placeholder={t('agent_editor_name_placeholder')}
                                 className="w-full px-3 py-2.5 rounded-xl bg-[var(--color-bg-hover)] border border-[var(--color-border)] text-[var(--color-text-main)] text-sm placeholder:text-[var(--color-text-light)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
                             />
                         </label>
                         <label className="block">
                             <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5 block">
-                                中文名称
+                                {t('agent_editor_name_zh')}
                             </span>
                             <input
                                 value={nameZh}
                                 onChange={e => setNameZh(e.target.value)}
-                                placeholder="例：我的助手"
+                                placeholder={t('agent_editor_name_zh_placeholder')}
                                 className="w-full px-3 py-2.5 rounded-xl bg-[var(--color-bg-hover)] border border-[var(--color-border)] text-[var(--color-text-main)] text-sm placeholder:text-[var(--color-text-light)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
                             />
                         </label>
@@ -174,12 +174,12 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                     {/* Personality */}
                     <label className="block">
                         <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5 block">
-                            {language === 'zh' ? '简介' : 'Description'}
+                            {t('agent_editor_desc')}
                         </span>
                         <input
                             value={personality}
                             onChange={e => setPersonality(e.target.value)}
-                            placeholder={language === 'zh' ? '一句话描述此助手的职责' : 'One-line description of this agent'}
+                            placeholder={t('agent_editor_desc_placeholder')}
                             className="w-full px-3 py-2.5 rounded-xl bg-[var(--color-bg-hover)] border border-[var(--color-border)] text-[var(--color-text-main)] text-sm placeholder:text-[var(--color-text-light)] focus:outline-none focus:border-[var(--color-primary)] transition-colors"
                         />
                     </label>
@@ -188,16 +188,13 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                     <label className="block">
                         <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                             <Sparkles size={11} className="text-[var(--color-primary)]" />
-                            {language === 'zh' ? '系统提示词' : 'System Prompt'} *
+                            {t('agent_editor_system_prompt')} *
                         </span>
                         <textarea
                             value={systemPrompt}
                             onChange={e => setSystemPrompt(e.target.value)}
                             rows={6}
-                            placeholder={language === 'zh'
-                                ? '你是一个专业的...助手。你的职责是...'
-                                : 'You are a specialized assistant that...'
-                            }
+                            placeholder={t('agent_editor_prompt_placeholder')}
                             className="w-full px-3 py-2.5 rounded-xl bg-[var(--color-bg-hover)] border border-[var(--color-border)] text-[var(--color-text-main)] text-sm placeholder:text-[var(--color-text-light)] focus:outline-none focus:border-[var(--color-primary)] transition-colors resize-none font-mono leading-relaxed"
                         />
                     </label>
@@ -205,7 +202,7 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                     {/* Color */}
                     <div>
                         <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 block">
-                            {language === 'zh' ? '主题色' : 'Theme'}
+                            {t('agent_editor_theme')}
                         </span>
                         <div className="flex gap-2 flex-wrap">
                             {GRADIENT_OPTIONS.map(g => (
@@ -226,7 +223,7 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                     {/* Skills */}
                     <div>
                         <span className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2 block">
-                            {language === 'zh' ? '技能 (可多选)' : 'Skills (multi-select)'}
+                            {t('agent_editor_skills')}
                         </span>
                         <div className="space-y-3">
                             {CATEGORY_ORDER.map(cat => {
@@ -271,7 +268,7 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                         <button
                             onClick={handleDelete}
                             className="p-2.5 rounded-xl text-red-400 hover:bg-red-400/10 transition-colors"
-                            title={language === 'zh' ? '删除' : 'Delete'}
+                            title={t('delete')}
                         >
                             <Trash2 size={18} />
                         </button>
@@ -281,16 +278,14 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                         onClick={onClose}
                         className="px-4 py-2 rounded-xl text-sm font-semibold text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] transition-colors"
                     >
-                        {language === 'zh' ? '取消' : 'Cancel'}
+                        {t('cancel')}
                     </button>
                     <button
                         onClick={handleSave}
                         disabled={saving}
                         className="px-5 py-2 rounded-xl text-sm font-bold text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-50 transition-colors"
                     >
-                        {saving
-                            ? (language === 'zh' ? '保存中...' : 'Saving...')
-                            : (language === 'zh' ? '保存' : 'Save')}
+                        {saving ? t('saving') : t('save')}
                     </button>
                 </div>
             </div>

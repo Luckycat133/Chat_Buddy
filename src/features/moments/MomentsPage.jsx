@@ -135,7 +135,7 @@ export default function MomentsPage() {
                         </div>
                         <h3 className="text-lg font-bold text-[var(--color-text-main)] mb-1">
                             {activeHashtag
-                                ? (language === 'zh' ? `没有包含 ${activeHashtag} 的动态` : `No posts with ${activeHashtag}`)
+                                ? t('no_posts_with_hashtag', { hashtag: activeHashtag })
                                 : (t('no_posts') || 'Your timeline is empty')
                             }
                         </h3>

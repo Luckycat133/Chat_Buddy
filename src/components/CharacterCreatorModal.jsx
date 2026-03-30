@@ -216,36 +216,36 @@ Guidelines:
                                 <User size={28} className="text-[var(--color-primary)]" />
                             </div>
                             <h4 className="font-medium text-lg">
-                                {language === 'zh' ? '基本信息' : 'Basic Info'}
+                                {t('basic_info')}
                             </h4>
                             <p className="text-sm text-[var(--color-text-muted)]">
-                                {language === 'zh' ? '给你的角色起个名字' : 'Give your character a name'}
+                                {t('give_character_name')}
                             </p>
                         </div>
 
                         <div className="space-y-3">
                             <div>
                                 <label className="block text-sm font-medium mb-1">
-                                    {language === 'zh' ? '英文名字' : 'English Name'} *
+                                    {t('english_name')} *
                                 </label>
                                 <input
                                     type="text"
                                     value={formData.name}
                                     onChange={(e) => handleInputChange('name', e.target.value)}
-                                    placeholder={language === 'zh' ? '例如: Luna' : 'e.g. Luna'}
+                                    placeholder={t('name_placeholder_en')}
                                     className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-white)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
                                 />
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium mb-1">
-                                    {language === 'zh' ? '中文名字 (可选)' : 'Chinese Name (Optional)'}
+                                    {t('chinese_name_optional')}
                                 </label>
                                 <input
                                     type="text"
                                     value={formData.name_zh}
                                     onChange={(e) => handleInputChange('name_zh', e.target.value)}
-                                    placeholder={language === 'zh' ? '例如: 露娜' : 'e.g. 露娜'}
+                                    placeholder={t('name_placeholder_zh')}
                                     className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-white)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
                                 />
                             </div>
@@ -261,22 +261,22 @@ Guidelines:
                                 <Sparkles size={28} className="text-[var(--color-primary)]" />
                             </div>
                             <h4 className="font-medium text-lg">
-                                {language === 'zh' ? '性格与兴趣' : 'Personality & Interests'}
+                                {t('personality_interests')}
                             </h4>
                             <p className="text-sm text-[var(--color-text-muted)]">
-                                {language === 'zh' ? '定义角色的性格特点' : 'Define your character\'s personality'}
+                                {t('define_personality')}
                             </p>
                         </div>
 
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">
-                                    {language === 'zh' ? '性格描述' : 'Personality'} *
+                                    {t('personality_desc')} *
                                 </label>
                                 <textarea
                                     value={formData.personality}
                                     onChange={(e) => handleInputChange('personality', e.target.value)}
-                                    placeholder={language === 'zh' ? '例如: 好奇心强，温暖友善' : 'e.g. Curious, warm and friendly'}
+                                    placeholder={t('personality_placeholder')}
                                     rows={2}
                                     className="w-full px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-white)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 resize-none"
                                 />
@@ -284,7 +284,7 @@ Guidelines:
 
                             <div>
                                 <label className="block text-sm font-medium mb-1">
-                                    {language === 'zh' ? '兴趣/爱好' : 'Interests'}
+                                    {t('interests')}
                                 </label>
                                 <div className="flex gap-2 mb-2">
                                     <input
@@ -292,7 +292,7 @@ Guidelines:
                                         value={interestInput}
                                         onChange={(e) => setInterestInput(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addInterest())}
-                                        placeholder={language === 'zh' ? '添加兴趣...' : 'Add interest...'}
+                                        placeholder={t('add_interest')}
                                         className="flex-1 px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-white)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30"
                                     />
                                     <button
@@ -317,7 +317,7 @@ Guidelines:
 
                             <div>
                                 <label className="block text-sm font-medium mb-2">
-                                    {language === 'zh' ? '说话风格' : 'Speaking Style'}
+                                    {t('speaking_style')}
                                 </label>
                                 <div className="grid grid-cols-2 gap-2">
                                     {SPEAKING_STYLES.map((style) => (
@@ -353,10 +353,10 @@ Guidelines:
                                 <MessageCircle size={28} className="text-[var(--color-primary)]" />
                             </div>
                             <h4 className="font-medium text-lg">
-                                {language === 'zh' ? '选择头像' : 'Choose Avatar'}
+                                {t('choose_avatar')}
                             </h4>
                             <p className="text-sm text-[var(--color-text-muted)]">
-                                {language === 'zh' ? '为角色选择一个头像' : 'Select an avatar for your character'}
+                                {t('select_avatar_for_character')}
                             </p>
                         </div>
 
@@ -405,7 +405,7 @@ Guidelines:
                                 className="w-full py-3 rounded-lg border border-dashed border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all flex items-center justify-center gap-2 text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
                             >
                                 <Upload size={18} />
-                                {language === 'zh' ? '上传自定义头像' : 'Upload Custom Avatar'}
+                                {t('upload_custom_avatar')}
                             </button>
                         </div>
                     </div>
@@ -420,10 +420,10 @@ Guidelines:
                                 <Palette size={28} className="text-[var(--color-primary)]" />
                             </div>
                             <h4 className="font-medium text-lg">
-                                {language === 'zh' ? '主题颜色' : 'Theme Color'}
+                                {t('theme_color')}
                             </h4>
                             <p className="text-sm text-[var(--color-text-muted)]">
-                                {language === 'zh' ? '选择角色的主题色' : 'Choose a theme color for your character'}
+                                {t('choose_theme_color')}
                             </p>
                         </div>
 
@@ -455,14 +455,14 @@ Guidelines:
                         {/* Preview Card */}
                         <div className="mt-6 p-4 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-active)]">
                             <div className="text-xs text-[var(--color-text-muted)] mb-2">
-                                {language === 'zh' ? '预览' : 'Preview'}
+                                {t('preview')}
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="w-12 h-12 rounded-full overflow-hidden">
                                     <img src={formData.avatar} alt="Preview" className="w-full h-full object-cover" />
                                 </div>
                                 <div className="flex-1">
-                                    <div className="font-medium">{formData.name || (language === 'zh' ? '未命名' : 'Unnamed')}</div>
+                                    <div className="font-medium">{formData.name || t('unnamed')}</div>
                                     <div className={cn("text-xs px-2 py-0.5 rounded-full inline-block mt-1", selectedColor?.bg, selectedColor?.text)}>
                                         {SPEAKING_STYLES.find(s => s.id === formData.style)?.name}
                                     </div>
@@ -490,13 +490,13 @@ Guidelines:
                 <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                     <button
                         onClick={onClose}
-                        aria-label={language === 'zh' ? '关闭' : 'Close'}
+                        aria-label={t('close')}
                         className="p-2 rounded-full hover:bg-[var(--color-bg-hover)] transition-colors"
                     >
                         <X size={20} className="text-[var(--color-text-muted)]" />
                     </button>
                     <h3 id="character-creator-title" className="font-semibold text-[17px]">
-                        {language === 'zh' ? '创建自定义角色' : 'Create Custom Character'}
+                        {t('create_custom_character')}
                     </h3>
                     <div className="w-10" />
                 </div>
@@ -526,7 +526,7 @@ Guidelines:
                         disabled={currentStep === 1}
                         className="px-4 py-2 rounded-lg font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                     >
-                        {language === 'zh' ? '上一步' : 'Back'}
+                        {t('back')}
                     </button>
 
                     {currentStep < totalSteps ? (
@@ -535,7 +535,7 @@ Guidelines:
                             disabled={!canProceed()}
                             className="px-6 py-2 rounded-lg font-medium bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
-                            {language === 'zh' ? '下一步' : 'Next'}
+                            {t('next')}
                         </button>
                     ) : (
                         <button
@@ -546,12 +546,12 @@ Guidelines:
                             {isGenerating ? (
                                 <>
                                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                    {language === 'zh' ? '创建中...' : 'Creating...'}
+                                    {t('creating')}
                                 </>
                             ) : (
                                 <>
                                     <Check size={18} />
-                                    {language === 'zh' ? '创建角色' : 'Create Character'}
+                                    {t('create_character')}
                                 </>
                             )}
                         </button>
