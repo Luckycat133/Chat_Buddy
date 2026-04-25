@@ -3,6 +3,8 @@ import { callAI } from '../../features/chat/services/chatService';
 import { executeTool } from '../../features/chat/services/toolService';
 import { compressContext, extractMemoriesAsync } from '../memory/ContextCompressor';
 import { buildMemoryBlock, buildGroupContextBlock } from '../memory/MemoryInjector';
+import { tryProactiveImageGen, analyzeContextForImageGen } from '../../services/proactiveImageService';
+import { buildSkillsSystemBlock } from '../../services/minimaxSkillsManifest';
 
 /**
  * Domain Layer: AI Pipeline
@@ -90,6 +92,7 @@ export class AIPipeline {
         this._personas = personas;
 
         const chatId = chat.id;
+        this._chatMessages = chat.messages || []; // cache for proactive image
 
         // 1. Calculate Delays
         const readDelay = getRandomDelay(ai.readDelay || { min: 500, max: 2000 });
@@ -356,6 +359,39 @@ Please send a revised/improved version. Be natural and conversational.`;
 
         // Done
         this.callbacks.onTyping?.(chatId, ai.id, false);
+
+        // ── Proactive Image Generation (fire-and-forget) ──────────────────────
+        // Run after typing stops so it doesn't block the response.
+        // Only triggers if context analysis score is high enough or AI mentioned visuals.
+        this._tryProactiveImage(chatId, ai, cleanResponse);
+    }
+
+    /**
+     * Fire-and-forget proactive image generation.
+     * Runs asynchronously after AI response is delivered.
+     * Any errors are silently swallowed to avoid disrupting chat.
+     */
+    _tryProactiveImage(chatId, ai, aiResponse) {
+        Promise.resolve().then(async () => {
+            try {
+                const messages = this._chatMessages || [];
+                const analysis = analyzeContextForImageGen(messages, aiResponse);
+                if (!analysis.willTrigger) return;
+
+                const result = await tryProactiveImageGen(
+                    chatId,
+                    messages,
+                    aiResponse,
+                    { id: ai.id, name: ai.name, style: ai.style, interests: ai.interests }
+                );
+
+                if (result) {
+                    this.callbacks.onProactiveImage?.(chatId, result);
+                }
+            } catch (e) {
+                console.warn('[AIPipeline] Proactive image failed (non-blocking):', e.message);
+            }
+        });
     }
 
     async _simulateTypingAndSend(chatId, ai, content) {
@@ -470,7 +506,10 @@ ${ai.agentType === 'task-specialist' ? this._getSpecialistTools(ai) : ''}
         }
 
         // T12: Long-term memory + group chat context
-        return `${base}${personaRules}\n${languageHint}${controlTags}${affinityHint}${moodHint}${memoryBlock}${groupBlock}\nRULES: concise, reply when relevant, use memories naturally.`;
+        // Append MiniMax skills block so AI knows its multimodal capabilities
+        const skillsBlock = buildSkillsSystemBlock(true);
+        const skillsHint = skillsBlock ? `\n\n${skillsBlock}` : '';
+        return `${base}${personaRules}\n${languageHint}${controlTags}${affinityHint}${moodHint}${memoryBlock}${groupBlock}${skillsHint}\nRULES: concise, reply when relevant, use memories naturally.`;
     }
 
     _getSpecialistTools(ai) {

@@ -12,9 +12,9 @@ import { memoryStore } from '../core/memory/MemoryStore';
 import { cn } from '../utils/cn';
 
 const CATEGORY_COLORS = {
-    preference: { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' },
-    fact: { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' },
-    event: { bg: 'bg-purple-500/10', text: 'text-purple-400', border: 'border-purple-500/20' },
+    preference: { bg: 'bg-[var(--color-accent-sky)]/20', text: 'text-[var(--color-accent-sky)]', border: 'border-[var(--color-accent-sky)]/30' },
+    fact: { bg: 'bg-[var(--color-primary)]/10', text: 'text-[var(--color-primary)]', border: 'border-[var(--color-primary)]/20' },
+    event: { bg: 'bg-[var(--color-accent-lavender)]/20', text: 'text-[var(--color-accent-lavender)]', border: 'border-[var(--color-accent-lavender)]/30' },
 };
 
 const IMPORTANCE_LABELS = {

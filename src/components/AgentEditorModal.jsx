@@ -242,7 +242,7 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                                                         className={cn(
                                                             'px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all duration-150',
                                                             active
-                                                                ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                                                                ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] border-[var(--color-primary)]'
                                                                 : 'bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/50',
                                                         )}
                                                     >
@@ -283,7 +283,7 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                     <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="px-5 py-2 rounded-xl text-sm font-bold text-white bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-50 transition-colors"
+                        className="px-5 py-2 rounded-xl text-sm font-bold text-[var(--color-on-primary)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-50 transition-colors"
                     >
                         {saving ? t('saving') : t('save')}
                     </button>

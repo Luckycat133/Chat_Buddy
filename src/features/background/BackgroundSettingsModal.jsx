@@ -211,7 +211,7 @@ export default function BackgroundSettingsModal({ isOpen, onClose, chatId, perso
                                                     key={cat.id}
                                                     onClick={() => setActiveCategory(cat.id)}
                                                     className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${activeCategory === cat.id
-                                                        ? 'bg-[var(--color-primary)] text-white shadow-md'
+                                                        ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow-md'
                                                         : 'bg-[var(--color-bg-white)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] border border-[var(--color-border)]'
                                                         }`}
                                                 >
@@ -235,7 +235,7 @@ export default function BackgroundSettingsModal({ isOpen, onClose, chatId, perso
                                                         <span className="text-white font-medium text-sm text-center px-2">{theme.name}</span>
                                                     </div>
                                                     {currentConfig.value === theme.url && (
-                                                        <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full shadow-lg">
+                                                        <div className="absolute top-2 right-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] p-1 rounded-full shadow-lg">
                                                             <Check className="w-3 h-3" />
                                                         </div>
                                                     )}
@@ -272,7 +272,7 @@ export default function BackgroundSettingsModal({ isOpen, onClose, chatId, perso
                                                             <span className="text-white font-medium text-sm text-center px-2">{theme.name}</span>
                                                         </div>
                                                         {isSelected && (
-                                                            <div className="absolute top-2 right-2 bg-blue-500 text-white p-1 rounded-full shadow-lg">
+                                                            <div className="absolute top-2 right-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] p-1 rounded-full shadow-lg">
                                                                 <Check className="w-3 h-3" />
                                                             </div>
                                                         )}
@@ -296,17 +296,17 @@ export default function BackgroundSettingsModal({ isOpen, onClose, chatId, perso
                                                 {t('background_upload_desc')}
                                             </p>
                                             {uploadStatus === 'compressing' && (
-                                                <p className="text-sm text-blue-500 mb-3">{t('background_upload_compressing')}</p>
+                                                <p className="text-sm text-[var(--color-primary)] mb-3">{t('background_upload_compressing')}</p>
                                             )}
                                             {uploadStatus === 'error-large' && (
-                                                <p className="text-sm text-red-500 mb-3">{t('background_upload_too_large')}</p>
+                                                <p className="text-sm text-[var(--color-danger)] mb-3">{t('background_upload_too_large')}</p>
                                             )}
                                             {uploadStatus === 'done' && (
-                                                <p className="text-sm text-green-500 mb-3 flex items-center gap-1">
+                                                <p className="text-sm text-[var(--color-success)] mb-3 flex items-center gap-1">
                                                     <Check className="w-4 h-4" /> Applied!
                                                 </p>
                                             )}
-                                            <label className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium cursor-pointer transition-colors shadow-lg">
+                                            <label className="px-6 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-on-primary)] rounded-lg font-medium cursor-pointer transition-colors shadow-sm">
                                                 {t('background_upload_choose')}
                                                 <input type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
                                             </label>
@@ -328,7 +328,7 @@ export default function BackgroundSettingsModal({ isOpen, onClose, chatId, perso
                                             <button
                                                 onClick={handleVideoApply}
                                                 disabled={!videoUrl.trim()}
-                                                className="w-full py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-lg text-sm font-medium transition-colors"
+                                                className="w-full py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-40 text-[var(--color-on-primary)] rounded-lg text-sm font-medium transition-colors"
                                             >
                                                 Apply Video
                                             </button>
@@ -342,7 +342,7 @@ export default function BackgroundSettingsModal({ isOpen, onClose, chatId, perso
                                         {/* Visual effects card */}
                                         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
                                             <h3 className="text-lg font-medium mb-6 flex items-center">
-                                                <Sliders className="w-5 h-5 mr-2 text-blue-500" />
+                                                <Sliders className="w-5 h-5 mr-2 text-[var(--color-primary)]" />
                                                 {t('background_visual_effects')}
                                             </h3>
 
@@ -423,7 +423,7 @@ export default function BackgroundSettingsModal({ isOpen, onClose, chatId, perso
                                                 </label>
                                                 <button
                                                     onClick={() => handleAdjustmentChange('autoSwitch', !currentConfig.autoSwitch)}
-                                                    className={`relative w-12 h-6 rounded-full transition-colors ${currentConfig.autoSwitch ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                                    className={`relative w-12 h-6 rounded-full transition-colors ${currentConfig.autoSwitch ? 'bg-[var(--color-primary)]' : 'bg-gray-300 dark:bg-gray-600'}`}
                                                 >
                                                     <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform shadow ${currentConfig.autoSwitch ? 'translate-x-7' : 'translate-x-1'}`} />
                                                 </button>

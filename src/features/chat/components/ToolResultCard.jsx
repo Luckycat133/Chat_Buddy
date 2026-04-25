@@ -41,6 +41,28 @@ export default function ToolResultCard({ msg, language }) {
     const isLoading = status === 'loading';
     const isError = status === 'error';
 
+    // UI/UX Improvement: Special native-feeling rendering for image generation
+    if (toolName === 'generate_image') {
+        // Hide the tool trace entirely if it succeeded; the AI will organically post the image in the chat
+        if (status === 'success' || status === 'completed') return null;
+        
+        // Show a friendly loading indicator instead of a developer-style log card
+        if (isLoading) {
+            return (
+                <div className="flex justify-start mb-3 px-2">
+                    <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] shadow-sm animate-[pulse_2s_infinite]">
+                        <div className="flex items-center space-x-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-bounce" style={{ animationDelay: '0ms' }} />
+                            <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-bounce" style={{ animationDelay: '150ms' }} />
+                            <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                        <span className="text-xs font-semibold">{language === 'zh' ? '正在相册中挑选照片...' : 'Looking through the photo gallery...'}</span>
+                    </div>
+                </div>
+            );
+        }
+    }
+
     return (
         <div className="flex justify-start mb-3 px-2">
             <div className={cn(

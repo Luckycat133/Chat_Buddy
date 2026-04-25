@@ -160,7 +160,7 @@ export default function AvatarSelector({ isOpen, onClose, currentAvatar, onSelec
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <div className="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-white text-3xl font-bold">
+                                <div className="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-[var(--color-on-primary)] text-3xl font-bold">
                                     ?
                                 </div>
                             )}
@@ -183,7 +183,7 @@ export default function AvatarSelector({ isOpen, onClose, currentAvatar, onSelec
                         className={cn(
                             "w-full py-3 rounded-lg flex items-center justify-center gap-2 font-medium transition-all",
                             "bg-[var(--color-primary-light)] text-[var(--color-primary)]",
-                            "hover:bg-[var(--color-primary)] hover:text-white",
+                            "hover:bg-[var(--color-primary)] hover:text-[var(--color-on-primary)]",
                             isUploading && "opacity-50 cursor-not-allowed"
                         )}
                     >

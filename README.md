@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.2.7-blue.svg)
+![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19-61DAFB.svg)
 
@@ -293,11 +293,15 @@ We welcome contributions! Please follow these guidelines:
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-**Current Version**: v0.2.7 (2026-02-22)
+**Current Version/当前版本**: v0.4.0 (2026-04-06)
 
-### Recent Updates
+### 最近更新 / Recent Updates
 
-- 📝 **Draft Box** (v0.2.7): Auto-save unfinished moments; restore on reopen with one-tap discard
+- 🎨 **马卡龙现代版 / Macaron Modern** (v0.4.0): UI/UX 全面现代化；Bento 控制面板 v2；稳定的 HSL 颜色系统；现代化图标。 / Major UI/UX overhaul; Bento Grid dashboard v2; stabilized HSL color system; desaturated modern icons.
+- 🤖 **专业智能体 / Professional Agents** (v0.3.3): 6 个专门的任务智能体 (代码、缪斯、学者、老师、极光、像素)；ReAct 工具调用；沙箱执行。 / 6 specialized task agents (Coder, Muse, Scholar, Sensei, Aurora, Pixel); ReAct tool calling; Sandbox execution.
+- 🧠 **认知记忆 / Cognitive Memory** (v0.3.0): 长期角色记忆；IndexedDB 存储；记忆交换工具；上下文感知的 AI。 / Long-term character memory; IndexedDB storage; memory exchange tool; context-aware AI.
+- 📚 **RAG 系统 / RAG System** (v0.3.2): 知识库集成；混合搜索 (BM25 + Jaccard)；客户端文档索引。 / Knowledge Base integration; Hybrid search (BM25 + Jaccard); client-side document indexing.
+- 📝 **草稿箱 / Draft Box** (v0.2.7): 自动保存未完成的状态；重新打开时恢复，一键丢弃。 / Auto-save unfinished moments; restore on reopen with one-tap discard.
 - #️⃣ **Hashtag Topics** (v0.2.7): Clickable `#tags` in posts filter the feed; dismissible filter pill
 - ⬇️ **Load More Pagination** (v0.2.7): Feed loads 10 posts at a time for better performance
 - 🎂 **Story Events** (v0.2.7): Birthday posts for all 13 personas + seasonal holiday specials

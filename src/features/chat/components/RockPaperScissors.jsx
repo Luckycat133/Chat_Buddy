@@ -198,7 +198,7 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
                                     <button
                                         key={choice.id}
                                         onClick={() => handleChoice(choice)}
-                                        className="w-16 h-16 rounded-full bg-[var(--color-bg-app)] hover:bg-[var(--color-primary)] hover:text-white text-3xl transition-all hover:scale-110 active:scale-95"
+                                        className="w-16 h-16 rounded-full bg-[var(--color-bg-app)] hover:bg-[var(--color-primary)] hover:text-[var(--color-on-primary)] text-3xl transition-all hover:scale-110 active:scale-95"
                                     >
                                         {choice.emoji}
                                     </button>
@@ -212,7 +212,7 @@ export default function RockPaperScissors({ aiName, onClose, onResult }) {
                         <div className="flex gap-3">
                             <button
                                 onClick={handlePlayAgain}
-                                className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-[var(--color-primary-hover)] transition-colors"
+                                className="flex-1 py-3 bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-[var(--color-primary-hover)] transition-colors"
                             >
                                 <RotateCcw size={18} />
                                 {t('play_again')}

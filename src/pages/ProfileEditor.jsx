@@ -75,7 +75,7 @@ export default function ProfileEditor() {
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <div className="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-white text-3xl font-bold">
+                                <div className="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-[var(--color-on-primary)] text-3xl font-bold">
                                     {getDisplayName(language).charAt(0).toUpperCase()}
                                 </div>
                             )}

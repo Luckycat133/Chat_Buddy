@@ -36,6 +36,14 @@ import {
     RECENCY_OPTIONS
 } from '../../../services/perplexityService';
 
+// Import Tavily real-time web search service
+import {
+    tavilySearch,
+    tavilyNewsSearch,
+    formatTavilyResults,
+    isTavilyConfigured
+} from '../../../services/tavilyService';
+
 // T12: Memory Exchange for inter-character memory tool
 import { requestMemory } from '../../../core/memory/MemoryExchange';
 
@@ -83,9 +91,13 @@ export async function executeTool(toolName, args, extras = {}) {
             case 'detect_content_domain':
                 return detectContentDomain(args.text);
 
-            // ========== Research Tools (Legacy) ==========
+            // ========== Research Tools (Tavily Real-Time Search) ==========
             case 'web_search':
-                return executeWebSearch(args.query);
+                return executeTavilyWebSearch(args.query, args.options);
+            case 'tavily_search':
+                return executeTavilyWebSearch(args.query, args);
+            case 'tavily_news':
+                return executeTavilyNewsSearch(args.query, args);
             case 'analyze_data':
                 return executeDataAnalysis(args);
 
@@ -340,21 +352,84 @@ async function executeInSandbox(code, language = 'javascript') {
 // ========== Research Tool Implementations ==========
 
 /**
- * Web search via Perplexity Sonar
+ * Real-time web search via Tavily API.
+ * Falls back to a descriptive error if Tavily is not configured.
+ *
+ * @param {string} query - Search query
+ * @param {Object} [options] - Tavily search options
+ * @param {number} [options.maxResults] - Max results (1-10)
+ * @param {number} [options.relevanceThreshold] - Min relevance score (0-1)
+ * @param {string} [options.searchDepth] - 'basic' | 'advanced'
+ * @param {string[]} [options.includeDomains] - Whitelist domains
+ * @param {string[]} [options.excludeDomains] - Blacklist domains
  */
-async function executeWebSearch(query) {
+async function executeTavilyWebSearch(query, options = {}) {
+    if (!query) return '[Web Search Error] 请提供搜索查询。';
+
+    if (!isTavilyConfigured()) {
+        return [
+            '[Web Search] Tavily API 未配置。',
+            '请在 .env 文件中设置 VITE_TAVILY_API_KEY。',
+            '',
+            '您可以在 https://tavily.com 免费注册获取 API 密钥。',
+        ].join('\n');
+    }
+
     try {
-        const searchModel = 'llama-3.1-sonar-small-128k-online';
-        const prompt = `Search the web for: "${query}". Return a concise summary with key findings.`;
+        console.log(`[ToolService] Tavily web search: "${query.substring(0, 60)}"`);
 
-        const result = await callAI(
-            [{ role: 'user', content: prompt }],
-            { model: searchModel, maxTokens: 500, temperature: 0.2 }
-        );
+        const searchResponse = await tavilySearch(query, {
+            maxResults: options.maxResults || 5,
+            relevanceThreshold: options.relevanceThreshold || 0.3,
+            searchDepth: options.searchDepth || 'basic',
+            includeAnswer: true,
+            includeDomains: options.includeDomains || [],
+            excludeDomains: options.excludeDomains || [],
+            topic: options.topic || 'general',
+        });
 
-        return result ? `[Search Results]\n${result}` : "[Search Error] No results.";
-    } catch (e) {
-        return `[Search Error] ${e.message}`;
+        return formatTavilyResults(searchResponse);
+
+    } catch (error) {
+        console.error('[ToolService] Tavily search error:', error);
+        return [
+            `[Web Search Error] ${error.message}`,
+            '',
+            '请检查：',
+            '1. VITE_TAVILY_API_KEY 是否正确配置在 .env 中',
+            '2. 网络连接是否正常',
+            '3. 是否超出每日搜索配额',
+        ].join('\n');
+    }
+}
+
+/**
+ * Real-time news search via Tavily API.
+ * @param {string} query - News search query
+ * @param {Object} [options]
+ * @param {number} [options.days=7] - Limit to last N days
+ */
+async function executeTavilyNewsSearch(query, options = {}) {
+    if (!query) return '[News Search Error] 请提供搜索查询。';
+
+    if (!isTavilyConfigured()) {
+        return '[News Search] Tavily API 未配置。请在 .env 文件中设置 VITE_TAVILY_API_KEY。';
+    }
+
+    try {
+        console.log(`[ToolService] Tavily news search: "${query.substring(0, 60)}"`);
+
+        const searchResponse = await tavilyNewsSearch(query, {
+            maxResults: options.maxResults || 5,
+            days: options.days || 7,
+            includeAnswer: true,
+        });
+
+        return formatTavilyResults(searchResponse);
+
+    } catch (error) {
+        console.error('[ToolService] Tavily news search error:', error);
+        return `[News Search Error] ${error.message}`;
     }
 }
 

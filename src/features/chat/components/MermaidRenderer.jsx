@@ -27,6 +27,7 @@ export default function MermaidRenderer({ content }) {
                     theme: isDarkMode ? 'dark' : 'default',
                     securityLevel: 'strict',
                     fontFamily: 'system-ui, -apple-system, sans-serif',
+                    suppressErrorRendering: true, // Crucial: prevents Mermaid from drawing the giant bomb SVG
                 });
 
                 // Clear previous content safely
@@ -34,16 +35,35 @@ export default function MermaidRenderer({ content }) {
                     containerRef.current.removeChild(containerRef.current.firstChild);
                 }
 
+                const trimmedContent = content.trim();
+
+                // 1. Validate syntax explicitly. This will throw if content is invalid.
+                // In some versions, parse returns a promise, in others it's synchronous.
+                if (mermaid.parseAsync) {
+                    await mermaid.parseAsync(trimmedContent);
+                } else {
+                    await mermaid.parse(trimmedContent, { suppressErrors: true });
+                }
+
                 // Generate a unique ID for this diagram
                 const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
 
-                // Render the diagram
-                const { svg } = await mermaid.render(id, content.trim());
+                // 2. Render the diagram
+                const { svg } = await mermaid.render(id, trimmedContent);
+
+                // Fail-safe: if mermaid still returns an error SVG silently
+                if (svg.includes('Syntax error in text') || svg.includes('error-icon')) {
+                    throw new Error('Invalid Mermaid syntax');
+                }
 
                 // Parse and insert SVG safely
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(svg, 'image/svg+xml');
                 const svgElement = doc.documentElement;
+                
+                // Add maximum bounds so huge diagrams don't break the layout
+                svgElement.setAttribute('style', 'max-width: 100%; height: auto;');
+                
                 containerRef.current.appendChild(svgElement);
             } catch (err) {
                 console.error('Mermaid render error:', err);

@@ -22,6 +22,39 @@ import LinkPreview from '../LinkPreview';
 const LazyMarkdownCodeBlock = lazy(() => import('../MarkdownCodeBlock'));
 const LazyMermaidRenderer = lazy(() => import('../MermaidRenderer'));
 import ToolResultCard from '../ToolResultCard';
+import TTSButton from '../TTSButton';
+import ProactiveImageCard from '../ProactiveImageCard';
+// Skill Recommendation Bubble removed per user request
+import { useImageGen } from '../../../../hooks/useImageGen';
+
+/**
+ * Per-AI-message extras: proactive image card + skill recommendation bubble.
+ * Isolated to its own component to contain the useImageGen hook state.
+ */
+function AIMessageExtras({ msg, persona, messages }) {
+    const { state, result, error, params, updateParams, generate } = useImageGen(
+        msg.chatId || 'unknown',
+        persona,
+        messages
+    );
+
+    return (
+        <>
+            {/* Proactive Image Card */}
+            {(state !== 'idle' || result) && (
+                <ProactiveImageCard
+                    state={state}
+                    result={result}
+                    error={error}
+                    params={params}
+                    onUpdateParams={updateParams}
+                    onRegenerate={() => generate({ force: true })}
+                    personaName={persona?.name || 'AI'}
+                />
+            )}
+        </>
+    );
+}
 
 /**
  * T07: Highlight @mentions in message content
@@ -56,15 +89,14 @@ function HighlightedMentions({ content, participants, currentUserId, onMentionCl
 
     // Split content by mentions and render with highlighting
     const parts = content.split(mentionPattern);
-    let cursor = 0;
 
-    return parts.map((part, partIndex) => {
-        const key = `mention-${cursor}-${part}`;
-        cursor += part.length;
-        // Check if this part is a mention (odd indices in the split result)
+    // Use reduce to avoid cursor reassignment after render
+    return parts.reduce((acc, part, partIndex) => {
+        const offset = parts.slice(0, partIndex).reduce((sum, p) => sum + p.length, 0);
+        const key = `mention-${offset}-${partIndex}`;
         if (partIndex % 2 === 1) {
             const isCurrentUser = participants?.find(p => p.name === part)?.id === currentUserId;
-            return (
+            acc.push(
                 <button
                     key={key}
                     type="button"
@@ -73,7 +105,7 @@ function HighlightedMentions({ content, participants, currentUserId, onMentionCl
                         'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md font-medium cursor-pointer',
                         'transition-all duration-200 hover:scale-105',
                         isCurrentUser
-                            ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                            ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow-sm'
                             : 'bg-[var(--color-primary)]/15 text-[var(--color-primary)]'
                     )}
                     title={isCurrentUser ? t('mention_you') : `@${part}`}
@@ -81,9 +113,11 @@ function HighlightedMentions({ content, participants, currentUserId, onMentionCl
                     @{part}
                 </button>
             );
+        } else {
+            acc.push(part);
         }
-        return part;
-    });
+        return acc;
+    }, []);
 }
 
 function CodeBlock({ language, children }) {
@@ -107,7 +141,7 @@ function LinkWithPreview({ href, children, ...props }) {
         return (
             <a
                 href={href}
-                className="text-blue-500 hover:underline"
+                className="underline underline-offset-2 hover:opacity-80 transition-opacity font-medium"
                 {...props}
             >
                 {children}
@@ -119,7 +153,7 @@ function LinkWithPreview({ href, children, ...props }) {
         <span className="relative inline-block">
             <a
                 href={href}
-                className="text-blue-500 hover:underline"
+                className="underline underline-offset-2 hover:opacity-80 transition-opacity font-medium"
                 target="_blank"
                 rel="noopener noreferrer"
                 onMouseEnter={() => setShowPreview(true)}
@@ -349,7 +383,7 @@ export default function MessageTimeline({
                             ref={(node) => setMessageRef(msg.id, node)}
                             data-message-id={msg.id}
                             className={cn(
-                                "flex mb-4 group/msg rounded-2xl transition-all",
+                                "flex mb-2 group/msg rounded-2xl transition-all",
                                 isMe ? "justify-end" : "justify-start",
                                 "bubble-enter",
                                 isHighlighted && "ring-2 ring-[var(--color-primary)]/70 bg-[var(--color-primary)]/10 px-1 py-1"
@@ -361,7 +395,7 @@ export default function MessageTimeline({
                                 style={!isMe ? getCharacterThemeStyle(msg.senderId) : {}}
                             >
                                 {/* Avatar */}
-                                <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 shadow-sm opacity-90 hover:opacity-100 transition-opacity">
+                                <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 shadow-sm opacity-90 hover:opacity-100 transition-opacity duration-200">
                                     {sender?.avatar ? (
                                         <img src={sender.avatar} className="w-full h-full object-cover" alt="" />
                                     ) : (
@@ -377,9 +411,9 @@ export default function MessageTimeline({
                                         "relative transition-all duration-200 message-bubble-hover",
                                         (type === 'text' || type === 'file')
                                             ? (isMe
-                                                ? "bubble-msg-me px-4.5 py-3 bg-[var(--gradient-aurora)] text-white rounded-[20px] rounded-tr-sm shadow-md"
+                                                ? "bubble-msg-me px-4.5 py-3 bg-[var(--gradient-aurora)] text-[var(--color-on-primary)] rounded-[var(--radius-bubble)] rounded-tr-sm shadow-sm border border-transparent"
                                                 : cn(
-                                                    "bubble-msg px-4.5 py-3 bg-[var(--color-bg-white)] text-[var(--color-text-main)] rounded-[20px] rounded-tl-sm border border-[var(--color-border-light)] shadow-sm",
+                                                    "bubble-msg px-4.5 py-3 bg-[var(--color-bg-white)] text-[var(--color-text-main)] rounded-[var(--radius-bubble)] rounded-tl-sm border border-[var(--color-border)] shadow-sm",
                                                     "message-bubble-ai",
                                                     getCharacterGlowClass(msg.senderId)
                                                 ))
@@ -387,10 +421,9 @@ export default function MessageTimeline({
                                     )}
                                         style={isMe && (type === 'text' || type === 'file')
                                             ? {
-                                                background: 'var(--gradient-user-bubble, linear-gradient(135deg, #f9735d 0%, #ef5b7f 100%))',
-                                                backgroundSize: '180% 180%',
-                                                color: '#ffffff',
-                                                textShadow: '0 1px 1px rgba(0, 0, 0, 0.18)'
+                                                background: 'var(--color-primary)',
+                                                color: 'var(--color-on-primary)',
+                                                textShadow: '0 1px 1px rgba(0, 0, 0, 0.1)'
                                             }
                                             : undefined
                                         }>
@@ -399,11 +432,11 @@ export default function MessageTimeline({
                                         )}
 
                                         {type === 'sticker' ? (
-                                            <div className="text-7xl drop-shadow-md hover:scale-110 transition-transform cursor-pointer origin-bottom">
+                                            <div className="text-7xl drop-shadow-md hover:scale-110 transition-transform duration-200 cursor-pointer origin-bottom">
                                                 {content}
                                             </div>
                                         ) : type === 'gift' && meta ? (
-                                            <div className="bg-gradient-to-r from-pink-500 to-rose-500 text-white p-3 rounded-2xl shadow-lg flex items-center gap-3 min-w-[160px]">
+                                            <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-active)] text-[var(--color-on-primary)] p-3 rounded-2xl shadow-lg flex items-center gap-3 min-w-[160px]">
                                                 <div className="text-3xl bg-white/20 p-2 rounded-xl">{meta.emoji}</div>
                                                 <div>
                                                     <p className="font-bold text-sm">{language === 'zh' ? meta.name : meta.name_en}</p>
@@ -411,7 +444,7 @@ export default function MessageTimeline({
                                                 </div>
                                             </div>
                                         ) : type === 'red_packet' && meta ? (
-                                            <div className="bg-gradient-to-r from-[#FA9D3B] to-[#F76B1C] text-white p-1 rounded-2xl shadow-md cursor-pointer hover:shadow-lg transition-shadow min-w-[220px]">
+                                            <div className="bg-gradient-to-r from-[#FA9D3B] to-[#F76B1C] text-white p-1 rounded-2xl shadow-md cursor-pointer hover:shadow-lg transition-shadow duration-200 min-w-[220px]">
                                                 <div className="flex items-center gap-3 p-3">
                                                     <div className="bg-[#FEF2DC] rounded-xl p-2.5 text-[#FA9D3B]">
                                                         <Coins size={24} />
@@ -456,7 +489,7 @@ export default function MessageTimeline({
                                                 <div className={cn("p-2.5 rounded-xl", isMe ? "bg-white/20" : "bg-[var(--color-bg-active)]")}>
                                                     <Paperclip size={20} className={isMe ? "text-white" : "text-[var(--color-text-muted)]"} />
                                                 </div>
-                                                <div className="text-sm underline underline-offset-2 opacity-90 hover:opacity-100 cursor-pointer">
+                                                <div className="text-sm underline underline-offset-2 opacity-90 hover:opacity-100 transition-opacity duration-200 cursor-pointer">
                                                     {content}
                                                 </div>
                                             </div>
@@ -562,15 +595,34 @@ export default function MessageTimeline({
                                     ))}
                                 </div>
 
-                                <button
-                                    onClick={(e) => onContextMenu(e, msg)}
-                                    className={cn(
-                                        "opacity-0 group-hover/msg:opacity-100 transition-opacity p-2 rounded-full hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] self-center active:scale-95",
-                                        isMe ? "mr-2" : "ml-2"
+                                {/* AI Message Extras: Skill Recommendation + Proactive Image */}
+                                {!isMe && type === 'text' && content && (
+                                    <AIMessageExtras
+                                        msg={{ ...msg, chatId: chat?.id }}
+                                        persona={personas?.find(p => p.id === msg.senderId)}
+                                        messages={chat?.messages || []}
+                                    />
+                                )}
+
+                                {/* TTS (语音朗读) + More Menu Buttons */}
+                                <div className={cn(
+                                    "flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity self-center",
+                                    isMe ? "mr-1 flex-row-reverse" : "ml-1"
+                                )}>
+                                    {/* TTS Button — only for AI text messages */}
+                                    {!isMe && type === 'text' && content && (
+                                        <TTSButton
+                                            text={content}
+                                            personaId={msg.senderId}
+                                        />
                                     )}
-                                >
-                                    <MoreHorizontal size={14} />
-                                </button>
+                                    <button
+                                        onClick={(e) => onContextMenu(e, msg)}
+                                        className="p-2 rounded-full hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] active:scale-95 transition-all duration-200 cursor-pointer"
+                                    >
+                                        <MoreHorizontal size={14} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </React.Fragment>

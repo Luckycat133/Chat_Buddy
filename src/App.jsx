@@ -3,9 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import AppProviders from './providers/AppProviders';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
+import ChatWindow from './features/chat/ChatWindow';
 
 const ChatList = lazy(() => import('./features/chat/ChatList'));
-const ChatWindow = lazy(() => import('./features/chat/ChatWindow'));
 const CreateChat = lazy(() => import('./features/chat/CreateChat'));
 const GroupDetails = lazy(() => import('./features/chat/GroupDetails'));
 const Settings = lazy(() => import('./pages/Settings'));

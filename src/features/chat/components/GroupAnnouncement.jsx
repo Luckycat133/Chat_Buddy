@@ -90,7 +90,7 @@ export default function GroupAnnouncement({ announcement, isAdmin, onClose, onSa
                                     className={cn(
                                         "flex-1 py-2.5 rounded-lg font-medium transition-all",
                                         content.trim()
-                                            ? "bg-[var(--color-primary)] text-white"
+                                            ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                                             : "bg-gray-200 text-gray-400"
                                     )}
                                 >
@@ -124,7 +124,7 @@ export default function GroupAnnouncement({ announcement, isAdmin, onClose, onSa
                                     </button>
                                     <button
                                         onClick={() => setIsEditing(true)}
-                                        className="flex-1 py-2.5 bg-[var(--color-primary)] text-white rounded-lg font-medium"
+                                        className="flex-1 py-2.5 bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-lg font-medium"
                                     >
                                         {t('btn_edit')}
                                     </button>
@@ -138,7 +138,7 @@ export default function GroupAnnouncement({ announcement, isAdmin, onClose, onSa
                             {isAdmin && (
                                 <button
                                     onClick={() => setIsEditing(true)}
-                                    className="mt-4 px-6 py-2 bg-[var(--color-primary)] text-white rounded-full font-medium"
+                                    className="mt-4 px-6 py-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-full font-medium"
                                 >
                                     {t('announcement_create_btn')}
                                 </button>

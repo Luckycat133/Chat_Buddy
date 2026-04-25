@@ -86,11 +86,11 @@ const characterThemes = {
 const defaultTheme = {
   id: 'default',
   name: 'Default',
-  primary: '#FF9B7A',
+  primary: '#CA8A04',
   accent: '#B8A4E3',
   glow: 'rgba(255, 155, 122, 0.35)',
   glowClass: '',
-  gradient: 'linear-gradient(135deg, #FF9B7A 0%, #FF7E9D 50%, #B8A4E3 100%)',
+  gradient: 'linear-gradient(135deg, #CA8A04 0%, #1c1917 100%)',
 };
 
 /**
@@ -137,6 +137,8 @@ export function getCharacterThemeStyle(personaId) {
     '--character-primary': theme.primary,
     '--character-accent': theme.accent,
     '--character-gradient': theme.gradient,
+    // Dynamically override the app's primary color with the character's primary color
+    '--color-primary': theme.primary,
   };
 }
 

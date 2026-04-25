@@ -148,7 +148,7 @@ export default function GiftPanel({ recipientId, recipientName, onClose, onGiftS
                         className={cn(
                             "w-full py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2",
                             selectedGift && !sending
-                                ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]"
+                                ? "bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
                                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
                         )}
                     >

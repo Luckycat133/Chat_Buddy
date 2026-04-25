@@ -90,7 +90,7 @@ export default function Help() {
                                 </p>
                             </div>
                             <div className="flex items-start gap-4">
-                                <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-400 flex-shrink-0 shadow-sm">
+                                <div className="w-10 h-10 bg-[var(--color-primary-light)] rounded-xl flex items-center justify-center text-[var(--color-accent-gold)] flex-shrink-0 shadow-sm">
                                     <Sparkles size={20} />
                                 </div>
                                 <p className="text-sm font-medium text-[var(--color-text-secondary)] leading-snug">
@@ -106,9 +106,14 @@ export default function Help() {
                             <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
                                 {t('contact_info')}
                             </p>
-                            <button className="btn btn-secondary btn-sm w-full mt-4">
-                                {t('contact_support') || 'Contact Support'}
-                            </button>
+                            <a
+                                href="https://github.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-secondary btn-sm w-full mt-4 inline-flex items-center justify-center gap-2 no-underline"
+                            >
+                                {t('contact_support')}
+                            </a>
                         </div>
                     </aside>
 
@@ -142,7 +147,7 @@ export default function Help() {
                                         >
                                             <div className={cn(
                                                 "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
-                                                isExpanded ? "bg-[var(--color-primary)] text-white" : "bg-[var(--color-bg-hover)] text-[var(--color-primary)]"
+                                                isExpanded ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]" : "bg-[var(--color-bg-hover)] text-[var(--color-primary)]"
                                             )}>
                                                 {faq.icon}
                                             </div>
@@ -166,10 +171,10 @@ export default function Help() {
                                                     </p>
                                                     <div className="mt-4 flex gap-2">
                                                         <button className="btn btn-ghost btn-sm">
-                                                            {t('helpful') || 'Helpful'}
+                                                            {t('helpful')}
                                                         </button>
                                                         <button className="btn btn-ghost btn-sm">
-                                                            {t('share') || 'Share'}
+                                                            {t('share')}
                                                         </button>
                                                     </div>
                                                 </div>

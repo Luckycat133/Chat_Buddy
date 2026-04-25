@@ -13,6 +13,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] — Macaron Modern & Quality Polish (2026-04-06)
+
+> Major UI/UX modernization and comprehensive localization pass. The "Macaron Orange" design system is now fully stabilized and polished.
+
+### Added — UI/UX Modernization
+- **Macaron Orange Design System 2.0** (`src/index.css`)
+  - Stabilized HSL-based color tokens for consistent primary, surface, and semantic colors.
+  - Implemented modern icon desaturation (0.7-0.9 opacity) and harmonization.
+  - Established standardized typography system with 1.25 modular ratio.
+- **Bento Grid Dashboard v2** (`src/pages/Dashboard.jsx`)
+  - Redesigned widget layout for better information density and visual appeal.
+  - Refined greeting section with animated glass background.
+- **Localized Agent Skills & Filters** (`src/pages/AgentsPage.jsx`)
+  - Added `translateSkill` helper and `skillKeyMap` for dynamic localization.
+  - Filter tags (Coding, Writing, etc.) now use `t()` keys and support active states.
+
+### Fixed — Quality UI Polish
+- **About Page Layout Fix** (`src/pages/About.jsx`)
+  - Resolved critical logo overflow bug in header.
+  - Properly centered and sized version and brand information.
+- **Help Page Refinement** (`src/pages/Help.jsx`)
+  - Replaced hardcoded `orange-50` colors with theme-aware tokens.
+  - Translated "Contact Support" button and "X Questions" counter.
+  - Fixed support button to be a valid functional link.
+- **Settings Page Consistency** (`src/pages/Settings.jsx`)
+  - Fully translated "Character Memory" and Advanced Tools descriptions.
+
+### Changed — Localization (i18n)
+- **locales.js Audit** (`src/data/locales.js`)
+  - Added 30+ missing translation keys for Agent skills, support links, and dashboard elements.
+  - Achieved 100% EN/ZH parity across all primary and secondary routes.
+
+---
+
 ## [Unreleased]
 
 > Planned features not yet assigned to a specific version.
@@ -314,7 +348,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Keyboard navigation support
 - **Layout & Navigation**
   - Responsive sidebar + bottom bar layout
-  - About page with version info
+  - About page with version: "v0.4.0", about_title: "About Chat Buddy"
   - Help & FAQ page
   - Chat Buddy logo
   - Notification settings (sound, DnD, browser push)

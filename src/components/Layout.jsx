@@ -64,11 +64,6 @@ export default function Layout() {
                 <BackgroundLayer />
             </Suspense>
 
-            {/* Ambient Backlight (Aurora) for depth */}
-            <div aria-hidden="true" className="absolute top-0 left-0 w-full h-[60vh] opacity-40 pointer-events-none"
-                style={{ background: 'radial-gradient(circle at 10% 10%, var(--color-primary-softer), transparent 70%)' }}></div>
-            <div aria-hidden="true" className="absolute bottom-0 right-0 w-full h-[60vh] opacity-30 pointer-events-none"
-                style={{ background: 'radial-gradient(circle at 90% 90%, var(--color-accent-lavender), transparent 70%)' }}></div>
 
             {/* Sidebar - Desktop - Floating Vertical Island */}
             <aside aria-label="Sidebar" className="hidden md:flex flex-col items-center py-6 my-4 ml-4 z-30 relative
@@ -77,19 +72,14 @@ export default function Layout() {
 
                 {/* Logo with glow effect */}
                 <div className="mb-8 relative group cursor-pointer">
-                    <div className="absolute inset-0 rounded-[var(--radius-lg)] opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                        style={{
-                            background: 'var(--gradient-aurora)',
-                            filter: 'blur(8px)',
-                            transform: 'scale(1.1)'
-                        }} />
+
                     <div className="relative w-14 h-14 rounded-[var(--radius-lg)] overflow-hidden shadow-lg
                         transition-all duration-500 group-hover:scale-105
                         ring-2 ring-[var(--color-border)] group-hover:ring-[var(--color-primary)]/40">
                         {logoError ? (
                             <div
-                                className="w-full h-full flex items-center justify-center text-white font-bold text-xl animate-aurora"
-                                style={{ background: 'var(--gradient-aurora)' }}
+                                className="w-full h-full flex items-center justify-center text-white font-bold text-xl"
+                                style={{ background: 'var(--color-primary)' }}
                             >
                                 <span className="flex items-center gap-0.5 transform group-hover:rotate-12 transition-transform duration-500">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -141,8 +131,8 @@ export default function Layout() {
 
             {/* Mobile Bottom Tab Bar - Floating Dock (Hidden in Chat and Agent Workspace) */}
             {!location.pathname.startsWith('/chat/') && !location.pathname.match(/^\/agents\/[^/]+$/) && (
-                <nav aria-label="Mobile" className="md:hidden fixed bottom-6 left-6 right-6 glass-crystal rounded-[var(--radius-xl)] shadow-floating
-                    flex justify-around items-center px-4 py-3 z-50 animate-fade-slide-up border border-white/50"
+                <nav aria-label="Mobile" className="md:hidden fixed bottom-6 left-6 right-6 bg-[var(--color-bg-white)] rounded-[var(--radius-xl)] shadow-floating
+                    flex justify-around items-center px-4 py-3 z-50 border border-[var(--color-border)]"
                     style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
 
                     <MobileNavItem to="/" icon={<MessageSquare size={24} />} label={t('nav_chats')} />
@@ -187,10 +177,10 @@ function NavItem({ to, icon, label, delay, shortcutHint, ...rest }) {
         <NavLink
             to={to}
             className={({ isActive }) => cn(
-                "group relative flex items-center justify-center w-14 h-14 rounded-[22px] transition-all duration-400 ease-out",
+                "group relative flex items-center justify-center w-14 h-14 rounded-[var(--radius-xl)] transition-all duration-400 ease-out",
                 isActive
-                    ? "text-white shadow-glow-strong scale-110"
-                    : "text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:bg-[var(--color-bg-hover)] hover:shadow-lg hover:scale-105"
+                    ? "text-[var(--color-on-primary)] shadow-md scale-105"
+                    : "text-[var(--color-text-muted)] hover:text-[var(--color-text-main)] hover:bg-[var(--color-bg-hover)] hover:shadow-sm hover:scale-105"
             )}
             title={shortcutHint ? `${label} (${shortcutHint})` : label}
             style={{ animationDelay: `${delay}ms` }}
@@ -199,16 +189,15 @@ function NavItem({ to, icon, label, delay, shortcutHint, ...rest }) {
         >
             {({ isActive }) => (
                 <>
-                    {/* Active background - Squircle with Gradient */}
+                    {/* Active background - Clean primary fill */}
                     {isActive && (
-                        <div className="absolute inset-0 rounded-[22px] animate-aurora shadow-inner"
-                            style={{ background: 'var(--gradient-aurora)', backgroundSize: '150% 150%' }} />
+                        <div className="absolute inset-0 rounded-[var(--radius-xl)] bg-[var(--color-primary)] shadow-sm" />
                     )}
 
                     {/* Active Indicator - Left Bar */}
                     {isActive && (
                         <div
-                            className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1 h-6 rounded-full bg-white shadow-glow"
+                            className="absolute -left-1.5 top-1/2 -translate-y-1/2 w-1 h-6 rounded-full bg-[var(--color-primary)] shadow-sm"
                             aria-hidden="true"
                         />
                     )}
@@ -254,8 +243,7 @@ function MobileNavItem({ to, icon, label }) {
                     {/* Active indicator dot */}
                     {isActive && (
                         <div
-                            className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full animate-scale-in"
-                            style={{ background: 'var(--gradient-aurora)' }}
+                            className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[var(--color-primary)]"
                             aria-hidden="true"
                         />
                     )}

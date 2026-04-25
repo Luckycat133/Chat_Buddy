@@ -115,7 +115,7 @@ export default function CheckInPanel({ onClose }) {
                                     "w-10 h-10 mx-auto rounded-full flex items-center justify-center text-sm font-medium transition-all",
                                     day.isToday && !day.checked && "ring-2 ring-[var(--color-primary)] ring-offset-2",
                                     day.checked
-                                        ? "bg-[var(--color-primary)] text-white"
+                                        ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                                         : day.isPast
                                             ? "bg-[var(--color-bg-active)] text-[var(--color-text-light)]"
                                             : "bg-[var(--color-bg-white)] text-[var(--color-text-main)]"
@@ -129,7 +129,7 @@ export default function CheckInPanel({ onClose }) {
 
                 {/* Check In Result */}
                 {checkInResult?.success && (
-                    <div className="px-4 py-3 bg-green-50 text-green-700 text-center">
+                    <div className="px-4 py-3 bg-[var(--color-primary-softer)] text-[var(--color-primary-active)] text-center">
                         <p className="font-medium">
                             🎉 {t('checkin_success')}
                         </p>
@@ -167,7 +167,7 @@ export default function CheckInPanel({ onClose }) {
                             "w-full py-3 rounded-lg font-medium transition-all flex items-center justify-center gap-2",
                             hasChecked
                                 ? "bg-[var(--color-bg-active)] text-[var(--color-text-light)] cursor-not-allowed"
-                                : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]"
+                                : "bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]"
                         )}
                     >
                         <Calendar size={20} />

@@ -225,7 +225,7 @@ export default function FriendDetail({ friend, onClose }) {
                     <div className="sticky bottom-0 bg-[var(--color-bg-white)] pt-3">
                         <button
                             onClick={handleStartChat}
-                            className="w-full py-3 bg-[var(--color-primary)] text-white rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-[var(--color-primary-hover)] transition-all"
+                            className="w-full py-3 bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-[var(--color-primary-hover)] transition-all"
                         >
                             <MessageCircle size={20} />
                             {existingChat ? (t('view_chat') || 'View Chat') : (t('start_chat') || 'Start Chat')}

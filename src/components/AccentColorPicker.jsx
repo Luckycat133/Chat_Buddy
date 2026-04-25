@@ -5,7 +5,7 @@ import { RotateCcw, Pipette } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 const PRESETS = [
-    { id: 'default', hex: '#ff9b7a', labelKey: 'accent_default' },
+    { id: 'default', hex: '#ca8a04', labelKey: 'accent_default' },
     { id: 'coral', hex: '#ff7e9d', labelKey: 'accent_coral' },
     { id: 'lavender', hex: '#b8a4e3', labelKey: 'accent_lavender' },
     { id: 'mint', hex: '#7ddfc3', labelKey: 'accent_mint' },

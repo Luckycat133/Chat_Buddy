@@ -63,9 +63,9 @@ export default function DailyTaskPanel({ onClose }) {
                 {/* Footer message */}
                 {allDone && (
                     <div className="px-4 pb-4">
-                        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-[var(--radius-lg)] p-3 text-center">
-                            <p className="text-sm font-bold text-green-700 dark:text-green-400">{t('tasks_all_done')}</p>
-                            <p className="text-xs text-green-600/70 dark:text-green-500/70 mt-0.5">{t('tasks_reset_tomorrow')}</p>
+                        <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 rounded-[var(--radius-lg)] p-3 text-center">
+                            <p className="text-sm font-bold text-[var(--color-primary-active)]">{t('tasks_all_done')}</p>
+                            <p className="text-xs text-[var(--color-primary)]/80 mt-0.5">{t('tasks_reset_tomorrow')}</p>
                         </div>
                     </div>
                 )}
@@ -94,7 +94,7 @@ function TaskRow({ task, t }) {
         <div className={cn(
             'flex items-center gap-3 p-3 rounded-[var(--radius-lg)] border transition-all',
             task.completed
-                ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/50'
+                ? 'bg-[var(--color-primary)]/5 border-[var(--color-primary)]/30'
                 : 'bg-[var(--color-bg-hover)] border-[var(--color-border)]'
         )}>
             {/* Status icon */}
@@ -105,12 +105,12 @@ function TaskRow({ task, t }) {
                 <div className="flex items-center gap-2">
                     <span className={cn(
                         'text-sm font-semibold',
-                        task.completed ? 'text-green-700 dark:text-green-400' : 'text-[var(--color-text-main)]'
+                        task.completed ? 'text-[var(--color-primary-active)]' : 'text-[var(--color-text-main)]'
                     )}>
                         {label}
                     </span>
                     {task.completed
-                        ? <CheckCircle2 size={14} className="text-green-500 flex-shrink-0" />
+                        ? <CheckCircle2 size={14} className="text-[var(--color-primary)] flex-shrink-0" />
                         : <Circle size={14} className="text-[var(--color-text-muted)] flex-shrink-0" />
                     }
                 </div>
@@ -123,7 +123,7 @@ function TaskRow({ task, t }) {
                             <div
                                 className={cn(
                                     'rounded-full h-1 transition-all duration-300',
-                                    task.completed ? 'bg-green-500' : 'bg-[var(--color-primary)]'
+                                    task.completed ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-primary)]/70'
                                 )}
                                 style={{ width: `${pct}%` }}
                             />
@@ -139,7 +139,7 @@ function TaskRow({ task, t }) {
             <div className={cn(
                 'flex-shrink-0 text-xs font-bold px-2 py-1 rounded-full',
                 task.completed
-                    ? 'bg-green-100 dark:bg-green-800/30 text-green-700 dark:text-green-400'
+                    ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary-active)]'
                     : task.points > 0
                         ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
                         : 'bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]'

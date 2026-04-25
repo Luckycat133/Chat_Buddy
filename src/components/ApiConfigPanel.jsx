@@ -267,7 +267,7 @@ export default function ApiConfigPanel({ onClose }) {
                 "flex-1 py-2.5 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-all",
                 testStatus === "testing"
                   ? "bg-[var(--color-bg-app)] text-[var(--color-text-muted)] cursor-wait"
-                  : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)]",
+                  : "bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)]",
               )}
             >
               {testStatus === "testing" ? (
@@ -308,7 +308,7 @@ export default function ApiConfigPanel({ onClose }) {
           <div className="flex gap-3">
             <button
               onClick={handleSave}
-              className="flex-1 py-2.5 rounded-xl font-medium text-sm bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-hover)] transition-all flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 rounded-xl font-medium text-sm bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-hover)] transition-all flex items-center justify-center gap-2"
             >
               {saved ? <Check size={16} /> : <Save size={16} />}
               {saved ? t("config_saved") : t("save_config")}
@@ -353,7 +353,7 @@ export default function ApiConfigPanel({ onClose }) {
                 />
                 <button
                   onClick={handleSaveProfile}
-                  className="px-3 py-2 rounded-lg bg-[var(--color-primary)] text-white text-sm font-medium"
+                  className="px-3 py-2 rounded-lg bg-[var(--color-primary)] text-[var(--color-on-primary)] text-sm font-medium"
                 >
                   {t("save")}
                 </button>

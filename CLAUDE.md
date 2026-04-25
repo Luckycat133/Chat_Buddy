@@ -319,6 +319,7 @@ Supports any OpenAI-compatible API provider (DeepSeek, Perplexity, OpenAI).
 - `v0.1.x`: Foundation Layer (i18n, API, UI Design System)
 - `v0.2.x`: Basic Role-Play (Characters, Chat, Social)
 - `v0.3.x`: Basic Agent (Memory, Agents, RAG, Professional Skills)
+- `v0.4.x`: Modernization & Polish (Final UI, Quality Consolidation)
 
 Version updates follow [Keep a Changelog](https://keepachangelog.com/) format in `CHANGELOG.md`.
 

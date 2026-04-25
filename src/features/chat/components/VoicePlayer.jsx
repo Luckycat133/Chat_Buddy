@@ -127,7 +127,7 @@ export default function VoicePlayer({ duration, url, waveform, isMe }) {
                     "w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95",
                     isMe
                         ? "bg-white text-[var(--color-primary)] hover:bg-white/90"
-                        : "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-active)]"
+                        : "bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-active)]"
                 )}
             >
                 {isPlaying ? (

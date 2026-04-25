@@ -112,7 +112,7 @@ export default function StickerPicker({ aiId, onSelect }) {
                         <div className="text-4xl mb-2">{longPressSticker.sticker.emoji}</div>
                         <button
                             onClick={handleToggleFavorite}
-                            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-bg-app)] rounded-lg hover:bg-[var(--color-primary)] hover:text-white transition-colors w-full justify-center"
+                            className="flex items-center gap-2 px-4 py-2 bg-[var(--color-bg-app)] rounded-lg hover:bg-[var(--color-primary)] hover:text-[var(--color-on-primary)] transition-colors w-full justify-center"
                         >
                             <Star size={16} className={isFavorite(longPressSticker.packId, longPressSticker.sticker.id) ? 'fill-current' : ''} />
                             {isFavorite(longPressSticker.packId, longPressSticker.sticker.id)

@@ -327,7 +327,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                         {inputValue.trim() ? (
                             <button
                                 type="submit"
-                                className="composer-send-btn animate-aurora"
+                                className="composer-send-btn"
                                 aria-label={t('send') || 'Send'}
                             >
                                 <Send size={22} className="ml-0.5" />
@@ -361,19 +361,19 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
             {showPlusMenu && (
                 <div className="plus-menu glass-crystal animate-scale-spring">
                     <MenuButton icon={ImageIcon} label={t('image')} onClick={onOpenImageUpload}
-                        color="text-[var(--color-accent-lavender)]" bg="bg-purple-50" />
+                        color="text-[var(--color-text-main)]" bg="bg-[var(--color-bg-active)]" />
                     <MenuButton icon={Paperclip} label={t('file')} onClick={() => setShowFileUploader(true)}
-                        color="text-[var(--color-accent-sky)]" bg="bg-sky-50" />
+                        color="text-[var(--color-text-main)]" bg="bg-[var(--color-bg-active)]" />
                     <MenuButton icon={Heart} label={t('sticker')} onClick={() => setShowStickerPicker(true)}
-                        color="text-[var(--color-accent-coral)]" bg="bg-pink-50" />
+                        color="text-[var(--color-text-main)]" bg="bg-[var(--color-bg-active)]" />
                     <MenuButton icon={Gift} label={t('gift')} onClick={handleOpenGift}
-                        color="text-[var(--color-accent-coral)]" bg="bg-pink-50" />
+                        color="text-[var(--color-text-main)]" bg="bg-[var(--color-bg-active)]" />
                     <MenuButton icon={Coins} label={t('red_packet')} onClick={handleOpenRedPacket}
-                        color="text-red-500" bg="bg-red-50" />
+                        color="text-[var(--color-text-main)]" bg="bg-[var(--color-bg-active)]" />
                     <MenuButton icon={Gamepad2} label={t('game')} onClick={handleOpenGame}
-                        color="text-[var(--color-accent-lavender)]" bg="bg-purple-50" />
+                        color="text-[var(--color-text-main)]" bg="bg-[var(--color-bg-active)]" />
                     <MenuButton icon={BarChart3} label={t('poll')} onClick={handleOpenPoll}
-                        color="text-[var(--color-primary)]" bg="bg-orange-50" />
+                        color="text-[var(--color-text-main)]" bg="bg-[var(--color-bg-active)]" />
                 </div>
             )}
 

@@ -77,6 +77,8 @@ export class ChatEngine {
             // Phase 3: Editing and recall callbacks
             onEditing: this._handleAIEditing.bind(this),
             onRecall: this._handleAIRecall.bind(this),
+            // Proactive image callback
+            onProactiveImage: this._handleProactiveImage.bind(this),
         });
     }
 
@@ -791,6 +793,38 @@ export class ChatEngine {
             }
         }
         this._notify(); // Ephemeral update, no save
+    }
+
+    _handleProactiveImage(chatId, result) {
+        if (!result || !result.imageUrl) return;
+        
+        // Find persona ID. If omitted, default to the system.
+        const senderId = result.personaId || 'ai-system'; 
+        
+        // Append an [IMG:url] message
+        const imageContent = `[IMG:${result.imageUrl}]`;
+        
+        // Dispatch internally without triggering recursive AI response
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        if (chatIndex === -1) return;
+
+        const newMessage = {
+            id: crypto.randomUUID(),
+            senderId,
+            content: imageContent,
+            timestamp: new Date().toISOString(),
+            status: 'sent',
+            quotedMessageId: null,
+            readBy: []
+        };
+
+        const updatedChat = { ...this.chats[chatIndex] };
+        updatedChat.messages = [...updatedChat.messages, newMessage];
+        updatedChat.lastMessage = newMessage;
+        updatedChat.updatedAt = newMessage.timestamp;
+
+        this.chats[chatIndex] = updatedChat;
+        this.save();
     }
 
     // Phase 3: Handle AI editing state

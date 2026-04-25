@@ -85,7 +85,7 @@ export default function AgentWorkspace() {
 
                     <button
                         onClick={handleNewChat}
-                        className="w-full py-3 bg-[var(--gradient-aurora)] hover:shadow-glow-strong text-white rounded-[var(--radius-lg)] font-bold flex items-center justify-center gap-2 transition-all duration-300 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 text-[15px]"
+                        className="w-full py-3 bg-[var(--gradient-aurora)] hover:shadow-glow-strong text-[var(--color-on-primary)] rounded-[var(--radius-lg)] font-bold flex items-center justify-center gap-2 transition-all duration-300 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 text-[15px]"
                     >
                         <Plus size={20} />
                         {localizedNewTopicName}

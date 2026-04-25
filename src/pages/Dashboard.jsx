@@ -19,7 +19,8 @@ import {
     TrendingUp,
     Clock,
     GripVertical,
-    RotateCcw
+    RotateCcw,
+    Gift
 } from 'lucide-react';
 import {
     DndContext,
@@ -42,16 +43,16 @@ import { useChat } from '../features/chat/context/ChatContext';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
 
-// Default widget order
+// Default widget order - Balanced for 3-column layout
 const DEFAULT_WIDGET_ORDER = [
     'recent-chats',
-    'checkin',
-    'agents',
+    'stats',
     'moments',
-    'friends',
-    'achievements',
+    'checkin',
     'todays-pick',
-    'stats'
+    'agents',
+    'friends',
+    'achievements'
 ];
 
 // Widget size configuration
@@ -197,7 +198,6 @@ export default function Dashboard() {
                 subtitle={t('conversations_count', { count: recentChats.length })}
                 icon={MessageSquare}
                 onClick={() => navigate('/')}
-                glowColor="var(--color-primary-glow)"
             >
                 <div className="space-y-2 mt-2">
                     {recentChats.slice(0, 4).map((chat) => {
@@ -214,7 +214,7 @@ export default function Dashboard() {
                                     {persona?.avatar ? (
                                         <img src={persona.avatar} alt="" className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="w-full h-full bg-[var(--gradient-aurora)] flex items-center justify-center text-white text-xs font-bold">
+                                        <div className="w-full h-full bg-[var(--gradient-aurora)] flex items-center justify-center text-[var(--color-on-primary)] text-xs font-bold">
                                             {chat.name?.charAt(0)}
                                         </div>
                                     )}
@@ -239,11 +239,12 @@ export default function Dashboard() {
                 size="sm"
                 title={t('daily_checkin')}
                 icon={CalendarCheck}
-                gradient="linear-gradient(135deg, #FF9B7A 0%, #FF7E9D 100%)"
                 onClick={() => navigate('/achievements')}
             >
-                <div className="text-center mt-2">
-                    <div className="text-3xl mb-1">🎁</div>
+                <div className="text-center mt-2 flex flex-col items-center">
+                    <div className="mb-2 p-3 bg-[var(--color-primary-glow)] rounded-full text-[var(--color-primary)]">
+                        <Gift size={24} />
+                    </div>
                     <p className="text-xs text-[var(--color-text-muted)]">
                         {t('tap_to_checkin')}
                     </p>
@@ -256,10 +257,11 @@ export default function Dashboard() {
                 title={t('ai_agents')}
                 icon={Bot}
                 onClick={() => navigate('/agents')}
-                glowColor="var(--color-accent-lavender)"
             >
-                <div className="text-center mt-2">
-                    <div className="text-3xl mb-1">🤖</div>
+                <div className="text-center mt-2 flex flex-col items-center">
+                    <div className="mb-2 p-3 bg-[var(--color-primary-glow)] rounded-full text-[var(--color-primary)]">
+                        <Bot size={24} />
+                    </div>
                     <p className="text-xs text-[var(--color-text-muted)]">
                         {t('smart_tasks')}
                     </p>
@@ -284,7 +286,7 @@ export default function Dashboard() {
                             {persona.avatar ? (
                                 <img src={persona.avatar} alt="" className="w-full h-full object-cover" />
                             ) : (
-                                <div className="w-full h-full bg-[var(--gradient-aurora)] flex items-center justify-center text-white text-xs font-bold">
+                                <div className="w-full h-full bg-[var(--gradient-aurora)] flex items-center justify-center text-[var(--color-on-primary)] text-xs font-bold">
                                     {persona.name?.charAt(0)}
                                 </div>
                             )}
@@ -323,7 +325,6 @@ export default function Dashboard() {
                 title={t('achievements')}
                 icon={Trophy}
                 onClick={() => navigate('/achievements')}
-                gradient="linear-gradient(135deg, #FFD666 0%, #FF9B7A 100%)"
             >
                 <div className="mt-2">
                     <div className="flex items-center justify-between text-xs mb-1">
@@ -349,7 +350,6 @@ export default function Dashboard() {
                 title={t('todays_pick')}
                 subtitle={t('chat_with_them')}
                 icon={Sparkles}
-                gradient="linear-gradient(135deg, var(--color-accent-mint) 0%, var(--color-accent-sky) 100%)"
             >
                 {personas[0] && (
                     <Link
@@ -450,15 +450,15 @@ export default function Dashboard() {
                     onDragEnd={handleDragEnd}
                 >
                     <SortableContext items={widgetOrder}>
-                        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 auto-rows-[minmax(120px,auto)]">
+                        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 auto-rows-[minmax(110px,auto)]">
                             {widgetOrder.map((widgetId) => (
                                 <SortableWidget
                                     key={widgetId}
                                     id={widgetId}
                                     className={cn(
-                                        // Size classes matching BentoCard sizes
-                                        WIDGET_SIZES[widgetId] === 'lg' && 'md:col-span-2 md:row-span-2',
-                                        WIDGET_SIZES[widgetId] === 'md' && 'md:col-span-2',
+                                        // Size classes — reduced for 3-col panel layout
+                                        WIDGET_SIZES[widgetId] === 'lg' && 'col-span-2 row-span-2',
+                                        WIDGET_SIZES[widgetId] === 'md' && 'col-span-2',
                                         WIDGET_SIZES[widgetId] === 'tall' && 'md:row-span-2',
                                         WIDGET_SIZES[widgetId] === 'sm' && 'col-span-1 row-span-1',
                                     )}
