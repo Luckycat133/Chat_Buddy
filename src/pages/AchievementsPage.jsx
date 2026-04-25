@@ -113,7 +113,7 @@ export default function AchievementsPage() {
                             className={cn(
                                 "flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all",
                                 selectedCategory === cat.id
-                                    ? "bg-[var(--color-primary)] text-white"
+                                    ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                                     : "bg-[var(--color-bg-app)] text-[var(--color-text-muted)]"
                             )}
                         >

@@ -237,7 +237,7 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                                 }}
                                 className="w-full px-4 py-3 flex items-start gap-3 hover:bg-[var(--color-bg-app)] transition-colors border-b border-[var(--color-border-light)]"
                             >
-                                <div className="w-10 h-10 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-white flex-shrink-0">
+                                <div className="w-10 h-10 rounded-full bg-[var(--color-primary)] flex items-center justify-center text-[var(--color-on-primary)] flex-shrink-0">
                                     <MessageSquare size={18} />
                                 </div>
 

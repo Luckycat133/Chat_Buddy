@@ -74,7 +74,7 @@ export default function GroupPoll({ chatId, onClose, onCreatePoll }) {
                         className={cn(
                             "px-4 py-1.5 rounded-full text-sm font-medium transition-all",
                             isValid
-                                ? "bg-[var(--color-primary)] text-white"
+                                ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
                                 : "bg-gray-200 text-gray-400"
                         )}
                     >

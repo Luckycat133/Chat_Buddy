@@ -38,6 +38,31 @@ export default function AgentsPage() {
         return agentName.toLowerCase().includes(searchLower) || (desc || '').toLowerCase().includes(searchLower);
     });
 
+    const skillKeyMap = {
+        'code-generation': 'skill_code_generation',
+        'code-review': 'skill_code_review',
+        'debugging': 'skill_debugging',
+        'creative-writing': 'skill_creative_writing',
+        'editing': 'skill_editing',
+        'translation': 'skill_translation',
+        'research': 'skill_research',
+        'summarization': 'skill_summarization',
+        'fact-checking': 'skill_fact_checking',
+        'teaching': 'skill_teaching',
+        'quiz-generation': 'skill_quiz_generation',
+        'active-listening': 'skill_active_listening',
+        'mindfulness': 'skill_mindfulness',
+        'brainstorming': 'skill_brainstorming',
+        'ui-ux': 'skill_ui_ux',
+        'visual-design': 'skill_visual_design',
+    };
+
+    const translateSkill = (skill) => {
+        const key = skillKeyMap[skill.toLowerCase()];
+        if (key) return t(key) || skill.replace(/-/g, ' ');
+        return skill.replace(/-/g, ' ');
+    };
+
     const handleChat = (agentId) => {
         navigate(`/agents/${agentId}`);
     };
@@ -91,7 +116,7 @@ export default function AgentsPage() {
                     {/* Create button */}
                     <button
                         onClick={openCreate}
-                        className="shrink-0 mt-1 flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-bold text-sm shadow-glow transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
+                        className="shrink-0 mt-1 flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-on-primary)] font-bold text-sm shadow-glow transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
                     >
                         <Plus size={17} />
                         <span className="hidden sm:inline">{t('create_agent')}</span>
@@ -110,9 +135,21 @@ export default function AgentsPage() {
                             className="w-full bg-transparent border-none py-3 px-4 text-[16px] text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)] focus:outline-none font-medium"
                         />
                         <div className="hidden md:flex gap-2 mr-2">
-                            {['Coding', 'Writing'].map(tag => (
-                                <button key={tag} className="px-4 py-1.5 rounded-full text-xs font-bold bg-[var(--color-bg-active)] text-[var(--color-text-secondary)] hover:bg-[var(--color-primary)] hover:text-white transition-colors">
-                                    {tag}
+                            {[
+                                { term: 'coding', label: t('filter_coding') || 'Coding' },
+                                { term: 'writing', label: t('filter_writing') || 'Writing' }
+                            ].map(({ term, label }) => (
+                                <button
+                                    key={term}
+                                    onClick={() => setSearchTerm(searchTerm === term ? '' : term)}
+                                    className={cn(
+                                        "px-4 py-1.5 rounded-full text-xs font-bold transition-colors",
+                                        searchTerm === term
+                                            ? "bg-[var(--color-primary)] text-[var(--color-on-primary)]"
+                                            : "bg-[var(--color-bg-active)] text-[var(--color-text-secondary)] hover:bg-[var(--color-primary)] hover:text-[var(--color-on-primary)]"
+                                    )}
+                                >
+                                    {label}
                                 </button>
                             ))}
                         </div>
@@ -203,7 +240,7 @@ export default function AgentsPage() {
                                         <div className="flex flex-wrap gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
                                             {agent.skills?.slice(0, isFeatured ? 5 : 2).map((skill, i) => (
                                                 <span key={i} className="px-2.5 py-1 rounded-md glass-strong text-[10px] font-bold text-[var(--color-text-main)] uppercase tracking-wider shadow-sm border border-[var(--color-border-light)]">
-                                                    {skill.replace(/-/g, ' ')}
+                                                    {translateSkill(skill)}
                                                 </span>
                                             ))}
                                             {agent.skills?.length > (isFeatured ? 5 : 2) && (
@@ -228,7 +265,7 @@ export default function AgentsPage() {
                         <p className="text-sm opacity-70 max-w-xs text-center">
                             {t('try_different_search') || 'Try adjusting your search terms to find the right assistant.'}
                         </p>
-                        <button onClick={openCreate} className="mt-6 flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[var(--color-primary)] text-white font-bold text-sm hover:bg-[var(--color-primary-hover)] transition-colors">
+                        <button onClick={openCreate} className="mt-6 flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-sm hover:bg-[var(--color-primary-hover)] transition-colors">
                             <Plus size={16} /> {t('create_first_agent')}
                         </button>
                     </div>

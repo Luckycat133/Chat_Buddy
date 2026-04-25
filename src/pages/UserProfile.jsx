@@ -141,7 +141,7 @@ export default function UserProfile() {
             <div className="mx-4 mb-8">
                 <button
                     onClick={() => navigate('/profile/edit')}
-                    className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium shadow-lg hover:bg-[var(--color-primary-hover)] transition-all active:scale-[0.98]"
+                    className="w-full py-3 bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-xl font-medium shadow-lg hover:bg-[var(--color-primary-hover)] transition-all active:scale-[0.98]"
                 >
                     {t('edit_profile') || 'Edit Profile'}
                 </button>

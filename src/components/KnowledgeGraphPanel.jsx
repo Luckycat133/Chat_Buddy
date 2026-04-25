@@ -168,7 +168,7 @@ export default function KnowledgeGraphPanel({ onClose }) {
                                 className={cn(
                                     'px-3 py-1 rounded-full text-xs font-semibold transition-colors',
                                     activeTab === tab
-                                        ? 'bg-[var(--color-primary)] text-white'
+                                        ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)]'
                                         : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]'
                                 )}
                             >
@@ -207,7 +207,7 @@ export default function KnowledgeGraphPanel({ onClose }) {
                         <input type="text" placeholder={t('kg_description')} value={newNode.description} onChange={e => setNewNode(p => ({ ...p, description: e.target.value }))} className="w-full input-modern text-xs py-2" />
                         <input type="text" placeholder={t('kg_prerequisites_hint')} value={newNode.prerequisites} onChange={e => setNewNode(p => ({ ...p, prerequisites: e.target.value }))} className="w-full input-modern text-xs py-2" />
                         <div className="flex gap-2">
-                            <button onClick={handleAddNode} className="flex-1 py-2 rounded-[var(--radius-lg)] bg-[var(--color-primary)] text-white text-xs font-semibold hover:opacity-90">{t('add')}</button>
+                            <button onClick={handleAddNode} className="flex-1 py-2 rounded-[var(--radius-lg)] bg-[var(--color-primary)] text-[var(--color-on-primary)] text-xs font-semibold hover:opacity-90">{t('add')}</button>
                             <button onClick={() => setShowAddForm(false)} className="px-4 py-2 rounded-[var(--radius-lg)] text-xs text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]">{t('cancel')}</button>
                         </div>
                     </div>

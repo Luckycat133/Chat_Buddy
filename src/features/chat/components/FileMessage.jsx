@@ -73,11 +73,11 @@ export function GeneratedFileMessage({ fileData, onDownload }) {
     const { t } = useLanguage();
 
     return (
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-3 max-w-[300px]">
+        <div className="bg-[var(--color-primary-softer)] border border-[var(--color-primary)]/25 rounded-lg p-3 max-w-[300px]">
             {/* Header */}
             <div className="flex items-center gap-2 mb-2">
                 <span className="text-lg">{fileData.icon}</span>
-                <span className="text-xs font-medium text-purple-600 uppercase">
+                <span className="text-xs font-medium text-[var(--color-primary-active)] uppercase">
                     {t('generated_file')}
                 </span>
             </div>
@@ -103,7 +103,7 @@ export function GeneratedFileMessage({ fileData, onDownload }) {
             {/* Download button */}
             <button
                 onClick={() => onDownload?.(fileData)}
-                className="w-full flex items-center justify-center gap-2 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-on-primary)] text-sm font-medium rounded-lg transition-colors"
             >
                 <Download size={16} />
                 {t('download_file')}

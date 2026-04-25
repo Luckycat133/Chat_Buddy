@@ -368,41 +368,41 @@ export default function Settings() {
                                 <SettingItem
                                     icon={<Brain size={18} />}
                                     color="bg-[var(--color-icon-purple)]"
-                                    label="Character Memory"
-                                    subLabel="View & manage what characters remember"
+                                    label={t('character_memory')}
+                                    subLabel={t('character_memory_settings_desc')}
                                     onClick={() => setShowMemorySelector(true)}
                                 />
                                 <SettingItem
                                     icon={<Database size={18} />}
-                                    color="bg-emerald-500"
+                                    color="bg-[var(--color-icon-green)]"
                                     label={t('kb_title')}
                                     subLabel={t('kb_settings_desc')}
                                     onClick={() => setShowKnowledgeBase(true)}
                                 />
                                 <SettingItem
                                     icon={<Cpu size={18} />}
-                                    color="bg-indigo-500"
+                                    color="bg-[var(--color-icon-indigo)]"
                                     label={t('model_switcher_title')}
                                     subLabel={t('model_switcher_settings_desc')}
                                     onClick={() => setShowModelSwitcher(true)}
                                 />
                                 <SettingItem
                                     icon={<Network size={18} />}
-                                    color="bg-violet-500"
+                                    color="bg-[var(--color-icon-purple)]"
                                     label={t('kg_title')}
                                     subLabel={t('kg_settings_desc')}
                                     onClick={() => setShowKnowledgeGraph(true)}
                                 />
                                 <SettingItem
                                     icon={<GraduationCap size={18} />}
-                                    color="bg-amber-500"
+                                    color="bg-[var(--color-icon-orange)]"
                                     label={t('learning_report_title')}
                                     subLabel={t('learning_report_settings_desc')}
                                     onClick={() => setShowLearningReport(true)}
                                 />
                                 <SettingItem
                                     icon={<Trophy size={18} />}
-                                    color="bg-yellow-500"
+                                    color="bg-[var(--color-icon-brown)]"
                                     label={t('leaderboard_title')}
                                     subLabel={t('leaderboard_settings_desc')}
                                     onClick={() => navigate('/leaderboard')}
@@ -602,12 +602,12 @@ export default function Settings() {
 
                                     <button
                                         onClick={handleClearAllData}
-                                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors text-left"
+                                        className="w-full flex items-center gap-3 p-3 rounded-lg bg-[var(--color-danger)]/10 hover:bg-[var(--color-danger)]/20 transition-colors text-left"
                                     >
-                                        <LogOut size={18} className="text-red-500" />
-                                        <div>
-                                            <p className="text-sm font-medium text-red-500">{t('privacy_clear_data')}</p>
-                                            <p className="text-xs text-red-400/70">{t('danger_zone')}</p>
+                                        <LogOut size={18} className="text-[var(--color-danger)]" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-[var(--color-danger)]">{t('privacy_clear_data')}</p>
+                                            <p className="text-xs text-[var(--color-danger)]/70">{t('danger_zone')}</p>
                                         </div>
                                     </button>
                                 </div>

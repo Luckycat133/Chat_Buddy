@@ -203,7 +203,7 @@ export default function IdiomChainGame({ aiName, onClose, onResult }) {
                         <div key={idx}>
                             {item.type === 'user' && (
                                 <div className="flex justify-end">
-                                    <div className="bg-[var(--color-primary)] text-white rounded-[var(--radius-xl)] rounded-tr-sm px-4 py-2 max-w-[70%]">
+                                    <div className="bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-[var(--radius-xl)] rounded-tr-sm px-4 py-2 max-w-[70%]">
                                         <span className="font-bold text-lg">{item.idiom}</span>
                                     </div>
                                 </div>

@@ -206,7 +206,7 @@ export default function FriendGroups() {
                         <p>{t('no_groups') || 'No groups yet'}</p>
                         <button
                             onClick={startAdding}
-                            className="mt-4 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg font-medium"
+                            className="mt-4 px-4 py-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-lg font-medium"
                         >
                             {t('add_group') || 'Add Group'}
                         </button>

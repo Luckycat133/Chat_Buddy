@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.2.7-blue.svg)
+![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19-61DAFB.svg)
 
@@ -277,11 +277,15 @@ graph LR
 
 查看 [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md) 了解版本历史。
 
-**当前版本**：v0.2.7 (2026-02-22)
+**当前版本**: v0.4.0 (2026-04-06)
 
 ### 最近更新
 
-- 📝 **草稿箱** (v0.2.7)：自动保存未发布动态，重新打开时恢复，支持一键丢弃
+- 🎨 **马卡龙现代版** (v0.4.0): UI/UX 全面现代化；Bento 控制面板 v2；稳定的 HSL 颜色系统；现代化图标。
+- 🤖 **专业智能体** (v0.3.3): 6 个专门的任务智能体 (代码、缪斯、学者、老师、极光、像素)；ReAct 工具调用；沙箱执行。
+- 🧠 **认知记忆** (v0.3.0): 长期角色记忆；IndexedDB 存储；记忆交换工具；上下文感知的 AI。
+- 📚 **RAG 系统** (v0.3.2): 知识库集成；混合搜索 (BM25 + Jaccard)；客户端文档索引。
+- 📝 **草稿箱** (v0.2.7): 自动保存未发布状态；重新打开时恢复，一键丢弃。
 - #️⃣ **话题标签** (v0.2.7)：动态中 `#话题` 可点击过滤朋友圈，顶部显示可关闭筛选条
 - ⬇️ **分页加载** (v0.2.7)：默认展示 10 条，"加载更多"按钮逐批追加
 - 🎂 **故事事件** (v0.2.7)：13 位角色生日当天自动发帖，元旦/情人节/万圣节/圣诞节节日特供

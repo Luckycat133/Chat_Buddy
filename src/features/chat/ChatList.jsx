@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo, Suspense } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Pin, Circle, Trash2, MessageSquarePlus, Sparkles, X } from 'lucide-react';
 import { useChat } from './context/ChatContext';
@@ -7,6 +7,8 @@ import { cn } from '../../utils/cn';
 import { formatChatListTime } from '../../utils/formatTime';
 import { SkeletonList, SkeletonChatCard } from '../../components/Skeleton';
 import HighlightText from '../../components/HighlightText';
+
+const Dashboard = React.lazy(() => import('../../pages/Dashboard'));
 
 // ========== Memoized Chat List Item (iOS 26 Card Style) ==========
 const ChatListItem = memo(function ChatListItem({
@@ -29,8 +31,8 @@ const ChatListItem = memo(function ChatListItem({
                 "flex items-center gap-4 p-3 rounded-[var(--radius-lg)] transition-all duration-400 group relative",
                 "border border-transparent",
                 isActive
-                    ? "bg-[var(--color-bg-white)] shadow-glow scale-[1.02] ring-2 ring-[var(--color-primary)]/10"
-                    : "bg-[var(--color-bg-white)]/40 hover:bg-[var(--color-bg-white)]/80 hover:shadow-md hover:scale-[1.01]"
+                    ? "bg-[var(--color-bg-white)] shadow-sm scale-[1.02] ring-1 ring-[var(--color-border)]"
+                    : "bg-[var(--color-bg-white)]/40 hover:bg-[var(--color-bg-white)]/80 hover:shadow-sm hover:scale-[1.01]"
             )}
             style={{ animationDelay: `${index * 50}ms` }}
         >
@@ -48,8 +50,7 @@ const ChatListItem = memo(function ChatListItem({
                     {meta.avatar ? (
                         <img src={meta.avatar} alt="avatar" className="w-full h-full object-cover" />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white text-lg font-bold animate-aurora"
-                            style={{ background: 'var(--gradient-aurora)' }}>
+                        <div className="w-full h-full flex items-center justify-center text-[var(--color-on-primary)] text-lg font-bold bg-[var(--color-primary)]">
                             {meta.name.charAt(0)}
                         </div>
                     )}
@@ -79,8 +80,7 @@ const ChatListItem = memo(function ChatListItem({
                     </h3>
                     <div className="flex items-center gap-2 flex-shrink-0">
                         {chat.isUnread && (
-                            <div className="w-2.5 h-2.5 rounded-full animate-pulse"
-                                style={{ background: 'var(--gradient-aurora)' }} />
+                            <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-primary)] shadow-sm animate-pulse" />
                         )}
                         <span className="text-xs font-medium text-[var(--color-text-muted)] opacity-80">{time}</span>
                     </div>
@@ -93,7 +93,16 @@ const ChatListItem = memo(function ChatListItem({
                         <span className="flex items-center gap-1">
                             {t('is_typing')}
                         </span>
-                    ) : (chat.lastMessage ? chat.lastMessage.content : t('no_messages'))}
+                    ) : (chat.lastMessage ? (() => {
+                        const content = chat.lastMessage.content;
+                        if (!content) return '';
+                        if (content.startsWith('[IMG:')) return `[${t('photo') || 'Photo'}]`;
+                        if (content.startsWith('[STICKER:')) return `[${t('sticker') || 'Sticker'}]`;
+                        if (content.startsWith('[FILE]')) return `[${t('file') || 'File'}]`;
+                        if (content.startsWith('[GIFT:')) return `[${t('gift') || 'Gift'}]`;
+                        if (content.startsWith('[RED_PACKET:')) return `[${t('red_packet') || 'Red Packet'}]`;
+                        return content;
+                    })() : t('no_messages'))}
                 </p>
             </div>
         </Link>
@@ -107,12 +116,9 @@ function EmptyState({ onCreateChat }) {
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 animate-fade-slide-up">
             {/* Floating animated icon */}
             <div className="relative mb-8">
-                <div className="absolute inset-0 rounded-full blur-2xl opacity-40"
-                    style={{ background: 'var(--gradient-aurora)' }} />
-                <div className="relative w-28 h-28 rounded-full flex items-center justify-center animate-float"
-                    style={{ background: 'var(--gradient-aurora-soft)' }}>
-                    <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg"
-                        style={{ background: 'var(--gradient-aurora)' }}>
+                <div className="absolute inset-0 rounded-full bg-[var(--color-primary)] blur-xl opacity-20" />
+                <div className="relative w-28 h-28 rounded-full flex items-center justify-center animate-float bg-[var(--color-primary-softer)]">
+                    <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg bg-[var(--color-primary)]">
                         <Sparkles size={36} className="text-white" />
                     </div>
                 </div>
@@ -263,131 +269,145 @@ export default function ChatList() {
     }, [navigate]);
 
     return (
-        <div className="flex flex-col h-full w-full md:w-[360px] flex-shrink-0 relative z-10 
-            md:py-4 md:pl-4 overflow-hidden" onClick={closeContextMenu}>
+        <div className="flex w-full h-full bg-[var(--color-bg-app)] md:bg-transparent">
+            {/* Left Panel: Chat List */}
+            <div className="flex flex-col h-full w-full md:w-[360px] flex-shrink-0 relative z-10 
+                md:py-4 md:pl-4 overflow-hidden" onClick={closeContextMenu}>
 
-            {/* Search Header - Floating Glass Pill */}
-            <div className="px-2 mb-2 z-20">
-                <div className="glass-crystal rounded-[var(--radius-xl)] p-2 shadow-floating transition-all duration-300">
-                    <div className={cn(
-                        "relative flex items-center transition-all duration-300",
-                        searchFocused && "scale-[1.01]"
-                    )}>
-                        <Search className={cn(
-                            "absolute left-4 transition-colors duration-300",
-                            searchFocused ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
-                        )} size={20} />
-                        <input
-                            type="text"
-                            placeholder={t('search')}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            onFocus={() => setSearchFocused(true)}
-                            onBlur={() => setSearchFocused(false)}
-                            className="w-full bg-transparent border-none py-3 pl-12 pr-4 text-[15px]
-                                text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)]
-                                focus:outline-none font-medium"
-                        />
-                        {searchTerm && (
-                            <button
-                                onClick={() => setSearchTerm('')}
-                                className="absolute right-3 p-1 rounded-full hover:bg-[var(--color-bg-hover)] 
-                                    text-[var(--color-text-muted)] transition-colors"
-                            >
-                                <X size={16} />
-                            </button>
-                        )}
-                    </div>
+                {/* Search Header - Floating Glass Pill */}
+                <div className="px-2 mb-2 z-20">
+                    <div className="glass-crystal rounded-[var(--radius-xl)] p-2 shadow-floating transition-all duration-300">
+                        <div className={cn(
+                            "relative flex items-center transition-all duration-300",
+                            searchFocused && "scale-[1.01]"
+                        )}>
+                            <Search className={cn(
+                                "absolute left-4 transition-colors duration-300",
+                                searchFocused ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
+                            )} size={20} />
+                            <input
+                                type="text"
+                                placeholder={t('search')}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onFocus={() => setSearchFocused(true)}
+                                onBlur={() => setSearchFocused(false)}
+                                className="w-full bg-transparent border-none py-3 pl-12 pr-4 text-[15px]
+                                    text-[var(--color-text-main)] placeholder:text-[var(--color-text-muted)]
+                                    focus:outline-none font-medium"
+                            />
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="absolute right-3 p-1 rounded-full hover:bg-[var(--color-bg-hover)] 
+                                        text-[var(--color-text-muted)] transition-colors"
+                                >
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
 
-                    {/* Filter Tabs - Inside the Glass Shell */}
-                    <div className="flex gap-2 mt-2 px-1 pb-1 overflow-x-auto scrollbar-hide">
-                        {['all', 'social'].map((tab) => (
-                            <button
-                                key={tab}
-                                onClick={() => setActiveTab(tab)}
-                                className={cn(
-                                    "px-4 py-1.5 text-xs font-semibold rounded-full transition-all duration-300 whitespace-nowrap",
-                                    activeTab === tab
-                                        ? "text-white shadow-glow"
-                                        : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]"
-                                )}
-                                style={activeTab === tab ? {
-                                    background: 'var(--gradient-aurora)',
-                                } : {}}
-                            >
-                                {tab === 'all' && t('all_chats')}
-                                {tab === 'social' && t('social_companions')}
-                            </button>
-                        ))}
+                        {/* Filter Tabs - Inside the Glass Shell */}
+                        <div className="flex gap-2 mt-2 px-1 pb-1 overflow-x-auto scrollbar-hide">
+                            {['all', 'social'].map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={cn(
+                                        "px-4 py-1.5 text-xs font-semibold rounded-[var(--radius-lg)] transition-all duration-300 whitespace-nowrap",
+                                        activeTab === tab
+                                            ? "text-[var(--color-on-primary)] bg-[var(--color-primary)] shadow-sm"
+                                            : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)]"
+                                    )}
+                                >
+                                    {tab === 'all' && t('all_chats')}
+                                    {tab === 'social' && t('social_companions')}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Chat List - Floating Cards Container */}
-            <div className="flex-1 overflow-y-auto px-2 space-y-3 pb-32 md:pb-4 custom-scrollbar">
-                {isLoading ? (
-                    <SkeletonList count={4} skeleton={SkeletonChatCard} />
-                ) : filteredChats.length === 0 ? (
-                    <EmptyState onCreateChat={handleCreateChat} />
-                ) : (
-                    filteredChats.map(({ chat, meta }, index) => {
-                        const lastMsg = chat.lastMessage;
-                        const time = lastMsg ? formatChatListTime(lastMsg.timestamp, language) : '';
-                        const isActive = location.pathname === `/chat/${chat.id}`;
-                        const typingAIs = typingIndicators?.[chat.id] || [];
-                        const isTyping = typingAIs.length > 0;
+                {/* Chat List - Floating Cards Container */}
+                <div className="flex-1 overflow-y-auto px-2 space-y-3 pb-32 md:pb-4 custom-scrollbar">
+                    {isLoading ? (
+                        <SkeletonList count={4} skeleton={SkeletonChatCard} />
+                    ) : filteredChats.length === 0 ? (
+                        <EmptyState onCreateChat={handleCreateChat} />
+                    ) : (
+                        filteredChats.map(({ chat, meta }, index) => {
+                            const lastMsg = chat.lastMessage;
+                            const time = lastMsg ? formatChatListTime(lastMsg.timestamp, language) : '';
+                            const isActive = location.pathname === `/chat/${chat.id}`;
+                            const typingAIs = typingIndicators?.[chat.id] || [];
+                            const isTyping = typingAIs.length > 0;
 
-                        return (
-                            <ChatListItem
-                                key={chat.id}
-                                chat={chat}
-                                meta={meta}
-                                isActive={isActive}
-                                isTyping={isTyping}
-                                time={time}
-                                t={t}
-                                onContextMenu={handleContextMenu}
-                                presenceMap={presenceMap}
-                                index={index}
-                                searchTerm={searchTerm}
-                            />
-                        );
-                    })
+                            return (
+                                <ChatListItem
+                                    key={chat.id}
+                                    chat={chat}
+                                    meta={meta}
+                                    isActive={isActive}
+                                    isTyping={isTyping}
+                                    time={time}
+                                    t={t}
+                                    onContextMenu={handleContextMenu}
+                                    presenceMap={presenceMap}
+                                    index={index}
+                                    searchTerm={searchTerm}
+                                />
+                            );
+                        })
+                    )}
+                </div>
+
+                {/* Context Menu - Floating Crystal */}
+                {contextMenu && (
+                    <div
+                        className="fixed z-50 glass-crystal rounded-[var(--radius-lg)] shadow-floating py-2 min-w-[200px] 
+                            animate-scale-spring origin-top-left overflow-hidden ring-1 ring-white/60"
+                        style={{ left: contextMenu.x, top: contextMenu.y }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <ContextMenuItem
+                            icon={<Pin size={16} />}
+                            label={chats.find(c => c.id === contextMenu.chatId)?.isPinned ? t('unpin') : t('pin')}
+                            active={chats.find(c => c.id === contextMenu.chatId)?.isPinned}
+                            onClick={() => handlePin(contextMenu.chatId)}
+                        />
+                        <ContextMenuItem
+                            icon={<Circle size={16} />}
+                            label={chats.find(c => c.id === contextMenu.chatId)?.isUnread ? t('mark_read') : t('mark_unread')}
+                            active={chats.find(c => c.id === contextMenu.chatId)?.isUnread}
+                            colorClass="text-[var(--color-accent-sky)]"
+                            onClick={() => handleMarkUnread(contextMenu.chatId)}
+                        />
+
+                        <div className="h-px bg-[var(--color-border)] my-1 mx-3 opacity-50" />
+
+                        <ContextMenuItem
+                            icon={<Trash2 size={16} />}
+                            label={t('delete')}
+                            colorClass="text-[var(--color-danger)]"
+                            onClick={() => handleDelete(contextMenu.chatId)}
+                        />
+                    </div>
                 )}
             </div>
 
-            {/* Context Menu - Floating Crystal */}
-            {contextMenu && (
-                <div
-                    className="fixed z-50 glass-crystal rounded-[var(--radius-lg)] shadow-floating py-2 min-w-[200px] 
-                        animate-scale-spring origin-top-left overflow-hidden ring-1 ring-white/60"
-                    style={{ left: contextMenu.x, top: contextMenu.y }}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <ContextMenuItem
-                        icon={<Pin size={16} />}
-                        label={chats.find(c => c.id === contextMenu.chatId)?.isPinned ? t('unpin') : t('pin')}
-                        active={chats.find(c => c.id === contextMenu.chatId)?.isPinned}
-                        onClick={() => handlePin(contextMenu.chatId)}
-                    />
-                    <ContextMenuItem
-                        icon={<Circle size={16} />}
-                        label={chats.find(c => c.id === contextMenu.chatId)?.isUnread ? t('mark_read') : t('mark_unread')}
-                        active={chats.find(c => c.id === contextMenu.chatId)?.isUnread}
-                        colorClass="text-[var(--color-accent-sky)]"
-                        onClick={() => handleMarkUnread(contextMenu.chatId)}
-                    />
-
-                    <div className="h-px bg-[var(--color-border)] my-1 mx-3 opacity-50" />
-
-                    <ContextMenuItem
-                        icon={<Trash2 size={16} />}
-                        label={t('delete')}
-                        colorClass="text-[var(--color-danger)]"
-                        onClick={() => handleDelete(contextMenu.chatId)}
-                    />
+            {/* Right Panel: Dashboard (Desktop Only) */}
+            <div className="hidden md:flex flex-1 overflow-hidden relative border-l border-[var(--color-border)]/50">
+                <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-bg-white)]/40 to-transparent pointer-events-none z-0" />
+                <div className="relative z-10 w-full h-full overflow-y-auto">
+                    <Suspense fallback={
+                        <div className="flex h-full items-center justify-center text-[var(--color-text-muted)] animate-pulse">
+                            Loading Dashboard...
+                        </div>
+                    }>
+                        <Dashboard />
+                    </Suspense>
                 </div>
-            )}
+            </div>
         </div>
     );
 }

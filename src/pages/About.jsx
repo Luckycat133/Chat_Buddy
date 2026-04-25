@@ -13,6 +13,7 @@ export default function About() {
     ];
 
     const changelog = [
+        { version: 'v0.4.0', date: '2026-04-06', changes: t('changelog_v040') || 'Macaron Modern & Quality Polish' },
         { version: 'v0.3.0', date: '2026-01-08', changes: t('changelog_v030') },
         { version: 'v0.2.5', date: '2025-12-27', changes: t('changelog_v025') },
         { version: 'v0.2.4', date: '2025-12-21', changes: t('changelog_v024') },
@@ -32,9 +33,9 @@ export default function About() {
             <div className="page-content space-y-6">
                 {/* App Info Header */}
                 <div className="page-header animate-fade-slide-down">
-                    <div className="page-header-icon logo-animated overflow-hidden !p-0">
+                    <div className="flex-shrink-0 w-14 h-14 rounded-2xl overflow-hidden shadow-md border border-[var(--color-border-light)] logo-animated">
                         {logoError ? (
-                            <div className="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-white text-xl font-bold">
+                            <div className="w-full h-full bg-[var(--color-primary)] flex items-center justify-center text-[var(--color-on-primary)] text-xl font-bold">
                                 CB
                             </div>
                         ) : (
@@ -51,7 +52,7 @@ export default function About() {
                             Chat Buddy
                         </h1>
                         <p className="page-header-desc">
-                            v0.3.0 • {t('about_tagline')}
+                            v0.4.0 · {t('about_tagline')}
                         </p>
                     </div>
                 </div>

@@ -199,7 +199,7 @@ export default function AvatarUploadModal({ isOpen, onClose, currentAvatar, onUp
                                 disabled={isProcessing}
                                 className={cn(
                                     "w-full py-4 rounded-xl flex items-center justify-center gap-2 font-medium transition-all",
-                                    "bg-[var(--color-primary)] text-white",
+                                    "bg-[var(--color-primary)] text-[var(--color-on-primary)]",
                                     "hover:bg-[var(--color-primary-active)]",
                                     "disabled:opacity-50 disabled:cursor-not-allowed"
                                 )}
@@ -276,7 +276,7 @@ export default function AvatarUploadModal({ isOpen, onClose, currentAvatar, onUp
                                 </button>
                                 <button
                                     onClick={handlePreview}
-                                    className="flex-1 py-3 rounded-xl font-medium bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-active)] transition-colors"
+                                    className="flex-1 py-3 rounded-xl font-medium bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-active)] transition-colors"
                                 >
                                     {t('preview') || 'Preview'}
                                 </button>
@@ -318,7 +318,7 @@ export default function AvatarUploadModal({ isOpen, onClose, currentAvatar, onUp
                                 </button>
                                 <button
                                     onClick={handleConfirm}
-                                    className="flex-1 py-3 rounded-xl font-medium bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-active)] transition-colors flex items-center justify-center gap-2"
+                                    className="flex-1 py-3 rounded-xl font-medium bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:bg-[var(--color-primary-active)] transition-colors flex items-center justify-center gap-2"
                                 >
                                     <Check size={18} />
                                     {t('confirm') || 'Confirm'}

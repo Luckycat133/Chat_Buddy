@@ -81,7 +81,14 @@ const InternalMomentsProvider = ({ children }) => {
 // Component to run AI hooks (needs access to both State and Actions)
 const MomentsAIOrchestrator = () => {
     const { posts, lastAIPostTime, lastStoryEventDate } = useMomentsState();
-    const { generateDynamicAIPost, generateAIComment, toggleLike, addReaction, generateStoryPost } = useMomentsActions();
+    const {
+        generateDynamicAIPost,
+        generateAIComment,
+        toggleLike,
+        addReaction,
+        generateStoryPost,
+        generateAIFeedback,
+    } = useMomentsActions();
     const { setMomentsData } = useMomentsState();
 
     useMomentsAI({
@@ -90,7 +97,8 @@ const MomentsAIOrchestrator = () => {
         generateDynamicAIPost,
         generateAIComment,
         toggleLike,
-        addReaction
+        addReaction,
+        generateAIFeedback,
     });
 
     useStoryEvents({
@@ -106,7 +114,15 @@ const MomentsAIOrchestrator = () => {
 // -----------------------------------------------------------------------------
 // AI ORCHESTRATION HOOK
 // -----------------------------------------------------------------------------
-function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAIComment, toggleLike, addReaction }) {
+function useMomentsAI({
+    posts,
+    lastAIPostTime,
+    generateDynamicAIPost,
+    generateAIComment,
+    toggleLike,
+    addReaction,
+    generateAIFeedback,
+}) {
 
     const aiPostIntervalRef = useRef(null);
     const aiInteractionIntervalRef = useRef(null);
@@ -156,7 +172,15 @@ function useMomentsAI({ posts, lastAIPostTime, generateDynamicAIPost, generateAI
             }, delay);
             timeoutIdsRef.current.push(timeoutId);
         });
-    }, [evaluateShouldLike, toggleLike, addReaction, generateAIComment]);
+
+        const feedbackPersona = interactors[0];
+        if (feedbackPersona) {
+            const feedbackTimeoutId = setTimeout(() => {
+                generateAIFeedback(postId, feedbackPersona.id, postsRef.current);
+            }, 1800 + Math.random() * 2200);
+            timeoutIdsRef.current.push(feedbackTimeoutId);
+        }
+    }, [addReaction, evaluateShouldLike, generateAIComment, generateAIFeedback, toggleLike]);
 
     // Effect: Detect new user posts
     useEffect(() => {

@@ -116,7 +116,7 @@ export default function ExportModal({ chat, personas, onClose }) {
                                                 {format.label}
                                             </span>
                                             {isSelected && (
-                                                <span className="px-2 py-0.5 text-[10px] font-medium bg-[var(--color-primary)] text-white rounded-full">
+                                                <span className="px-2 py-0.5 text-[10px] font-medium bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-full">
                                                     {t('selected') || 'Selected'}
                                                 </span>
                                             )}
