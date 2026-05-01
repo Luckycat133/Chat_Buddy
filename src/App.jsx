@@ -38,6 +38,7 @@ export default function App() {
               <Route path="/" element={<Layout />}>
                 <Route index element={<ChatList />} />
                 <Route path="dashboard" element={<Dashboard />} />
+                <Route path="chat" element={<Navigate to="/" replace />} />
                 <Route path="chat/:id" element={<ChatWindow />} />
                 <Route path="chat/:id/search" element={<ChatWindow />} />
                 <Route path="chat/:id/details" element={<GroupDetails />} />
