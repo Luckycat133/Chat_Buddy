@@ -1,19 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { ImageIcon, MapPin, RefreshCw } from 'lucide-react';
 import { ImageLightbox } from '../../chat/components/ImageMessage';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
 import { buildMomentImageFallback, isRenderableMomentImage } from '../services/momentsMediaService';
 
-// 单张图片组件，带重试机制
-function MomentImage({ src, index, onFail, onClick, language }) {
+const MIN_ASPECT_RATIO = 3 / 4;
+const MAX_ASPECT_RATIO = 4 / 3;
+
+function clampAspectRatio(ratio) {
+    if (!ratio || ratio <= 0) return 1;
+    return Math.min(Math.max(ratio, MIN_ASPECT_RATIO), MAX_ASPECT_RATIO);
+}
+
+function formatAspectStyle(ratio) {
+    const clamped = clampAspectRatio(ratio);
+    return { aspectRatio: `${clamped.toFixed(4)} / 1` };
+}
+
+function MomentImage({ src, index, totalCount, onFail, onClick, language }) {
     const [retryCount, setRetryCount] = useState(0);
     const [currentSrc, setCurrentSrc] = useState(src);
     const [hasFailed, setHasFailed] = useState(false);
+    const [naturalRatio, setNaturalRatio] = useState(null);
 
-    const handleError = () => {
+    const handleLoad = useCallback((e) => {
+        const img = e.currentTarget;
+        if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+            setNaturalRatio(img.naturalWidth / img.naturalHeight);
+        }
+    }, []);
+
+    const handleError = useCallback(() => {
         if (retryCount < 2 && /^https?:\/\//i.test(currentSrc)) {
-            // 尝试加一个时间戳参数强制刷新（bypass浏览器缓存）
             const sep = currentSrc.includes('?') ? '&' : '?';
             setCurrentSrc(`${src}${sep}_r=${retryCount + 1}`);
             setRetryCount(c => c + 1);
@@ -21,16 +40,12 @@ function MomentImage({ src, index, onFail, onClick, language }) {
             setHasFailed(true);
             onFail(index);
         }
-    };
+    }, [retryCount, currentSrc, src, index, onFail]);
 
-    const handleRetry = (e) => {
-        e.stopPropagation();
-        setHasFailed(false);
-        setRetryCount(0);
-        setCurrentSrc(`${src}?_retry=${Date.now()}`);
-    };
+    if (hasFailed) return null;
 
-    if (hasFailed) return null; // 父层用 fallback
+    const isSingle = totalCount === 1;
+    const useAdaptiveRatio = isSingle && naturalRatio;
 
     return (
         <button
@@ -38,15 +53,19 @@ function MomentImage({ src, index, onFail, onClick, language }) {
             type="button"
             onClick={onClick}
             aria-label={language === 'zh' ? '查看动态图片' : 'View post image'}
-            className="group relative aspect-square overflow-hidden rounded-[18px] bg-[var(--color-bg-app)]"
+            className={cn(
+                'group relative overflow-hidden rounded-[18px] bg-[var(--color-bg-app)]',
+                !useAdaptiveRatio && 'aspect-square'
+            )}
+            style={useAdaptiveRatio ? formatAspectStyle(naturalRatio) : undefined}
         >
             <img
                 src={currentSrc}
                 alt=""
                 loading="lazy"
                 referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                onLoad={handleLoad}
                 onError={handleError}
             />
             <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/8" />
@@ -59,11 +78,13 @@ function MomentImage({ src, index, onFail, onClick, language }) {
     );
 }
 
-// 图片加载失败的美化占位卡
-function ImageFallbackCard({ post, language }) {
+function ImageFallbackCard({ post, totalCount, language }) {
     const fallback = buildMomentImageFallback(post, language);
     return (
-        <div className="aspect-square rounded-[18px] border border-[var(--color-border)] bg-gradient-to-br from-[rgba(255,157,74,0.08)] to-[rgba(255,214,183,0.12)] p-4 flex flex-col justify-between">
+        <div className={cn(
+            'rounded-[18px] border border-[var(--color-border)] bg-gradient-to-br from-[rgba(255,157,74,0.08)] to-[rgba(255,214,183,0.12)] p-4 flex flex-col justify-between',
+            totalCount === 1 ? 'aspect-[4/3]' : 'aspect-square'
+        )}>
             <div className="flex items-center justify-between text-[var(--color-text-muted)]">
                 <ImageIcon size={18} />
                 {post?.location && (
@@ -99,26 +120,32 @@ export default function MomentMediaGrid({ post }) {
 
     if (allImages.length === 0) return null;
 
+    const totalCount = allImages.length;
     const handleFail = (index) => {
         setFailedIndexes(prev => prev.includes(index) ? prev : [...prev, index]);
     };
 
-    const successImages = allImages.filter((_, i) => !failedIndexes.includes(i));
+    const successCount = allImages.filter((_, i) => !failedIndexes.includes(i)).length;
     const failedCount = failedIndexes.length;
 
     return (
         <>
             <div className={cn(
                 'grid gap-1.5 mt-3',
-                successImages.length === 1 && 'grid-cols-1 max-w-[min(100%,22rem)]',
-                successImages.length === 2 && 'grid-cols-2 max-w-[min(100%,28rem)]',
-                successImages.length >= 3 && 'grid-cols-3'
+                successCount === 1 && 'grid-cols-1 max-w-[min(100%,24rem)]',
+                successCount === 2 && 'grid-cols-2 max-w-[min(100%,30rem)]',
+                successCount >= 3 && 'grid-cols-3'
             )}>
                 {allImages.map((image, index) => {
                     const hasFailed = failedIndexes.includes(index);
                     if (hasFailed) {
                         return (
-                            <ImageFallbackCard key={`fallback-${index}`} post={post} language={language} />
+                            <ImageFallbackCard
+                                key={`fallback-${index}`}
+                                post={post}
+                                totalCount={totalCount}
+                                language={language}
+                            />
                         );
                     }
                     return (
@@ -126,6 +153,7 @@ export default function MomentMediaGrid({ post }) {
                             key={`${image}-${index}`}
                             src={image}
                             index={index}
+                            totalCount={totalCount}
                             onFail={handleFail}
                             onClick={() => setActiveImage(image)}
                             language={language}
@@ -133,7 +161,6 @@ export default function MomentMediaGrid({ post }) {
                     );
                 })}
 
-                {/* 如果九宫格超出限制的提示 */}
                 {post?.images?.length > 9 && failedCount === 0 && (
                     <div className="flex aspect-square items-center justify-center rounded-[18px] border border-dashed border-[var(--color-border)] bg-[var(--color-bg-app)]">
                         <span className="text-[14px] font-semibold text-[var(--color-text-muted)]">

@@ -13,6 +13,53 @@ Chat Buddy 的所有重要变更都将记录在此文件中。
 
 ---
 
+## [0.4.1] — 生产就绪 (2026-05-01)
+
+> 全面的生产就绪优化：代码质量、测试、CI/CD 和文档。
+
+### 新增 — CI/CD 流水线
+- **GitHub Actions 工作流**（`.github/workflows/ci.yml`）
+  - 自动化 Lint、单元测试、构建、E2E 测试和覆盖率报告
+  - 在推送到 main/remake 分支及所有 PR 时运行
+  - 并行任务执行与依赖管理
+
+### 新增 — 测试基础设施
+- **E2E 测试套件**（`e2e/app.spec.js`）
+  - 基于 Playwright 的端到端测试，覆盖所有主要流程
+  - 导航、聊天、好友、朋友圈、设置、无障碍和响应式设计测试
+  - 配置支持 Chromium、Firefox、Safari 和移动端浏览器
+- **StorageService 测试**（`src/services/storage/StorageService.spec.js`）
+  - localStorage 抽象层的全面测试
+  - 命名空间处理、JSON 解析、配额错误处理
+- **APIClient 测试**（`src/services/api/APIClient.spec.js`）
+  - HTTP 行为验证、重试逻辑、错误处理测试
+  - OpenAI 格式兼容性测试
+
+### 新增 — 文档
+- **部署指南**（`docs/DEPLOYMENT.md`）
+  - Vercel、Netlify、GitHub Pages、Cloudflare Pages 部署说明
+  - 所有支持服务商的环境变量配置
+  - 故障排除指南和生产检查清单
+- **安全策略**（`docs/SECURITY.md`）
+  - 客户端安全模型概述
+  - API 密钥处理和最佳实践
+  - 隐私注意事项和已知限制
+
+### 变更 — 代码质量
+- **React Compiler 合规**（`src/features/chat/ChatWindow.jsx`）
+  - 使用派生的 `useMemo` 状态修复 `setState-in-effect` 反模式
+  - 调整依赖数组与实际 React 行为一致
+  - 用派生计算替代同步状态更新
+- **ESLint 配置**（`eslint.config.js`）
+  - 将 `react-hooks/set-state-in-effect` 设为警告级别
+  - 添加测试全局变量以正确验证 spec 文件
+
+### 修复 — 版本对齐
+- **包版本**（`package.json`）
+  - 从 v0.3.3 升级到 v0.4.0 以匹配 CHANGELOG
+
+---
+
 ## [未发布]
 
 > 尚未分配到具体版本的计划功能。

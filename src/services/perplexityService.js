@@ -263,7 +263,7 @@ Criteria:
         if (jsonMatch) {
             try {
                 parsed = JSON.parse(jsonMatch[0]);
-            } catch (_e) {
+            } catch (_parseError) {
                 // JSON parsing failed, use raw answer
             }
         }

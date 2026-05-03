@@ -2,7 +2,7 @@
   "name": "chat-buddy",
   "description": "A modern, responsive AI chat application featuring multiple personalities, anime characters, group chats, and bilingual support.",
   "private": true,
-  "version": "0.3.3",
+  "version": "0.4.0",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -27,7 +27,6 @@
     "lucide-react": "^0.556.0",
     "mathjs": "^15.1.0",
     "mermaid": "^11.12.3",
-    "playwright": "^1.58.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",

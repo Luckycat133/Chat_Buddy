@@ -13,7 +13,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Styling**: TailwindCSS 4.1.17 (CSS-first, no config file)
 - **Animations**: Framer Motion 12.26.2
 - **AI**: OpenAI-compatible API (DeepSeek, Perplexity, etc.)
-- **Storage**: LocalStorage (namespace: `chat-buddy:`)
+- **Storage**: IndexedDB (chat/docs/media) + LocalStorage (light settings, namespace: `chat-buddy:`)
+- **Testing**: Vitest 3 + jsdom, Playwright, MSW, Testing Library
 - **Linting**: ESLint 9.39.1
 
 ## Development Commands
@@ -30,6 +31,24 @@ npm run preview
 
 # Run linter
 npm run lint
+
+# Run unit tests (vitest + jsdom)
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run e2e tests (Playwright, requires dev server on :5173)
+npx playwright test
+
+# Prompt regression benchmark
+npm run prompt:bench
+
+# UX walkthrough (uses Playwright to capture screenshots)
+npm run stress
 ```
 
 ## Architecture
@@ -74,19 +93,22 @@ The codebase follows **Clean Architecture** principles with clear layer separati
 ```
 src/
 ├── core/              # Domain logic (pure JS, no React)
-│   ├── chat/          # ChatEngine, AIPipeline
+│   ├── chat/          # ChatEngine, AIPipeline, ChatNormalizer, ChatPollManager
 │   └── presence/      # PresenceService, GreetingService
 ├── services/          # Infrastructure
 │   ├── api/           # APIClient (HTTP client), aiClient (AI API singleton)
-│   └── storage/       # StorageService (localStorage wrapper)
+│   └── storage/       # StorageService (localStorage), ChatStorageService (IndexedDB),
+│                      #   DocumentStorageService, ImageStorageService
 ├── features/          # Feature modules
 │   ├── chat/          # Chat components, hooks, services
 │   ├── moments/       # Social feed system
-│   └── background/    # Background themes
+│   └── background/    # BackgroundContext, BackgroundLayer, themes, DynamicBackground
 ├── context/           # Global contexts (FriendContext, LanguageContext)
 ├── components/        # Shared UI components
 ├── pages/             # Route pages
-└── data/              # Static data (personas, locales, skills)
+├── data/              # Static data (personas, locales, skills)
+├── test/              # Test setup (MSW server, crypto mock)
+└── utils/             # Shared utilities (sanitize, logger, validation)
 ```
 
 ## Core Systems
@@ -295,10 +317,11 @@ All AI characters are defined in `src/data/personas.js` with:
 
 ### Storage
 
-- Uses `StorageService` wrapper around localStorage
-- Namespace: `chat-buddy:` prefix for all keys
-- Key data stores:
-  - `chat-buddy-chats`: Chat history
+- **Primary data** (chats, documents, moments): **IndexedDB** via `ChatStorageService`, `DocumentStorageService`
+- **Light settings**: `StorageService` wrapper around **localStorage** (namespace: `chat-buddy:`)  
+- **Media/assets** (avatars, backgrounds): `ImageStorageService` (IndexedDB) — avoids 5MB localStorage limit
+- Key localStorage keys:
+  - `chat-buddy-chats`: Chat history (migrating to IndexedDB)
   - `chat-buddy-friend-data`: Friend metadata
   - `chat-buddy-moments`: Social feed posts
   - `chat-buddy-backgrounds`: Background settings
@@ -310,9 +333,11 @@ Required in `.env`:
 VITE_AI_API_URL=https://api.deepseek.com    # API base URL
 VITE_AI_API_KEY=sk-xxxxx                    # API key
 VITE_AI_MODEL=deepseek-chat                 # Model name
+VITE_TAVILY_API_KEY=tvly-xxxxx              # Tavily web search (for web_search tool)
 ```
 
 Supports any OpenAI-compatible API provider (DeepSeek, Perplexity, OpenAI).
+Runtime API keys entered in the Settings UI are stored in sessionStorage only (cleared on tab close).
 
 ## Versioning Strategy
 
@@ -382,8 +407,11 @@ Version updates follow [Keep a Changelog](https://keepachangelog.com/) format in
 2. **Personas are immutable**: Loaded once at app init, don't modify at runtime
 3. **ChatEngine persistence**: Call `.save()` manually after mutations
 4. **Presence timing**: Schedule uses 24-hour format (0-23)
-5. **LocalStorage limits**: ~5-10MB per domain, consider data size
-6. **API compatibility**: Ensure OpenAI format (messages array, role/content structure)
+5. **IndexedDB**: Chat/docs/media primary store; use `ChatStorageService`, not direct localStorage for chat data
+6. **LocalStorage limits**: ~5-10MB per domain; keep only light settings there
+7. **API compatibility**: Ensure OpenAI format (messages array, role/content structure)
+8. **Test crypto mock**: `crypto.randomUUID()` returns `'uuid-fixed'` in tests — don't rely on real UUIDs in assertions
+9. **MSW in tests**: API calls are mocked via MSW in `src/test/msw/` — add handlers there for new endpoints
 
 ## Debugging Guide
 
@@ -404,7 +432,8 @@ All major systems log with prefixes: `[ChatEngine]`, `[AIPipeline]`, `[APIClient
 
 ### Browser DevTools
 
-- **Application → LocalStorage**: Check `chat-buddy-chats`, `chat-buddy-user`, `chat-buddy-social`, `chat-buddy-language`
+- **Application → IndexedDB**: Check `chat-buddy-db` for chats, documents, images
+- **Application → LocalStorage**: Check `chat-buddy-user`, `chat-buddy-friend-data`, `chat-buddy-social`, `chat-buddy-language`
 - **Network tab**: Monitor API calls, look for 401 (auth error), 429 (rate limit)
 - **Console**: Look for prefixed log messages and errors
 
@@ -427,6 +456,9 @@ All major systems log with prefixes: `[ChatEngine]`, `[AIPipeline]`, `[APIClient
 | `src/features/chat/services/toolService.js` | Tool execution |
 | `src/services/api/APIClient.js` | HTTP client with retry/timeout |
 | `src/services/storage/StorageService.js` | localStorage abstraction |
+| `src/services/storage/ChatStorageService.js` | IndexedDB chat persistence |
+| `src/test/setupTests.js` | Vitest setup (MSW, crypto mock, cleanup) |
+| `src/test/msw/server.js` | MSW server for API mocking in tests |
 
 ### Configuration (safe to modify)
 
@@ -440,11 +472,38 @@ All major systems log with prefixes: `[ChatEngine]`, `[AIPipeline]`, `[APIClient
 
 ## Testing
 
-Currently no automated tests. Manual testing workflow:
+### Unit Tests (Vitest + jsdom)
+
+- **Config**: `vitest.config.js` — jsdom environment, `src/test/setupTests.js` setup file
+- **Test files**: `src/**/*.spec.{js,jsx}` (16+ spec files)
+- **Setup**: MSW server for API mocking, crypto.randomUUID mocked to `'uuid-fixed'`, auto-cleanup after each test
+- **Coverage thresholds** (enforced): 85% branches, 90% functions, 90% lines, 90% statements
+- **Coverage targets**: `ChatEngine.js`, `AIPipeline.js`, `chatService.js`, `MessageTimeline.jsx`
+
+```bash
+npm run test              # Run once
+npm run test:watch        # Watch mode
+npm run test:coverage     # With coverage report (text + HTML)
+```
+
+### E2E Tests (Playwright)
+
+- **Config**: `playwright.config.js` — 4 browser projects (chromium, firefox, safari, mobile-chrome)
+- **Location**: `e2e/app.spec.js`
+- **Screenshots**: Captured in `e2e/screenshots/`
+- Run manually with dev server already running on `:5173`, or via CI (`npm run preview` on `:4173`)
+
+```bash
+# With dev server running on :5173
+npx playwright test
+```
+
+### Manual Testing
+
 1. Start dev server: `npm run dev`
 2. Test in browser (Chrome/Firefox/Safari)
 3. Check console for errors
-4. Verify localStorage persistence (DevTools → Application → Storage)
+4. Verify localStorage + IndexedDB persistence (DevTools → Application → Storage)
 5. Test bilingual switching
 6. Verify AI responses in chat
 

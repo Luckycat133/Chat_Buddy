@@ -261,7 +261,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                             style={isRecording ? { background: 'var(--character-gradient, var(--gradient-aurora))', backgroundSize: '150% 150%' } : {}}
                         >
                             {isRecording
-                                ? `🎙️ ${t('release_to_send_voice')}`
+                                ? <><Mic size={16} className="inline mr-1" />{t('release_to_send_voice')}</>
                                 : t('hold_to_talk')}
                         </button>
                     ) : (

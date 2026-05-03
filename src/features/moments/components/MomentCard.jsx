@@ -67,8 +67,9 @@ function AIFeedbackCard({ feedback, language, onApplyComment, onCommentClick }) 
                         {feedback.summary}
                     </p>
                     {feedback.nextMove && (
-                        <p className="mt-2 text-[12px] leading-5 text-[var(--color-text-muted)]">
-                            💡 {feedback.nextMove}
+                        <p className="mt-2 flex items-start gap-1.5 text-[12px] leading-5 text-[var(--color-text-muted)]">
+                            <Sparkles size={12} className="mt-0.5 flex-shrink-0 text-[var(--color-primary)]" />
+                            <span>{feedback.nextMove}</span>
                         </p>
                     )}
                     {feedback.suggestedComment && (

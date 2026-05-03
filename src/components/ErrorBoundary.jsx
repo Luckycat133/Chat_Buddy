@@ -1,50 +1,51 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { createLogger } from '../utils/logger';
 
-/**
- * Error Boundary Component
- * Catches JavaScript errors anywhere in the child component tree and displays a fallback UI.
- *
- * Usage:
- * <ErrorBoundary>
- *   <MyComponent />
- * </ErrorBoundary>
- */
+const log = createLogger('ErrorBoundary');
+
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null
+      errorInfo: null,
+      errorCount: 0,
     };
+    this._maxErrors = props.maxErrors ?? 3;
   }
 
   static getDerivedStateFromError(_error) {
-    // Update state so the next render will show the fallback UI
     return { hasError: true };
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log the error to console for debugging
-    console.error('[ErrorBoundary] Caught an error:', error);
-    console.error('[ErrorBoundary] Error info:', errorInfo);
+    const errorCount = this.state.errorCount + 1;
 
-    this.setState({
-      error,
-      errorInfo
+    log.error('Component error caught', {
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack?.slice(0, 500),
+      componentStack: errorInfo?.componentStack?.slice(0, 500),
+      count: errorCount,
     });
 
-    // You can also log to an error reporting service here
-    // logErrorToService(error, errorInfo);
+    this.setState({ error, errorInfo, errorCount });
+
+    if (this.props.onError) {
+      try { this.props.onError(error, errorInfo); } catch (_) { /* noop */ }
+    }
   }
 
   handleReset = () => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null
-    });
+    const { errorCount } = this.state;
+    if (errorCount >= this._maxErrors) {
+      window.location.reload();
+      return;
+    }
+    this.setState({ hasError: false, error: null, errorInfo: null });
+    if (this.props.onReset) this.props.onReset();
   };
 
   handleReload = () => {
@@ -53,33 +54,34 @@ class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
-      // Custom fallback UI
       if (this.props.fallback) {
-        return this.props.fallback;
+        return typeof this.props.fallback === 'function'
+          ? this.props.fallback({ error: this.state.error, reset: this.handleReset })
+          : this.props.fallback;
       }
+
+      const { errorCount } = this.state;
 
       return (
         <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-app)] p-4">
           <div className="max-w-md w-full bg-[var(--color-bg-white)] rounded-2xl shadow-xl p-6 text-center">
-            {/* Error Icon */}
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center">
               <AlertTriangle size={32} className="text-red-500" />
             </div>
 
-            {/* Title */}
             <h1 className="text-xl font-bold text-[var(--color-text-main)] mb-2">
-              {this.props.title || 'Something went wrong'}
+              {this.props.title || (errorCount >= this._maxErrors ? 'Multiple errors detected' : 'Something went wrong')}
             </h1>
 
-            {/* Description */}
             <p className="text-sm text-[var(--color-text-muted)] mb-6">
-              {this.props.message || 'An unexpected error occurred. Please try again.'}
+              {this.props.message || (errorCount >= this._maxErrors
+                ? 'The page will reload to recover. You may lose unsaved data.'
+                : 'An unexpected error occurred. Please try again.')}
             </p>
 
-            {/* Error Details (development only) */}
             {import.meta.env.DEV && this.state.error && (
               <details className="text-left mb-6 p-3 bg-[var(--color-bg-app)] rounded-lg overflow-auto max-h-40">
-                <summary className="text-xs font-medium text-[var(--color-text-muted)] cursor-pointer">
+                <summary className="text-xs font-medium text-[var(--color-text-muted)] cursor-pointer select-none">
                   Error Details
                 </summary>
                 <pre className="mt-2 text-xs text-red-500 whitespace-pre-wrap break-all">
@@ -89,7 +91,6 @@ class ErrorBoundary extends React.Component {
               </details>
             )}
 
-            {/* Action Buttons */}
             <div className="flex gap-3 justify-center">
               <button
                 onClick={this.handleReset}
@@ -112,20 +113,6 @@ class ErrorBoundary extends React.Component {
 
     return this.props.children;
   }
-}
-
-/**
- * Higher-order component to wrap a component with an ErrorBoundary
- */
-// eslint-disable-next-line react-refresh/only-export-components
-export function withErrorBoundary(WrappedComponent, errorBoundaryProps = {}) {
-  return function WithErrorBoundaryWrapper(props) {
-    return (
-      <ErrorBoundary {...errorBoundaryProps}>
-        <WrappedComponent {...props} />
-      </ErrorBoundary>
-    );
-  };
 }
 
 export default ErrorBoundary;

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { normalizeChat, normalizeMessage, getDirectPeerId, getChatActivityTimestamp, isTaskParticipant } from './ChatNormalizer';
 
 const mocks = vi.hoisted(() => {
   const store = new Map();
@@ -249,7 +250,8 @@ describe('ChatEngine', () => {
     const result = engine.votePoll('chat-1', 'poll-1', 'opt-1', 'switch');
 
     // Then
-    expect(result).toEqual({ success: false, error: 'Poll has expired' });
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Poll has expired');
   });
 
   it('test_when_vote_poll_switch_should_toggle_and_clear_other_options', () => {
@@ -275,7 +277,7 @@ describe('ChatEngine', () => {
     const result = engine.votePoll('chat-1', 'poll-1', 'opt-1', 'switch');
 
     // Then
-    expect(result).toEqual({ success: true });
+    expect(result.success).toBe(true);
     const poll = engine.chats[0].polls[0];
     expect(poll.options[0].votes).toContain('user-me');
     expect(poll.options[1].votes).not.toContain('user-me');
@@ -483,13 +485,10 @@ describe('ChatEngine', () => {
   });
 
   it('test_when_normalize_receives_null_or_incomplete_entities_should_return_safe_defaults', () => {
-    // Given
-    const engine = createEngineWithChats([]);
-
     // When
-    const invalidChat = engine._normalizeChat(null);
-    const invalidMessage = engine._normalizeMessage({ id: 'm1', senderId: null, content: 'x' });
-    const minimalMessage = engine._normalizeMessage({ id: 'm2', senderId: 'ai-1', content: 'ok' });
+    const invalidChat = normalizeChat(null);
+    const invalidMessage = normalizeMessage({ id: 'm1', senderId: null, content: 'x' });
+    const minimalMessage = normalizeMessage({ id: 'm2', senderId: 'ai-1', content: 'ok' });
 
     // Then
     expect(invalidChat).toBeNull();
@@ -529,17 +528,14 @@ describe('ChatEngine', () => {
   });
 
   it('test_when_helper_guards_and_fallbacks_run_should_return_safe_values', () => {
-    // Given
-    const engine = createEngineWithChats([]);
-
     // When / Then
-    expect(engine._isTaskParticipant('user-me')).toBe(false);
-    expect(engine._isTaskParticipant('agent-custom')).toBe(true);
-    expect(engine._getDirectPeerId(null)).toBeNull();
-    expect(engine._getDirectPeerId({ participants: ['ai-1', 'ai-2'] })).toBeNull();
-    expect(engine._getDirectPeerId({ participants: ['user-me', 'ai-2'] })).toBe('ai-2');
-    expect(engine._getChatActivityTimestamp({ createdAt: '2024-01-01T00:00:00.000Z' })).toBe('2024-01-01T00:00:00.000Z');
-    expect(engine._getChatActivityTimestamp({})).toBe(new Date(0).toISOString());
+    expect(isTaskParticipant('user-me')).toBe(false);
+    expect(isTaskParticipant('agent-custom')).toBe(true);
+    expect(getDirectPeerId(null)).toBeNull();
+    expect(getDirectPeerId({ participants: ['ai-1', 'ai-2'] })).toBeNull();
+    expect(getDirectPeerId({ participants: ['user-me', 'ai-2'] })).toBe('ai-2');
+    expect(getChatActivityTimestamp({ createdAt: '2024-01-01T00:00:00.000Z' })).toBe('2024-01-01T00:00:00.000Z');
+    expect(getChatActivityTimestamp({})).toBe(new Date(0).toISOString());
   });
 
   it('test_when_init_finds_duplicate_social_direct_chats_should_merge_cluster_and_persist', () => {

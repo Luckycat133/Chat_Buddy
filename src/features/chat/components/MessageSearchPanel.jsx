@@ -130,7 +130,8 @@ export default function MessageSearchPanel({ onClose, onSelectMessage, currentCh
                     day: 'numeric'
                 });
             }
-        } catch {
+        } catch (e) {
+            console.warn('[MessageSearch] Date formatting failed:', e?.message);
             return '';
         }
     };

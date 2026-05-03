@@ -427,7 +427,8 @@ export function isTavilyConfigured() {
     try {
         getTavilyApiKey();
         return true;
-    } catch {
+    } catch (e) {
+        console.warn('[tavilyService] API key check failed:', e?.message);
         return false;
     }
 }

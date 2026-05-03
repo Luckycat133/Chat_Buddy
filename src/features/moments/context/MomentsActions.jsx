@@ -46,7 +46,8 @@ async function persistGeneratedImage(imageUrl) {
 
     try {
         return await cacheRemoteImageAsDataUrl(imageUrl);
-    } catch {
+    } catch (e) {
+        console.warn('[MomentsActions] Image caching failed:', e?.message);
         return imageUrl;
     }
 }
@@ -371,7 +372,8 @@ export const MomentsActionProvider = ({ children, setMomentsData }) => {
                         fallback.suggestedComment
                     ),
                 };
-            } catch {
+            } catch (e) {
+                console.warn('[MomentsActions] Feedback parsing failed:', e?.message);
                 feedback = fallback;
             }
         }

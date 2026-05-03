@@ -3,8 +3,11 @@ import { callAI } from '../../features/chat/services/chatService';
 import { executeTool } from '../../features/chat/services/toolService';
 import { compressContext, extractMemoriesAsync } from '../memory/ContextCompressor';
 import { buildMemoryBlock, buildGroupContextBlock } from '../memory/MemoryInjector';
+import { createLogger, AppError } from '../../utils/logger';
 import { tryProactiveImageGen, analyzeContextForImageGen } from '../../services/proactiveImageService';
 import { buildSkillsSystemBlock } from '../../services/minimaxSkillsManifest';
+
+const log = createLogger('AIPipeline');
 
 /**
  * Domain Layer: AI Pipeline
@@ -67,7 +70,8 @@ export class AIPipeline {
                     if (typeof fn.arguments === 'string' && fn.arguments.trim()) {
                         try {
                             args = JSON.parse(fn.arguments);
-                        } catch {
+                        } catch (parseError) {
+                            log.warn('Tool call arguments JSON parse failed', { name, raw: fn.arguments?.slice(0, 100), error: parseError.message });
                             args = {};
                         }
                     } else if (fn.arguments && typeof fn.arguments === 'object') {
@@ -76,7 +80,8 @@ export class AIPipeline {
                     return { name, args };
                 })
                 .filter(Boolean);
-        } catch {
+        } catch (parseError) {
+            log.warn('Failed to parse tool calls from AI response', { error: parseError.message });
             return null;
         }
     }
@@ -195,9 +200,9 @@ export class AIPipeline {
                     });
                     this.callbacks.onToolEnd?.(chatId, toolMsgId, toolOutput, null);
                     toolHistory.push({ role: 'user', content: `[TOOL_RESULT for ${toolCall.name}]\n${toolOutput}\n\n[Please continue based on this result]` });
-                } catch (e) {
-                    const errorMessage = e?.message || String(e);
-                    this.log('[Native Tool Error]', e);
+                } catch (error) {
+                    const errorMessage = error?.message || String(error);
+                    this.log('[Native Tool Error]', error);
                     this.callbacks.onToolEnd?.(chatId, toolMsgId, null, errorMessage);
                     toolHistory.push({ role: 'user', content: `[TOOL_ERROR]: ${errorMessage}` });
                 }
@@ -231,15 +236,15 @@ export class AIPipeline {
 
                 await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
 
-            } catch (e) {
-                this.log('[Tool Error]', e);
+            } catch (error) {
+                this.log('[Tool Error]', error);
                 // T13: Emit tool end (error)
-                this.callbacks.onToolEnd?.(chatId, toolMsgId, null, e.message);
+                this.callbacks.onToolEnd?.(chatId, toolMsgId, null, error.message);
 
                 const newHistory = [
                     ...initialHistory,
                     { role: 'assistant', content: response },
-                    { role: 'user', content: `[TOOL_ERROR]: ${e.message}` }
+                    { role: 'user', content: `[TOOL_ERROR]: ${error.message}` }
                 ];
                 await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
             }
@@ -258,12 +263,12 @@ export class AIPipeline {
                     { role: 'user', content: `[TOOL_RESULT for MEMORY_REQUEST from ${targetName}]\n${toolOutput}\n\n[Please continue based on this result]` }
                 ];
                 await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
-            } catch (e) {
-                this.log('[Memory Request Error]', e);
+            } catch (error) {
+                this.log('[Memory Request Error]', error);
                 const newHistory = [
                     ...initialHistory,
                     { role: 'assistant', content: response },
-                    { role: 'user', content: `[TOOL_ERROR]: Memory exchange failed — ${e.message}` }
+                    { role: 'user', content: `[TOOL_ERROR]: Memory exchange failed — ${error.message}` }
                 ];
                 await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
             }
@@ -388,8 +393,8 @@ Please send a revised/improved version. Be natural and conversational.`;
                 if (result) {
                     this.callbacks.onProactiveImage?.(chatId, result);
                 }
-            } catch (e) {
-                console.warn('[AIPipeline] Proactive image failed (non-blocking):', e.message);
+            } catch (error) {
+                console.warn('[AIPipeline] Proactive image failed (non-blocking):', error.message);
             }
         });
     }

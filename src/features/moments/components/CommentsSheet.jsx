@@ -106,6 +106,7 @@ export default function CommentsSheet({ post, onClose }) {
             setTimeout(async () => {
                 await generateAIComment(activePost.id, activePost.authorId, syntheticReplyTarget, postsSnapshot);
                 setIsAIReplying(false);
+                // eslint-disable-next-line react-hooks/purity
             }, 1000 + Math.random() * 1500);
         }
     };

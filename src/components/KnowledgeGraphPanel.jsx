@@ -14,13 +14,13 @@ function loadCustomNodes() {
     try {
         const raw = localStorage.getItem(CUSTOM_KG_KEY);
         return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
+    } catch (e) { console.warn('[KnowledgeGraph] Failed to load custom nodes:', e?.message); return []; }
 }
 
 function saveCustomNodes(nodes) {
     try {
         localStorage.setItem(CUSTOM_KG_KEY, JSON.stringify(nodes));
-    } catch { /* ignore */ }
+    } catch (e) { console.warn('[KnowledgeGraph] Failed to save custom nodes:', e?.message); }
 }
 
 const CATEGORY_COLORS = {
@@ -89,7 +89,7 @@ export default function KnowledgeGraphPanel({ onClose }) {
     const [activeTab, setActiveTab] = useState('all'); // 'all' | 'custom'
 
     const allNodes = useMemo(() => [
-        ...KNOWLEDGE_NODES.map(n => ({ ...n, isCustom: false })),
+        ...Object.values(KNOWLEDGE_NODES).map(n => ({ ...n, isCustom: false })),
         ...customNodes.map(n => ({ ...n, isCustom: true }))
     ], [customNodes]);
 

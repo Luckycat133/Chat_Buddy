@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense, useMemo, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { useChat } from './context/ChatContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -69,16 +69,131 @@ export default function ChatWindow({ chatId: propChatId }) {
 
     // T07: Bookmark states
     const [showBookmarkPanel, setShowBookmarkPanel] = useState(false);
-    const [bookmarkedMessageIds, setBookmarkedMessageIds] = useState(new Set());
 
     // T07: Export modal state
     const [showExportModal, setShowExportModal] = useState(false);
     const greetedChatIdRef = useRef(null);
     const toastTimerRef = useRef(null);
 
-    const chat = chats.find(c => c.id === id);
+    const chat = useMemo(() => chats.find(c => c.id === id), [chats, id]);
     const isSearchRoute = location.pathname === `/chat/${id}/search`;
     const showSearchPanel = isSearchRoute;
+
+    // --- Handlers (defined before early return to maintain hook order) ---
+
+    const showToast = useCallback((msg) => {
+        if (toastTimerRef.current) {
+            clearTimeout(toastTimerRef.current);
+        }
+        setToast(msg);
+        toastTimerRef.current = setTimeout(() => {
+            setToast(null);
+            toastTimerRef.current = null;
+        }, 2000);
+    }, []);
+
+    const handleMessageContextMenu = useCallback((e, msg) => {
+        e.preventDefault();
+        setSelectedMessage(msg);
+        setMenuPosition({ x: e.clientX, y: e.clientY });
+        const elapsed = msg?.timestamp ? Date.now() - new Date(msg.timestamp).getTime() : Infinity;
+        setCanRecallMessage(elapsed < 2 * 60 * 1000);
+    }, []);
+
+    const handleFileSelect = useCallback((fileData) => {
+        addDocument(fileData);
+        if (chat?.id) {
+            sendMessage(chat.id, `[FILE] ${fileData.name} (${formatFileSize(fileData.size)})`);
+            showToast(t('file_uploaded'));
+        }
+    }, [chat, sendMessage, showToast, t, addDocument]);
+
+    const handleGiftSent = useCallback((gift) => {
+        if (!chat?.id) return;
+        sendMessage(chat.id, `[GIFT:${gift.emoji}:${gift.name}:${gift.name_en}]`);
+        updateTaskProgress('task_gift', 1);
+        setShowGiftPanel(false);
+        showToast(t('gift_sent'));
+    }, [chat, sendMessage, showToast, t, updateTaskProgress]);
+
+    const handleRedPacketSent = useCallback(({ amount, message }) => {
+        if (!chat?.id) return;
+        sendMessage(chat.id, `[RED_PACKET:${amount}:${message}]`);
+        setShowRedPacketPanel(false);
+        showToast(t('red_packet_sent'));
+    }, [chat, sendMessage, showToast, t]);
+
+    const handleGameResult = useCallback(({ result, score, attempts, rounds }) => {
+        if (!chat?.id) return;
+        if (activeGame === 'rps') {
+            const resultText = result === 'win' ? 'Win' : result === 'lose' ? 'Lose' : 'Draw';
+            sendMessage(chat.id, `[GAME:RPS:${resultText}:${score.player}-${score.ai}]`);
+        } else if (activeGame === 'number_guess') {
+            const resultText = result === 'win' ? `Win in ${attempts} tries` : 'Lose';
+            sendMessage(chat.id, `[GAME:NUM:${resultText}]`);
+        } else if (activeGame === 'idiom_chain') {
+            const completedRounds = rounds || 0;
+            sendMessage(chat.id, `[GAME:IDIOM:${result}:${completedRounds}]`);
+        }
+        setActiveGame(null);
+    }, [activeGame, chat, sendMessage]);
+
+    const handleCreatePoll = useCallback((poll) => {
+        if (!chat?.id) return;
+        const currentPolls = chat.polls || [];
+        updateChat(chat.id, { polls: [poll, ...currentPolls] });
+        sendMessage(chat.id, `[POLL:${poll.id}]`);
+        setShowPoll(false);
+    }, [chat, updateChat, sendMessage]);
+
+    const confirmForward = useCallback((message, targetChatIds) => {
+        targetChatIds.forEach(targetId => sendMessage(targetId, message.content));
+        showToast(t('message_forwarded') || 'Forwarded');
+        setMessageToForward(null);
+        setShowForwardModal(false);
+    }, [sendMessage, showToast, t]);
+
+    const handleBookmark = useCallback((messageId, shouldBookmark) => {
+        if (!chat?.id) return;
+        if (shouldBookmark) {
+            const result = bookmarkMessage(chat.id, messageId);
+            if (result.success) {
+                showToast(t('message_bookmarked') || 'Message bookmarked');
+            } else {
+                showToast(t('already_bookmarked') || 'Already bookmarked');
+            }
+        } else {
+            const result = unbookmarkMessage(messageId);
+            if (result.success) {
+                showToast(t('bookmark_removed') || 'Bookmark removed');
+            }
+        }
+    }, [chat, bookmarkMessage, unbookmarkMessage, showToast, t]);
+
+    const navigateToMessage = useCallback((chatId, messageId) => {
+        if (!chatId || !messageId) return;
+        if (chatId !== chat?.id) {
+            navigate(`/chat/${chatId}`, {
+                state: { targetMessageId: messageId }
+            });
+            return;
+        }
+        setFocusedMessageId(messageId);
+    }, [chat?.id, navigate]);
+
+    const handleNavigateToBookmark = useCallback((chatId, messageId) => {
+        navigateToMessage(chatId, messageId);
+    }, [navigateToMessage]);
+
+    const handleFocusHandled = useCallback(() => {
+        setFocusedMessageId(null);
+        if (!location.state?.targetMessageId) return;
+
+        const nextState = location.state ? { ...location.state } : {};
+        delete nextState.targetMessageId;
+        const hasState = Object.keys(nextState).length > 0;
+        navigate(location.pathname, { replace: true, state: hasState ? nextState : null });
+    }, [location.state, location.pathname, navigate]);
 
     // T05: Window-open greeting check
     useEffect(() => {
@@ -93,7 +208,6 @@ export default function ChatWindow({ chatId: propChatId }) {
         const greeting = checkWindowOpenGreeting(chat, otherPersona, language);
         if (!greeting) return;
 
-        // Slight delay to feel natural after opening.
         const timer = setTimeout(() => {
             triggerGreeting(chat.id, greeting.message, greeting.personaId);
         }, 1000);
@@ -115,18 +229,17 @@ export default function ChatWindow({ chatId: propChatId }) {
     }, [chat?.id, chat?.messages?.length, markMessagesAsRead]);
 
     // Keep bookmarked IDs in sync with bookmark storage for current chat.
-    useEffect(() => {
-        if (!chat?.id) {
-            setBookmarkedMessageIds(new Set());
-            return;
-        }
+    // Derived state: recompute when chat changes (avoids setState-in-effect pattern).
+    const derivedBookmarkedIds = useMemo(() => {
+        if (!chat?.id) return new Set();
         const ids = getBookmarks()
             .filter((bookmark) => bookmark.chatId === chat.id)
             .map((bookmark) => bookmark.messageId);
-        setBookmarkedMessageIds(new Set(ids));
+        return new Set(ids);
     }, [chat?.id, showBookmarkPanel]);
 
     // Receive target message from route state (global search / settings search / bookmark jumps).
+    // Syncs from external navigation state - imperative but necessary for route-driven focus.
     useEffect(() => {
         const targetMessageId = location.state?.targetMessageId;
         if (targetMessageId) {
@@ -134,128 +247,19 @@ export default function ChatWindow({ chatId: propChatId }) {
         }
     }, [location.state?.targetMessageId]);
 
-    if (!chat) return <div className="flex items-center justify-center h-full bg-[var(--color-bg-app)] text-[var(--color-text-muted)]">{t('select_chat')}</div>;
-
-    // Determine character for theming (DM only)
-    const isDM = chat.participants.length === 2;
+    // Determine character for theming (DM only) - derived from chat state
+    const isDM = chat?.participants?.length === 2;
     const otherParticipantId = isDM ? chat.participants.find(p => p !== 'user-me') : null;
     const characterStyle = otherParticipantId ? getCharacterThemeStyle(otherParticipantId) : {};
 
-    // --- Handlers ---
-
-    const showToast = (msg) => {
-        if (toastTimerRef.current) {
-            clearTimeout(toastTimerRef.current);
-        }
-        setToast(msg);
-        toastTimerRef.current = setTimeout(() => {
-            setToast(null);
-            toastTimerRef.current = null;
-        }, 2000);
-    };
-
-    const handleMessageContextMenu = (e, msg) => {
-        e.preventDefault();
-        setSelectedMessage(msg);
-        setMenuPosition({ x: e.clientX, y: e.clientY });
-        // Compute canRecall in event handler where Date.now() is allowed
-        const elapsed = msg?.timestamp ? Date.now() - new Date(msg.timestamp).getTime() : Infinity;
-        setCanRecallMessage(elapsed < 2 * 60 * 1000);
-    };
-
-    const handleFileSelect = (fileData) => {
-        addDocument(fileData);
-        sendMessage(chat.id, `[FILE] ${fileData.name} (${formatFileSize(fileData.size)})`);
-        showToast(t('file_uploaded'));
-    };
-
-    const handleGiftSent = (gift) => {
-        sendMessage(chat.id, `[GIFT:${gift.emoji}:${gift.name}:${gift.name_en}]`);
-        updateTaskProgress('task_gift', 1);
-        setShowGiftPanel(false);
-        showToast(t('gift_sent'));
-    };
-
-    const handleRedPacketSent = ({ amount, message }) => {
-        sendMessage(chat.id, `[RED_PACKET:${amount}:${message}]`);
-        setShowRedPacketPanel(false);
-        showToast(t('red_packet_sent'));
-    };
-
-    const handleGameResult = ({ result, score, attempts, rounds }) => {
-        if (activeGame === 'rps') {
-            const resultText = result === 'win' ? 'Win' : result === 'lose' ? 'Lose' : 'Draw';
-            sendMessage(chat.id, `[GAME:RPS:${resultText}:${score.player}-${score.ai}]`);
-        } else if (activeGame === 'number_guess') {
-            const resultText = result === 'win' ? `Win in ${attempts} tries` : 'Lose';
-            sendMessage(chat.id, `[GAME:NUM:${resultText}]`);
-        } else if (activeGame === 'idiom_chain') {
-            const completedRounds = rounds || 0;
-            sendMessage(chat.id, `[GAME:IDIOM:${result}:${completedRounds}]`);
-        }
-        setActiveGame(null);
-    };
-
-    const handleCreatePoll = (poll) => {
-        const currentPolls = chat.polls || [];
-        updateChat(chat.id, { polls: [poll, ...currentPolls] });
-        sendMessage(chat.id, `[POLL:${poll.id}]`);
-        setShowPoll(false);
-    };
-
-    const confirmForward = (message, targetChatIds) => {
-        targetChatIds.forEach(targetId => sendMessage(targetId, message.content));
-        showToast(t('message_forwarded') || 'Forwarded');
-        setMessageToForward(null);
-        setShowForwardModal(false);
-    };
-
-    const handleBookmark = (messageId, shouldBookmark) => {
-        if (shouldBookmark) {
-            const result = bookmarkMessage(chat.id, messageId);
-            if (result.success) {
-                showToast(t('message_bookmarked') || 'Message bookmarked');
-                setBookmarkedMessageIds(prev => new Set([...prev, messageId]));
-            } else {
-                showToast(t('already_bookmarked') || 'Already bookmarked');
-            }
-        } else {
-            const result = unbookmarkMessage(messageId);
-            if (result.success) {
-                showToast(t('bookmark_removed') || 'Bookmark removed');
-                setBookmarkedMessageIds(prev => {
-                    const next = new Set(prev);
-                    next.delete(messageId);
-                    return next;
-                });
-            }
-        }
-    };
-
-    const navigateToMessage = (chatId, messageId) => {
-        if (!chatId || !messageId) return;
-        if (chatId !== chat?.id) {
-            navigate(`/chat/${chatId}`, {
-                state: { targetMessageId: messageId }
-            });
-            return;
-        }
-        setFocusedMessageId(messageId);
-    };
-
-    const handleNavigateToBookmark = (chatId, messageId) => {
-        navigateToMessage(chatId, messageId);
-    };
-
-    const handleFocusHandled = () => {
-        setFocusedMessageId(null);
-        if (!location.state?.targetMessageId) return;
-
-        const nextState = location.state ? { ...location.state } : {};
-        delete nextState.targetMessageId;
-        const hasState = Object.keys(nextState).length > 0;
-        navigate(location.pathname, { replace: true, state: hasState ? nextState : null });
-    };
+    // No chat selected - render loading/error state instead of full chat UI
+    if (!chat) {
+        return (
+            <div className="flex items-center justify-center h-full bg-[var(--color-bg-app)] text-[var(--color-text-muted)]">
+                {t('select_chat')}
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-[var(--color-bg-chat)] relative flex-1" style={characterStyle}>
@@ -321,7 +325,7 @@ export default function ChatWindow({ chatId: propChatId }) {
                         message={selectedMessage}
                         isOwnMessage={selectedMessage.senderId === 'user-me'}
                         isPinned={chat?.pinnedMessages?.includes(selectedMessage.id)}
-                        isBookmarked={bookmarkedMessageIds.has(selectedMessage.id)}
+                        isBookmarked={derivedBookmarkedIds.has(selectedMessage.id)}
                         position={menuPosition}
                         canRecall={canRecallMessage}
                         onClose={() => setSelectedMessage(null)}
@@ -472,13 +476,6 @@ export default function ChatWindow({ chatId: propChatId }) {
                         isOpen={showBookmarkPanel}
                         onClose={() => setShowBookmarkPanel(false)}
                         onNavigateToMessage={handleNavigateToBookmark}
-                        onBookmarkRemoved={(messageId) => {
-                            setBookmarkedMessageIds(prev => {
-                                const next = new Set(prev);
-                                next.delete(messageId);
-                                return next;
-                            });
-                        }}
                         personas={personas}
                     />
                 </Suspense>

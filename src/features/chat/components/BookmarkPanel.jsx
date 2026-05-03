@@ -4,7 +4,7 @@ import { useLanguage } from '../../../context/LanguageContext';
 import { getBookmarks, removeBookmark } from '../services/BookmarkService';
 import { formatTimeSeparator } from '../../../utils/formatTime';
 
-export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, onBookmarkRemoved, personas }) {
+export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, personas }) {
     const { t, language } = useLanguage();
     const [bookmarks, setBookmarks] = React.useState([]);
 
@@ -25,7 +25,6 @@ export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, on
         e.stopPropagation();
         removeBookmark(messageId);
         setBookmarks(getBookmarks());
-        onBookmarkRemoved?.(messageId);
     };
 
     const handleNavigate = (bookmark) => {
