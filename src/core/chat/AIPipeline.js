@@ -72,7 +72,7 @@ export class AIPipeline {
                             args = JSON.parse(fn.arguments);
                         } catch (parseError) {
                             log.warn('Tool call arguments JSON parse failed', { name, raw: fn.arguments?.slice(0, 100), error: parseError.message });
-                            args = {};
+                            args = { error: 'JSON_PARSE_FAILED', details: parseError.message };
                         }
                     } else if (fn.arguments && typeof fn.arguments === 'object') {
                         args = fn.arguments;
