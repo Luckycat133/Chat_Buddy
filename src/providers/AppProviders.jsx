@@ -1,6 +1,4 @@
 import React from 'react';
-
-// Context Imports
 import { ChatProvider } from '../features/chat/context/ChatContext';
 import { BackgroundProvider } from '../features/background/BackgroundContext';
 import { LanguageProvider } from '../context/LanguageContext';
@@ -12,12 +10,8 @@ import { NotificationProvider } from '../context/NotificationContext';
 import { SocialProvider } from '../context/SocialContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import { StickerProvider } from '../context/StickerContext';
+import { ToastProvider } from '../components/ToastProvider';
 
-/**
- * AppProviders Component
- * Composes all global context providers in the correct order.
- * Reducing "Provider Hell" in the main App component.
- */
 export default function AppProviders({ children }) {
     return (
         <LanguageProvider>
@@ -31,7 +25,9 @@ export default function AppProviders({ children }) {
                                         <MomentsProvider>
                                             <ChatProvider>
                                                 <BackgroundProvider>
-                                                    {children}
+                                                    <ToastProvider>
+                                                        {children}
+                                                    </ToastProvider>
                                                 </BackgroundProvider>
                                             </ChatProvider>
                                         </MomentsProvider>

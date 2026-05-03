@@ -100,8 +100,8 @@ function setSessionApiKey(apiKey) {
 
         if (value) sessionStorage.setItem(SESSION_API_KEY_KEY, value);
         else sessionStorage.removeItem(SESSION_API_KEY_KEY);
-    } catch {
-        // Best-effort only; callers still receive in-memory config.
+    } catch (e) {
+        console.warn('[apiConfig] sessionStorage write failed (best-effort):', e?.message);
     }
 }
 
@@ -112,7 +112,8 @@ function getSessionApiKey() {
         const sessionStorage = getSessionStorage();
         sessionApiKeyCache = sessionStorage?.getItem(SESSION_API_KEY_KEY) || '';
         return sessionApiKeyCache;
-    } catch {
+    } catch (e) {
+        console.warn('[apiConfig] sessionStorage read failed:', e?.message);
         sessionApiKeyCache = '';
         return sessionApiKeyCache;
     }
@@ -393,7 +394,8 @@ function getLocalStorageBackupData() {
         if (!key || !key.startsWith(LOCAL_STORAGE_PREFIX)) continue;
         try {
             backup[key] = JSON.parse(localStorage.getItem(key));
-        } catch {
+        } catch (e) {
+            console.warn('[apiConfig] localStorage JSON parse failed for key:', key, e?.message);
             backup[key] = localStorage.getItem(key);
         }
     }
@@ -415,8 +417,8 @@ export async function clearAllAppData() {
         INDEXED_DB_SCHEMAS.map(async (schema) => {
             try {
                 await clearStoreRecords(schema);
-            } catch {
-                // Best-effort clear.
+            } catch (e) {
+                console.warn('[apiConfig] IndexedDB clear failed (best-effort):', schema.dbName, e?.message);
             }
         })
     );
@@ -436,7 +438,8 @@ export async function exportAllData() {
                     ...(indexedDBData[schema.dbName] || {}),
                     [schema.storeName]: records
                 };
-            } catch {
+            } catch (e) {
+                console.warn('[apiConfig] IndexedDB export failed:', schema.dbName, e?.message);
                 indexedDBData[schema.dbName] = {
                     ...(indexedDBData[schema.dbName] || {}),
                     [schema.storeName]: []

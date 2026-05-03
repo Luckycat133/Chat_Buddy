@@ -34,6 +34,7 @@ dist-ssr
 *.sw?
 
 # Test and development artifacts
+test-results/
 .pytest_cache
 reports/
 e2e/reports/*

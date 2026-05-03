@@ -18,7 +18,7 @@ export function getCurrentHour(timezone) {
             timeZone: timezone,
         });
         return parseInt(formatter.format(new Date()), 10);
-    } catch (_e) {
+    } catch (_error) {
         return new Date().getHours();
     }
 }

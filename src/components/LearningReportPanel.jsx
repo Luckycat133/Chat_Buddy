@@ -15,7 +15,7 @@ function loadProgress() {
     try {
         const raw = localStorage.getItem(PROGRESS_KEY);
         return raw ? JSON.parse(raw) : { topics: [], quizzes: [], sessions: 0, totalMessages: 0 };
-    } catch { return { topics: [], quizzes: [], sessions: 0, totalMessages: 0 }; }
+    } catch (e) { console.warn('[LearningReport] Failed to load progress:', e?.message); return { topics: [], quizzes: [], sessions: 0, totalMessages: 0 }; }
 }
 
 function ProgressBar({ value, max, color = 'var(--color-primary)' }) {

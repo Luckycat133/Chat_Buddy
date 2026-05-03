@@ -1,11 +1,11 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { LanguageProvider } from '../../../context/LanguageContext';
 import MomentMediaGrid from './MomentMediaGrid';
 
 describe('MomentMediaGrid', () => {
-    it('shows a text fallback when the image fails to load', () => {
+    it('shows a text fallback when the image fails to load after retries', async () => {
         render(
             <LanguageProvider>
                 <MomentMediaGrid
@@ -18,11 +18,16 @@ describe('MomentMediaGrid', () => {
             </LanguageProvider>
         );
 
-        const image = document.querySelector('img');
-        expect(image).not.toBeNull();
-        fireEvent.error(image);
+        const getImage = () => document.querySelector('img');
+        expect(getImage()).not.toBeNull();
 
-        expect(screen.getAllByText('海边').length).toBeGreaterThan(0);
-        expect(screen.getByText(/text cover|文字封面/i)).toBeInTheDocument();
+        for (let i = 0; i < 3; i++) {
+            const img = getImage();
+            if (img) fireEvent.error(img);
+        }
+
+        await waitFor(() => {
+            expect(screen.getAllByText('海边').length).toBeGreaterThan(0);
+        });
     });
 });

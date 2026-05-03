@@ -13,6 +13,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.1] — Production Readiness (2026-05-01)
+
+> Comprehensive production readiness pass: code quality, testing, CI/CD, and documentation.
+
+### Added — CI/CD Pipeline
+- **GitHub Actions Workflow** (`.github/workflows/ci.yml`)
+  - Automated lint, unit tests, build, E2E tests, and coverage reporting
+  - Runs on push to main/remake branches and all pull requests
+  - Parallel job execution with dependency management
+
+### Added — Testing Infrastructure
+- **E2E Test Suite** (`e2e/app.spec.js`)
+  - Playwright-based end-to-end tests for all major flows
+  - Navigation, chat, friends, moments, settings, accessibility, and responsive design tests
+  - Configured for Chromium, Firefox, Safari, and mobile browsers
+- **StorageService Tests** (`src/services/storage/StorageService.spec.js`)
+  - Comprehensive tests for localStorage abstraction layer
+  - Namespace handling, JSON parsing, quota error handling
+- **APIClient Tests** (`src/services/api/APIClient.spec.js`)
+  - HTTP behavior validation, retry logic, error handling tests
+  - OpenAI format compatibility tests
+
+### Added — Documentation
+- **Deployment Guide** (`docs/DEPLOYMENT.md`)
+  - Vercel, Netlify, GitHub Pages, Cloudflare Pages deployment instructions
+  - Environment variable configuration for all supported providers
+  - Troubleshooting guide and production checklist
+- **Security Policy** (`docs/SECURITY.md`)
+  - Client-side security model overview
+  - API key handling and best practices
+  - Privacy considerations and known limitations
+
+### Changed — Code Quality
+- **React Compiler Compliance** (`src/features/chat/ChatWindow.jsx`)
+  - Fixed `setState-in-effect` anti-patterns using derived `useMemo` state
+  - Aligned dependency arrays with actual React behavior
+  - Replaced synchronous state updates with derived computation
+- **ESLint Configuration** (`eslint.config.js`)
+  - Added `react-hooks/set-state-in-effect` as warning (not error) for necessary patterns
+  - Added test globals for proper spec file linting
+- **Memoization Cleanup** (`src/features/chat/ChatWindow.jsx`, `MomentsSidebar.jsx`)
+  - Simplified hook dependency arrays from `chat?.id` to `chat` object
+  - Removed unnecessary bookmark state management (derived from BookmarkService)
+
+### Fixed — Version Alignment
+- **Package Version** (`package.json`)
+  - Bumped from v0.3.3 to v0.4.0 to match CHANGELOG
+- **Worker ESLint** (`public/sandbox.worker.js`)
+  - Removed deprecated `/* eslint-env worker */` comment
+  - Added proper `/* global */` directive
+
+---
+
 ## [0.4.0] — Macaron Modern & Quality Polish (2026-04-06)
 
 > Major UI/UX modernization and comprehensive localization pass. The "Macaron Orange" design system is now fully stabilized and polished.

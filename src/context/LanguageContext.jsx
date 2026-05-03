@@ -11,7 +11,8 @@ function detectBrowserLanguage() {
     try {
         const browserLang = navigator.language || navigator.userLanguage || 'en';
         return browserLang.startsWith('zh') ? 'zh' : 'en';
-    } catch {
+    } catch (e) {
+        console.warn('[LanguageContext] Browser language detection failed:', e?.message);
         return 'en';
     }
 }

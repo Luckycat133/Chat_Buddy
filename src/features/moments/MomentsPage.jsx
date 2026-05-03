@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Camera, Hash, Image as ImageIcon, RefreshCw, Smile, Sparkles, X, Zap } from 'lucide-react';
 import { useMoments } from './context/MomentsContext';
 import { useUser } from '../../context/UserContext';
@@ -23,28 +23,30 @@ function extractTopHashtags(posts, limit = 5) {
 
 // 顶部 AI 活跃通知条
 function AIActivityBanner({ posts, language }) {
-    const INITIAL_PERSONAS = useMemo(() => {
-        // 仅获取最近 10 分钟 AI 有互动的帖子
-        const tenMinAgo = Date.now() - 10 * 60 * 1000;
+    // Compute time threshold once on mount using lazy initialization
+    const [tenMinAgo] = useState(() => Date.now() - 10 * 60 * 1000);
+
+    const activeCount = useMemo(() => {
+        const threshold = tenMinAgo;
         const active = posts.filter(p => {
             const recentComment = (p.comments || []).some(
-                c => c.authorId !== 'user-me' && new Date(c.createdAt).getTime() > tenMinAgo
+                c => c.authorId !== 'user-me' && new Date(c.createdAt).getTime() > threshold
             );
             const recentLike = (p.likes || []).length > 0 && p.authorId === 'user-me';
             return recentComment || recentLike;
         });
         return active.length;
-    }, [posts]);
+    }, [posts, tenMinAgo]);
 
-    if (INITIAL_PERSONAS === 0) return null;
+    if (activeCount === 0) return null;
 
     return (
         <div className="flex items-center gap-2 rounded-2xl border border-[var(--color-primary)]/15 bg-[var(--color-primary)]/6 px-4 py-2.5">
             <Zap size={14} className="flex-shrink-0 text-[var(--color-primary)]" />
             <p className="text-[13px] text-[var(--color-text-main)]">
                 {language === 'zh'
-                    ? `你的动态最近很活跃，有 ${INITIAL_PERSONAS} 条帖子收到了 AI 互动。`
-                    : `Your feed is active — ${INITIAL_PERSONAS} post${INITIAL_PERSONAS > 1 ? 's' : ''} got recent AI engagement.`}
+                    ? `你的动态最近很活跃，有 ${activeCount} 条帖子收到了 AI 互动。`
+                    : `Your feed is active — ${activeCount} post${activeCount > 1 ? 's' : ''} got recent AI engagement.`}
             </p>
         </div>
     );
@@ -86,8 +88,8 @@ export default function MomentsPage() {
     const { userProfile, getDisplayName } = useUser();
     const { t, language } = useLanguage();
 
-    const safePosts = Array.isArray(posts) ? posts : [];
-    const safeUserProfile = (userProfile && typeof userProfile === 'object') ? userProfile : { avatar: null };
+    const safePosts = useMemo(() => Array.isArray(posts) ? posts : [], [posts]);
+    const safeUserProfile = useMemo(() => (userProfile && typeof userProfile === 'object') ? userProfile : { avatar: null }, [userProfile]);
 
     const [showComposer, setShowComposer] = useState(false);
     const [composerPrompt, setComposerPrompt] = useState('');
@@ -98,13 +100,14 @@ export default function MomentsPage() {
     const [activeTab, setActiveTab] = useState('all');
     const [visibleCount, setVisibleCount] = useState(10);
 
+    // Simulate loading state for smooth entrance animation
     useEffect(() => {
         const timer = setTimeout(() => setIsLoading(false), 350);
         return () => clearTimeout(timer);
     }, []);
 
-    // 重置分页计数
-    useEffect(() => { setVisibleCount(10); }, [activeTab, activeHashtag]);
+    // Reset pagination when filters change
+    useLayoutEffect(() => { setVisibleCount(10); }, [activeTab, activeHashtag]);
 
     const sortedPosts = useMemo(() =>
         [...safePosts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),

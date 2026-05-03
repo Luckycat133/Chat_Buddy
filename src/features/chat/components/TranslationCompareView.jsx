@@ -18,7 +18,7 @@ function CopyButton({ text, t }) {
             await navigator.clipboard.writeText(text);
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
-        } catch { /* ignore */ }
+        } catch (e) { console.warn('[TranslationCompare] Clipboard write failed:', e?.message); }
     };
     return (
         <button

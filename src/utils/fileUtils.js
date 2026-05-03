@@ -169,11 +169,13 @@ export async function validateFileContent(file) {
             try {
                 const text = new TextDecoder().decode(buffer);
                 JSON.parse(text);
-            } catch {
+            } catch (e) {
+                console.warn('[fileUtils] JSON validation failed:', e?.message);
                 errors.push('invalid_json_content');
             }
         }
-    } catch {
+    } catch (e) {
+        console.warn('[fileUtils] Content read error:', e?.message);
         errors.push('content_read_error');
     }
 

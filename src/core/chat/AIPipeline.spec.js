@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
   extractMemoriesAsync: vi.fn(),
   buildMemoryBlock: vi.fn(),
   buildGroupContextBlock: vi.fn(),
+  tryProactiveImageGen: vi.fn(),
+  analyzeContextForImageGen: vi.fn(() => ({ willTrigger: false })),
+  buildSkillsSystemBlock: vi.fn(() => ''),
 }));
 
 vi.mock("../../features/chat/services/chatService", () => ({
@@ -29,6 +32,15 @@ vi.mock("../memory/ContextCompressor", () => ({
 vi.mock("../memory/MemoryInjector", () => ({
   buildMemoryBlock: mocks.buildMemoryBlock,
   buildGroupContextBlock: mocks.buildGroupContextBlock,
+}));
+
+vi.mock("../../services/proactiveImageService", () => ({
+  tryProactiveImageGen: mocks.tryProactiveImageGen,
+  analyzeContextForImageGen: mocks.analyzeContextForImageGen,
+}));
+
+vi.mock("../../services/minimaxSkillsManifest", () => ({
+  buildSkillsSystemBlock: mocks.buildSkillsSystemBlock,
 }));
 
 import { AIPipeline } from "./AIPipeline";

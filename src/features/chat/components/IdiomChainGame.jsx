@@ -88,8 +88,8 @@ export default function IdiomChainGame({ aiName, onClose, onResult }) {
                 // Strip possible markdown code fences
                 const cleaned = (raw || '').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
                 result = JSON.parse(cleaned);
-            } catch {
-                // Parse failed — treat as game error
+            } catch (e) {
+                console.warn('[IdiomChain] JSON parse failed:', e?.message);
                 setHistory(h => [...h, { type: 'error', msg: '判定失败，请重试' }]);
                 setLoading(false);
                 return;
@@ -126,7 +126,8 @@ export default function IdiomChainGame({ aiName, onClose, onResult }) {
                 setRequiredChar(nextChar);
                 setTimeout(() => inputRef.current?.focus(), 100);
             }
-        } catch {
+        } catch (e) {
+            console.warn('[IdiomChain] Network error:', e?.message);
             setHistory(h => [...h, { type: 'error', msg: '网络错误，请重试' }]);
         } finally {
             setLoading(false);

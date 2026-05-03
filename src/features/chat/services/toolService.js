@@ -187,7 +187,7 @@ function executeMathTool(expression) {
             try {
                 const deriv = derivative(expression, 'x').toString();
                 output += `\nDerivative: ${deriv}`;
-            } catch (_e) {
+            } catch (_derivError) {
                 // Derivative not applicable
             }
         }
@@ -198,7 +198,7 @@ function executeMathTool(expression) {
             if (simplified !== expression) {
                 output += `\nSimplified: ${simplified}`;
             }
-        } catch (_e) {
+        } catch (_simplifyError) {
             // Simplification not applicable
         }
 
@@ -556,8 +556,8 @@ ${imageUrl.startsWith('data:')
         : `Generated image URL: ${imageUrl}`}`;
             }
         }
-    } catch {
-        // Fall through to simulation mode.
+    } catch (err) {
+        console.warn('[toolService] Image generation failed, falling back to simulation:', err?.message || err);
     }
 
     const systemPrompt = `You are an image generation describer. The user wants to generate an image with the prompt: "${prompt}".

@@ -93,7 +93,8 @@ export const STYLE_PRESETS = {
 function loadStats() {
   try {
     return JSON.parse(localStorage.getItem(STATS_KEY) || '{}');
-  } catch {
+  } catch (e) {
+    console.warn('[proactiveImageService] Failed to load stats:', e?.message);
     return {};
   }
 }
@@ -101,8 +102,8 @@ function loadStats() {
 function saveStats(stats) {
   try {
     localStorage.setItem(STATS_KEY, JSON.stringify(stats));
-  } catch {
-    /* ignore QuotaExceededError */
+  } catch (e) {
+    console.warn('[proactiveImageService] Failed to save stats (likely QuotaExceeded):', e?.message);
   }
 }
 

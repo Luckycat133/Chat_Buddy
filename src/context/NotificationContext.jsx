@@ -55,8 +55,8 @@ export const NotificationProvider = ({ children }) => {
                     // Browser may block autoplay, ignore error
                 });
             }
-        } catch {
-            // Fallback: create new audio instance
+        } catch (e) {
+            console.warn('[NotificationContext] Audio play failed, creating new instance:', e?.message);
             const audio = new Audio('/sounds/notification.mp3');
             audio.volume = settings.soundVolume;
             audio.play().catch(() => { });

@@ -26,7 +26,6 @@ export async function cacheRemoteImageAsDataUrl(src = '') {
 
     try {
         const response = await fetch(src, {
-            mode: 'cors',
             credentials: 'omit',
             cache: 'force-cache',
             signal: controller.signal,
@@ -38,6 +37,9 @@ export async function cacheRemoteImageAsDataUrl(src = '') {
 
         const blob = await response.blob();
         return await blobToDataUrl(blob);
+    } catch (e) {
+        console.warn('[momentsMediaService] Image caching failed, using original URL:', e?.message);
+        return src;
     } finally {
         clearTimeout(timeoutId);
     }

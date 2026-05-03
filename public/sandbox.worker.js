@@ -1,24 +1,30 @@
-/* eslint-env worker */
-/**
- * T13: Sandbox Web Worker
- * Provides isolated code execution for JavaScript and Python (via Pyodide).
- * - Runs outside the main thread — UI never blocks
- * - Captures console.log / print output
- * - Enforces 10-second timeout via main-thread kill
- * - Python support is lazy-loaded on first use
- */
-
 /* global loadPyodide */
 
 let pyodide = null;
 let pyodideLoading = false;
 let pyodideReady = false;
 
-// ─── Pyodide lazy loader ────────────────────────────────────────────────────
+const MAX_CODE_SIZE = 64 * 1024;
+const JS_TIMEOUT_MS = 10000;
+const PY_TIMEOUT_MS = 30000;
+
+const BLOCKED_GLOBALS = [
+    'fetch', 'XMLHttpRequest', 'WebSocket', 'Worker', 'SharedWorker',
+    'ServiceWorker', 'importScripts', 'eval', 'Function',
+    'indexedDB', 'caches', 'navigator', 'location',
+    'localStorage', 'sessionStorage',
+    'EventSource', 'BroadcastChannel', 'MessageChannel',
+    'IDBFactory', 'IDBDatabase',
+];
+
+function checkCodeSize(code) {
+    if (typeof code !== 'string') throw new Error('Code must be a string');
+    if (code.length > MAX_CODE_SIZE) throw new Error('Code exceeds maximum size limit (' + MAX_CODE_SIZE + ' chars)');
+}
+
 async function ensurePyodide() {
     if (pyodideReady) return true;
     if (pyodideLoading) {
-        // Wait until ready
         await new Promise(resolve => {
             const interval = setInterval(() => {
                 if (pyodideReady) { clearInterval(interval); resolve(); }
@@ -42,8 +48,8 @@ async function ensurePyodide() {
     }
 }
 
-// ─── JavaScript execution ───────────────────────────────────────────────────
 function runJavaScript(code) {
+    checkCodeSize(code);
     const logs = [];
     const mockConsole = {
         log:   (...a) => logs.push(a.map(String).join(' ')),
@@ -52,10 +58,19 @@ function runJavaScript(code) {
         info:  (...a) => logs.push('INFO: '  + a.map(String).join(' ')),
     };
 
+    const sandbox = {};
+    for (const key of BLOCKED_GLOBALS) {
+        Object.defineProperty(sandbox, key, {
+            get: () => { throw new Error('Access to "' + key + '" is blocked in sandbox'); },
+            set: () => { throw new Error('Cannot override "' + key + '" in sandbox'); },
+            configurable: false,
+            enumerable: false,
+        });
+    }
+
     try {
-        // Wrap in a function so `return` works at top level
-        const fn = new Function('console', code);
-        const result = fn(mockConsole);
+        const fn = new Function('console', 'globalThis', 'self', 'window', 'global', code);
+        const result = fn(mockConsole, sandbox, sandbox, sandbox, sandbox);
         const output = logs.length > 0
             ? logs.join('\n')
             : (result !== undefined ? String(result) : '(No output)');
@@ -65,11 +80,18 @@ function runJavaScript(code) {
     }
 }
 
-// ─── Python execution ───────────────────────────────────────────────────────
+function withTimeout(promise, ms) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Execution timed out after ' + ms + 'ms')), ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 async function runPython(code) {
+    checkCodeSize(code);
     await ensurePyodide();
 
-    // Redirect stdout/stderr
     const captured = [];
     pyodide.runPython(`
 import sys, io
@@ -80,9 +102,8 @@ sys.stderr = _stderr_buf
 `);
 
     try {
-        await pyodide.runPythonAsync(code);
+        await withTimeout(pyodide.runPythonAsync(code), PY_TIMEOUT_MS);
     } catch (e) {
-        // Restore streams even on error
         const stderr = pyodide.runPython('sys.stderr.getvalue()') || '';
         pyodide.runPython('sys.stdout = sys.__stdout__; sys.stderr = sys.__stderr__');
         return { status: 'error', output: (stderr || e.message).trim() };
@@ -98,7 +119,6 @@ sys.stderr = _stderr_buf
     return { status: 'success', output: captured.join('').trim() || '(No output)' };
 }
 
-// ─── Message handler ────────────────────────────────────────────────────────
 self.onmessage = async (event) => {
     const { type, language, code, requestId } = event.data;
 
@@ -107,7 +127,7 @@ self.onmessage = async (event) => {
     try {
         let result;
         if (language === 'python') {
-            result = await runPython(code);
+            result = await withTimeout(runPython(code), PY_TIMEOUT_MS + 5000);
         } else {
             result = runJavaScript(code);
         }

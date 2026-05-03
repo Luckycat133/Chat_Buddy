@@ -22,11 +22,11 @@ function extractTrendingTags(posts = []) {
         .map(([tag, count]) => ({ tag, count }));
 }
 
-function StatCard({ icon: Icon, label, value, accent }) {
+function StatCard({ icon: _Icon, label, value, accent }) {
     return (
         <div className={`rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-white)] px-3 py-3 shadow-sm ${accent ? 'border-[var(--color-primary)]/20 bg-[var(--color-primary)]/5' : ''}`}>
             <div className="flex items-center gap-1.5 text-[var(--color-text-muted)]">
-                <Icon size={14} />
+                <_Icon size={14} />
                 <span className="text-[11px] leading-none">{label}</span>
             </div>
             <div className="mt-2 text-[22px] font-bold tabular-nums text-[var(--color-text-main)]">

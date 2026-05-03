@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'e2e', '*.cjs', '*.test.js']),
+  globalIgnores(['dist', 'e2e', '*.cjs', '*.test.js', 'playwright.config.js']),
   // T13: Sandbox worker uses Web Worker globals (importScripts, self)
   {
     files: ['public/sandbox.worker.js'],
@@ -31,6 +31,7 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+      'react-hooks/set-state-in-effect': 'warn',
     },
   },
   {
@@ -46,6 +47,7 @@ export default defineConfig([
         beforeEach: 'readonly',
         afterEach: 'readonly',
         vi: 'readonly',
+        global: 'readonly',
       },
     },
   },

@@ -190,7 +190,8 @@ export function isMiniMaxConfigured() {
     try {
         getApiKey();
         return true;
-    } catch {
+    } catch (e) {
+        console.warn('[minimaxService] API key check failed:', e?.message);
         return false;
     }
 }

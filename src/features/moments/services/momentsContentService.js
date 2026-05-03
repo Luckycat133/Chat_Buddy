@@ -419,7 +419,8 @@ export function parseMomentAssistResponse(raw, language = 'zh', fallback = null)
             suggestions,
             quality: fallbackAssist.quality,
         };
-    } catch {
+    } catch (e) {
+        console.warn('[momentsContent] Assist parsing failed:', e?.message);
         return fallbackAssist;
     }
 }
