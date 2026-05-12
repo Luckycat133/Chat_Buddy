@@ -92,6 +92,9 @@ function getTimeSlot() {
 }
 
 function pickRandom(arr) {
+    if (!Array.isArray(arr) || arr.length === 0) {
+        return '';
+    }
     return arr[Math.floor(Math.random() * arr.length)];
 }
 

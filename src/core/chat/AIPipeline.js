@@ -130,7 +130,9 @@ export class AIPipeline {
             if (compressed) {
                 const oldMessages = chat.messages.slice(0, -8);
                 const extraction = extractMemoriesAsync(oldMessages, ai.id, ai.name);
-                if (extraction?.catch) extraction.catch(() => { });
+                if (extraction?.catch) extraction.catch((error) => {
+                    console.warn('[AIPipeline] Memory extraction failed (non-blocking):', error);
+                });
             }
 
             // 4. Generate System Prompt (T06: affinity/mood, T12: long-term memory injection)

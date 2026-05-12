@@ -213,7 +213,7 @@ export default function ChatWindow({ chatId: propChatId }) {
         }, 1000);
 
         return () => clearTimeout(timer);
-    }, [chat, chat?.id, personas, language, triggerGreeting]);
+    }, [chat, personas, language, triggerGreeting]);
 
     useEffect(() => () => {
         if (toastTimerRef.current) {
@@ -236,16 +236,20 @@ export default function ChatWindow({ chatId: propChatId }) {
             .filter((bookmark) => bookmark.chatId === chat.id)
             .map((bookmark) => bookmark.messageId);
         return new Set(ids);
-    }, [chat?.id, showBookmarkPanel]);
+    }, [chat?.id]);
+
+    // Extract target message ID from route state with proper memoization
+    const targetMessageIdFromRoute = useMemo(() => {
+        return location.state?.targetMessageId;
+    }, [location.state]);
 
     // Receive target message from route state (global search / settings search / bookmark jumps).
     // Syncs from external navigation state - imperative but necessary for route-driven focus.
     useEffect(() => {
-        const targetMessageId = location.state?.targetMessageId;
-        if (targetMessageId) {
-            setFocusedMessageId(targetMessageId);
+        if (targetMessageIdFromRoute) {
+            setFocusedMessageId(targetMessageIdFromRoute);
         }
-    }, [location.state?.targetMessageId]);
+    }, [targetMessageIdFromRoute]);
 
     // Determine character for theming (DM only) - derived from chat state
     const isDM = chat?.participants?.length === 2;

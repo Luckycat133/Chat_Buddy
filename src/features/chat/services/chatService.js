@@ -85,7 +85,7 @@ function extractDeltaContent(data) {
     return toTextContent(delta.content || delta.text || '');
 }
 
-async function parseSSEStream(response, onDelta) {
+async function parseSSEStream(response, onDelta, options = {}) {
     const reader = response.body?.getReader?.();
     if (!reader) return null;
 
@@ -93,10 +93,26 @@ async function parseSSEStream(response, onDelta) {
     let buffer = '';
     let fullText = '';
     let nativeToolCalls = null;
+    const timeoutMs = options.timeout || 120000; // 120秒默认超时
+    const abortController = new AbortController();
+    let timedOut = false;
 
-    while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
+    const timeoutId = setTimeout(() => {
+        timedOut = true;
+        abortController.abort();
+        if (reader.cancel) {
+            reader.cancel(new Error('SSE stream timeout'));
+        }
+    }, timeoutMs);
+
+    try {
+        while (true) {
+            if (timedOut) {
+                console.warn('[SSE] Stream timed out after', timeoutMs, 'ms');
+                break;
+            }
+            const { value, done } = await reader.read();
+            if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
         const events = buffer.split(/\r?\n\r?\n/);
@@ -131,6 +147,13 @@ async function parseSSEStream(response, onDelta) {
                 // Ignore malformed SSE frames from intermediate providers.
             }
         }
+        }
+    } catch (error) {
+        if (!timedOut) {
+            console.warn('[SSE] Stream error:', error);
+        }
+    } finally {
+        clearTimeout(timeoutId);
     }
 
     const tail = decoder.decode();

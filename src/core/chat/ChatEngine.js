@@ -282,11 +282,19 @@ export class ChatEngine {
   // =========================================================================
 
   sendMessage(chatId, content, senderId = 'user-me', quotedMessageId = null) {
+    if (!chatId) {
+      console.warn('[ChatEngine] Invalid chatId in sendMessage');
+      return;
+    }
+    
     const cleaned = this.deps.cleanMessageContent(content);
     if (!cleaned) return;
 
     const chatIndex = this.chats.findIndex(c => c.id === chatId);
-    if (chatIndex === -1) return;
+    if (chatIndex === -1) {
+      console.warn(`[ChatEngine] Chat not found: ${chatId}`);
+      return;
+    }
 
     const newMessage = {
       id: crypto.randomUUID(),
@@ -299,14 +307,14 @@ export class ChatEngine {
     };
 
     const updatedChat = { ...this.chats[chatIndex] };
-    updatedChat.messages = [...updatedChat.messages, newMessage];
+    updatedChat.messages = [...(updatedChat.messages || []), newMessage];
     updatedChat.lastMessage = newMessage;
     updatedChat.updatedAt = newMessage.timestamp;
 
     this.chats[chatIndex] = updatedChat;
     this.save();
 
-    if (senderId === 'user-me') {
+    if (senderId === 'user-me' && updatedChat.participants) {
       const aiIds = updatedChat.participants.filter(id => id !== 'user-me');
       this._onUserMessageCallbacks.forEach(cb => cb(chatId, aiIds));
 
@@ -314,14 +322,16 @@ export class ChatEngine {
       this._triggerAIResponse(updatedChat);
 
       const isGroupChat = updatedChat.participants.length > 2;
-      if (isGroupChat && updatedChat.messages.length >= 20 && updatedChat.messages.length % 10 === 0) {
+      if (isGroupChat && updatedChat.messages && updatedChat.messages.length >= 20 && updatedChat.messages.length % 10 === 0) {
         const aiParticipants = updatedChat.participants
           .filter(id => id !== 'user-me')
           .map(id => this.personas.find(p => p.id === id))
           .filter(Boolean)
           .map(p => ({ id: p.id, name: p.name }));
         const promise = this.deps.extractGroupMemoriesAsync(updatedChat.messages, chatId, aiParticipants);
-        if (promise?.catch) promise.catch(() => { });
+        if (promise?.catch) promise.catch(err => {
+          console.warn('[ChatEngine] Group memory extraction failed:', err);
+        });
       }
     }
   }
@@ -680,28 +690,32 @@ export class ChatEngine {
   }
 
   _handleAISchedule(chatId, ai, minutes) {
-    const parsedMinutes = Math.max(1, Math.min(Number(minutes) || 1, 24 * 60));
-    const scheduleKey = `${chatId}:${ai.id}`;
-    const existing = this._scheduledMessages.get(scheduleKey);
-    if (existing) {
-      clearTimeout(existing);
-    }
-
-    const timeoutId = setTimeout(() => {
-      this._scheduledMessages.delete(scheduleKey);
-      const chat = this.chats.find(c => c.id === chatId);
-      if (chat) {
-        const lastMsg = chat.messages[chat.messages.length - 1];
-        if (!lastMsg?.timestamp) return;
-        const timeDiff = Date.now() - new Date(lastMsg.timestamp).getTime();
-        if (timeDiff > parsedMinutes * 60 * 1000 * 0.8) {
-          this.aiPipeline.processTurn(chat, this.personas, ai);
+        if (!ai?.id) {
+            console.warn('[ChatEngine] Invalid AI object in _handleAISchedule');
+            return;
         }
-      }
-    }, parsedMinutes * 60 * 1000);
+        const parsedMinutes = Math.max(1, Math.min(Number(minutes) || 1, 24 * 60));
+        const scheduleKey = `${chatId}:${ai.id}`;
+        const existing = this._scheduledMessages.get(scheduleKey);
+        if (existing) {
+            clearTimeout(existing);
+        }
 
-    this._scheduledMessages.set(scheduleKey, timeoutId);
-  }
+        const timeoutId = setTimeout(() => {
+            this._scheduledMessages.delete(scheduleKey);
+            const chat = this.chats.find(c => c.id === chatId);
+            if (chat && chat.messages && chat.messages.length > 0) {
+                const lastMsg = chat.messages[chat.messages.length - 1];
+                if (!lastMsg?.timestamp) return;
+                const timeDiff = Date.now() - new Date(lastMsg.timestamp).getTime();
+                if (timeDiff > parsedMinutes * 60 * 1000 * 0.8) {
+                    this.aiPipeline.processTurn(chat, this.personas, ai);
+                }
+            }
+        }, parsedMinutes * 60 * 1000);
+
+        this._scheduledMessages.set(scheduleKey, timeoutId);
+    }
 
   _clearScheduledMessagesForChat(chatId) {
     const prefix = `${chatId}:`;
@@ -713,22 +727,32 @@ export class ChatEngine {
   }
 
   _triggerAIResponse(chat) {
+    if (!chat?.participants) {
+      console.warn('[ChatEngine] Invalid chat object in _triggerAIResponse');
+      return;
+    }
+    
     const candidates = chat.participants
       .filter(id => id !== 'user-me')
       .map(id => this.personas.find(p => p.id === id))
       .filter(Boolean);
 
-    const recentGroupMessages = this.chats
-      .filter(c => c.id !== chat.id && c.participants.length > 2)
-      .flatMap(c => c.messages.slice(-5).map(m => ({
+    const recentGroupMessages = (this.chats || [])
+      .filter(c => c?.id !== chat.id && c?.participants?.length > 2)
+      .flatMap(c => (c.messages || []).slice(-5).map(m => ({
         ...m,
         participants: c.participants
       })))
-      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+      .sort((a, b) => {
+        const aTime = a?.timestamp ? new Date(a.timestamp).getTime() : 0;
+        const bTime = b?.timestamp ? new Date(b.timestamp).getTime() : 0;
+        return aTime - bTime;
+      })
       .slice(-10);
 
     candidates.forEach((ai) => {
-      const isMentioned = chat.lastMessage.content.includes(`@${ai.name}`);
+      if (!ai?.id || !ai?.name) return;
+      const isMentioned = chat?.lastMessage?.content?.includes(`@${ai.name}`) || false;
       const isDirect = chat.participants.length === 2;
 
       if (isDirect || isMentioned || Math.random() > 0.3) {
@@ -740,15 +764,19 @@ export class ChatEngine {
   }
 
   _checkAutoNaming(chat) {
-    if (chat.messages.length !== 1) return;
-    if (chat.participants.length !== 2) return;
+    if (!chat?.messages || chat.messages.length !== 1) return;
+    if (!chat?.participants || chat.participants.length !== 2) return;
 
     const aiId = chat.participants.find(p => p !== 'user-me');
+    if (!aiId) return;
+    
     const ai = this.personas.find(p => p.id === aiId);
 
     if (!ai || ai.agentType !== 'task-specialist') return;
 
-    const firstMessage = chat.messages[0].content;
+    const firstMessage = chat.messages[0]?.content;
+    if (!firstMessage) return;
+    
     const namingPrompt = `
 Generate a clear chat title (max 6 words) from this first message.
 No quotes, no punctuation, title text only.
@@ -767,7 +795,9 @@ Title:`;
         const cleanTitle = title.replace(/["']/g, '').trim();
         this.updateChat(chat.id, { name: cleanTitle });
       }
-    }).catch(err => console.error('[ChatEngine] Auto-naming failed:', err));
+    }).catch(err => {
+      console.error('[ChatEngine] Auto-naming failed:', err);
+    });
   }
 
   // =========================================================================

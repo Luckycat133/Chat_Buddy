@@ -23,7 +23,13 @@ class StorageService {
             // Handle un-prefixed legacy keys (migration path)
             if (item === null) {
                 const legacyMx = this.storage.getItem(key);
-                if (legacyMx !== null) return JSON.parse(legacyMx);
+                if (legacyMx !== null) {
+                    try {
+                        return JSON.parse(legacyMx);
+                    } catch (parseError) {
+                        console.warn(`[StorageService] Failed to parse legacy key "${key}":`, parseError);
+                    }
+                }
             }
 
             return item ? JSON.parse(item) : defaultValue;

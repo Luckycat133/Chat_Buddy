@@ -459,6 +459,7 @@ export const LOCALES = {
         click_to_expand: 'Click to expand',
         invalid_image_file: 'Invalid image file',
         image_read_error: 'Failed to read image',
+        image_too_large: 'Image too large (max 10MB)',
 
         // T07: Chat History Export
         export_chat: 'Export Chat',
@@ -1492,6 +1493,7 @@ export const LOCALES = {
         click_to_expand: '\u70B9\u51FB\u67E5\u770B',
         invalid_image_file: '\u65E0\u6548\u7684\u56FE\u7247\u6587\u4EF6',
         image_read_error: '\u8BFB\u53D6\u56FE\u7247\u5931\u8D25',
+        image_too_large: '\u56FE\u7247\u8FC7\u5927\uff08\u6700\u592710MB\uff09',
 
         // T07: 聊天记录导出
         export_chat: '\u5BFC\u51FA\u804A\u5929\u8BB0\u5F55',
