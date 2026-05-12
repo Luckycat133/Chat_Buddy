@@ -148,6 +148,9 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
     // T07: Image upload handler
     const imageInputRef = useRef(null);
 
+    // Maximum image size (10MB)
+    const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+
     const handleImageSelect = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -155,6 +158,12 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
         // Check if file is an image
         if (!file.type.startsWith('image/')) {
             onError?.(t('invalid_image_file'));
+            return;
+        }
+
+        // Check file size
+        if (file.size > MAX_IMAGE_SIZE) {
+            onError?.(t('image_too_large') || 'Image too large (max 10MB)');
             return;
         }
 
