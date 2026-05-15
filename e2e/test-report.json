@@ -1,0 +1,95 @@
+{
+  "steps": [
+    {
+      "name": "页面加载",
+      "status": "SUCCESS",
+      "details": "加载时间: 1638ms",
+      "timestamp": "2026-05-15T10:38:48.147Z"
+    },
+    {
+      "name": "模态框处理",
+      "status": "SUCCESS",
+      "details": "",
+      "timestamp": "2026-05-15T10:38:50.909Z"
+    },
+    {
+      "name": "导航到好友页面",
+      "status": "SUCCESS",
+      "details": "",
+      "timestamp": "2026-05-15T10:38:53.006Z"
+    },
+    {
+      "name": "点击好友卡片",
+      "status": "SUCCESS",
+      "details": "已选择第一个好友",
+      "timestamp": "2026-05-15T10:38:54.151Z"
+    },
+    {
+      "name": "点击开始聊天",
+      "status": "SUCCESS",
+      "details": "已点击开始聊天按钮",
+      "timestamp": "2026-05-15T10:38:55.779Z"
+    },
+    {
+      "name": "找到聊天composer",
+      "status": "SUCCESS",
+      "details": "",
+      "timestamp": "2026-05-15T10:38:55.836Z"
+    },
+    {
+      "name": "消息输入框存在",
+      "status": "SUCCESS",
+      "details": "",
+      "timestamp": "2026-05-15T10:38:55.837Z"
+    },
+    {
+      "name": "消息输入功能",
+      "status": "SUCCESS",
+      "details": "输入: \"Hello, this is a test message!...\"",
+      "timestamp": "2026-05-15T10:38:55.857Z"
+    },
+    {
+      "name": "按Enter发送消息",
+      "status": "SUCCESS",
+      "details": "",
+      "timestamp": "2026-05-15T10:38:56.912Z"
+    },
+    {
+      "name": "消息显示",
+      "status": "SUCCESS",
+      "details": "找到 1 条消息",
+      "timestamp": "2026-05-15T10:38:56.915Z"
+    },
+    {
+      "name": "表情选择器打开",
+      "status": "WARNING",
+      "details": "按钮可点击但选择器未显示",
+      "timestamp": "2026-05-15T10:38:57.461Z"
+    },
+    {
+      "name": "发送按钮存在",
+      "status": "SUCCESS",
+      "details": "发送按钮可见",
+      "timestamp": "2026-05-15T10:38:57.978Z"
+    }
+  ],
+  "consoleErrors": [
+    {
+      "message": "The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element."
+    },
+    {
+      "message": "Executing inline script violates the following Content Security Policy directive 'script-src 'self' blob:'. Either the 'unsafe-inline' keyword, a hash ('sha256-31fQF/g9KGmEnutu6M7cTHdK4cN5J5z5NRerO5mFMfQ='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked."
+    },
+    {
+      "message": "AI API Key not configured. Set VITE_AI_API_KEY in .env"
+    },
+    {
+      "message": "The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element."
+    },
+    {
+      "message": "Executing inline script violates the following Content Security Policy directive 'script-src 'self' blob:'. Either the 'unsafe-inline' keyword, a hash ('sha256-31fQF/g9KGmEnutu6M7cTHdK4cN5J5z5NRerO5mFMfQ='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked."
+    }
+  ],
+  "pageLoadTime": 1638,
+  "issues": []
+}

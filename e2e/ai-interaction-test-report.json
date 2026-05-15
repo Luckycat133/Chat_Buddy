@@ -1,0 +1,121 @@
+{
+  "startTime": "2026-05-15T10:32:53.201Z",
+  "steps": [
+    {
+      "step": "环境检查",
+      "status": "info",
+      "timestamp": "2026-05-15T10:32:53.204Z",
+      "message": "启动 Playwright 浏览器"
+    },
+    {
+      "step": "浏览器启动",
+      "status": "pass",
+      "timestamp": "2026-05-15T10:32:53.449Z"
+    },
+    {
+      "step": "页面加载",
+      "status": "pass",
+      "timestamp": "2026-05-15T10:32:56.063Z",
+      "loadTime": "2613ms",
+      "url": "http://localhost:5173/chat/"
+    },
+    {
+      "step": "关闭欢迎教程",
+      "status": "pass",
+      "timestamp": "2026-05-15T10:32:58.508Z"
+    },
+    {
+      "step": "查找聊天列表项",
+      "status": "pass",
+      "timestamp": "2026-05-15T10:33:00.514Z",
+      "selector": "a[href*=\"/chat/\"]",
+      "count": 1
+    },
+    {
+      "step": "点击 AI 角色",
+      "status": "pass",
+      "timestamp": "2026-05-15T10:33:01.556Z",
+      "character": "LunaTap to chat"
+    },
+    {
+      "step": "查找消息输入框",
+      "status": "pass",
+      "timestamp": "2026-05-15T10:33:04.593Z",
+      "selector": "input[type=\"text\"]"
+    },
+    {
+      "step": "输入消息",
+      "status": "pass",
+      "timestamp": "2026-05-15T10:33:04.662Z",
+      "message": "Hello! How are you today?"
+    },
+    {
+      "step": "发送消息",
+      "status": "pass",
+      "timestamp": "2026-05-15T10:33:04.707Z"
+    },
+    {
+      "step": "检测 typing 状态",
+      "status": "info",
+      "timestamp": "2026-05-15T10:33:09.877Z",
+      "message": "未检测到明显的 typing 指示器"
+    },
+    {
+      "step": "等待 AI 回复",
+      "status": "info",
+      "timestamp": "2026-05-15T10:33:40.400Z",
+      "message": "30秒内未收到 AI 回复"
+    },
+    {
+      "step": "发送第二条测试消息",
+      "status": "pass",
+      "timestamp": "2026-05-15T10:33:40.514Z"
+    },
+    {
+      "step": "超时处理",
+      "status": "info",
+      "timestamp": "2026-05-15T10:33:50.517Z",
+      "message": "未检测到明确的超时提示"
+    }
+  ],
+  "consoleErrors": [
+    {
+      "text": "The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> element.",
+      "location": {
+        "url": "http://localhost:5173/chat/",
+        "lineNumber": 20,
+        "columnNumber": 0
+      }
+    },
+    {
+      "text": "Executing inline script violates the following Content Security Policy directive 'script-src 'self' blob:'. Either the 'unsafe-inline' keyword, a hash ('sha256-31fQF/g9KGmEnutu6M7cTHdK4cN5J5z5NRerO5mFMfQ='), or a nonce ('nonce-...') is required to enable inline execution. The action has been blocked.",
+      "location": {
+        "url": "http://localhost:5173/chat/",
+        "lineNumber": 26,
+        "columnNumber": 0
+      }
+    },
+    {
+      "text": "AI API Key not configured. Set VITE_AI_API_KEY in .env",
+      "location": {
+        "url": "http://localhost:5173/src/features/chat/services/chatService.js",
+        "lineNumber": 205,
+        "columnNumber": 16
+      }
+    }
+  ],
+  "aiResponseTimes": [],
+  "issues": [
+    {
+      "message": "控制台错误检测",
+      "timestamp": "2026-05-15T10:33:50.517Z",
+      "count": 3,
+      "errors": [
+        "The Content Security Policy directive 'frame-ancestors' is ignored when delivered via a <meta> eleme",
+        "Executing inline script violates the following Content Security Policy directive 'script-src 'self' ",
+        "AI API Key not configured. Set VITE_AI_API_KEY in .env"
+      ]
+    }
+  ],
+  "endTime": "2026-05-15T10:33:50.571Z"
+}
