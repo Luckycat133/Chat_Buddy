@@ -2,9 +2,11 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![React](https://img.shields.io/badge/React-19-61DAFB.svg)
+![React](https://img.shields.io/badge/React-19+-61DAFB.svg)
+![Tests](https://img.shields.io/badge/tests-143%20passing-success.svg)
+![Coverage](https://img.shields.io/badge/coverage-4.75%25-yellow.svg)
 
 **AI Chat Companion**
 
@@ -31,15 +33,12 @@ A modern, responsive AI chat application featuring multiple personalities, anime
 ## Features
 
 ### 🤖 AI Friend System
-
 - **13 Unique AI Personas**: 5 original characters + 8 anime characters
 - Each persona has distinct personality traits, speaking styles, and interests
 - Powered by DeepSeek API for intelligent, context-aware responses
 
 ### 🎌 Anime Characters
-
 Meet your favorite anime characters:
-
 - **Hatsune Miku** - Cheerful virtual idol
 - **Rem** - Devoted maid from Re:Zero
 - **Rin Tohsaka** - Tsundere magus from Fate
@@ -50,61 +49,31 @@ Meet your favorite anime characters:
 - **Gojo Satoru** - The strongest from Jujutsu Kaisen
 
 ### 💬 Group Chat
-
 - Create groups with multiple AIs
 - AIs interact with you and each other
 - Customize AI capabilities per group
 
 ### 🌍 Bilingual Support
-
 - Seamless English/Chinese interface switching
 - All UI elements, documentation, and AI responses support both languages
 
 ### 🎨 Modern UI
-
 - "Macaroon Orange" theme with WeChat-inspired design
 - Smooth animations and responsive layout
 - Works on desktop and mobile
 
 ### 💾 Local Storage
-
 - Chats and settings saved in browser
 - No account required
 - Privacy-focused design
 
-### 🖼️ Immersive Background System
-
-- **100+ Preset Backgrounds** across 12 categories: Exclusive AI-generated, IP (Attack on Titan, Genshin, Persona 5…), Characters, Nature, Space, and more
-- **Dynamic Animated Backgrounds**: Floating particles, aurora borealis, cascading rain, and flowing gradients — all CSS-native, no canvas overhead
-- **Per-Chat Customization**: Independent background per conversation with automatic fallback (chat → character default → global theme)
-- **Parallax Effect**: Mouse-tracking depth effect on image backgrounds (adjustable intensity)
-- **Video Backgrounds**: Stream any MP4/WebM URL as a looping background
-- **Time-Based Auto-Switch**: Different backgrounds for day (6:00–18:00) and night
-- **Custom Upload**: Drag-and-drop with automatic canvas compression (max 1920×1080, JPEG 85%)
-- **IndexedDB Storage**: Custom images stored in IndexedDB — not localStorage — eliminating 5 MB quota pressure
-- **Export / Import**: Share background configs as portable `.json` files
-
-### 🤖 Smart AI Features
-
-- **Dynamic Online Status** (v0.2.1): Real-time Online/Busy/Offline states based on character schedules
-- **Visual Typing Indicators** (v0.2.1): See when AI is typing with animated bubbles
-- **Proactive Greetings** (v0.2.1): AI initiates conversation after long inactivity or on return
-- **Multi-message** (v0.2.1): AI can send consecutive messages like real users
-- **WeChat-style time display** (v0.2.1)
-- **Character Affinity System** (v0.2.2): Build intimacy through chatting and gifts; AI responses adapt from formal to intimate
-- **Character Mood System** (v0.2.2): 5 moods (Happy, Calm, Tired, Excited, Melancholy) affect AI tone and response style
-
-### 🎮 Social & Interaction (v0.2.6)
-
-- **Daily Task System**: 6 rotating tasks each day — check in, send messages, play games, send stickers, gifts, and chat with 3 characters; earn up to 165 pts/day
-- **Number Guess Mini-Game**: AI picks a secret number 1–100; guess in 7 tries to win 30 points
-- **Game Selector**: Choose between Rock-Paper-Scissors and Number Guess when playing games in chat
-- **RPS Point Rewards**: Earn +10 pts for each round win in Rock-Paper-Scissors
-- **Achievements**: 11 milestones with point rewards; accessible from the profile card
-- **Gift & Red Packet**: Send virtual gifts to boost affinity; send festive red packets
+### 🤖 Smart AI Features (v0.2.1)
+- Multi-message: AI can send consecutive messages like real users
+- Typing indicators: See when AI is "typing"
+- Proactive messaging: AI may reach out on their own
+- WeChat-style time display
 
 ### 📸 Moments Enhancements (v0.2.4)
-
 - **AI Dynamic Posts**: AI friends post daily life updates based on their location and personality
 - **Smart Interactions**: AI intelligently comments on and likes your posts
 - **WeChat-style Features**: Location tags, privacy settings, and cover photos
@@ -122,10 +91,10 @@ Meet your favorite anime characters:
 
 ### Prerequisites
 
-| Requirement      | Version                    |
-| ---------------- | -------------------------- |
-| Node.js          | v16+                       |
-| npm              | v7+                        |
+| Requirement | Version |
+|-------------|---------|
+| Node.js | v16+ |
+| npm | v7+ |
 | DeepSeek API Key | Optional, for AI responses |
 
 ### Installation
@@ -147,44 +116,15 @@ cp .env.example .env
 npm run dev
 ```
 
-### Native Dependency Troubleshooting (macOS Apple Silicon)
-
-If you see errors such as:
-- `Cannot find module @rollup/rollup-darwin-arm64`
-- `Cannot find native binding` (`@tailwindcss/oxide`)
-- `Cannot find module ../lightningcss.darwin-arm64.node`
-- `The service was stopped` (`esbuild`)
-
-Run:
-
-```bash
-rm -rf node_modules/@rollup/rollup-darwin-arm64 \
-       node_modules/lightningcss \
-       node_modules/lightningcss-darwin-arm64 \
-       node_modules/@tailwindcss/oxide \
-       node_modules/@tailwindcss/oxide-darwin-arm64
-npm install
-```
-
-Then verify:
-
-```bash
-npm run lint
-npm run test
-npm run build
-```
-
 ### Environment Variables
 
-| Variable          | Required | Description                                     |
-| ----------------- | -------- | ----------------------------------------------- |
-| `VITE_AI_API_URL` | Yes      | API Base URL (e.g., `https://api.deepseek.com`) |
-| `VITE_AI_API_KEY` | Yes      | Your API key for AI responses                   |
-| `VITE_AI_MODEL`   | Yes      | Model name (e.g., `deepseek-chat`, `sonar`)     |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_AI_API_URL` | Yes | API Base URL (e.g., `https://api.deepseek.com`) |
+| `VITE_AI_API_KEY` | Yes | Your API key for AI responses |
+| `VITE_AI_MODEL` | Yes | Model name (e.g., `deepseek-chat`, `sonar`) |
 
 > **Supported Providers**: DeepSeek, Perplexity, OpenAI, and other OpenAI-compatible APIs.
-
-> **Security Note**: If you enter credentials in the in-app Settings panel, the API key is kept only for the current browser session. Saved provider profiles keep the base URL and model, but not the key.
 
 ---
 
@@ -208,7 +148,6 @@ npm run build
 
 - **Language**: Switch between English and Chinese
 - **Theme**: Macaroon Orange (default)
-- **API Configuration**: Saved provider settings keep the endpoint and model; API keys entered in Settings are session-only
 - **Help**: View FAQ and usage tips
 - **About**: Check version and changelog
 
@@ -220,28 +159,23 @@ npm run build
 
 ### Tech Stack
 
-- Frontend: React 19, Vite 7
-- Styling: TailwindCSS 4 (CSS-first, no config file)
-- Animations: Framer Motion
+- Frontend: React 19, Vite
+- Styling: TailwindCSS
 - State: Clean Architecture (ChatEngine + Context)
-- AI: DeepSeek / Perplexity / OpenAI-compatible API
-- Storage: LocalStorage (light settings) + IndexedDB (chat/doc primary data, media/background assets)
+- AI: DeepSeek / Perplexity API
+- Storage: LocalStorage
 
 ### Project Structure
 
 ```
 src/
 ├── core/               # Domain logic (pure JS)
-│   ├── chat/           # ChatEngine, AIPipeline
-│   └── presence/       # PresenceService, GreetingService
+│   └── chat/
 ├── services/           # Infrastructure (API, Storage)
-│   ├── api/
-│   └── storage/        # StorageService (localStorage) + ImageStorageService (IndexedDB)
 ├── features/           # Feature modules
 │   ├── chat/
-│   ├── moments/
-│   └── background/     # BackgroundContext, BackgroundLayer, themes, DynamicBackground
-├── context/            # Global contexts
+│   └── moments/
+├── providers/          # Context composition
 ├── components/         # Shared UI
 └── pages/              # Routes
 ```
@@ -293,32 +227,24 @@ We welcome contributions! Please follow these guidelines:
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-**Current Version/当前版本**: v0.4.0 (2026-04-06)
+**Current Version**: v0.3.1 (2026-01-18)
 
-### 最近更新 / Recent Updates
-
-- 🎨 **马卡龙现代版 / Macaron Modern** (v0.4.0): UI/UX 全面现代化；Bento 控制面板 v2；稳定的 HSL 颜色系统；现代化图标。 / Major UI/UX overhaul; Bento Grid dashboard v2; stabilized HSL color system; desaturated modern icons.
-- 🤖 **专业智能体 / Professional Agents** (v0.3.3): 6 个专门的任务智能体 (代码、缪斯、学者、老师、极光、像素)；ReAct 工具调用；沙箱执行。 / 6 specialized task agents (Coder, Muse, Scholar, Sensei, Aurora, Pixel); ReAct tool calling; Sandbox execution.
-- 🧠 **认知记忆 / Cognitive Memory** (v0.3.0): 长期角色记忆；IndexedDB 存储；记忆交换工具；上下文感知的 AI。 / Long-term character memory; IndexedDB storage; memory exchange tool; context-aware AI.
-- 📚 **RAG 系统 / RAG System** (v0.3.2): 知识库集成；混合搜索 (BM25 + Jaccard)；客户端文档索引。 / Knowledge Base integration; Hybrid search (BM25 + Jaccard); client-side document indexing.
-- 📝 **草稿箱 / Draft Box** (v0.2.7): 自动保存未完成的状态；重新打开时恢复，一键丢弃。 / Auto-save unfinished moments; restore on reopen with one-tap discard.
-- #️⃣ **Hashtag Topics** (v0.2.7): Clickable `#tags` in posts filter the feed; dismissible filter pill
-- ⬇️ **Load More Pagination** (v0.2.7): Feed loads 10 posts at a time for better performance
-- 🎂 **Story Events** (v0.2.7): Birthday posts for all 13 personas + seasonal holiday specials
-- 📤 **Repost to Chat** (v0.2.7): Forward any moment to a chat as a formatted shared message
-- 📋 **Daily Task System** (v0.2.6): 6 rotating tasks per day, up to 165 pts/day reward
-- 🔢 **Number Guess Game** (v0.2.6): Guess the secret 1-100 number in 7 tries for 30 pts
-- 🎮 **Game Selector** (v0.2.6): Pick between RPS and Number Guess in-chat
-- 💰 **RPS Point Rewards** (v0.2.6): +10 pts per round win in Rock-Paper-Scissors
-- 🖼️ **Immersive Background System** (v0.2.5): 100+ presets, dynamic animations, per-chat customization
-- 💕 **Affinity System** (v0.2.2): 5 intimacy levels; AI tone adapts from formal to intimate
-- 😊 **Character Mood System** (v0.2.2): 5 moods affect AI response style
-- 🌐 **Dynamic Presence** (v0.2.1): Online/Busy/Offline based on character schedules
-- 🧠 **Specialized AI Agents**: 6 task assistants (Coder, Muse, Scholar, Sensei, Aurora, Pixel)
-- 🛠️ **ReAct Tool Calling**: AI can execute code, search, and generate images
-- 📸 **Moments** (v0.2.7): AI posts, smart comments, emoji reactions, location tags
-- 👫 **Friends Management**: Groups, starring, remarks
-- 🎯 **Achievements**: 11 milestones with point rewards
+### Recent Updates
+- 🖼️ **Immersive Background System**: 20+ AI-generated backgrounds for each persona
+- 🌙 **Dark Mode Overhaul**: Complete CSS variable system with glass effects
+- 📱 **iOS 26 Style**: Refined border-radius and subtle animations
+- 🎨 **Per-Chat Backgrounds**: Custom background for each conversation
+- 🧠 **Specialized AI Agents**: 6 task-focused assistants (Coder, Muse, Scholar, etc.)
+- 🛠️ **ReAct Tool Calling**: AI can execute code, search, generate images
+- 📸 Enhanced AI Moments with dynamic posting and smart comments
+- 📍 Location tags and visibility settings (Public/Private/etc.)
+- 💬 Reply threads and emoji reactions in Moments
+- 👥 Moments/Timeline with AI auto-posting
+- 👫 Friends management with groups
+- 🎯 Daily Check-in and Achievements
+- 🧧 Red Packet and Gift system
+- 🎮 Rock-Paper-Scissors mini game
+- 😊 Emoji picker with 8 categories
 
 ---
 
