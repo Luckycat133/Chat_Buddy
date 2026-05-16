@@ -73,7 +73,7 @@ function AIFeedbackCard({ feedback, language, onApplyComment, onCommentClick }) 
                         </p>
                     )}
                     {feedback.suggestedComment && (
-                        <div className="mt-3 flex items-start gap-3 rounded-xl bg-white/60 px-3 py-2.5">
+                        <div className="mt-3 flex items-start gap-3 rounded-xl bg-[var(--color-bg-app)] px-3 py-2.5">
                             <span className="mt-0.5 text-[12px] text-[var(--color-text-muted)]">"</span>
                             <p className="flex-1 text-[13px] leading-6 text-[var(--color-text-main)] italic">
                                 {feedback.suggestedComment}
@@ -232,7 +232,7 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
 
     return (
         <>
-            <article className="overflow-hidden rounded-[28px] border border-[var(--color-border)] bg-[linear-gradient(160deg,rgba(255,255,255,0.99),rgba(255,249,245,0.95))] shadow-[0_8px_32px_rgba(255,157,74,0.07)] transition-shadow hover:shadow-[0_12px_40px_rgba(255,157,74,0.12)]">
+            <article className="overflow-hidden rounded-[28px] border border-[var(--color-border)] bg-[var(--color-bg-white)] shadow-[0_8px_32px_rgba(255,157,74,0.07)] transition-shadow hover:shadow-[0_12px_40px_rgba(255,157,74,0.12)]">
                 {/* 头部：头像 + 名称 + 时间 + 菜单 */}
                 <div className="flex items-start gap-3 px-5 pt-5">
                     <div className="relative h-11 w-11 flex-shrink-0">
@@ -315,7 +315,7 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
 
                     {/* 转发引用 */}
                     {post.repostOf && (
-                        <div className="mt-3 overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[rgba(255,255,255,0.6)] p-4">
+                        <div className="mt-3 overflow-hidden rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg-app)] p-4">
                             <div className="flex items-center gap-2 text-[12px] font-semibold text-[var(--color-primary)]">
                                 <Repeat2 size={12} />
                                 {post.repostOf.authorName}
@@ -357,7 +357,7 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
                                     {reactionSummary.map(([emoji, users]) => (
                                         <div
                                             key={emoji}
-                                            className="inline-flex items-center gap-0.5 rounded-full bg-white/80 px-2 py-0.5 text-[12px] shadow-sm"
+                                            className="inline-flex items-center gap-0.5 rounded-full bg-[var(--color-bg-white)] px-2 py-0.5 text-[12px] shadow-sm border border-[var(--color-border)]"
                                         >
                                             <span>{emoji}</span>
                                             <span className="text-[var(--color-text-muted)]">{users.length}</span>
@@ -406,7 +406,7 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
 
                     {/* 快速评论区 */}
                     {showQuickComment && (
-                        <div className="mb-3 flex items-center gap-2 rounded-[16px] border border-[var(--color-border)] bg-white/80 p-2 shadow-sm">
+                        <div className="mb-3 flex items-center gap-2 rounded-[16px] border border-[var(--color-border)] bg-[var(--color-bg-white)] p-2 shadow-sm">
                             <div className="h-7 w-7 flex-shrink-0 overflow-hidden rounded-full bg-[var(--color-primary)]">
                                 {userProfile?.avatar ? (
                                     <img src={userProfile.avatar} alt="me" className="h-full w-full object-cover" />
@@ -506,7 +506,7 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
                             {showReactions && (
                                 <>
                                     <div className="fixed inset-0 z-10" onClick={() => setShowReactions(false)} />
-                                    <div className="absolute bottom-12 left-1/2 z-20 -translate-x-1/2 flex gap-1 rounded-full border border-[var(--color-border)] bg-white p-1.5 shadow-2xl">
+                                    <div className="absolute bottom-12 left-1/2 z-20 -translate-x-1/2 flex gap-1 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-white)] p-1.5 shadow-2xl">
                                         {REACTION_EMOJIS.map(emoji => (
                                             <button
                                                 key={emoji}

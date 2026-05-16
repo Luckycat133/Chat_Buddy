@@ -2,12 +2,10 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, MoreHorizontal, Sparkles, Image, Download, Bookmark } from 'lucide-react';
 import { useLanguage } from '../../../../context/LanguageContext';
-import { useSocial } from '../../../../context/SocialContext';
 
-export default function ChatHeader({ chat, personas, typingIndicators, presenceMap, moodMap, onOpenBackground, onOpenExport, onOpenBookmarks }) {
+export default function ChatHeader({ chat, personas, typingIndicators, presenceMap, onOpenBackground, onOpenExport, onOpenBookmarks }) {
     const navigate = useNavigate();
     const { t, language } = useLanguage();
-    const { getIntimacyLevel, getIntimacy } = useSocial();
 
     const getHeaderInfo = () => {
         if (!chat) return { name: '', avatar: null, id: null };
@@ -94,21 +92,6 @@ export default function ChatHeader({ chat, personas, typingIndicators, presenceM
                         <span className="group-hover:underline decoration-2 decoration-[var(--color-primary)]/30 underline-offset-2">
                             {headerInfo.name}
                         </span>
-                        {/* T06: Mood emoji */}
-                        {headerInfo.id && moodMap?.[headerInfo.id] && (
-                            <span className="text-sm" title={language === 'zh' ? moodMap[headerInfo.id].label_zh : moodMap[headerInfo.id].label}>
-                                {moodMap[headerInfo.id].emoji}
-                            </span>
-                        )}
-                        {/* T06: Affinity badge */}
-                        {headerInfo.id && getIntimacy(headerInfo.id) > 0 && (
-                            <span
-                                className="affinity-badge"
-                                style={{ backgroundColor: getIntimacyLevel(headerInfo.id).color }}
-                            >
-                                {language === 'zh' ? getIntimacyLevel(headerInfo.id).name : getIntimacyLevel(headerInfo.id).name_en}
-                            </span>
-                        )}
                         {headerInfo.memberCount && (
                             <span className="member-badge">
                                 {headerInfo.memberCount}

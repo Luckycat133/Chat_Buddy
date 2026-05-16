@@ -489,34 +489,16 @@ CONTROL TAGS:
 ${ai.agentType === 'task-specialist' ? this._getSpecialistTools(ai) : ''}
 - Normal chat = plain text. Never wrap control tags in code fences.
 `;
-        // T06: Affinity-aware tone instructions
-        let affinityHint = '';
-        if (context?.intimacyLevel) {
-            const level = context.intimacyLevel;
-            if (level >= 5) {
-                affinityHint = '\nRELATIONSHIP: soulmate. Be intimate, affectionate, and detailed.';
-            } else if (level >= 4) {
-                affinityHint = '\nRELATIONSHIP: close friend. Warm, personal, occasional nicknames.';
-            } else if (level >= 3) {
-                affinityHint = '\nRELATIONSHIP: good friend. Warm and casual.';
-            } else if (level >= 2) {
-                affinityHint = '\nRELATIONSHIP: friend. Friendly and conversational.';
-            } else {
-                affinityHint = '\nRELATIONSHIP: acquaintance. Brief, polite, slightly formal.';
-            }
-        }
-
-        // T06: Mood-aware behavior hint
-        let moodHint = '';
-        if (context?.mood?.promptHint) {
-            moodHint = `\nCURRENT MOOD: ${context.mood.promptHint}`;
-        }
-
         // T12: Long-term memory + group chat context
         // Append MiniMax skills block so AI knows its multimodal capabilities
         const skillsBlock = buildSkillsSystemBlock(true);
         const skillsHint = skillsBlock ? `\n\n${skillsBlock}` : '';
-        return `${base}${personaRules}\n${languageHint}${controlTags}${affinityHint}${moodHint}${memoryBlock}${groupBlock}${skillsHint}\nRULES: concise, reply when relevant, use memories naturally.`;
+        const behaviorRules = `
+BEHAVIOR RULES:
+1. Stay fully in character at all times. Never break character or acknowledge being an AI unless directly asked.
+2. Be concise. Prefer 1-3 sentences for casual messages; expand only when the topic warrants depth.
+3. Reply only when relevant. In group chats, use [SILENCE] if the message isn't directed at you.`;
+        return `${base}${personaRules}\n${languageHint}${controlTags}${memoryBlock}${groupBlock}${skillsHint}${behaviorRules}`;
     }
 
     _getSpecialistTools(ai) {

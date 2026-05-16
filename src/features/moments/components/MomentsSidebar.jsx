@@ -52,7 +52,7 @@ export default function MomentsSidebar({ posts = [], onUsePrompt }) {
     return (
         <aside className="space-y-4 lg:sticky lg:top-24">
             {/* AI 灵感站 */}
-            <div className="overflow-hidden rounded-[28px] border border-[var(--color-border)] bg-[linear-gradient(160deg,rgba(255,255,255,0.99),rgba(255,246,238,0.95))] p-5 shadow-[0_12px_40px_rgba(255,157,74,0.10)]">
+            <div className="overflow-hidden rounded-[28px] border border-[var(--color-border)] bg-[var(--color-bg-white)] p-5 shadow-[0_12px_40px_rgba(255,157,74,0.10)]">
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-[rgba(255,157,74,0.12)] px-3 py-1 text-[12px] font-semibold text-[var(--color-primary)]">
                     <Sparkles size={13} />
                     {language === 'zh' ? 'AI 灵感站' : 'AI Inspiration'}
@@ -76,7 +76,7 @@ export default function MomentsSidebar({ posts = [], onUsePrompt }) {
                             key={item.id}
                             type="button"
                             onClick={() => onUsePrompt?.(item.prompt)}
-                            className="group w-full rounded-[18px] border border-[var(--color-border)] bg-white/70 px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--color-primary)]/30 hover:shadow-md"
+                            className="group w-full rounded-[18px] border border-[var(--color-border)] bg-[var(--color-bg-app)] px-4 py-3 text-left transition-all hover:-translate-y-0.5 hover:border-[var(--color-primary)]/30 hover:shadow-md"
                         >
                             <div className="text-[13px] font-semibold text-[var(--color-text-main)] group-hover:text-[var(--color-primary)]">
                                 {item.title}

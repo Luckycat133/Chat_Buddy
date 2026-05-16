@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
-import { ImageIcon, MapPin, RefreshCw } from 'lucide-react';
+import { ImageIcon, MapPin } from 'lucide-react';
 import { ImageLightbox } from '../../chat/components/ImageMessage';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
-import { buildMomentImageFallback, isRenderableMomentImage } from '../services/momentsMediaService';
+import { buildMomentImageFallback, isRenderableMomentImage, buildProxiedUrls } from '../services/momentsMediaService';
 
 const MIN_ASPECT_RATIO = 3 / 4;
 const MAX_ASPECT_RATIO = 4 / 3;
@@ -18,29 +18,53 @@ function formatAspectStyle(ratio) {
     return { aspectRatio: `${clamped.toFixed(4)} / 1` };
 }
 
+/** Animated skeleton placeholder while image loads */
+function ImageSkeleton({ isSingle }) {
+    return (
+        <div
+            className={cn(
+                'rounded-[18px] bg-[var(--color-bg-active)] animate-pulse',
+                isSingle ? 'aspect-[4/3]' : 'aspect-square'
+            )}
+        >
+            <div className="flex h-full items-center justify-center">
+                <ImageIcon size={24} className="text-[var(--color-text-muted)] opacity-30" />
+            </div>
+        </div>
+    );
+}
+
+/**
+ * MomentImage: multi-level proxy with skeleton loading state.
+ * Tries URLs in order: original → weserv proxy → wsrv proxy → cache-bust.
+ */
 function MomentImage({ src, index, totalCount, onFail, onClick, language }) {
-    const [retryCount, setRetryCount] = useState(0);
-    const [currentSrc, setCurrentSrc] = useState(src);
+    const proxiedUrls = buildProxiedUrls(src);
+    const [urlIndex, setUrlIndex] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
     const [hasFailed, setHasFailed] = useState(false);
     const [naturalRatio, setNaturalRatio] = useState(null);
 
+    const currentSrc = proxiedUrls[urlIndex] || src;
+
     const handleLoad = useCallback((e) => {
         const img = e.currentTarget;
+        setIsLoading(false);
         if (img.naturalWidth > 0 && img.naturalHeight > 0) {
             setNaturalRatio(img.naturalWidth / img.naturalHeight);
         }
     }, []);
 
     const handleError = useCallback(() => {
-        if (retryCount < 2 && /^https?:\/\//i.test(currentSrc)) {
-            const sep = currentSrc.includes('?') ? '&' : '?';
-            setCurrentSrc(`${src}${sep}_r=${retryCount + 1}`);
-            setRetryCount(c => c + 1);
+        const nextIndex = urlIndex + 1;
+        if (nextIndex < proxiedUrls.length) {
+            setUrlIndex(nextIndex);
         } else {
+            setIsLoading(false);
             setHasFailed(true);
             onFail(index);
         }
-    }, [retryCount, currentSrc, src, index, onFail]);
+    }, [urlIndex, proxiedUrls, index, onFail]);
 
     if (hasFailed) return null;
 
@@ -48,33 +72,44 @@ function MomentImage({ src, index, totalCount, onFail, onClick, language }) {
     const useAdaptiveRatio = isSingle && naturalRatio;
 
     return (
-        <button
-            key={`img-${index}`}
-            type="button"
-            onClick={onClick}
-            aria-label={language === 'zh' ? '查看动态图片' : 'View post image'}
+        <div
             className={cn(
-                'group relative overflow-hidden rounded-[18px] bg-[var(--color-bg-app)]',
+                'relative overflow-hidden rounded-[18px]',
                 !useAdaptiveRatio && 'aspect-square'
             )}
             style={useAdaptiveRatio ? formatAspectStyle(naturalRatio) : undefined}
         >
-            <img
-                src={currentSrc}
-                alt=""
-                loading="lazy"
-                referrerPolicy="no-referrer"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
-                onLoad={handleLoad}
-                onError={handleError}
-            />
-            <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/8" />
-            {retryCount > 0 && (
-                <div className="absolute right-2 top-2 rounded-full bg-black/40 p-1">
-                    <RefreshCw size={11} className="text-white animate-spin" />
-                </div>
-            )}
-        </button>
+            {/* Skeleton overlay while loading */}
+            {isLoading && <ImageSkeleton isSingle={isSingle} />}
+
+            <button
+                type="button"
+                onClick={onClick}
+                aria-label={language === 'zh' ? '查看动态图片' : 'View post image'}
+                className={cn(
+                    'group absolute inset-0 w-full h-full',
+                    isLoading && 'opacity-0 pointer-events-none'
+                )}
+            >
+                <img
+                    src={currentSrc}
+                    alt=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.04]"
+                    onLoad={handleLoad}
+                    onError={handleError}
+                />
+                <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/10 rounded-[18px]" />
+                {/* Show proxy badge if loading from proxy */}
+                {urlIndex > 0 && !isLoading && (
+                    <div className="absolute bottom-1.5 right-1.5 rounded-full bg-black/40 px-1.5 py-0.5 text-[9px] text-white/70">
+                        proxy
+                    </div>
+                )}
+            </button>
+        </div>
     );
 }
 
@@ -82,7 +117,7 @@ function ImageFallbackCard({ post, totalCount, language }) {
     const fallback = buildMomentImageFallback(post, language);
     return (
         <div className={cn(
-            'rounded-[18px] border border-[var(--color-border)] bg-gradient-to-br from-[rgba(255,157,74,0.08)] to-[rgba(255,214,183,0.12)] p-4 flex flex-col justify-between',
+            'rounded-[18px] border border-[var(--color-border)] bg-gradient-to-br from-[rgba(255,155,84,0.08)] to-[rgba(255,194,153,0.12)] p-4 flex flex-col justify-between',
             totalCount === 1 ? 'aspect-[4/3]' : 'aspect-square'
         )}>
             <div className="flex items-center justify-between text-[var(--color-text-muted)]">
@@ -126,7 +161,6 @@ export default function MomentMediaGrid({ post }) {
     };
 
     const successCount = allImages.filter((_, i) => !failedIndexes.includes(i)).length;
-    const failedCount = failedIndexes.length;
 
     return (
         <>
@@ -161,7 +195,7 @@ export default function MomentMediaGrid({ post }) {
                     );
                 })}
 
-                {post?.images?.length > 9 && failedCount === 0 && (
+                {post?.images?.length > 9 && (
                     <div className="flex aspect-square items-center justify-center rounded-[18px] border border-dashed border-[var(--color-border)] bg-[var(--color-bg-app)]">
                         <span className="text-[14px] font-semibold text-[var(--color-text-muted)]">
                             +{post.images.length - 9}

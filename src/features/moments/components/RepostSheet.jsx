@@ -41,7 +41,7 @@ export default function RepostSheet({ post, authorName, onClose }) {
                 </div>
 
                 <div className="space-y-5 overflow-y-auto px-4 py-4">
-                    <section className="rounded-3xl border border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,247,241,0.94))] p-4">
+                    <section className="rounded-3xl border border-[var(--color-border)] bg-[var(--color-bg-app)] p-4">
                         <div className="flex items-center gap-2 text-[15px] font-semibold text-[var(--color-text-main)]">
                             <Repeat2 size={16} className="text-[var(--color-primary)]" />
                             {language === 'zh' ? '转发到我的朋友圈' : 'Repost to my feed'}
@@ -56,7 +56,7 @@ export default function RepostSheet({ post, authorName, onClose }) {
                             value={note}
                             onChange={(event) => setNote(event.target.value)}
                             placeholder={language === 'zh' ? '写一句你想补充的话（可选）...' : 'Add a line of your own (optional)...'}
-                            className="mt-3 h-24 w-full resize-none rounded-2xl border border-[var(--color-border)] bg-white px-4 py-3 text-[14px] outline-none"
+                            className="mt-3 h-24 w-full resize-none rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-white)] px-4 py-3 text-[14px] outline-none"
                         />
 
                         <button

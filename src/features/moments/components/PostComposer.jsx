@@ -44,7 +44,7 @@ const STATUS_COLORS = {
 
 function QualityPill({ item }) {
     return (
-        <div className="flex items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-white/80 px-3 py-3">
+        <div className="flex items-start gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-white)] px-3 py-3">
             <span className={cn('mt-1 h-2 w-2 flex-shrink-0 rounded-full', STATUS_COLORS[item.status] || STATUS_COLORS.idle)} />
             <div className="min-w-0">
                 <div className="text-[13px] font-semibold text-[var(--color-text-main)]">{item.label}</div>
@@ -231,10 +231,10 @@ export default function PostComposer({ isOpen, onClose, initialPrompt = '' }) {
             role="dialog"
             aria-modal="true"
             aria-labelledby="post-composer-title"
-            className="fixed inset-0 z-50 flex flex-col bg-[rgba(255,251,247,0.97)] backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex flex-col bg-[var(--color-bg-app)]/95 backdrop-blur-sm"
         >
-            {/* 顶栏 */}
-            <div className="flex flex-shrink-0 items-center justify-between border-b border-[var(--color-border)] px-4 py-3.5 md:px-6">
+            {/* 顶栏 — 仅关闭按钮 + 居中标题，发布按钮已移至底部 */}
+            <div className="flex flex-shrink-0 items-center border-b border-[var(--color-border)] px-4 py-3.5 md:px-6">
                 <button
                     type="button"
                     onClick={onClose}
@@ -244,7 +244,7 @@ export default function PostComposer({ isOpen, onClose, initialPrompt = '' }) {
                     <X size={22} />
                 </button>
 
-                <div className="text-center">
+                <div className="flex-1 text-center">
                     <h3 id="post-composer-title" className="text-[16px] font-bold text-[var(--color-text-main)]">
                         {t('new_post') || '发布动态'}
                     </h3>
@@ -253,19 +253,8 @@ export default function PostComposer({ isOpen, onClose, initialPrompt = '' }) {
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={handlePost}
-                    disabled={isPosting || !canPost}
-                    className={cn(
-                        'rounded-full px-5 py-2 text-[14px] font-bold transition-all',
-                        canPost
-                            ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] hover:opacity-90 active:scale-95'
-                            : 'bg-[var(--color-bg-app)] text-[var(--color-text-light)]'
-                    )}
-                >
-                    {t('post') || '发布'}
-                </button>
+                {/* 占位元素保持标题居中 */}
+                <div className="w-8" />
             </div>
 
             {/* 主内容 */}
@@ -318,7 +307,7 @@ export default function PostComposer({ isOpen, onClose, initialPrompt = '' }) {
                                         {showVisibilityPicker && (
                                             <>
                                                 <div className="fixed inset-0 z-10" onClick={() => setShowVisibilityPicker(false)} />
-                                                <div className="absolute left-0 top-8 z-20 min-w-[180px] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-xl">
+                                                <div className="absolute left-0 top-8 z-20 min-w-[180px] overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-white)] shadow-xl">
                                                     {VISIBILITY_OPTIONS.map(opt => (
                                                         <button
                                                             key={opt.value}
@@ -498,7 +487,7 @@ export default function PostComposer({ isOpen, onClose, initialPrompt = '' }) {
                                                 </p>
                                                 <div className="mt-2.5 flex flex-wrap gap-1.5">
                                                     {(assistResult.hashtags || []).map(tag => (
-                                                        <span key={tag} className="rounded-full bg-white/80 px-2.5 py-0.5 text-[12px] font-medium text-[var(--color-primary)]">
+                                                        <span key={tag} className="rounded-full bg-[var(--color-bg-white)] border border-[var(--color-border)] px-2.5 py-0.5 text-[12px] font-medium text-[var(--color-primary)]">
                                                             {tag}
                                                         </span>
                                                     ))}
@@ -514,7 +503,7 @@ export default function PostComposer({ isOpen, onClose, initialPrompt = '' }) {
                                                     <button
                                                         type="button"
                                                         onClick={() => setContent(prev => `${prev}${prev ? '\n\n' : ''}${(assistResult.hashtags || []).join(' ')}`.trim())}
-                                                        className="rounded-full border border-[var(--color-border)] bg-white/80 px-4 py-1.5 text-[13px] font-semibold text-[var(--color-text-main)] hover:bg-white"
+                                                        className="rounded-full border border-[var(--color-border)] bg-[var(--color-bg-white)] px-4 py-1.5 text-[13px] font-semibold text-[var(--color-text-main)] hover:bg-[var(--color-bg-app)]"
                                                     >
                                                         {language === 'zh' ? '仅追加标签' : 'Tags only'}
                                                     </button>
@@ -543,7 +532,7 @@ export default function PostComposer({ isOpen, onClose, initialPrompt = '' }) {
 
                     {/* 右列：质量检查（桌面端） */}
                     <aside className="hidden space-y-4 lg:block">
-                        <div className="overflow-hidden rounded-[24px] border border-[var(--color-border)] bg-[linear-gradient(160deg,rgba(255,255,255,0.99),rgba(255,246,238,0.95))] p-4 shadow-sm">
+                        <div className="overflow-hidden rounded-[24px] border border-[var(--color-border)] bg-[var(--color-bg-white)] p-4 shadow-sm">
                             <div className="text-[14px] font-bold text-[var(--color-text-main)]">
                                 {language === 'zh' ? '发布前检查' : 'Quality Check'}
                             </div>
@@ -568,9 +557,9 @@ export default function PostComposer({ isOpen, onClose, initialPrompt = '' }) {
                 </div>
             </div>
 
-            {/* 底部工具栏 */}
-            <div className="flex-shrink-0 border-t border-[var(--color-border)] px-4 py-3 md:px-6">
-                <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-1">
+            {/* 底部工具栏 — 发布按钮置于右侧，跟随键盘位置，符合拇指操作直觉 */}
+            <div className="flex-shrink-0 border-t border-[var(--color-border)] bg-[var(--color-bg-app)] px-4 py-3 md:px-6">
+                <div className="mx-auto flex max-w-5xl items-center gap-1">
                     <input
                         type="file"
                         ref={fileInputRef}
@@ -580,6 +569,7 @@ export default function PostComposer({ isOpen, onClose, initialPrompt = '' }) {
                         className="hidden"
                     />
 
+                    {/* 左侧工具操作 */}
                     <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
@@ -588,11 +578,11 @@ export default function PostComposer({ isOpen, onClose, initialPrompt = '' }) {
                             'inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-[13px] font-medium transition-colors',
                             images.length >= 9
                                 ? 'text-[var(--color-text-light)]'
-                                : 'text-[var(--color-primary)] hover:bg-[var(--color-bg-app)]'
+                                : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-white)] hover:text-[var(--color-primary)]'
                         )}
                     >
                         <ImageIcon size={18} />
-                        <span>{t('add_photos') || '图片'}</span>
+                        <span className="hidden sm:inline">{t('add_photos') || '图片'}</span>
                         {images.length > 0 && <span className="text-[var(--color-text-muted)]">({images.length}/9)</span>}
                     </button>
 
@@ -601,20 +591,39 @@ export default function PostComposer({ isOpen, onClose, initialPrompt = '' }) {
                         onClick={() => setShowLocationPicker(true)}
                         className={cn(
                             'inline-flex items-center gap-1.5 rounded-2xl px-3 py-2 text-[13px] font-medium transition-colors',
-                            location ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-app)] hover:text-[var(--color-primary)]'
+                            location
+                                ? 'text-[var(--color-primary)]'
+                                : 'text-[var(--color-text-muted)] hover:bg-[var(--color-bg-white)] hover:text-[var(--color-primary)]'
                         )}
                     >
                         <MapPin size={18} />
-                        <span>{location || (t('location') || '位置')}</span>
+                        <span className="hidden sm:inline">{location || (t('location') || '位置')}</span>
                     </button>
 
-                    <div className="ml-auto flex items-center gap-2">
+                    {/* 右侧：字数 + 发布按钮（主操作） */}
+                    <div className="ml-auto flex items-center gap-3">
                         <span className={cn(
                             'text-[12px]',
                             content.length > 400 ? 'text-amber-500' : 'text-[var(--color-text-muted)]'
                         )}>
                             {content.length}
                         </span>
+
+                        {/* 发布按钮 — 移至底部，拇指可轻松触达 */}
+                        <button
+                            type="button"
+                            onClick={handlePost}
+                            disabled={isPosting || !canPost}
+                            aria-label={t('post') || '发布'}
+                            className={cn(
+                                'rounded-full px-5 py-2 text-[14px] font-bold transition-all',
+                                canPost
+                                    ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow-sm hover:opacity-90 active:scale-95'
+                                    : 'bg-[var(--color-bg-white)] text-[var(--color-text-light)] border border-[var(--color-border)]'
+                            )}
+                        >
+                            {t('post') || '发布'}
+                        </button>
                     </div>
                 </div>
             </div>
