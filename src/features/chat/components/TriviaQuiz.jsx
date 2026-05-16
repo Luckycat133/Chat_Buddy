@@ -3,13 +3,12 @@
  * AI generates questions from chat context or general knowledge.
  * Multiple choice, score tracking, points reward.
  */
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { X, Brain, Trophy, RefreshCw, Loader2, CheckCircle, XCircle } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useSocial } from '../../../context/SocialContext';
 import { callAI } from '../services/chatService';
 import { cn } from '../../../utils/cn';
-import { getHistoryByCharacter, saveQuizResult } from '../services/TriviaStore';
 
 const QUIZ_LENGTH = 5;
 const POINTS_PER_CORRECT = 6;
@@ -30,16 +29,16 @@ correct is the index (0-3) of the correct option. Output only JSON.`;
         const response = await callAI([
             { role: 'system', content: 'You are a trivia question generator. Output only valid JSON.' },
             { role: 'user', content: prompt }
-        ], { maxTokens: 300, temperature: 0.8 });
+        ], { max_tokens: 300, temperature: 0.8 });
 
-        const text = String(response || '').trim();
+        const text = response?.choices?.[0]?.message?.content?.trim() || '';
         // Extract JSON from the response (handle code block wrapping)
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error('No JSON found');
         const parsed = JSON.parse(jsonMatch[0]);
         if (!parsed.question || !Array.isArray(parsed.options) || parsed.options.length < 2) throw new Error('Invalid format');
         return parsed;
-    } catch (_parseError) {
+    } catch (_e) {
         // Fallback question if AI fails
         return {
             question: language === 'zh' ? `关于${category}：什么是人工智能？` : `About ${category}: What does AI stand for?`,
@@ -52,7 +51,7 @@ correct is the index (0-3) of the correct option. Output only JSON.`;
     }
 }
 
-export default function TriviaQuiz({ aiName: _aiName, onClose, chatId, personaId }) {
+export default function TriviaQuiz({ aiName: _aiName, onClose }) {
     const { t, language } = useLanguage();
     const { addPoints, updateTaskProgress } = useSocial();
     const [phase, setPhase] = useState('select'); // 'select' | 'playing' | 'result'
@@ -63,22 +62,8 @@ export default function TriviaQuiz({ aiName: _aiName, onClose, chatId, personaId
     const [answers, setAnswers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showExplain, setShowExplain] = useState(false);
-    const [history, setHistory] = useState([]);
 
     const categories = language === 'zh' ? CATEGORIES_ZH : CATEGORIES_EN;
-
-    useEffect(() => {
-        let cancelled = false;
-        if (!personaId) return;
-        getHistoryByCharacter(personaId).then((items) => {
-            if (!cancelled) setHistory(items || []);
-        }).catch(() => {
-            if (!cancelled) setHistory([]);
-        });
-        return () => {
-            cancelled = true;
-        };
-    }, [personaId, phase]);
 
     const startQuiz = useCallback(async (cat) => {
         setCategory(cat);
@@ -106,28 +91,13 @@ export default function TriviaQuiz({ aiName: _aiName, onClose, chatId, personaId
         setAnswers(prev => [...prev, { selected: optIdx, correct: q.correct, isCorrect }]);
     };
 
-    const handleNext = async () => {
+    const handleNext = () => {
         if (currentQ + 1 >= questions.length) {
             // Calculate final score
-            const correctCount = answers.filter(a => a.isCorrect).length;
+            const correctCount = answers.filter(a => a.isCorrect).length + (selected === questions[currentQ].correct ? 1 : 0);
             const pts = correctCount * POINTS_PER_CORRECT;
             addPoints(pts);
             updateTaskProgress?.('task_game', 1);
-            if (chatId && personaId) {
-                await saveQuizResult({
-                    chatId,
-                    personaId,
-                    score: correctCount,
-                    total: questions.length,
-                    questions: questions.map((q, idx) => ({
-                        q: q.question,
-                        options: q.options,
-                        answer: q.correct,
-                        userAnswer: answers[idx]?.selected ?? null,
-                        correct: Boolean(answers[idx]?.isCorrect)
-                    }))
-                }).catch(() => { });
-            }
             setPhase('result');
         } else {
             setCurrentQ(q => q + 1);
@@ -169,25 +139,6 @@ export default function TriviaQuiz({ aiName: _aiName, onClose, chatId, personaId
                             </button>
                         ))}
                     </div>
-                    {history.length > 0 && (
-                        <div className="px-4 pb-5">
-                            <p className="text-xs font-semibold text-[var(--color-text-muted)] mb-2">
-                                {t('trivia_history') || 'Recent Results'}
-                            </p>
-                            <div className="space-y-1.5">
-                                {history.slice(0, 3).map(item => (
-                                    <div key={item.id} className="flex items-center justify-between text-xs bg-[var(--color-bg-hover)] rounded-lg px-3 py-2">
-                                        <span className="text-[var(--color-text-muted)]">
-                                            {new Date(item.generatedAt).toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US')}
-                                        </span>
-                                        <span className="font-semibold text-[var(--color-text-main)]">
-                                            {item.score}/{item.total}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
         );

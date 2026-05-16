@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * T15: TranslationCompareView
  * Side-by-side source / translated text panel for Muse agent.
@@ -6,6 +7,7 @@
 import React, { useState } from 'react';
 import { Copy, Check, ArrowRight, Languages } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
+// cn utility available if needed
 
 const LANG_LABELS = {
     en: 'EN', zh: 'ZH', ja: 'JA', ko: 'KO', fr: 'FR', de: 'DE', es: 'ES',
@@ -18,7 +20,7 @@ function CopyButton({ text, t }) {
             await navigator.clipboard.writeText(text);
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
-        } catch (e) { console.warn('[TranslationCompare] Clipboard write failed:', e?.message); }
+        } catch { /* ignore */ }
     };
     return (
         <button
@@ -26,9 +28,26 @@ function CopyButton({ text, t }) {
             className="p-1 rounded-[var(--radius-sm)] hover:bg-black/5 dark:hover:bg-white/10 text-[var(--color-text-muted)] transition-colors"
             aria-label={t('copy')}
         >
-            {copied ? <Check size={12} className="text-[var(--color-success)]" /> : <Copy size={12} />}
+            {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
         </button>
     );
+}
+
+/**
+ * Parse [TRANSLATION:source||target||from||to] marker from message content.
+ * Returns { source, target, from, to } or null.
+ */
+export function parseTranslationMarker(content) {
+    const match = content?.match(/\[TRANSLATION:([\s\S]*?)\]/);
+    if (!match) return null;
+    const parts = match[1].split('||');
+    return {
+        source: parts[0]?.trim() || '',
+        target: parts[1]?.trim() || '',
+        from: (parts[2]?.trim() || 'auto').toLowerCase(),
+        to: (parts[3]?.trim() || 'en').toLowerCase(),
+        rest: content.replace(match[0], '').trim()
+    };
 }
 
 export default function TranslationCompareView({ source, target, from = 'auto', to = 'en' }) {
@@ -37,9 +56,9 @@ export default function TranslationCompareView({ source, target, from = 'auto', 
     return (
         <div className="mt-2 rounded-[var(--radius-xl)] border border-[var(--color-primary)]/20 overflow-hidden bg-[var(--color-bg-white)] shadow-sm">
             {/* Header */}
-            <div className="flex items-center gap-2 px-3 py-2 bg-[var(--color-primary-softer)] border-b border-[var(--color-border-light)]">
-                <Languages size={13} className="text-[var(--color-primary)] shrink-0" />
-                <span className="text-[11px] font-semibold text-[var(--color-primary-active)] uppercase tracking-wide">
+            <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/20 dark:to-purple-900/20 border-b border-[var(--color-border-light)]">
+                <Languages size={13} className="text-violet-500 shrink-0" />
+                <span className="text-[11px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide">
                     {t('translation_compare')}
                 </span>
                 <div className="flex items-center gap-1 ml-auto">
@@ -47,7 +66,7 @@ export default function TranslationCompareView({ source, target, from = 'auto', 
                         {LANG_LABELS[from] || from.toUpperCase()}
                     </span>
                     <ArrowRight size={10} className="text-[var(--color-text-muted)]" />
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[var(--color-primary)]/15 text-[var(--color-primary-active)]">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400">
                         {LANG_LABELS[to] || to.toUpperCase()}
                     </span>
                 </div>
@@ -69,9 +88,9 @@ export default function TranslationCompareView({ source, target, from = 'auto', 
                 </div>
 
                 {/* Target */}
-                <div className="p-3 bg-[var(--color-primary-softer)]">
+                <div className="p-3 bg-violet-50/40 dark:bg-violet-900/10">
                     <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-semibold text-[var(--color-primary-active)] uppercase tracking-wide">
+                        <span className="text-[10px] font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide">
                             {t('translation_result')}
                         </span>
                         <CopyButton text={target} t={t} />

@@ -8,10 +8,15 @@ import { useLanguage } from '../context/LanguageContext';
 import { useDocuments } from '../context/DocumentContext';
 import { cn } from '../utils/cn';
 
-function getFileIconType(type = '') {
-    if (type.includes('text') || type.includes('txt') || type.includes('md')) return 'text';
-    if (type.includes('code') || type.includes('js') || type.includes('py')) return 'code';
-    return 'file';
+const FILE_ICONS = {
+    'text': FileText,
+    'code': FileCode,
+};
+
+function getFileIcon(type = '') {
+    if (type.includes('text') || type.includes('txt') || type.includes('md')) return FileText;
+    if (type.includes('code') || type.includes('js') || type.includes('py')) return FileCode;
+    return File;
 }
 
 function formatBytes(bytes) {
@@ -29,16 +34,13 @@ function formatDate(iso, language) {
 
 function DocumentCard({ doc, chunksForDoc, language, t, onDelete }) {
     const [showPreview, setShowPreview] = useState(false);
-    const iconType = getFileIconType(doc.type || '');
     const chunkCount = chunksForDoc.length;
 
     return (
         <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-bg-white)] overflow-hidden transition-all">
             <div className="flex items-start gap-3 p-3.5">
                 <div className="w-9 h-9 rounded-[var(--radius-md)] bg-[var(--color-bg-hover)] flex items-center justify-center shrink-0 mt-0.5">
-                    {iconType === 'text' && <FileText size={18} className="text-[var(--color-primary)]" />}
-                    {iconType === 'code' && <FileCode size={18} className="text-[var(--color-primary)]" />}
-                    {iconType === 'file' && <File size={18} className="text-[var(--color-primary)]" />}
+                    {React.createElement(getFileIcon(doc.type || ''), { size: 18, className: "text-[var(--color-primary)]" })}
                 </div>
                 <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm text-[var(--color-text-main)] truncate">{doc.name}</p>

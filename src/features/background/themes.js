@@ -10,8 +10,8 @@ export const BACKGROUND_THEMES = {
     {
       id: "ai_cyberpunk_rain",
       name: "Cyberpunk Rain",
-      url: "/backgrounds/cyberpunk_city_rain_1768655801129.png",
-      preview: "/backgrounds/cyberpunk_city_rain_1768655801129.png",
+      url: "/backgrounds/cyberpunk_city_rain.png",
+      preview: "/backgrounds/cyberpunk_city_rain.png",
       description: "AI Generated - City streets in neon rain",
     },
     {
@@ -24,8 +24,8 @@ export const BACKGROUND_THEMES = {
     {
       id: "ai_ghibli_valley",
       name: "Ghibli Valley",
-      url: "/backgrounds/ghibli_landscape_1768655817028.png",
-      preview: "/backgrounds/ghibli_landscape_1768655817028.png",
+      url: "/backgrounds/ghibli_landscape.png",
+      preview: "/backgrounds/ghibli_landscape.png",
       description: "AI Generated - Lush green valley",
     },
     {
@@ -38,8 +38,8 @@ export const BACKGROUND_THEMES = {
     {
       id: "ai_library_snow",
       name: "Snowy Library",
-      url: "/backgrounds/cozy_library_snow_1768655831879.png",
-      preview: "/backgrounds/cozy_library_snow_1768655831879.png",
+      url: "/backgrounds/cozy_library_snow.png",
+      preview: "/backgrounds/cozy_library_snow.png",
       description: "AI Generated - Library with a winter view",
     },
   ],
