@@ -655,7 +655,13 @@ describe("AIPipeline", () => {
 
     // Then
     expect(malformed).toBeNull();
-    expect(parsed).toEqual([{ name: "lookup", args: {} }]);
+    expect(parsed).toEqual([{
+      name: "lookup",
+      args: {
+        error: 'JSON_PARSE_FAILED',
+        details: expect.stringContaining("JSON")
+      }
+    }]);
   });
 
   it("test_when_parse_native_tool_marker_uses_object_arguments_should_preserve_object_payload", () => {

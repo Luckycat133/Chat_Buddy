@@ -180,7 +180,7 @@ export default function AgentsPage() {
                                         <>
                                             <div className={cn("absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity", agent.color?.split(' ')[0])} />
                                             <img src={agent.avatar} alt="" className="w-full h-full object-cover opacity-80" />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg-app)] via-[var(--color-bg-app)]/50 to-transparent" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-bg-app)] via-[var(--color-bg-app)]/80 to-transparent/10" />
                                         </>
                                     ) : (
                                         <div className={cn(
@@ -228,18 +228,18 @@ export default function AgentsPage() {
                                                     <Bot size={20} className="text-white" />
                                                 </div>
                                             )}
-                                            <h3 className="font-display font-bold text-2xl text-[var(--color-text-main)] drop-shadow-sm">
+                                            <h3 className="font-display font-bold text-2xl text-[var(--color-text-primary)] drop-shadow-md">
                                                 {displayName}
                                             </h3>
                                         </div>
 
-                                        <p className="text-[var(--color-text-secondary)] line-clamp-2 md:line-clamp-3 mb-4 text-sm font-medium leading-relaxed opacity-90 group-hover:opacity-100">
+                                        <p className="text-white/90 line-clamp-2 md:line-clamp-3 mb-4 text-sm font-medium leading-relaxed opacity-90 group-hover:opacity-100 drop-shadow">
                                             {desc || t('custom_agent_desc')}
                                         </p>
 
                                         <div className="flex flex-wrap gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
                                             {agent.skills?.slice(0, isFeatured ? 5 : 2).map((skill, i) => (
-                                                <span key={i} className="px-2.5 py-1 rounded-md glass-strong text-[10px] font-bold text-[var(--color-text-main)] uppercase tracking-wider shadow-sm border border-[var(--color-border-light)]">
+                                                <span key={i} className="px-2.5 py-1 rounded-md bg-black/40 text-[10px] font-bold text-white uppercase tracking-wider shadow-sm border border-white/10 backdrop-blur-md">
                                                     {translateSkill(skill)}
                                                 </span>
                                             ))}

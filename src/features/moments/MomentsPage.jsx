@@ -63,17 +63,17 @@ function FeedTabs({ active, onChange, language }) {
         'with-media': language === 'zh' ? '有图' : 'Media',
     };
     return (
-        <div className="flex gap-1 overflow-x-auto hide-scrollbar">
+        <div className="flex gap-0.5 overflow-x-auto hide-scrollbar border-b border-[var(--color-border-light)]">
             {TABS.map(tab => (
                 <button
                     key={tab}
                     type="button"
                     onClick={() => onChange(tab)}
                     className={cn(
-                        'flex-shrink-0 rounded-full px-4 py-1.5 text-[13px] font-semibold transition-all',
+                        'flex-shrink-0 px-4 py-2 text-[13px] font-semibold transition-all relative',
                         active === tab
-                            ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] shadow-sm'
-                            : 'bg-[var(--color-bg-white)] text-[var(--color-text-muted)] border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 hover:text-[var(--color-text-main)]'
+                            ? 'text-[var(--color-primary)] after:absolute after:bottom-0 after:left-2 after:right-2 after:h-[2px] after:rounded-full after:bg-[var(--color-primary)] after:content-[\'\']'
+                            : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'
                     )}
                 >
                     {labels[tab]}
@@ -140,11 +140,11 @@ export default function MomentsPage() {
 
     return (
         <div className="relative flex h-full w-full flex-col overflow-hidden bg-[var(--color-bg-app)]">
-            {/* 背景装饰 */}
-            <div className="pointer-events-none absolute inset-0 opacity-80">
-                <div className="absolute inset-x-0 top-0 h-[320px] bg-[radial-gradient(circle_at_top,_rgba(255,163,92,0.18),_transparent_70%)]" />
-                <div className="absolute left-[-10%] top-[15%] h-64 w-64 rounded-full bg-[rgba(255,214,183,0.12)] blur-3xl" />
-                <div className="absolute right-[-8%] top-[25%] h-80 w-80 rounded-full bg-[rgba(255,180,112,0.10)] blur-3xl" />
+            {/* 背景装饰 — 使用克制的中性深色渐变，而非高饱和橙色 */}
+            <div className="pointer-events-none absolute inset-0 opacity-60">
+                <div className="absolute inset-x-0 top-0 h-[280px] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.04),_transparent_70%)]" />
+                <div className="absolute left-[-10%] top-[15%] h-64 w-64 rounded-full bg-[rgba(255,255,255,0.02)] blur-3xl" />
+                <div className="absolute right-[-8%] top-[25%] h-80 w-80 rounded-full bg-[rgba(255,255,255,0.015)] blur-3xl" />
             </div>
 
             <div
@@ -193,14 +193,13 @@ export default function MomentsPage() {
                         {/* 主 Feed */}
                         <div className="order-1 space-y-4 lg:order-2">
 
-                            {/* 发帖入口 */}
-                            <section className="overflow-hidden rounded-[28px] border border-[var(--color-border)] bg-[linear-gradient(160deg,rgba(255,255,255,0.99),rgba(255,247,241,0.96))] shadow-[0_12px_40px_rgba(255,157,74,0.08)]">
+                            <section className="overflow-hidden rounded-[28px] border border-[var(--color-border)] bg-[var(--color-bg-white)] shadow-sm">
                                 <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center md:px-6">
                                     {/* 快速发帖按钮 */}
                                     <button
                                         type="button"
                                         onClick={() => openComposer()}
-                                        className="group flex flex-1 items-center gap-3 rounded-[22px] border border-[var(--color-border)] bg-white/80 p-3.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
+                                        className="group flex flex-1 items-center gap-3 rounded-[22px] border border-[var(--color-border)] bg-[var(--color-bg-white)] p-3.5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md"
                                     >
                                         <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-[12px] bg-[var(--color-bg-active)]">
                                             {safeUserProfile.avatar ? (
@@ -224,7 +223,7 @@ export default function MomentsPage() {
                                                 ? '刚才有个瞬间突然让我想慢下来，于是决定先把它记住。'
                                                 : 'A tiny moment slowed me down today, so I wanted to save it before it disappeared.'
                                             )}
-                                            className="flex items-center gap-1.5 rounded-2xl border border-[var(--color-border)] bg-white/80 px-3 py-2.5 text-[13px] text-[var(--color-text-muted)] transition-all hover:border-[var(--color-primary)]/30 hover:text-[var(--color-primary)]"
+                                            className="flex items-center gap-1.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-white)] px-3 py-2.5 text-[13px] text-[var(--color-text-muted)] transition-all hover:border-[var(--color-primary)]/30 hover:text-[var(--color-primary)]"
                                         >
                                             <ImageIcon size={15} />
                                             <span className="hidden xs:inline">{language === 'zh' ? '写瞬间' : 'Scene'}</span>
@@ -235,7 +234,7 @@ export default function MomentsPage() {
                                                 ? '今天最想分享的不是大事，而是那个让我一下开心起来的小细节。'
                                                 : 'The thing I want to share most today is not a big event, but a tiny detail that lifted my mood.'
                                             )}
-                                            className="flex items-center gap-1.5 rounded-2xl border border-[var(--color-border)] bg-white/80 px-3 py-2.5 text-[13px] text-[var(--color-text-muted)] transition-all hover:border-[var(--color-primary)]/30 hover:text-[var(--color-primary)]"
+                                            className="flex items-center gap-1.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-white)] px-3 py-2.5 text-[13px] text-[var(--color-text-muted)] transition-all hover:border-[var(--color-primary)]/30 hover:text-[var(--color-primary)]"
                                         >
                                             <Smile size={15} />
                                             <span className="hidden xs:inline">{language === 'zh' ? '发心情' : 'Mood'}</span>

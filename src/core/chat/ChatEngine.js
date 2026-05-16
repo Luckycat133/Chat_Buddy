@@ -13,6 +13,14 @@ import { votePoll, buildToolInputSummary } from './ChatPollManager';
 
 /** @typedef {typeof DEFAULT_DEPS} ChatEngineDeps */
 
+const LONG_MESSAGE_THRESHOLD = 30;
+const SHORT_MESSAGE_THRESHOLD = 5;
+const CASUAL_REPLY_CHANCE = 0.25;
+const CONSECUTIVE_SHORT_THRESHOLD = 8;
+const BURST_COUNT_THRESHOLD = 2;
+const BURST_REPLY_CHANCE = 0.4;
+const DEFAULT_REPLY_CHANCE = 0.65;
+
 const DEFAULT_DEPS = {
   storage: defaultStorage,
   chatStorage: defaultChatStorage,
@@ -248,6 +256,12 @@ export class ChatEngine {
     this.aiPipeline._random = this._pipelineOptions.random || Math.random;
   }
 
+  _updateChatState(chatIndex, updatedChat) {
+    const newChats = [...this.chats];
+    newChats[chatIndex] = updatedChat;
+    this.chats = newChats;
+  }
+
   _notify() {
     const state = this.getState();
     this.listeners.forEach(cb => cb(state));
@@ -311,7 +325,7 @@ export class ChatEngine {
     updatedChat.lastMessage = newMessage;
     updatedChat.updatedAt = newMessage.timestamp;
 
-    this.chats[chatIndex] = updatedChat;
+    this._updateChatState(chatIndex, updatedChat);
     this.save();
 
     if (senderId === 'user-me' && updatedChat.participants) {
@@ -343,7 +357,7 @@ export class ChatEngine {
     const chat = this.chats[chatIndex];
     const updatedMessages = chat.messages.filter(m => m.id !== messageId);
 
-    this.chats[chatIndex] = { ...chat, messages: updatedMessages };
+    this._updateChatState(chatIndex, { ...chat, messages: updatedMessages });
     this.save();
   }
 
@@ -396,7 +410,7 @@ export class ChatEngine {
     const chatIndex = this.chats.findIndex(c => c.id === chatId);
     if (chatIndex === -1) return;
 
-    this.chats[chatIndex] = { ...this.chats[chatIndex], ...updates };
+    this._updateChatState(chatIndex, { ...this.chats[chatIndex], ...updates });
     this.save();
   }
 
@@ -404,7 +418,7 @@ export class ChatEngine {
     const chatIndex = this.chats.findIndex(c => c.id === chatId);
     if (chatIndex === -1) return;
 
-    this.chats[chatIndex] = { ...this.chats[chatIndex], isPinned };
+    this._updateChatState(chatIndex, { ...this.chats[chatIndex], isPinned });
     this.save();
   }
 
@@ -412,7 +426,7 @@ export class ChatEngine {
     const chatIndex = this.chats.findIndex(c => c.id === chatId);
     if (chatIndex === -1) return;
 
-    this.chats[chatIndex] = { ...this.chats[chatIndex], isUnread };
+    this._updateChatState(chatIndex, { ...this.chats[chatIndex], isUnread });
     this.save();
   }
 
@@ -432,12 +446,12 @@ export class ChatEngine {
 
     this._clearScheduledMessagesForChat(chatId);
     const chat = this.chats[chatIndex];
-    this.chats[chatIndex] = {
+    this._updateChatState(chatIndex, {
       ...chat,
       messages: [],
       lastMessage: null,
       pinnedMessages: []
-    };
+    });
     this.save();
   }
 
@@ -459,7 +473,7 @@ export class ChatEngine {
       newPinned = pinnedMessages.filter(id => id !== messageId);
     }
 
-    this.chats[chatIndex] = { ...chat, pinnedMessages: newPinned };
+    this._updateChatState(chatIndex, { ...chat, pinnedMessages: newPinned });
     this.save();
   }
 
@@ -469,7 +483,7 @@ export class ChatEngine {
 
     const result = votePoll(this.chats[chatIndex], pollId, optionId, action, this.currentUserId);
     if (result.success) {
-      this.chats[chatIndex] = result.chat;
+      this._updateChatState(chatIndex, result.chat);
       this.save();
     }
     return result;
@@ -539,7 +553,7 @@ export class ChatEngine {
     });
 
     if (hasChanges) {
-      this.chats[chatIndex] = { ...chat, messages: updatedMessages };
+      this._updateChatState(chatIndex, { ...chat, messages: updatedMessages });
       this.save();
     }
   }
@@ -603,7 +617,7 @@ export class ChatEngine {
     updatedChat.lastMessage = newMessage;
     updatedChat.updatedAt = newMessage.timestamp;
 
-    this.chats[chatIndex] = updatedChat;
+    this._updateChatState(chatIndex, updatedChat);
     this.save();
   }
 
@@ -660,7 +674,7 @@ export class ChatEngine {
 
     const updatedChat = { ...this.chats[chatIndex] };
     updatedChat.messages = [...updatedChat.messages, toolMsg];
-    this.chats[chatIndex] = updatedChat;
+    this._updateChatState(chatIndex, updatedChat);
     this._notify();
     return msgId;
   }
@@ -685,7 +699,7 @@ export class ChatEngine {
 
     const updatedMessages = [...chat.messages];
     updatedMessages[msgIndex] = updatedMsg;
-    this.chats[chatIndex] = { ...chat, messages: updatedMessages };
+    this._updateChatState(chatIndex, { ...chat, messages: updatedMessages });
     this.save();
   }
 
@@ -726,6 +740,35 @@ export class ChatEngine {
     }
   }
 
+  _shouldAIReply(chat, ai) {
+    const isDirect = chat.participants.length === 2;
+    if (isDirect) return true;
+
+    const lastContent = chat.lastMessage?.content || '';
+    const isMentioned = lastContent.includes(`@${ai.name}`);
+    if (isMentioned) return true;
+
+    const recentUserMsgs = chat.messages.slice(-3)
+      .filter(m => m.senderId === 'user-me')
+      .map(m => m.content);
+
+    const lastUserMsg = recentUserMsgs[recentUserMsgs.length - 1] || '';
+
+    const isQuestion = /[？?]/.test(lastUserMsg) || /^(什么|为什么|怎么|哪|谁|有没有|能不能|can|what|why|how|when|who|is |are |do |does )/i.test(lastUserMsg);
+    const isLongMessage = lastUserMsg.length > LONG_MESSAGE_THRESHOLD;
+    const hasAiKeyword = /ai|助手|帮我|请|告诉|解释|分析|帮忙|help|please|tell me/i.test(lastUserMsg);
+
+    if (isQuestion || isLongMessage || hasAiKeyword) return true;
+
+    const isShortCasual = lastUserMsg.length <= SHORT_MESSAGE_THRESHOLD && /^(哈+|嗯+|啊+|噢|好|ok|嗯嗯|嗯哦|呢|哦|uh|hm|lol|omg)/i.test(lastUserMsg);
+    if (isShortCasual) return Math.random() < CASUAL_REPLY_CHANCE;
+
+    const consecutiveShortMsgs = recentUserMsgs.filter(m => m.length <= CONSECUTIVE_SHORT_THRESHOLD).length;
+    if (consecutiveShortMsgs >= BURST_COUNT_THRESHOLD) return Math.random() < BURST_REPLY_CHANCE;
+
+    return Math.random() < DEFAULT_REPLY_CHANCE;
+  }
+
   _triggerAIResponse(chat) {
     if (!chat?.participants) {
       console.warn('[ChatEngine] Invalid chat object in _triggerAIResponse');
@@ -751,11 +794,15 @@ export class ChatEngine {
       .slice(-10);
 
     candidates.forEach((ai) => {
+<<<<<<< Updated upstream
       if (!ai?.id || !ai?.name) return;
       const isMentioned = chat?.lastMessage?.content?.includes(`@${ai.name}`) || false;
       const isDirect = chat.participants.length === 2;
 
       if (isDirect || isMentioned || Math.random() > 0.3) {
+=======
+      if (this._shouldAIReply(chat, ai)) {
+>>>>>>> Stashed changes
         const baseContext = this._contextProvider?.(ai.id) || {};
         const context = { ...baseContext, recentGroupMessages };
         this.aiPipeline.processTurn(chat, this.personas, ai, context);

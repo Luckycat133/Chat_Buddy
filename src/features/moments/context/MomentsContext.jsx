@@ -156,7 +156,8 @@ function useMomentsAI({
         const interactors = shuffledPersonas.slice(0, 3 + Math.floor(Math.random() * 4));
 
         interactors.forEach((persona, i) => {
-            const delay = (i + 1) * (2000 + Math.random() * 4000);
+            // 拟真延迟：4~12秒，每个角色退开间隔，避免同时语浌
+            const delay = (i + 1) * (4000 + Math.random() * 4000);
             const timeoutId = setTimeout(async () => {
                 if (evaluateShouldLike(post, persona.id)) {
                     toggleLike(postId, persona.id);
@@ -173,11 +174,12 @@ function useMomentsAI({
             timeoutIdsRef.current.push(timeoutId);
         });
 
+        // AI 反馈 (Feedback 模块) 延迟 4~7秒，让用户先看到帖子上屏后再出现反馈功能
         const feedbackPersona = interactors[0];
         if (feedbackPersona) {
             const feedbackTimeoutId = setTimeout(() => {
                 generateAIFeedback(postId, feedbackPersona.id, postsRef.current);
-            }, 1800 + Math.random() * 2200);
+            }, 4000 + Math.random() * 3000);
             timeoutIdsRef.current.push(feedbackTimeoutId);
         }
     }, [addReaction, evaluateShouldLike, generateAIComment, generateAIFeedback, toggleLike]);
@@ -188,9 +190,9 @@ function useMomentsAI({
         const latestPost = posts[0]; // Assuming NEWEST first
 
         if (latestPost.authorId === 'user-me' && !processedPostIdsRef.current.has(latestPost.id)) {
-            // It's a new user post!
+            // It's a new user post! 延迟 4~9秒再触发 AI 互动，避免点赞数即刻变动引起困惑
             processedPostIdsRef.current.add(latestPost.id);
-            const timeoutId = setTimeout(() => triggerAIInteractionsWithRef(latestPost.id), 2000 + Math.random() * 5000);
+            const timeoutId = setTimeout(() => triggerAIInteractionsWithRef(latestPost.id), 4000 + Math.random() * 5000);
             timeoutIdsRef.current.push(timeoutId);
         }
     }, [posts, triggerAIInteractionsWithRef]);

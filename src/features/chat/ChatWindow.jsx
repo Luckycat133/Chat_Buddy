@@ -44,7 +44,7 @@ export default function ChatWindow({ chatId: propChatId }) {
     const location = useLocation();
     const navigate = useNavigate();
     const id = propChatId || paramChatId;
-    const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, editingIndicators, deleteMessage, pinMessage, votePoll, presenceMap, moodMap, triggerGreeting, bookmarkMessage, unbookmarkMessage, markMessagesAsRead } = useChat();
+    const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, editingIndicators, deleteMessage, pinMessage, votePoll, presenceMap, triggerGreeting, bookmarkMessage, unbookmarkMessage, markMessagesAsRead } = useChat();
     const { t, language } = useLanguage();
     const { addDocument } = useDocuments();
     const { updateTaskProgress } = useSocial();
@@ -275,7 +275,6 @@ export default function ChatWindow({ chatId: propChatId }) {
                 personas={personas}
                 typingIndicators={typingIndicators}
                 presenceMap={presenceMap}
-                moodMap={moodMap}
                 onOpenBackground={() => setShowBackgroundSettings(true)}
                 onOpenExport={() => setShowExportModal(true)}
                 onOpenBookmarks={() => setShowBookmarkPanel(true)}

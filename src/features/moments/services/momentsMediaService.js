@@ -5,6 +5,22 @@ export function isRenderableMomentImage(src = '') {
     return /^(data:image\/|blob:|https?:\/\/|\/)/i.test(normalized);
 }
 
+/**
+ * 构建多级代理 URL 列表。
+ * 返回顺序：原始 → weserv.nl 代理 → 再尝试原始（带 cache bust）
+ */
+export function buildProxiedUrls(src) {
+    if (typeof src !== 'string' || !/^https?:\/\//i.test(src)) return [src];
+
+    const encoded = encodeURIComponent(src);
+    return [
+        src,
+        `https://images.weserv.nl/?url=${encoded}&default=1`,
+        `https://wsrv.nl/?url=${encoded}`,
+        `${src}${src.includes('?') ? '&' : '?'}_cb=${Date.now()}`,
+    ];
+}
+
 function blobToDataUrl(blob) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();

@@ -11,13 +11,13 @@
      Concept: OLED Dark, Premium, Sleek, Glassmorphism
      ======================================== */
 
-  /* Primary Brand - Premium Gold Accent */
-  --color-primary: #CA8A04;
-  --color-primary-hover: #EAB308;
-  --color-primary-active: #A16207;
-  --color-primary-light: #FEF08A;
-  --color-primary-softer: rgba(202, 138, 4, 0.1);
-  --color-primary-glow: rgba(202, 138, 4, 0.25);
+  /* Primary Brand - Macaron Orange Accent */
+  --color-primary: #FF9B54;
+  --color-primary-hover: #FF8533;
+  --color-primary-active: #E66A19;
+  --color-primary-light: #FFC299;
+  --color-primary-softer: rgba(255, 155, 84, 0.1);
+  --color-primary-glow: rgba(255, 155, 84, 0.25);
 
   /* Accent Colors - Vibrant on Dark */
   --color-accent-coral: #FF6B6B;
@@ -79,8 +79,8 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
 
   --shadow-floating: 0 8px 30px rgba(0, 0, 0, 0.8); /* Minimal elevated layer */
-  --shadow-glow: 0 0 15px rgba(202, 138, 4, 0.15);
-  --shadow-glow-strong: 0 4px 20px 0 rgba(202, 138, 4, 0.3);
+  --shadow-glow: 0 0 15px rgba(255, 155, 84, 0.15);
+  --shadow-glow-strong: 0 4px 20px 0 rgba(255, 155, 84, 0.3);
   --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.5);
   --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.6);
   --shadow-card-hover: 0 4px 20px rgba(0, 0, 0, 0.8);
@@ -1454,17 +1454,8 @@ html:not(.dark) aside nav a:not(.active):hover {
 @keyframes bubbleIn {
   0% {
     opacity: 0;
-    transform: translateY(20px) scale(0.9);
+    transform: translateY(10px) scale(0.98);
   }
-
-  50% {
-    transform: translateY(-4px) scale(1.02);
-  }
-
-  70% {
-    transform: translateY(2px) scale(0.99);
-  }
-
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
