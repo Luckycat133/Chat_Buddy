@@ -102,12 +102,14 @@ export default function ModelSwitcherPanel({ onClose }) {
     const [currentModel, setCurrentModel] = useState(() => {
         const cfg = getApiConfig();
         const model = cfg.model || import.meta.env?.VITE_AI_MODEL || 'deepseek-chat';
-        return MODEL_PRESETS.some(m => m.id === model) ? model : 'custom';
+        const preset = MODEL_PRESETS.find(m => m.id === model);
+        return preset ? model : 'custom';
     });
     const [customModel, setCustomModel] = useState(() => {
         const cfg = getApiConfig();
         const model = cfg.model || import.meta.env?.VITE_AI_MODEL || 'deepseek-chat';
-        return MODEL_PRESETS.some(m => m.id === model) ? '' : model;
+        const preset = MODEL_PRESETS.find(m => m.id === model);
+        return preset ? '' : model;
     });
     const [usage] = useState(() => getUsageStats());
     const [saved, setSaved] = useState(false);
