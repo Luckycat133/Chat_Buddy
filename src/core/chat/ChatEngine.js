@@ -794,15 +794,6 @@ export class ChatEngine {
       .slice(-10);
 
     candidates.forEach((ai) => {
-<<<<<<< Updated upstream
-      if (!ai?.id || !ai?.name) return;
-      const isMentioned = chat?.lastMessage?.content?.includes(`@${ai.name}`) || false;
-      const isDirect = chat.participants.length === 2;
-
-      if (isDirect || isMentioned || Math.random() > 0.3) {
-=======
-      if (this._shouldAIReply(chat, ai)) {
->>>>>>> Stashed changes
         const baseContext = this._contextProvider?.(ai.id) || {};
         const context = { ...baseContext, recentGroupMessages };
         this.aiPipeline.processTurn(chat, this.personas, ai, context);
