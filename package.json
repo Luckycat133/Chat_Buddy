@@ -23,8 +23,8 @@
     "framer-motion": "^12.26.2",
     "katex": "^0.16.28",
     "lucide-react": "^0.556.0",
-    "mathjs": "^15.1.0",
-    "mermaid": "^11.12.3",
+    "mathjs": "^15.2.0",
+    "mermaid": "^11.15.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
@@ -53,7 +53,7 @@
     "msw": "^2.11.5",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.17",
-    "vite": "^7.2.4",
+    "vite": "^7.3.2",
     "vitest": "^3.2.4"
   }
 }
