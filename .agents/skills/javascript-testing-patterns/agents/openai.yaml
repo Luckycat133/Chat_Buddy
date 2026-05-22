@@ -1,0 +1,5 @@
+interface:
+  display_name: "JavaScript Testing Patterns"
+  short_description: "Implement comprehensive testing strategies using Jest, Vitest, and Testing Library for unit, integration, and E2E tests."
+policy:
+  allow_implicit_invocation: true
