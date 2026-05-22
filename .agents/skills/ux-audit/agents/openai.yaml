@@ -1,0 +1,5 @@
+interface:
+  display_name: "UX Audit"
+  short_description: "Run UX walkthroughs and QA sweeps on live web apps using browser automation to flag friction points and usability issues."
+policy:
+  allow_implicit_invocation: true

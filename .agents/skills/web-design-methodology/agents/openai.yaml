@@ -1,0 +1,5 @@
+interface:
+  display_name: "Web Design Methodology"
+  short_description: "Universal web design implementation methodology — BEM, responsive, accessibility, CSS architecture, and spacing systems."
+policy:
+  allow_implicit_invocation: true

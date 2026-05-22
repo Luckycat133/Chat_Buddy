@@ -1,0 +1,5 @@
+interface:
+  display_name: "Web Design Patterns"
+  short_description: "Design patterns for website sections — heroes, cards, CTAs, trust signals, and testimonials to avoid generic AI aesthetics."
+policy:
+  allow_implicit_invocation: true
