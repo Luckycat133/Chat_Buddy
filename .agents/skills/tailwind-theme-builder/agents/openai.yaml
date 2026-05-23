@@ -1,0 +1,5 @@
+interface:
+  display_name: "Tailwind Theme Builder"
+  short_description: "Set up Tailwind v4 with shadcn/ui themed UI, including CSS variable configuration and dark mode setup."
+policy:
+  allow_implicit_invocation: true
