@@ -20,8 +20,6 @@ dist-ssr
 *.local
 
 # Agent configurations
-.claude/
-.agents/
 .agent/
 **/*.local.json
 *.skill
