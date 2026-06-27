@@ -1,0 +1,5 @@
+interface:
+  display_name: "E2E Testing Patterns"
+  short_description: "Master end-to-end testing with Playwright and Cypress to build reliable test suites that catch bugs, improve confidence, and enable fast deployment."
+policy:
+  allow_implicit_invocation: true

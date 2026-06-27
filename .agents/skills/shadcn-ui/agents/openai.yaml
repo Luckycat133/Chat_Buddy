@@ -1,0 +1,5 @@
+interface:
+  display_name: "shadcn/ui"
+  short_description: "Install and configure shadcn/ui components for React projects, guiding selection, installation, and customization."
+policy:
+  allow_implicit_invocation: true

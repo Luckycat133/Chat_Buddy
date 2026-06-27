@@ -1,0 +1,5 @@
+interface:
+  display_name: "Tailwind v4 & shadcn"
+  short_description: "Production-tested setup for Tailwind CSS v4 with shadcn/ui, Vite, and React."
+policy:
+  allow_implicit_invocation: true
