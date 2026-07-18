@@ -8,6 +8,9 @@ async function expectAppReady(page, path = '/') {
 
 test.describe('Chat Buddy smoke tests', () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('chat-buddy-onboarding-done', JSON.stringify(true));
+    });
     await expectAppReady(page);
   });
 
