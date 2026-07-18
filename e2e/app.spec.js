@@ -23,6 +23,7 @@ test.describe('Chat Buddy smoke tests', () => {
     const routes = ['/agents', '/friends', '/moments', '/settings'];
 
     for (const route of routes) {
+      await expectAppReady(page, '/');
       await page.locator(`nav[aria-label="Primary"] a[href="${route}"]`).click();
       await expect(page).toHaveURL(new RegExp(`${route}$`));
       await expect(page.locator('main').first()).toBeVisible();
