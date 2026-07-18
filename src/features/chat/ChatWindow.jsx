@@ -230,18 +230,15 @@ export default function ChatWindow({ chatId: propChatId }) {
 
     // Keep bookmarked IDs in sync with bookmark storage for current chat.
     // Derived state: recompute when chat changes (avoids setState-in-effect pattern).
-    const derivedBookmarkedIds = useMemo(() => {
+    const derivedBookmarkedIds = (() => {
         if (!chat?.id) return new Set();
         const ids = getBookmarks()
             .filter((bookmark) => bookmark.chatId === chat.id)
             .map((bookmark) => bookmark.messageId);
         return new Set(ids);
-    }, [chat?.id]);
+    })();
 
-    // Extract target message ID from route state with proper memoization
-    const targetMessageIdFromRoute = useMemo(() => {
-        return location.state?.targetMessageId;
-    }, [location.state]);
+    const targetMessageIdFromRoute = location.state?.targetMessageId;
 
     // Receive target message from route state (global search / settings search / bookmark jumps).
     // Syncs from external navigation state - imperative but necessary for route-driven focus.
