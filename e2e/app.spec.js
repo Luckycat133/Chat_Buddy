@@ -1,4 +1,4 @@
-import { test, expect, chromium } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 // Skip E2E tests in CI if no API key configured
 const TEST_API_KEY = process.env.VITE_AI_API_KEY;
@@ -7,9 +7,8 @@ const SKIP_IF_NO_API = test.skip;
 test.describe('Chat Buddy E2E Tests', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the app
-    await page.goto('/');
-    // Wait for the app to load
-    await page.waitForLoadState('networkidle');
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#root')).toBeVisible();
   });
 
   test.describe('Navigation & Layout', () => {
@@ -128,7 +127,7 @@ test.describe('Chat Buddy E2E Tests', () => {
 
     test('should display friend list with groups', async ({ page }) => {
       await page.goto('/friends');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Check for friend cards or list items
       const friendItem = page.locator('[class*="friend"], [class*="contact"]').first();
@@ -137,7 +136,7 @@ test.describe('Chat Buddy E2E Tests', () => {
 
     test('should open friend detail panel', async ({ page }) => {
       await page.goto('/friends');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Click on a friend
       const friendItem = page.locator('[class*="friend"], [class*="contact"]').first();
@@ -158,7 +157,7 @@ test.describe('Chat Buddy E2E Tests', () => {
 
     test('should display moments feed', async ({ page }) => {
       await page.goto('/moments');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Check for moment cards
       const momentCard = page.locator('[class*="moment"], [class*="post"], [class*="feed-item"]').first();
@@ -167,7 +166,7 @@ test.describe('Chat Buddy E2E Tests', () => {
 
     SKIP_IF_NO_API('should create a new moment', async ({ page }) => {
       await page.goto('/moments');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Find and click the compose button
       const composeBtn = page.locator('button').filter({ has: page.locator('[class*="plus"], [class*="camera"], [class*="edit"]') }).first();
@@ -190,7 +189,7 @@ test.describe('Chat Buddy E2E Tests', () => {
 
     test('should filter moments by tab (all/mine/AI)', async ({ page }) => {
       await page.goto('/moments');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Find tab buttons
       const tabs = page.locator('[class*="tab"], button').filter({ hasText: /All|Mine|AI|全部|我的/i });
@@ -211,7 +210,7 @@ test.describe('Chat Buddy E2E Tests', () => {
 
     test('should toggle language between EN and ZH', async ({ page }) => {
       await page.goto('/settings');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Find language toggle
       const langToggle = page.locator('button').filter({ hasText: /EN|中|语言|Language/i }).first();
@@ -224,7 +223,7 @@ test.describe('Chat Buddy E2E Tests', () => {
 
     test('should display API configuration panel', async ({ page }) => {
       await page.goto('/settings');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Find API settings
       const apiSection = page.locator('[class*="api"], [class*="config"]').first();
@@ -246,7 +245,7 @@ test.describe('Chat Buddy E2E Tests', () => {
 
     test('should have proper heading hierarchy', async ({ page }) => {
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Check that h1 exists
       const h1 = page.locator('h1').first();
@@ -274,7 +273,7 @@ test.describe('Chat Buddy E2E Tests', () => {
     test('should display correctly on mobile viewport', async ({ page }) => {
       await page.setViewportSize({ width: 375, height: 667 });
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Verify main content is visible
       const mainContent = page.locator('main, [role="main"], #root > div').first();
@@ -284,7 +283,7 @@ test.describe('Chat Buddy E2E Tests', () => {
     test('should display correctly on tablet viewport', async ({ page }) => {
       await page.setViewportSize({ width: 768, height: 1024 });
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Verify main content is visible
       const mainContent = page.locator('main, [role="main"], #root > div').first();
@@ -309,7 +308,7 @@ test.describe('Chat Buddy E2E Tests', () => {
       });
 
       await page.goto('/');
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
 
       // Filter out known acceptable errors (CORS, network issues in test env, etc.)
       const criticalErrors = errors.filter(e =>
@@ -331,7 +330,7 @@ test.describe('Browser Compatibility', () => {
     const page = await context.newPage();
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify basic functionality
     await expect(page.locator('#root')).toBeVisible();
