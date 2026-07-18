@@ -54,6 +54,7 @@ export class ChatEngine {
 
         // Ephemeral state
         this.typingIndicators = {}; // { chatId: [aiId, ...] }
+        this.editingIndicators = {}; // { chatId: [aiId, ...] }
         this.presenceMap = {};      // { personaId: 'online'|'offline'|'busy' }
         this.moodMap = {};          // { personaId: moodObject }
         this._scheduledMessages = new Map(); // { `${chatId}:${aiId}`: timeoutId }
@@ -66,6 +67,8 @@ export class ChatEngine {
         // Sub-systems
         this.aiPipeline = new AIPipeline({
             onTyping: this._handleAITyping.bind(this),
+            onEditing: this._handleAIEditing.bind(this),
+            onRecall: this._handleAIRecall.bind(this),
             onMessage: this._handleAIMessage.bind(this),
             onSchedule: this._handleAISchedule.bind(this),
             onLog: (msg, data) => console.log(`[ChatEngine] ${msg}`, data),
@@ -314,8 +317,9 @@ export class ChatEngine {
     /**
      * Subscribe to state changes
      */
-    subscribe(callback) {
+    subscribe(callback, { emitCurrent = false } = {}) {
         this.listeners.add(callback);
+        if (emitCurrent) callback(this.getState());
         return () => this.listeners.delete(callback);
     }
 
@@ -361,15 +365,18 @@ export class ChatEngine {
         this._contextProvider = fn;
     }
 
-    _notify() {
-        // Emit a snapshot of the current state
-        const state = {
+    getState() {
+        return {
             chats: this.chats,
             typingIndicators: { ...this.typingIndicators },
+            editingIndicators: { ...this.editingIndicators },
             presenceMap: { ...this.presenceMap },
             moodMap: { ...this.moodMap }
         };
-        this.listeners.forEach(cb => cb(state));
+    }
+
+    _notify() {
+        this.listeners.forEach(cb => cb(this.getState()));
     }
 
     save() {
@@ -530,6 +537,8 @@ export class ChatEngine {
 
         this.chats = nextChats;
         delete this.typingIndicators[chatId];
+        delete this.editingIndicators[chatId];
+        this._cancelSchedulesForChat(chatId);
         this.save();
     }
 
@@ -538,6 +547,7 @@ export class ChatEngine {
         if (chatIndex === -1) return;
 
         const chat = this.chats[chatIndex];
+        this._cancelSchedulesForChat(chatId);
         this.chats[chatIndex] = {
             ...chat,
             messages: [],
@@ -749,6 +759,33 @@ export class ChatEngine {
         this._notify(); // Ephemeral update, no save
     }
 
+    _handleAIEditing(chatId, aiId, isEditing) {
+        const current = this.editingIndicators[chatId] || [];
+        if (isEditing) {
+            if (!current.includes(aiId)) this.editingIndicators[chatId] = [...current, aiId];
+        } else {
+            this.editingIndicators[chatId] = current.filter(id => id !== aiId);
+            if (this.editingIndicators[chatId].length === 0) delete this.editingIndicators[chatId];
+        }
+        this._notify();
+    }
+
+    _handleAIRecall(chatId, aiId) {
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        if (chatIndex === -1) return;
+        const chat = this.chats[chatIndex];
+        const messageIndex = [...chat.messages]
+            .map((message, index) => ({ message, index }))
+            .reverse()
+            .find(({ message }) => message.senderId === aiId && !message.recalled)?.index;
+        if (messageIndex === undefined) return;
+
+        const messages = [...chat.messages];
+        messages[messageIndex] = { ...messages[messageIndex], recalled: true };
+        this.chats[chatIndex] = { ...chat, messages };
+        this.save();
+    }
+
     _handleAIMessage(chatId, content, aiId) {
         // AI sends message -> Reuse internal logic
         this.sendMessage(chatId, content, aiId);
@@ -805,6 +842,15 @@ export class ChatEngine {
         updatedMessages[msgIndex] = updatedMsg;
         this.chats[chatIndex] = { ...chat, messages: updatedMessages };
         this.save();
+    }
+
+    _cancelSchedulesForChat(chatId) {
+        for (const [key, timeoutId] of this._scheduledMessages.entries()) {
+            if (key.startsWith(`${chatId}:`)) {
+                clearTimeout(timeoutId);
+                this._scheduledMessages.delete(key);
+            }
+        }
     }
 
     _handleAISchedule(chatId, ai, minutes) {
