@@ -128,7 +128,7 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
 
     return (
         <>
-            <div className="bg-[var(--color-bg-white)] border-b border-[var(--color-border-light)] px-4 py-4">
+            <div data-moment-card className="bg-[var(--color-bg-white)] border-b border-[var(--color-border-light)] px-4 py-4">
             {/* Header */}
             <div className="flex items-start gap-3">
                 {/* Avatar */}
@@ -263,6 +263,7 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
 
                             {/* Like */}
                             <button
+                                aria-label={hasLiked ? (t('unlike') || 'Unlike') : (t('like') || 'Like')}
                                 onClick={() => toggleLike(post.id)}
                                 className={cn(
                                     "flex items-center gap-1 transition-colors",
