@@ -24,7 +24,7 @@ test.describe('Chat Buddy smoke tests', () => {
 
     for (const route of routes) {
       await expectAppReady(page, '/');
-      await page.locator(`nav[aria-label="Primary"] a[href="${route}"]`).click();
+      await page.locator(`aside[aria-label="Sidebar"] a[href="${route}"]`).click();
       await expect(page).toHaveURL(new RegExp(`${route}$`));
       await expect(page.locator('main').first()).toBeVisible();
     }
