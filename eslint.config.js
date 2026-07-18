@@ -5,8 +5,15 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', 'e2e', '*.cjs', '*.test.js', 'playwright.config.js']),
-  // T13: Sandbox worker uses Web Worker globals (importScripts, self)
+  globalIgnores([
+    'dist',
+    'coverage',
+    'e2e',
+    'playwright-report',
+    'test-results',
+    '*.cjs',
+    'playwright.config.js',
+  ]),
   {
     files: ['public/sandbox.worker.js'],
     languageOptions: {
@@ -30,14 +37,20 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+      'no-unused-vars': ['error', {
+        varsIgnorePattern: '^[A-Z_]',
+        argsIgnorePattern: '^_',
+        caughtErrorsIgnorePattern: '^_',
+      }],
       'react-hooks/set-state-in-effect': 'warn',
     },
   },
   {
-    files: ['**/*.spec.{js,jsx}'],
+    files: ['**/*.{test,spec}.{js,jsx}', 'src/test/**/*.js'],
     languageOptions: {
       globals: {
+        ...globals.browser,
+        ...globals.node,
         describe: 'readonly',
         it: 'readonly',
         test: 'readonly',
@@ -47,8 +60,19 @@ export default defineConfig([
         beforeEach: 'readonly',
         afterEach: 'readonly',
         vi: 'readonly',
-        global: 'readonly',
       },
+    },
+  },
+  {
+    files: ['vite.config.js', 'vitest.config.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ['src/hooks/**/*.{js,jsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   },
 ])
