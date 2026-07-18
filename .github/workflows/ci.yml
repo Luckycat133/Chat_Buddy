@@ -67,10 +67,6 @@ jobs:
 
       - name: Build production bundle
         run: npm run build
-        env:
-          VITE_AI_API_URL: ${{ secrets.VITE_AI_API_URL }}
-          VITE_AI_API_KEY: ${{ secrets.VITE_AI_API_KEY }}
-          VITE_AI_MODEL: ${{ vars.VITE_AI_MODEL || 'deepseek-chat' }}
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -106,10 +102,6 @@ jobs:
 
       - name: Start preview server
         run: npm run preview &
-        env:
-          VITE_AI_API_URL: ${{ secrets.VITE_AI_API_URL }}
-          VITE_AI_API_KEY: ${{ secrets.VITE_AI_API_KEY }}
-          VITE_AI_MODEL: ${{ vars.VITE_AI_MODEL || 'deepseek-chat' }}
 
       - name: Wait for server
         run: npx wait-on http://localhost:4173 --timeout 60000
