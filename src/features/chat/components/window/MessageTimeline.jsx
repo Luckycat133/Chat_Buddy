@@ -596,11 +596,9 @@ export default function MessageTimeline({
     const [lightboxImage, setLightboxImage] = useState(null);
     const [highlightedMessageId, setHighlightedMessageId] = useState(null);
     
-    const mentionParticipants = useMemo(() => (
-        chat?.participants?.map((pid) => (
-            pid === 'user-me' ? currentUser : personas?.find((p) => p.id === pid)
-        )).filter(Boolean) || []
-    ), [chat?.participants, currentUser, personas]);
+    const mentionParticipants = chat?.participants?.map((pid) => (
+        pid === 'user-me' ? currentUser : personas?.find((persona) => persona.id === pid)
+    )).filter(Boolean) || [];
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
