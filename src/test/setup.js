@@ -37,6 +37,7 @@ globalThis.localStorage = localStorageMock;
 // JSDOM does not implement layout/scroll APIs used by the message timeline.
 Object.defineProperty(globalThis.HTMLElement.prototype, 'scrollIntoView', {
   configurable: true,
+  writable: true,
   value: vi.fn()
 });
 
