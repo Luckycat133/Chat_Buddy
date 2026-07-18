@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MomentsProvider, useMoments } from '../features/moments/context/MomentsContext';
 import { LanguageProvider } from '../context/LanguageContext';
@@ -62,7 +62,8 @@ describe('User Simulation: Moments Posting and Liking', () => {
     }, { timeout: 5000 });
 
     // 5. Simulate a "Like" interaction on the new post
-    const likeButton = screen.getByRole('button', { name: /点赞|Like/i });
+    const newPost = screen.getByText('Simulation: Real-user operation test!').closest('[data-moment-card]');
+    const likeButton = within(newPost).getByRole('button', { name: /点赞|Like/i });
     fireEvent.click(likeButton);
 
     // 6. Verify the like state is reflected
