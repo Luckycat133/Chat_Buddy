@@ -19,6 +19,15 @@ const COLOR_MAP = {
 
 let _id = 0;
 
+function createToastApi(addToast) {
+    const toast = (message, opts = {}) => addToast({ type: 'info', message, ...opts });
+    toast.success = (message, opts = {}) => addToast({ type: 'success', message, ...opts });
+    toast.error = (message, opts = {}) => addToast({ type: 'error', message, ...opts });
+    toast.warning = (message, opts = {}) => addToast({ type: 'warning', message, ...opts });
+    toast.info = (message, opts = {}) => addToast({ type: 'info', message, ...opts });
+    return toast;
+}
+
 export function ToastProvider({ children, maxToasts = 5, defaultDuration = 4000 }) {
     const [toasts, setToasts] = useState([]);
     const timersRef = useRef(new Map());
@@ -49,15 +58,7 @@ export function ToastProvider({ children, maxToasts = 5, defaultDuration = 4000 
         return id;
     }, [defaultDuration, maxToasts, removeToast]);
 
-    const toast = useMemo(() => Object.assign(
-        (message, opts = {}) => addToast({ type: 'info', message, ...opts }),
-        {
-            success: (message, opts = {}) => addToast({ type: 'success', message, ...opts }),
-            error: (message, opts = {}) => addToast({ type: 'error', message, ...opts }),
-            warning: (message, opts = {}) => addToast({ type: 'warning', message, ...opts }),
-            info: (message, opts = {}) => addToast({ type: 'info', message, ...opts }),
-        }
-    ), [addToast]);
+    const toast = useMemo(() => createToastApi(addToast), [addToast]);
 
     return (
         <ToastContext.Provider value={toast}>
