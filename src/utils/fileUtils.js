@@ -119,13 +119,13 @@ export function validateFile(file) {
     }
 
     // Check MIME type is allowed
-    const mimeType = file.type || 'application/octet-stream';
-    if (!ALLOWED_MIME_SET.has(mimeType)) {
+    const mimeType = typeof file.type === 'string' ? file.type.trim() : '';
+    if (mimeType && !ALLOWED_MIME_SET.has(mimeType)) {
         errors.push('unsupported_mime_type');
     }
 
-    // Check extension matches MIME type
-    const validExtensions = ALLOWED_MIME_TYPES[mimeType];
+    // Check extension matches MIME type when the browser supplied a MIME value.
+    const validExtensions = mimeType ? ALLOWED_MIME_TYPES[mimeType] : null;
     if (validExtensions && ext && !validExtensions.includes(ext)) {
         errors.push('extension_mime_mismatch');
     }

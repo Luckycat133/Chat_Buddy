@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { X, CheckCircle, AlertTriangle, Info, XCircle } from 'lucide-react';
 
 const ToastContext = createContext(null);
@@ -19,17 +19,26 @@ const COLOR_MAP = {
 
 let _id = 0;
 
+function createToastApi(addToast) {
+    const toast = (message, opts = {}) => addToast({ type: 'info', message, ...opts });
+    toast.success = (message, opts = {}) => addToast({ type: 'success', message, ...opts });
+    toast.error = (message, opts = {}) => addToast({ type: 'error', message, ...opts });
+    toast.warning = (message, opts = {}) => addToast({ type: 'warning', message, ...opts });
+    toast.info = (message, opts = {}) => addToast({ type: 'info', message, ...opts });
+    return toast;
+}
+
 export function ToastProvider({ children, maxToasts = 5, defaultDuration = 4000 }) {
     const [toasts, setToasts] = useState([]);
-    const timersRef = useRef(new Map());
+    const [timers] = useState(() => new Map());
 
     const removeToast = useCallback((id) => {
-        if (timersRef.current.has(id)) {
-            clearTimeout(timersRef.current.get(id));
-            timersRef.current.delete(id);
+        if (timers.has(id)) {
+            clearTimeout(timers.get(id));
+            timers.delete(id);
         }
         setToasts(prev => prev.filter(t => t.id !== id));
-    }, []);
+    }, [timers]);
 
     const addToast = useCallback((toast) => {
         const id = ++_id;
@@ -43,17 +52,13 @@ export function ToastProvider({ children, maxToasts = 5, defaultDuration = 4000 
 
         if (duration > 0) {
             const timer = setTimeout(() => removeToast(id), duration);
-            timersRef.current.set(id, timer);
+            timers.set(id, timer);
         }
 
         return id;
-    }, [defaultDuration, maxToasts, removeToast]);
+    }, [defaultDuration, maxToasts, removeToast, timers]);
 
-    const toast = useCallback((message, opts = {}) => addToast({ type: 'info', message, ...opts }), [addToast]);
-    toast.success = (message, opts = {}) => addToast({ type: 'success', message, ...opts });
-    toast.error = (message, opts = {}) => addToast({ type: 'error', message, ...opts });
-    toast.warning = (message, opts = {}) => addToast({ type: 'warning', message, ...opts });
-    toast.info = (message, opts = {}) => addToast({ type: 'info', message, ...opts });
+    const toast = useMemo(() => createToastApi(addToast), [addToast]);
 
     return (
         <ToastContext.Provider value={toast}>

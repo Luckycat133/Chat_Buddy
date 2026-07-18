@@ -1,8 +1,21 @@
-# Chat Buddy Remake
+# Chat Buddy Web
+
+> **Status: Maintenance Mode**
+>
+> This web version receives critical fixes and migration work only. New product
+> development is moving to [Chat_Buddy_iOS](https://github.com/Luckycat133/Chat_Buddy_iOS).
+> Before moving devices or testing the iOS importer, export a JSON backup from
+> Settings. See [WEB_TO_IOS_MIGRATION.md](WEB_TO_IOS_MIGRATION.md).
+>
+> **API-key warning:** this is a browser application. Any `VITE_*_API_KEY`
+> supplied at build time is embedded in the public JavaScript bundle. Public
+> deployments must use a server-side proxy or require each user to enter their own
+> key at runtime.
+
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)
+![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19+-61DAFB.svg)
 ![Tests](https://img.shields.io/badge/tests-143%20passing-success.svg)
@@ -227,7 +240,7 @@ We welcome contributions! Please follow these guidelines:
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-**Current Version**: v0.3.1 (2026-01-18)
+**Current Web Version**: v0.3.3
 
 ### Recent Updates
 - 🖼️ **Immersive Background System**: 20+ AI-generated backgrounds for each persona

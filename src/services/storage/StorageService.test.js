@@ -1,6 +1,4 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { storage as defaultStorage } from './StorageService';
-
 // 为测试创建StorageService类的访问
 class StorageService {
   constructor(storageBackend = window.localStorage) {
@@ -19,7 +17,7 @@ class StorageService {
       }
 
       return item ? JSON.parse(item) : defaultValue;
-    } catch (error) {
+    } catch (_error) {
       return defaultValue;
     }
   }
