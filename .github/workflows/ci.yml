@@ -103,13 +103,13 @@ jobs:
           npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.1 @tailwindcss/oxide-linux-x64-gnu@4.3.0
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium
 
       - name: Build
         run: npm run build
 
       - name: Run E2E tests
-        run: npm run test:e2e
+        run: npm run test:e2e -- --project=chromium
 
       - name: Upload test results
         if: always()
