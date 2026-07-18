@@ -103,16 +103,10 @@ jobs:
           npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.1 @tailwindcss/oxide-linux-x64-gnu@4.3.0
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps
 
       - name: Build
         run: npm run build
-
-      - name: Start preview server
-        run: npm run preview &
-
-      - name: Wait for server
-        run: npx wait-on http://localhost:4173 --timeout 60000
 
       - name: Run E2E tests
         run: npm run test:e2e
