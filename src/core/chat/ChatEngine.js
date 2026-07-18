@@ -1,5 +1,6 @@
 import { storage } from '../../services/storage/StorageService';
 import { AIPipeline } from './AIPipeline';
+import chatStorage from '../../services/storage/ChatStorageService';
 import { cleanMessageContent, callAI } from '../../features/chat/services/chatService';
 import { extractGroupMemoriesAsync } from '../memory/ContextCompressor'; // T12 Opt-3
 import { getPresenceMap } from '../presence/PresenceService';
@@ -85,6 +86,7 @@ export class ChatEngine {
         this.destroy();
         this.personas = personas;
         this.chats = this._loadChatsWithMigration();
+        void this._hydrateFromIndexedDB();
         const { chats: dedupedChats, changed } = this._dedupeDirectSocialChats(this.chats);
         if (changed) {
             this.chats = dedupedChats;
@@ -96,6 +98,19 @@ export class ChatEngine {
         this._startPresenceUpdates(personas);
         this._startGreetingChecker();
 
+        this._notify();
+    }
+
+    async _hydrateFromIndexedDB() {
+        await chatStorage.migrateFromLocalStorage(this.storageKeyCandidates);
+        const hydrated = await chatStorage.loadChats();
+        if (!Array.isArray(hydrated)) return;
+
+        const normalized = hydrated.map(chat => this._normalizeChat(chat)).filter(Boolean);
+        if (JSON.stringify(normalized) === JSON.stringify(this.chats)) return;
+
+        this.chats = this._dedupeDirectSocialChats(normalized).chats;
+        storage.set(this.storageKey, this.chats);
         this._notify();
     }
 
@@ -387,6 +402,7 @@ export class ChatEngine {
         clearTimeout(this._saveTimer);
         this._saveTimer = setTimeout(() => {
             storage.set(this.storageKey, this.chats);
+            void chatStorage.saveChats(this.chats);
         }, 0);
     }
 
@@ -437,7 +453,7 @@ export class ChatEngine {
                     .map(id => this.personas.find(p => p.id === id))
                     .filter(Boolean)
                     .map(p => ({ id: p.id, name: p.name }));
-                extractGroupMemoriesAsync(updatedChat.messages, chatId, aiParticipants).catch(() => { });
+                Promise.resolve(extractGroupMemoriesAsync(updatedChat.messages, chatId, aiParticipants)).catch(() => { });
             }
         }
     }
