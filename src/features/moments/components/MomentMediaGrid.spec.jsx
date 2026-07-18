@@ -21,9 +21,10 @@ describe('MomentMediaGrid', () => {
         const getImage = () => document.querySelector('img');
         expect(getImage()).not.toBeNull();
 
-        for (let i = 0; i < 3; i++) {
-            const img = getImage();
-            if (img) fireEvent.error(img);
+        // The service may add or remove proxy candidates; exhaust the chain
+        // without coupling this behavior test to an exact candidate count.
+        for (let i = 0; i < 10 && getImage(); i++) {
+            fireEvent.error(getImage());
         }
 
         await waitFor(() => {
