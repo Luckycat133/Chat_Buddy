@@ -22,10 +22,10 @@ export default defineConfig({
         'src/**/*.test.{js,jsx}' // 测试文件本身
       ],
       thresholds: {
-        lines: 4,
-        functions: 4,
-        branches: 4,
-        statements: 4
+        lines: 60,
+        functions: 60,
+        branches: 60,
+        statements: 60
       }
     }
   },
