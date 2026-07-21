@@ -585,7 +585,8 @@ describe("AIPipeline", () => {
 
     // Then
     expect(prompt).toContain("You are Edge");
-    expect(prompt).toContain("RULES: concise");
+    expect(prompt).toContain("BEHAVIOR RULES:");
+    expect(prompt).toContain("Be concise.");
     expect(prompt.includes("RELATIONSHIP:")).toBe(false);
     expect(prompt.includes("CURRENT MOOD:")).toBe(false);
   });

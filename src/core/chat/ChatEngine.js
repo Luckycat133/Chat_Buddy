@@ -1,5 +1,6 @@
 import { storage } from '../../services/storage/StorageService';
 import { AIPipeline } from './AIPipeline';
+import chatStorage from '../../services/storage/ChatStorageService';
 import { cleanMessageContent, callAI } from '../../features/chat/services/chatService';
 import { extractGroupMemoriesAsync } from '../memory/ContextCompressor'; // T12 Opt-3
 import { getPresenceMap } from '../presence/PresenceService';
@@ -54,6 +55,7 @@ export class ChatEngine {
 
         // Ephemeral state
         this.typingIndicators = {}; // { chatId: [aiId, ...] }
+        this.editingIndicators = {}; // { chatId: [aiId, ...] }
         this.presenceMap = {};      // { personaId: 'online'|'offline'|'busy' }
         this.moodMap = {};          // { personaId: moodObject }
         this._scheduledMessages = new Map(); // { `${chatId}:${aiId}`: timeoutId }
@@ -66,6 +68,8 @@ export class ChatEngine {
         // Sub-systems
         this.aiPipeline = new AIPipeline({
             onTyping: this._handleAITyping.bind(this),
+            onEditing: this._handleAIEditing.bind(this),
+            onRecall: this._handleAIRecall.bind(this),
             onMessage: this._handleAIMessage.bind(this),
             onSchedule: this._handleAISchedule.bind(this),
             onLog: (msg, data) => console.log(`[ChatEngine] ${msg}`, data),
@@ -82,6 +86,7 @@ export class ChatEngine {
         this.destroy();
         this.personas = personas;
         this.chats = this._loadChatsWithMigration();
+        void this._hydrateFromIndexedDB();
         const { chats: dedupedChats, changed } = this._dedupeDirectSocialChats(this.chats);
         if (changed) {
             this.chats = dedupedChats;
@@ -93,6 +98,19 @@ export class ChatEngine {
         this._startPresenceUpdates(personas);
         this._startGreetingChecker();
 
+        this._notify();
+    }
+
+    async _hydrateFromIndexedDB() {
+        await chatStorage.migrateFromLocalStorage(this.storageKeyCandidates);
+        const hydrated = await chatStorage.loadChats();
+        if (!Array.isArray(hydrated)) return;
+
+        const normalized = hydrated.map(chat => this._normalizeChat(chat)).filter(Boolean);
+        if (JSON.stringify(normalized) === JSON.stringify(this.chats)) return;
+
+        this.chats = this._dedupeDirectSocialChats(normalized).chats;
+        storage.set(this.storageKey, this.chats);
         this._notify();
     }
 
@@ -314,8 +332,9 @@ export class ChatEngine {
     /**
      * Subscribe to state changes
      */
-    subscribe(callback) {
+    subscribe(callback, { emitCurrent = false } = {}) {
         this.listeners.add(callback);
+        if (emitCurrent) callback(this.getState());
         return () => this.listeners.delete(callback);
     }
 
@@ -361,15 +380,18 @@ export class ChatEngine {
         this._contextProvider = fn;
     }
 
-    _notify() {
-        // Emit a snapshot of the current state
-        const state = {
+    getState() {
+        return {
             chats: this.chats,
             typingIndicators: { ...this.typingIndicators },
+            editingIndicators: { ...this.editingIndicators },
             presenceMap: { ...this.presenceMap },
             moodMap: { ...this.moodMap }
         };
-        this.listeners.forEach(cb => cb(state));
+    }
+
+    _notify() {
+        this.listeners.forEach(cb => cb(this.getState()));
     }
 
     save() {
@@ -380,6 +402,7 @@ export class ChatEngine {
         clearTimeout(this._saveTimer);
         this._saveTimer = setTimeout(() => {
             storage.set(this.storageKey, this.chats);
+            void chatStorage.saveChats(this.chats);
         }, 0);
     }
 
@@ -430,7 +453,7 @@ export class ChatEngine {
                     .map(id => this.personas.find(p => p.id === id))
                     .filter(Boolean)
                     .map(p => ({ id: p.id, name: p.name }));
-                extractGroupMemoriesAsync(updatedChat.messages, chatId, aiParticipants).catch(() => { });
+                Promise.resolve(extractGroupMemoriesAsync(updatedChat.messages, chatId, aiParticipants)).catch(() => { });
             }
         }
     }
@@ -530,6 +553,8 @@ export class ChatEngine {
 
         this.chats = nextChats;
         delete this.typingIndicators[chatId];
+        delete this.editingIndicators[chatId];
+        this._cancelSchedulesForChat(chatId);
         this.save();
     }
 
@@ -538,6 +563,7 @@ export class ChatEngine {
         if (chatIndex === -1) return;
 
         const chat = this.chats[chatIndex];
+        this._cancelSchedulesForChat(chatId);
         this.chats[chatIndex] = {
             ...chat,
             messages: [],
@@ -749,6 +775,33 @@ export class ChatEngine {
         this._notify(); // Ephemeral update, no save
     }
 
+    _handleAIEditing(chatId, aiId, isEditing) {
+        const current = this.editingIndicators[chatId] || [];
+        if (isEditing) {
+            if (!current.includes(aiId)) this.editingIndicators[chatId] = [...current, aiId];
+        } else {
+            this.editingIndicators[chatId] = current.filter(id => id !== aiId);
+            if (this.editingIndicators[chatId].length === 0) delete this.editingIndicators[chatId];
+        }
+        this._notify();
+    }
+
+    _handleAIRecall(chatId, aiId) {
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        if (chatIndex === -1) return;
+        const chat = this.chats[chatIndex];
+        const messageIndex = [...chat.messages]
+            .map((message, index) => ({ message, index }))
+            .reverse()
+            .find(({ message }) => message.senderId === aiId && !message.recalled)?.index;
+        if (messageIndex === undefined) return;
+
+        const messages = [...chat.messages];
+        messages[messageIndex] = { ...messages[messageIndex], recalled: true };
+        this.chats[chatIndex] = { ...chat, messages };
+        this.save();
+    }
+
     _handleAIMessage(chatId, content, aiId) {
         // AI sends message -> Reuse internal logic
         this.sendMessage(chatId, content, aiId);
@@ -805,6 +858,15 @@ export class ChatEngine {
         updatedMessages[msgIndex] = updatedMsg;
         this.chats[chatIndex] = { ...chat, messages: updatedMessages };
         this.save();
+    }
+
+    _cancelSchedulesForChat(chatId) {
+        for (const [key, timeoutId] of this._scheduledMessages.entries()) {
+            if (key.startsWith(`${chatId}:`)) {
+                clearTimeout(timeoutId);
+                this._scheduledMessages.delete(key);
+            }
+        }
     }
 
     _handleAISchedule(chatId, ai, minutes) {

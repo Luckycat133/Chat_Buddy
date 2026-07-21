@@ -3,7 +3,6 @@ import {
   sanitizeInput,
   validateEmail,
   validateUsername,
-  sanitizeHtmlLight,
   isValidUrl,
   sanitizeQueryParam,
   rateLimitTracker,

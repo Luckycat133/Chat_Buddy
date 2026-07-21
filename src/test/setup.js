@@ -1,14 +1,18 @@
-import { expect, afterEach, vi } from 'vitest';
+import { expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
+import { server } from './msw/server';
 
 // 扩展expect匹配器
 expect.extend(matchers);
 
-// 每个测试后清理
+// Keep all network behavior deterministic and reset per-test handlers.
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  server.resetHandlers();
   cleanup();
 });
+afterAll(() => server.close());
 
 // Mock localStorage
 const localStorageMock = (() => {
@@ -28,7 +32,14 @@ const localStorageMock = (() => {
   };
 })();
 
-global.localStorage = localStorageMock;
+globalThis.localStorage = localStorageMock;
+
+// JSDOM does not implement layout/scroll APIs used by the message timeline.
+Object.defineProperty(globalThis.HTMLElement.prototype, 'scrollIntoView', {
+  configurable: true,
+  writable: true,
+  value: vi.fn()
+});
 
 // Mock环境变量
 vi.stubEnv('VITE_AI_API_URL', 'https://api.test.com');

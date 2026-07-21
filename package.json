@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
     "preview": "vite preview",
     "stress": "node scripts/stress-ui.mjs",
     "prompt:bench": "node scripts/prompt-regression-benchmark.mjs"

@@ -463,6 +463,17 @@ Please send a revised/improved version. Be natural and conversational.`;
     _generateSystemPrompt(ai, context = null, memoryBlock = '', groupBlock = '') {
         const base = `You are ${ai.name}.\nPersonality: ${ai.personality}\nStyle: ${ai.style}`;
         const personaRules = ai.systemPrompt ? `\nCORE INSTRUCTIONS:\n${ai.systemPrompt}\n` : '';
+        const relationshipByLevel = {
+            1: 'acquaintance',
+            2: 'friend',
+            3: 'good friend',
+            4: 'close friend',
+            5: 'soulmate'
+        };
+        const relationship = relationshipByLevel[context?.intimacyLevel];
+        const relationshipHint = relationship ? `\nRELATIONSHIP: ${relationship}` : '';
+        const mood = context?.mood?.promptHint;
+        const moodHint = mood ? `\nCURRENT MOOD: ${mood}` : '';
         const preferredLanguage = context?.preferredLanguage === 'en' ? 'English' : 'Simplified Chinese';
         const latestUserLanguage = context?.latestUserLanguage;
         const strictTurnLanguage = latestUserLanguage === 'en'
@@ -498,7 +509,7 @@ BEHAVIOR RULES:
 1. Stay fully in character at all times. Never break character or acknowledge being an AI unless directly asked.
 2. Be concise. Prefer 1-3 sentences for casual messages; expand only when the topic warrants depth.
 3. Reply only when relevant. In group chats, use [SILENCE] if the message isn't directed at you.`;
-        return `${base}${personaRules}\n${languageHint}${controlTags}${memoryBlock}${groupBlock}${skillsHint}${behaviorRules}`;
+        return `${base}${personaRules}${relationshipHint}${moodHint}\n${languageHint}${controlTags}${memoryBlock}${groupBlock}${skillsHint}${behaviorRules}`;
     }
 
     _getSpecialistTools(ai) {

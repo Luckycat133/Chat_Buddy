@@ -380,19 +380,19 @@ describe('MessageTimeline', () => {
       polls: [],
       messages: [{ id: 'm1', senderId: 'user-me', content: 'focus me', timestamp: '2026-02-23T00:00:00.000Z' }],
     };
-    const originalScrollIntoView = Element.prototype.scrollIntoView;
-    Element.prototype.scrollIntoView = vi.fn();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = vi.fn();
     const onFocusHandled = vi.fn();
 
     // When
     renderTimeline(chat, { focusMessageId: 'm1', onFocusHandled });
 
     // Then
-    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+    expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
     expect(onFocusHandled).toHaveBeenCalledWith('m1');
 
     // Cleanup
-    Element.prototype.scrollIntoView = originalScrollIntoView;
+    HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
   });
 
   it('test_when_message_types_include_poll_game_and_sticker_should_render_specialized_views', () => {

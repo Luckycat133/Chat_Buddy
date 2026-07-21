@@ -160,8 +160,8 @@ LanguageProvider
 
 ## 7. 报告
 
-完整审查报告：`/Users/lobster/.openclaw/workspace-coder/reviews/2026-06-10-Chat_Buddy.md`
+历史审查报告曾保存在本地工作区；仓库不再引用不可移植的绝对路径。
 
 ---
 
-*最后更新: 2026-06-10 · Finn (MiniMax-M3)*
+*最后更新: 2026-07-18*
