@@ -298,7 +298,7 @@ export async function tryProactiveImageGen(chatId, messages, aiResponse, persona
   console.log(`[ProactiveImage] 触发! 分数=${analysis.score}, 风格=${styleKey}, reason=${analysis.reason}`);
 
   const startTime = Date.now();
-  let result = null;
+  let result;
 
   try {
     // 使用通用图片生成接口（复用 minimaxService）

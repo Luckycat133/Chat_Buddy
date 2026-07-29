@@ -99,7 +99,7 @@ async function minimaxPost(endpoint, body, timeoutMs = 30000) {
 
         return await res.json();
     } catch (e) {
-        if (e.name === 'AbortError') throw new Error('[MiniMaxService] 请求超时');
+        if (e.name === 'AbortError') throw new Error('[MiniMaxService] 请求超时', { cause: e });
         throw e;
     } finally {
         clearTimeout(tid);

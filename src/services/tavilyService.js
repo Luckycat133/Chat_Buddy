@@ -145,7 +145,7 @@ async function tavilyPost(body, retriesLeft = 2) {
 
     } catch (err) {
         if (err.name === 'AbortError') {
-            throw new Error('[TavilyService] Request timed out after 15 s');
+            throw new Error('[TavilyService] Request timed out after 15 s', { cause: err });
         }
         if (retriesLeft > 0 && err.name !== 'AbortError') {
             console.warn(`[TavilyService] Network error (${err.message}), retrying…`);

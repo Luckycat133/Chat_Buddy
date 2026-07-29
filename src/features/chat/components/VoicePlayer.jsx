@@ -18,6 +18,14 @@ export default function VoicePlayer({ duration, url, waveform, isMe }) {
         ? parseInt(duration.replace(/[^0-9]/g, '')) || 0
         : duration || 0;
 
+    const generateMockWaveform = (duration) => {
+        // Generate random waveform bars based on duration
+        const bars = Math.min(Math.max(duration, 8), 20);
+        return Array.from({ length: bars }, () =>
+            Math.floor(Math.random() * 60) + 20
+        );
+    };
+
     // Generate mock waveform if not provided (16 bars)
     const waveformData = waveform?.length > 0
         ? waveform
@@ -36,14 +44,6 @@ export default function VoicePlayer({ duration, url, waveform, isMe }) {
             }
         };
     }, []);
-
-    const generateMockWaveform = (duration) => {
-        // Generate random waveform bars based on duration
-        const bars = Math.min(Math.max(duration, 8), 20);
-        return Array.from({ length: bars }, () =>
-            Math.floor(Math.random() * 60) + 20
-        );
-    };
 
     const togglePlay = () => {
         if (isPlaying) {

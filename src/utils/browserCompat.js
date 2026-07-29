@@ -3,7 +3,7 @@ const checks = {};
 export function supports(feature) {
     if (feature in checks) return checks[feature];
 
-    let result = false;
+    let result;
     switch (feature) {
         case 'indexedDB':
             result = typeof indexedDB !== 'undefined';

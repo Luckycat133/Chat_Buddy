@@ -49,6 +49,7 @@
     "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.3",
+    "esbuild": "^0.27.0",
     "globals": "^17.8.0",
     "jsdom": "^30.0.0",
     "msw": "^2.15.0",
