@@ -44,7 +44,7 @@ async function ensurePyodide() {
         return true;
     } catch (e) {
         pyodideLoading = false;
-        throw new Error('Failed to load Python environment: ' + e.message);
+        throw new Error('Failed to load Python environment: ' + e.message, { cause: e });
     }
 }
 
