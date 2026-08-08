@@ -156,8 +156,8 @@ async function parseSSEStream(response, onDelta, options = {}) {
         clearTimeout(timeoutId);
     }
 
-    const tail = decoder.decode();
-    if (tail) buffer += tail;
+    // Flush remaining bytes from decoder (buffer not needed after stream ends)
+    decoder.decode();
 
     if (!fullText && nativeToolCalls) return nativeToolCalls;
     return fullText.trim() || null;
