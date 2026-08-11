@@ -2,9 +2,11 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19-61DAFB.svg)
+![Tests](https://img.shields.io/badge/tests-372%20passing-success.svg)
+![Coverage](https://img.shields.io/badge/coverage-21.48%25-red.svg)
 
 **AI 聊天伴侣**
 
@@ -13,6 +15,18 @@
 [English](README.md) | [中文](README.zh-CN.md)
 
 </div>
+
+---
+
+> **维护状态**：Web 版本目前只接收关键修复与迁移工作，新产品开发已转向
+> [Chat_Buddy_iOS](https://github.com/Luckycat133/Chat_Buddy_iOS)。迁移设备或测试 iOS 导入前，
+> 请先在设置页导出 JSON 备份。
+>
+> **API 密钥提示**：浏览器构建中的 `VITE_*_API_KEY` 会进入公开 JavaScript；公开部署应使用
+> 服务端代理，或要求用户在运行时输入自己的密钥。
+>
+> **最新审查**：当前安全、数据完整性、CI 与 UI/UX 问题见
+> [2026-08-11 综合审查报告](docs/CODE_REVIEW_REPORT_2026-08-11.md)。
 
 ---
 
@@ -101,19 +115,13 @@
 
 ---
 
-## 演示
-
-![聊天界面](docs/images/chat-demo.png)
-
----
-
 ## 快速开始
 
 ### 前置要求
 
 | 要求             | 版本                 |
 | ---------------- | -------------------- |
-| Node.js          | v16+                 |
+| Node.js          | `^22.22.2`、`^24.15.0` 或 `>=26` |
 | npm              | v7+                  |
 | DeepSeek API Key | 可选，用于AI智能回复 |
 
@@ -277,11 +285,11 @@ graph LR
 
 查看 [CHANGELOG.zh-CN.md](CHANGELOG.zh-CN.md) 了解版本历史。
 
-**当前版本**: v0.4.0 (2026-04-06)
+**当前包版本**：v0.3.3（以 `package.json` 为准）。`CHANGELOG` 中的 v0.4.x 条目尚未同步到包版本与 Git tag。
 
 ### 最近更新
 
-- 🎨 **马卡龙现代版** (v0.4.0): UI/UX 全面现代化；Bento 控制面板 v2；稳定的 HSL 颜色系统；现代化图标。
+- 🎨 **马卡龙现代版**（CHANGELOG v0.4.0 条目）：UI/UX 全面现代化；Bento 控制面板 v2；稳定的 HSL 颜色系统；现代化图标。
 - 🤖 **专业智能体** (v0.3.3): 6 个专门的任务智能体 (代码、缪斯、学者、老师、极光、像素)；ReAct 工具调用；沙箱执行。
 - 🧠 **认知记忆** (v0.3.0): 长期角色记忆；IndexedDB 存储；记忆交换工具；上下文感知的 AI。
 - 📚 **RAG 系统** (v0.3.2): 知识库集成；混合搜索 (BM25 + Jaccard)；客户端文档索引。

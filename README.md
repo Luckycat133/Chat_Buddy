@@ -11,6 +11,9 @@
 > supplied at build time is embedded in the public JavaScript bundle. Public
 > deployments must use a server-side proxy or require each user to enter their own
 > key at runtime.
+>
+> **Latest review:** the current security, data-integrity, CI, and UI/UX findings
+> are tracked in the [2026-08-11 comprehensive review](docs/CODE_REVIEW_REPORT_2026-08-11.md).
 
 
 <div align="center">
@@ -18,8 +21,8 @@
 ![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19+-61DAFB.svg)
-![Tests](https://img.shields.io/badge/tests-143%20passing-success.svg)
-![Coverage](https://img.shields.io/badge/coverage-4.75%25-yellow.svg)
+![Tests](https://img.shields.io/badge/tests-372%20passing-success.svg)
+![Coverage](https://img.shields.io/badge/coverage-21.48%25-red.svg)
 
 **AI Chat Companion**
 
@@ -94,19 +97,13 @@ Meet your favorite anime characters:
 
 ---
 
-## Demo
-
-![Chat Interface](docs/images/chat-demo.png)
-
----
-
 ## Getting Started
 
 ### Prerequisites
 
 | Requirement | Version |
 |-------------|---------|
-| Node.js | v16+ |
+| Node.js | `^22.22.2`, `^24.15.0`, or `>=26` |
 | npm | v7+ |
 | DeepSeek API Key | Optional, for AI responses |
 
@@ -176,7 +173,7 @@ npm run dev
 - Styling: TailwindCSS
 - State: Clean Architecture (ChatEngine + Context)
 - AI: DeepSeek / Perplexity API
-- Storage: LocalStorage
+- Storage: LocalStorage (settings) + IndexedDB (chats, documents, and media)
 
 ### Project Structure
 

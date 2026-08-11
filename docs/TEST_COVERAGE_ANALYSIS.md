@@ -1,27 +1,27 @@
 # Test Coverage Analysis & Improvement Plan
 
-> **Date**: 2026-03-30
+> **Date**: 2026-08-11
 > **Project**: Chat Buddy v0.3.3
-> **Automated Test Files**: 5
-> **Current Coverage Scope**: 4 production files are included in coverage thresholds
+> **Automated Test Files**: 19
+> **Current Coverage Scope**: repository-wide `src/**/*.{js,jsx}` with explicit exclusions
 > **Latest Verified Coverage Run**: `npm run test:coverage`
 
 ---
 
 ## 1. Executive Summary
 
-Chat Buddy now has a working Vitest-based automated test suite with **5 spec files and 112 passing tests**. The suite still focuses on the highest-risk chat flow files rather than the full repository, but the gated surface now has stable automated coverage and a passing coverage command.
+Chat Buddy has a working Vitest-based automated test suite with **19 test files and 372 passing tests**. Coverage now scans the repository-wide source tree rather than four hand-picked production files. The tests pass under `TZ=UTC`, but the coverage command correctly exits non-zero because the repository-wide totals remain below the configured thresholds.
 
 Latest verified `npm run test:coverage` result:
 
-- Statements: `97.40%`
-- Branches: `85.73%`
-- Functions: `93.13%`
-- Lines: `97.40%`
+- Statements: `20.65%`
+- Branches: `18.00%`
+- Functions: `16.09%`
+- Lines: `21.48%`
 
-Coverage thresholds remain strict for statements/functions/lines at `90%`, while the branch threshold is normalized to `85%` to reflect the current defensive-branch density in `ChatEngine`, `AIPipeline`, `chatService`, and `MessageTimeline`.
+Coverage thresholds are `60%` for statements, branches, functions, and lines. The current command therefore fails the quality gate even though all 372 tests pass.
 
-This document records the current testing state, the now-verified passing baseline, and the next coverage priorities if the repository expands the gated surface beyond these four files.
+This document records the current testing state and the next priorities required to restore the repository-wide quality gate.
 
 ---
 
@@ -36,22 +36,24 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
-    setupFiles: ['/src/test/setupTests.js'],
-    include: ['src/**/*.spec.{js,jsx}'],
+    setupFiles: ['./src/test/setup.js'],
+    include: ['src/**/*.{test,spec}.{js,jsx}'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
-      include: [
-        'src/core/chat/ChatEngine.js',
-        'src/core/chat/AIPipeline.js',
-        'src/features/chat/services/chatService.js',
-        'src/features/chat/components/window/MessageTimeline.jsx',
+      reporter: ['text', 'html', 'lcov', 'json'],
+      include: ['src/**/*.{js,jsx}'],
+      exclude: [
+        'src/data/**',
+        'src/test/**',
+        'src/main.jsx',
+        'src/utils/cn.js',
+        'src/**/*.test.{js,jsx}',
       ],
       thresholds: {
-        branches: 85,
-        functions: 90,
-        lines: 90,
-        statements: 90,
+        branches: 60,
+        functions: 60,
+        lines: 60,
+        statements: 60,
       },
     },
   },
@@ -60,13 +62,7 @@ export default defineConfig({
 
 ### 2.2 Current Test Inventory
 
-The current automated test files are:
-
-- `src/core/chat/ChatEngine.spec.js`
-- `src/core/chat/AIPipeline.spec.js`
-- `src/features/chat/services/chatService.spec.js`
-- `src/features/chat/components/window/MessageTimeline.spec.jsx`
-- `src/config/apiConfig.spec.js`
+The current suite contains 19 `*.spec.*` / `*.test.*` files across config, core chat, chat and Moments features, API/storage services, utilities, and user simulation.
 
 ### 2.3 Current `package.json` Scripts
 
@@ -75,14 +71,15 @@ The current automated test files are:
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test"
   }
 }
 ```
 
 ### 2.4 Current Coverage Caveat
 
-The configured thresholds now match the currently audited surface area closely enough for `npm run test:coverage` to act as an enforceable quality gate. Because only 4 production files are included in coverage checks, it remains a focused signal rather than a complete representation of repository-wide test health.
+`npm run test:coverage` is an enforceable repository-wide quality gate and is currently red. High-risk core files have strong local coverage, but most pages, components, Context providers, storage services, and tool integrations remain lightly covered or uncovered.
 
 ---
 
@@ -414,9 +411,9 @@ While lower priority than logic tests, these protect against UI regressions:
 
 This function uses `new Function()` to execute user-provided code. While it uses a mock console, it **does not sandbox** the execution. Tests should verify:
 
-- It cannot access the real `window` or `document`
-- It cannot modify global state
-- It handles infinite loops (timeout behavior)
+- Current behavior explicitly demonstrates access to ambient globals and must not be treated as a security boundary
+- After the execution model is replaced, regression tests prove that network, storage, and application globals are unavailable
+- A runaway script cannot block the application indefinitely
 - It handles syntax errors gracefully
 
 ### 9.2 Input Sanitization in `cleanMessageContent()`
@@ -436,18 +433,17 @@ localStorage has a ~5MB limit. Tests should verify that `set()` handles `QuotaEx
 
 ## 10. Coverage Goals & Milestones
 
-### Phase 1: Foundation (Week 1)
-- Install Vitest + testing libraries
-- Configure test infrastructure
-- Write tests for all **utility functions** (formatTime, fileUtils, ragUtils, fileGeneration, searchUtils)
-- **Target: ~20% of source files covered**
+### Phase 1: Protect Confirmed Regressions
+- Convert the authorization bypass, hydration overwrite, credential cleanup, and stale poll reproduction cases into committed tests
+- Add browser tests for backup import validation and modal keyboard behavior
+- Keep coverage scoped to the repository-wide source tree
+- **Target: prevent recurrence of every P1 finding in the 2026-08-11 review**
 
-### Phase 2: Core Logic (Week 2–3)
-- Test `ChatEngine` state machine
-- Test `AIPipeline` ReAct loop and response parsing
-- Test `StorageService` and `APIClient`
-- Test `chatService` (cleanMessageContent, selectModelByComplexity, compressContext)
-- **Target: ~40% coverage, all critical paths tested**
+### Phase 2: Close Core Gaps
+- Extend existing `ChatEngine` and `AIPipeline` coverage around authorization and persistence races
+- Complete `StorageService`, `APIClient`, and `chatService` error-path tests
+- Cover sessionStorage and IndexedDB cleanup together
+- **Target: 40% repository-wide coverage with all critical data paths tested**
 
 ### Phase 3: Integration (Week 4)
 - Test hooks (`useLocalStorage`)
@@ -460,9 +456,9 @@ localStorage has a ~5MB limit. Tests should verify that `set()` handles `QuotaEx
 - **Target: 70%+ coverage**
 
 ### Phase 5: CI/CD
-- Add GitHub Actions workflow to run tests on PR
+- Keep the existing GitHub Actions workflow running tests on PRs
 - Enforce coverage thresholds (fail build if coverage drops below 60%)
-- Add lint + type checking to pipeline
+- Keep lint and build checks in the pipeline; add type checking only after a typed surface exists
 
 ---
 

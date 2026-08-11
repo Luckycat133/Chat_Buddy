@@ -10,7 +10,7 @@
 
 ### Prerequisites
 
-- Node.js v16+ (v18+ recommended)
+- Node.js `^22.22.2`, `^24.15.0`, or `>=26`
 - npm v7+
 
 ### Setup
@@ -57,6 +57,7 @@ If you configure the provider inside the Settings panel instead of `.env`, the A
 | `npm run test` | Run the Vitest suite once |
 | `npm run test:watch` | Start Vitest in watch mode |
 | `npm run test:coverage` | Run tests with V8 coverage |
+| `npm run test:e2e` | Run the Playwright end-to-end suite |
 | `npm run stress` | Run the UI stress script |
 | `npm run prompt:bench` | Run the prompt regression benchmark |
 
@@ -85,7 +86,7 @@ If you configure the provider inside the Settings panel instead of `.env`, the A
 
 ### 前置要求
 
-- Node.js v16+（推荐 v18+）
+- Node.js `^22.22.2`、`^24.15.0` 或 `>=26`
 - npm v7+
 
 ### 配置
@@ -132,6 +133,7 @@ VITE_AI_MODEL=deepseek-chat
 | `npm run test` | 单次运行 Vitest 测试 |
 | `npm run test:watch` | 以监听模式运行 Vitest |
 | `npm run test:coverage` | 运行测试并生成 V8 覆盖率 |
+| `npm run test:e2e` | 运行 Playwright 端到端测试 |
 | `npm run stress` | 运行 UI 压力脚本 |
 | `npm run prompt:bench` | 运行 Prompt 回归基准 |
 
