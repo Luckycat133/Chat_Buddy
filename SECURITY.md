@@ -8,6 +8,7 @@
 > Worker 已删除；备份导入会先校验再原子写入且不会携带 API key；Mermaid 输出经过
 > 严格模式、限长、超时和 DOMPurify 二次净化；npm 与 pnpm 的 low-level audit 均为 0 漏洞。
 > 输入富文本同样使用 DOMPurify 解析式净化；朋友圈图片 API key 仅保留在内存中，并自动移除旧持久化值。
+> 提交 `73283719` 的远端 JavaScript/TypeScript 与 Python CodeQL 均成功；经源码与数据流复核后开放 Code Scanning 告警为 0，Dependabot 开放告警为 0。
 
 ---
 

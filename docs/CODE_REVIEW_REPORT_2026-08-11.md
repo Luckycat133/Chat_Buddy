@@ -22,6 +22,9 @@
 | 生产预览 + 系统 Chrome | CSP、DENY、nosniff 与 Referrer-Policy 响应头生效；Service Worker 激活并接管刷新页面；0 console errors |
 | `npm run test:e2e -- --project=chromium` | 19/19 通过 |
 | `npx playwright test e2e/ux.spec.js --project=mobile-chrome` | 8/8 通过 |
+| 远端 CI | 提交 `73283719` 的 CI 全部成功：[运行记录](https://github.com/Luckycat133/Chat_Buddy/actions/runs/31614255044) |
+| 远端 CodeQL | JavaScript/TypeScript 与 Python 均成功：[运行记录](https://github.com/Luckycat133/Chat_Buddy/actions/runs/31614255014)；开放告警 0 |
+| Dependabot | 开放告警 0 |
 
 ### 修复结果
 
@@ -37,7 +40,9 @@
 
 真实浏览器复测还发现通知模块会在启动时请求仓库中不存在的音频文件，开发模式下又会被生产 Service Worker 接管为 `408 Offline`。现已改为按需使用 Web Audio 生成短提示音，并限制 Service Worker 只在生产环境注册；启动控制台回归已纳入 19 项桌面验收。
 
-推送后的 CodeQL 复核进一步暴露了历史正则清洗、头像 URL、图片 API key 持久化及工作流权限问题。当前实现已改为 DOMPurify 解析式清洗、栅格图片 URL 白名单、图片密钥仅内存保存并迁移删除旧值、配置持久化字段白名单和 CI `contents: read` 最小权限；数字猜谜也改用无模偏差的 Web Crypto 随机数，同时删除 222 个误提交的旧覆盖率生成文件。新增回归已计入 398 项单元测试，最终 CodeQL 状态以本次补充提交的远端扫描结果为准。
+推送后的 CodeQL 复核进一步暴露了历史正则清洗、头像 URL、图片 API key 持久化及工作流权限问题。当前实现已改为 DOMPurify 解析式清洗、栅格图片 URL 白名单、图片密钥仅内存保存并迁移删除旧值、配置持久化字段白名单和 CI `contents: read` 最小权限；数字猜谜也改用无模偏差的 Web Crypto 随机数，同时删除 222 个误提交的旧覆盖率生成文件。新增回归已计入 398 项单元测试。
+
+提交 `73283719` 的远端 CodeQL JavaScript/TypeScript 与 Python job 均成功。告警复核后开放数为 0：18 条当前扫描结果属于通用 storage 包装器跨键串流或扫描器未识别 `sanitizeImageURL` 白名单的误报；26 条来自已停用的 default-setup 分析键，其原始问题真实但对应代码已经修复或删除。GitHub 仓库未启用 `mitigated` 分类，因此旧记录按“当前陈旧记录为误报”关闭，并在每条告警注释中保留“原发现真实、现已修复”的说明。
 
 ### 实际 UX 验收范围
 

@@ -126,6 +126,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Replaced regex-only HTML filtering with DOMPurify, allowlisted avatar image sources, removed legacy persisted Moments image keys, and constrained persistent API configuration fields
   - Declared read-only CI workflow permissions and removed 222 generated coverage artifacts from version control
   - Replaced the number-guessing secret with rejection-sampled Web Crypto randomness
+  - Verified remote CI and JavaScript/TypeScript + Python CodeQL on `73283719`; evidence-based triage leaves 0 open Code Scanning and 0 open Dependabot alerts
 - **Deterministic AIPipeline final-response handling** (`src/core/chat/AIPipeline.js`, `src/core/chat/AIPipeline.spec.js`)
   - Prevented optional recall simulation from overriding `[SCHEDULE]` and `[MULTI]` control-tag parsing
   - Added deterministic test coverage for the recall branch to stop intermittent test failures
