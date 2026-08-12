@@ -37,6 +37,8 @@ dist-ssr
 
 # Test and development artifacts
 test-results/
+.playwright-cli/
+playwright-report/
 .pytest_cache
 reports/
 test_reports/

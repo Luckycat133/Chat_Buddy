@@ -38,7 +38,7 @@
 ### 1. 安全与性能修复
 
 #### 1.1 SSE流超时保护
-**文件**: [src/features/chat/services/chatService.js](file:///workspace/src/features/chat/services/chatService.js)
+**文件**: [src/features/chat/services/chatService.js](../src/features/chat/services/chatService.js)
 
 **问题**: `while(true)` 无限循环无超时控制，导致浏览器阻塞
 
@@ -79,7 +79,7 @@ try {
 ---
 
 #### 1.2 Promise Rejection日志记录
-**文件**: [src/core/chat/AIPipeline.js](file:///workspace/src/core/chat/AIPipeline.js)
+**文件**: [src/core/chat/AIPipeline.js](../src/core/chat/AIPipeline.js)
 
 **问题**: 内存提取的Promise rejection被完全静默吞没
 
@@ -102,7 +102,7 @@ if (extraction?.catch) extraction.catch((error) => {
 ### 2. React最佳实践修复
 
 #### 2.1 MessageTimeline组件优化
-**文件**: [src/features/chat/components/window/MessageTimeline.jsx](file:///workspace/src/features/chat/components/window/MessageTimeline.jsx)
+**文件**: [src/features/chat/components/window/MessageTimeline.jsx](../src/features/chat/components/window/MessageTimeline.jsx)
 
 **优化内容**:
 1. 将单个消息拆分为独立的 `MessageItem` 组件并使用 `React.memo`
@@ -118,7 +118,7 @@ if (extraction?.catch) extraction.catch((error) => {
 ---
 
 #### 2.2 ChatComposer文件上传验证
-**文件**: [src/features/chat/components/window/ChatComposer.jsx](file:///workspace/src/features/chat/components/window/ChatComposer.jsx)
+**文件**: [src/features/chat/components/window/ChatComposer.jsx](../src/features/chat/components/window/ChatComposer.jsx)
 
 **修复内容**:
 - 添加文件大小限制验证（最大10MB）
@@ -138,7 +138,7 @@ if (file.size > MAX_FILE_SIZE) {
 ### 3. 错误处理增强
 
 #### 3.1 GreetingService边界检查
-**文件**: [src/core/presence/GreetingService.js](file:///workspace/src/core/presence/GreetingService.js)
+**文件**: [src/core/presence/GreetingService.js](../src/core/presence/GreetingService.js)
 
 **修复**: `pickRandom` 函数添加空数组检查
 
@@ -154,7 +154,7 @@ function pickRandom(arr) {
 ---
 
 #### 3.2 StorageService JSON解析保护
-**文件**: [src/services/storage/StorageService.js](file:///workspace/src/services/storage/StorageService.js)
+**文件**: [src/services/storage/StorageService.js](../src/services/storage/StorageService.js)
 
 **修复**: 为遗留数据的JSON.parse添加try-catch保护
 
@@ -177,7 +177,7 @@ try {
 ---
 
 #### 3.3 ChatEngine空值检查
-**文件**: [src/core/chat/ChatEngine.js](file:///workspace/src/core/chat/ChatEngine.js)
+**文件**: [src/core/chat/ChatEngine.js](../src/core/chat/ChatEngine.js)
 
 **修复**: 多个方法的空值访问保护
 - `_handleAISchedule`: 添加AI对象验证
@@ -300,13 +300,13 @@ try {
 - 架构设计报告 (Agent 5)
 
 **修复阶段**:
-- [chatService.js](file:///workspace/src/features/chat/services/chatService.js) - SSE超时
-- [AIPipeline.js](file:///workspace/src/core/chat/AIPipeline.js) - 错误日志
-- [MessageTimeline.jsx](file:///workspace/src/features/chat/components/window/MessageTimeline.jsx) - 性能优化
-- [ChatComposer.jsx](file:///workspace/src/features/chat/components/window/ChatComposer.jsx) - 文件验证
-- [GreetingService.js](file:///workspace/src/core/presence/GreetingService.js) - 边界检查
-- [StorageService.js](file:///workspace/src/services/storage/StorageService.js) - JSON解析保护
-- [ChatEngine.js](file:///workspace/src/core/chat/ChatEngine.js) - 空值检查
+- [chatService.js](../src/features/chat/services/chatService.js) - SSE超时
+- [AIPipeline.js](../src/core/chat/AIPipeline.js) - 错误日志
+- [MessageTimeline.jsx](../src/features/chat/components/window/MessageTimeline.jsx) - 性能优化
+- [ChatComposer.jsx](../src/features/chat/components/window/ChatComposer.jsx) - 文件验证
+- [GreetingService.js](../src/core/presence/GreetingService.js) - 边界检查
+- [StorageService.js](../src/services/storage/StorageService.js) - JSON解析保护
+- [ChatEngine.js](../src/core/chat/ChatEngine.js) - 空值检查
 
 ### 测试报告
 

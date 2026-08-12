@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Camera, Hash, Image as ImageIcon, RefreshCw, Smile, Sparkles, X, Zap } from 'lucide-react';
 import { useMoments } from './context/MomentsContext';
 import { useUser } from '../../context/UserContext';
@@ -70,7 +70,7 @@ function FeedTabs({ active, onChange, language }) {
                     type="button"
                     onClick={() => onChange(tab)}
                     className={cn(
-                        'flex-shrink-0 px-4 py-2 text-[13px] font-semibold transition-all relative',
+                        'relative min-h-11 flex-shrink-0 px-4 py-2 text-[13px] font-semibold transition-all',
                         active === tab
                             ? 'text-[var(--color-primary)] after:absolute after:bottom-0 after:left-2 after:right-2 after:h-[2px] after:rounded-full after:bg-[var(--color-primary)] after:content-[\'\']'
                             : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]'
@@ -105,9 +105,6 @@ export default function MomentsPage() {
         const timer = setTimeout(() => setIsLoading(false), 350);
         return () => clearTimeout(timer);
     }, []);
-
-    // Reset pagination when filters change
-    useLayoutEffect(() => { setVisibleCount(10); }, [activeTab, activeHashtag]);
 
     const sortedPosts = useMemo(() =>
         [...safePosts].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
@@ -174,7 +171,8 @@ export default function MomentsPage() {
                         <button
                             type="button"
                             onClick={() => openComposer()}
-                            className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-white)] px-4 py-2 text-[13px] font-bold text-[var(--color-text-main)] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+                            aria-label={t('share_moment') || (language === 'zh' ? '发布动态' : 'Share a Moment')}
+                            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-white)] px-4 py-2 text-[13px] font-bold text-[var(--color-text-main)] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
                         >
                             <Camera size={16} className="text-[var(--color-primary)]" />
                             <span className="hidden sm:inline">{t('share_moment') || '发布动态'}</span>
@@ -219,22 +217,24 @@ export default function MomentsPage() {
                                     <div className="flex flex-shrink-0 gap-2">
                                         <button
                                             type="button"
+                                            aria-label={language === 'zh' ? '写下瞬间' : 'Write a scene'}
                                             onClick={() => openComposer(language === 'zh'
                                                 ? '刚才有个瞬间突然让我想慢下来，于是决定先把它记住。'
                                                 : 'A tiny moment slowed me down today, so I wanted to save it before it disappeared.'
                                             )}
-                                            className="flex items-center gap-1.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-white)] px-3 py-2.5 text-[13px] text-[var(--color-text-muted)] transition-all hover:border-[var(--color-primary)]/30 hover:text-[var(--color-primary)]"
+                                            className="min-h-11 min-w-11 flex items-center gap-1.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-white)] px-3 py-2.5 text-[13px] text-[var(--color-text-muted)] transition-all hover:border-[var(--color-primary)]/30 hover:text-[var(--color-primary)]"
                                         >
                                             <ImageIcon size={15} />
                                             <span className="hidden xs:inline">{language === 'zh' ? '写瞬间' : 'Scene'}</span>
                                         </button>
                                         <button
                                             type="button"
+                                            aria-label={language === 'zh' ? '发布心情' : 'Share a mood'}
                                             onClick={() => openComposer(language === 'zh'
                                                 ? '今天最想分享的不是大事，而是那个让我一下开心起来的小细节。'
                                                 : 'The thing I want to share most today is not a big event, but a tiny detail that lifted my mood.'
                                             )}
-                                            className="flex items-center gap-1.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-white)] px-3 py-2.5 text-[13px] text-[var(--color-text-muted)] transition-all hover:border-[var(--color-primary)]/30 hover:text-[var(--color-primary)]"
+                                            className="min-h-11 min-w-11 flex items-center gap-1.5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-white)] px-3 py-2.5 text-[13px] text-[var(--color-text-muted)] transition-all hover:border-[var(--color-primary)]/30 hover:text-[var(--color-primary)]"
                                         >
                                             <Smile size={15} />
                                             <span className="hidden xs:inline">{language === 'zh' ? '发心情' : 'Mood'}</span>
@@ -256,7 +256,7 @@ export default function MomentsPage() {
                                         <button
                                             key={tag}
                                             type="button"
-                                            onClick={() => setActiveHashtag(tag)}
+                                            onClick={() => { setActiveHashtag(tag); setVisibleCount(10); }}
                                             className="flex-shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-bg-white)] px-3 py-1 text-[12px] font-medium text-[var(--color-text-main)] transition-all hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5 hover:text-[var(--color-primary)]"
                                         >
                                             {tag}
@@ -267,7 +267,7 @@ export default function MomentsPage() {
 
                             {/* Tab 筛选条 */}
                             <div className="flex items-center justify-between gap-3">
-                                <FeedTabs active={activeTab} onChange={tab => { setActiveTab(tab); setActiveHashtag(null); }} language={language} />
+                                <FeedTabs active={activeTab} onChange={tab => { setActiveTab(tab); setActiveHashtag(null); setVisibleCount(10); }} language={language} />
                                 {/* 话题筛选状态 */}
                                 {activeHashtag && (
                                     <div className="flex items-center gap-1.5">
@@ -276,7 +276,7 @@ export default function MomentsPage() {
                                         </span>
                                         <button
                                             type="button"
-                                            onClick={() => setActiveHashtag(null)}
+                                            onClick={() => { setActiveHashtag(null); setVisibleCount(10); }}
                                             className="rounded-full p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
                                         >
                                             <X size={13} />

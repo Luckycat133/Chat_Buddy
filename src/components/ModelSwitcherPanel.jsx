@@ -3,10 +3,13 @@
  * Manual model switching + token usage dashboard.
  * Reads/writes to localStorage apiConfig, shows usage stats.
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, Cpu, Check, ChevronRight, BarChart2, Zap } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
+import { useDialogFocusTrap } from '../hooks/useDialogFocusTrap';
+import { getConfig, saveConfig } from '../config/apiConfig';
+import { resetAIClient } from '../services/api/aiClient';
 
 const MODEL_PRESETS = [
     {
@@ -70,18 +73,12 @@ const MODEL_PRESETS = [
 ];
 
 function getApiConfig() {
-    try {
-        const saved = localStorage.getItem('chat-buddy-api-config');
-        return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
+    return getConfig();
 }
 
 function saveModelPreference(modelId) {
-    try {
-        const cfg = getApiConfig();
-        cfg.model = modelId;
-        localStorage.setItem('chat-buddy-api-config', JSON.stringify(cfg));
-    } catch { /* ignore */ }
+    saveConfig({ ...getConfig(), model: modelId });
+    resetAIClient();
 }
 
 function getUsageStats() {
@@ -113,6 +110,8 @@ export default function ModelSwitcherPanel({ onClose }) {
     });
     const [usage] = useState(() => getUsageStats());
     const [saved, setSaved] = useState(false);
+    const dialogRef = useRef(null);
+    useDialogFocusTrap(dialogRef, onClose);
 
     const handleSelect = (modelId) => {
         setCurrentModel(modelId);
@@ -131,8 +130,16 @@ export default function ModelSwitcherPanel({ onClose }) {
 
     return (
         <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative w-full max-w-md glass-crystal rounded-[var(--radius-2xl)] shadow-floating flex flex-col max-h-[85vh] overflow-hidden animate-scale-spring">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onMouseDown={onClose} aria-hidden="true" />
+            <div
+                ref={dialogRef}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="model-switcher-title"
+                aria-describedby="model-switcher-description"
+                tabIndex={-1}
+                className="relative w-full max-w-md glass-crystal rounded-[var(--radius-2xl)] shadow-floating flex flex-col max-h-[85vh] overflow-hidden animate-scale-spring outline-none"
+            >
                 {/* Header */}
                 <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[var(--color-border)]">
                     <div className="flex items-center gap-3">
@@ -140,11 +147,11 @@ export default function ModelSwitcherPanel({ onClose }) {
                             <Cpu size={18} className="text-white" />
                         </div>
                         <div>
-                            <h2 className="font-display font-bold text-[var(--color-text-main)]">{t('model_switcher_title')}</h2>
-                            <p className="text-xs text-[var(--color-text-muted)]">{t('model_switcher_desc')}</p>
+                            <h2 id="model-switcher-title" className="font-display font-bold text-[var(--color-text-main)]">{t('model_switcher_title')}</h2>
+                            <p id="model-switcher-description" className="text-xs text-[var(--color-text-muted)]">{t('model_switcher_desc')}</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-full hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] transition-colors">
+                    <button type="button" onClick={onClose} aria-label={t('close') || 'Close'} className="min-w-11 min-h-11 flex items-center justify-center rounded-full hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] transition-colors">
                         <X size={18} />
                     </button>
                 </div>
@@ -156,8 +163,10 @@ export default function ModelSwitcherPanel({ onClose }) {
                             const isActive = currentModel === preset.id;
                             return (
                                 <button
+                                    type="button"
                                     key={preset.id}
                                     onClick={() => handleSelect(preset.id)}
+                                    aria-pressed={isActive}
                                     className={cn(
                                         'w-full flex items-center gap-3 p-3.5 rounded-[var(--radius-xl)] border transition-all text-left',
                                         isActive
@@ -194,13 +203,16 @@ export default function ModelSwitcherPanel({ onClose }) {
 
                     {/* Custom model input */}
                     {currentModel === 'custom' && (
-                        <input
-                            type="text"
-                            value={customModel}
-                            onChange={e => setCustomModel(e.target.value)}
-                            placeholder="e.g. mistral-7b, llama3-70b..."
-                            className="w-full input-modern text-sm"
-                        />
+                        <label className="block text-sm font-medium text-[var(--color-text-main)]">
+                            {t('custom_model') || 'Custom model'}
+                            <input
+                                type="text"
+                                value={customModel}
+                                onChange={e => setCustomModel(e.target.value)}
+                                placeholder="e.g. mistral-7b, llama3-70b..."
+                                className="mt-2 w-full input-modern text-sm"
+                            />
+                        </label>
                     )}
 
                     {/* Usage Stats */}
@@ -234,6 +246,7 @@ export default function ModelSwitcherPanel({ onClose }) {
                 {/* Footer */}
                 <div className="flex items-center gap-3 px-5 pt-3 pb-5 border-t border-[var(--color-border)]">
                     <button
+                        type="button"
                         onClick={handleSave}
                         className={cn(
                             'flex-1 py-2.5 rounded-[var(--radius-xl)] font-semibold text-sm transition-all',
@@ -242,9 +255,9 @@ export default function ModelSwitcherPanel({ onClose }) {
                                 : 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent-coral)] text-white hover:opacity-90 active:scale-[0.98]'
                         )}
                     >
-                        {saved ? `✓ ${t('saved')}` : t('save_model')}
+                        <span aria-live="polite">{saved ? `✓ ${t('saved')}` : t('save_model')}</span>
                     </button>
-                    <button onClick={onClose} className="px-4 py-2.5 rounded-[var(--radius-xl)] text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] transition-colors">
+                    <button type="button" onClick={onClose} className="min-h-11 px-4 py-2.5 rounded-[var(--radius-xl)] text-sm text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] transition-colors">
                         {t('cancel')}
                     </button>
                 </div>

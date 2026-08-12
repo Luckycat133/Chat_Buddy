@@ -35,7 +35,7 @@ const CATEGORIES = [
 export default function BackgroundSettingsModal({ isOpen, onClose, chatId, personaId }) {
     const { getBackgroundForChat, setBackgroundForChat, globalTheme, setGlobalTheme, saveCustomImage } = useBackground();
     const { t } = useLanguage();
-    const trapRef = useFocusTrap(isOpen);
+    const trapRef = useFocusTrap(isOpen, onClose);
     const [activeTab, setActiveTab] = useState('presets');
     const [activeCategory, setActiveCategory] = useState('EXCLUSIVE');
     const [uploadStatus, setUploadStatus] = useState(null); // null | 'compressing' | 'error' | string

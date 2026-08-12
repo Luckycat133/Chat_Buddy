@@ -47,7 +47,7 @@
 
 **测试**: `test_when_parse_native_tool_marker_is_malformed_should_return_null_or_empty_args`
 
-**文件**: [src/core/chat/AIPipeline.spec.js:658](file:///workspace/src/core/chat/AIPipeline.spec.js#L658)
+**文件**: [src/core/chat/AIPipeline.spec.js:658](../src/core/chat/AIPipeline.spec.js#L658)
 
 **原因**: 
 - 测试期望: `{ name: "lookup", args: {} }`

@@ -17,7 +17,7 @@ export default function FriendDetail({ friend, onClose }) {
     const { t, language } = useLanguage();
     const { getIntimacy, getIntimacyLevel } = useSocial();
 
-    const trapRef = useFocusTrap(true);
+    const trapRef = useFocusTrap(true, onClose);
     const meta = getFriendMeta(friend.id);
     const [remarkInput, setRemarkInput] = useState(meta.remark || '');
     const [showGroupPicker, setShowGroupPicker] = useState(false);

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useMemo, useCallback, useEffect } from 'react';
 import { LOCALES } from '../data/locales';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
@@ -33,6 +33,10 @@ export const LanguageProvider = ({ children }) => {
 
     // Resolve actual UI language: browser detection on first visit, stored preference thereafter
     const language = storedLang === LANG_NOT_SET ? detectBrowserLanguage() : storedLang;
+
+    useEffect(() => {
+        document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
+    }, [language]);
 
     // When user explicitly sets language, persist it
     const setLanguage = useCallback((lang) => {

@@ -161,31 +161,57 @@ export const TASK_AGENTS = [
                 name: 'sonar_search',
                 description: '使用 Perplexity Sonar 进行实时网络搜索，支持学术/新闻/技术领域筛选',
                 parameters: {
-                    query: '搜索查询',
-                    domains: '领域筛选 (academic/news/tech/general)',
-                    recency: '时效性筛选 (hour/day/week/month/year)'
+                    type: 'object',
+                    properties: {
+                        query: { type: 'string', minLength: 1, description: '搜索查询' },
+                        domains: { type: 'string', enum: ['academic', 'news', 'tech', 'general'], description: '领域筛选' },
+                        recency: { type: 'string', enum: ['hour', 'day', 'week', 'month', 'year'], description: '时效性筛选' }
+                    },
+                    required: ['query'],
+                    additionalProperties: false
                 }
             },
             {
                 name: 'deep_research',
                 description: '多跳深度研究，综合多个来源，适合复杂问题',
                 parameters: {
-                    query: '研究问题',
-                    depth: '搜索深度 (1-3)'
+                    type: 'object',
+                    properties: {
+                        query: { type: 'string', minLength: 1, description: '研究问题' },
+                        depth: { type: 'integer', minimum: 1, maximum: 3, description: '搜索深度' }
+                    },
+                    required: ['query'],
+                    additionalProperties: false
                 }
             },
             {
                 name: 'fact_check',
                 description: '验证特定声明的准确性，返回可信度评估',
                 parameters: {
-                    claim: '需要验证的声明'
+                    type: 'object',
+                    properties: {
+                        claim: { type: 'string', minLength: 1, description: '需要验证的声明' }
+                    },
+                    required: ['claim'],
+                    additionalProperties: false
                 }
             },
             {
                 name: 'cite_sources',
                 description: '生成学术引用格式 (APA/MLA)',
                 parameters: {
-                    format: 'apa 或 mla'
+                    type: 'object',
+                    properties: {
+                        sources: {
+                            type: 'array',
+                            items: { type: 'object' },
+                            minItems: 1,
+                            description: '需要格式化的来源列表'
+                        },
+                        format: { type: 'string', enum: ['apa', 'mla'], description: '引用格式' }
+                    },
+                    required: ['sources', 'format'],
+                    additionalProperties: false
                 }
             }
         ],

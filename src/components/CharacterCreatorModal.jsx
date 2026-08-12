@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Plus, Upload, Check, Sparkles, Palette, User, Heart, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 /**
  * Phase 4: Character Creator Modal
@@ -44,6 +45,7 @@ const PRESET_AVATARS = [
 export default function CharacterCreatorModal({ isOpen, onClose, onCreate }) {
     const { t, language } = useLanguage();
     const fileInputRef = useRef(null);
+    const trapRef = useFocusTrap(isOpen, onClose);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -481,6 +483,8 @@ Guidelines:
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
             <div
+                ref={trapRef}
+                tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="character-creator-title"

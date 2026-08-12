@@ -56,6 +56,7 @@ export default function App() {
                 <Route path="profile/edit" element={<ProfileEditor />} />
                 <Route path="help" element={<Help />} />
                 <Route path="about" element={<About />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Routes>
           </Suspense>

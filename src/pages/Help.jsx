@@ -118,9 +118,9 @@ export default function Help() {
                     </aside>
 
                     {/* FAQ Section */}
-                    <main className="lg:col-span-2 space-y-4 animate-fade-slide-up" style={{ animationDelay: '200ms' }}>
+                    <section className="lg:col-span-2 space-y-4 animate-fade-slide-up" style={{ animationDelay: '200ms' }} aria-labelledby="faq-heading">
                         <div className="flex items-center justify-between mb-2 px-2">
-                            <h2 className="text-lg font-bold text-[var(--color-text-main)]">
+                            <h2 id="faq-heading" className="text-lg font-bold text-[var(--color-text-main)]">
                                 {t('faq_title')}
                             </h2>
                             <span className="badge">
@@ -139,11 +139,14 @@ export default function Help() {
                                         )}
                                     >
                                         <button
+                                            type="button"
                                             className={cn(
                                                 "w-full flex items-center gap-4 px-5 py-4 text-left transition-colors",
                                                 isExpanded ? "bg-[var(--color-primary-light)]/30" : "bg-[var(--color-bg-white)]"
                                             )}
                                             onClick={() => toggleFaq(faq.id)}
+                                            aria-expanded={isExpanded}
+                                            aria-controls={`faq-answer-${faq.id}`}
                                         >
                                             <div className={cn(
                                                 "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
@@ -164,7 +167,7 @@ export default function Help() {
                                             "grid transition-all duration-300 ease-in-out",
                                             isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                                         )}>
-                                            <div className="overflow-hidden">
+                                            <div id={`faq-answer-${faq.id}`} className="overflow-hidden">
                                                 <div className="px-6 py-5 bg-[var(--color-bg-white)] border-t border-[var(--color-border-light)]">
                                                     <p className="text-[var(--color-text-secondary)] leading-relaxed">
                                                         {faq.answer}
@@ -184,7 +187,7 @@ export default function Help() {
                                 );
                             })}
                         </div>
-                    </main>
+                    </section>
                 </div>
             </div>
         </div>

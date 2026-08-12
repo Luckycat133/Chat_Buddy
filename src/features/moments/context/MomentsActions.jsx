@@ -420,7 +420,7 @@ export const MomentsActionProvider = ({ children, setMomentsData }) => {
         }
     }, []);
 
-    const generateDynamicAIPost = useCallback(async (aiId) => {
+    const generateDynamicAIPost = useCallback(async (aiId, options = {}) => {
         const persona = INITIAL_PERSONAS.find(item => item.id === aiId);
         if (!persona) return false;
 
@@ -433,10 +433,12 @@ export const MomentsActionProvider = ({ children, setMomentsData }) => {
             location,
         });
 
-        const response = await callMomentsAI([
-            { role: 'system', content: generatePostSystemPrompt(persona, timeContext, location, preferredLanguage) },
-            { role: 'user', content: 'Generate a post.' },
-        ], 160);
+        const response = options.localOnly
+            ? fallbackPost
+            : await callMomentsAI([
+                { role: 'system', content: generatePostSystemPrompt(persona, timeContext, location, preferredLanguage) },
+                { role: 'user', content: 'Generate a post.' },
+            ], 160);
 
         const finalContent = normalizeGeneratedMomentText(response, preferredLanguage, fallbackPost);
         const images = await maybeGenerateCachedImages(

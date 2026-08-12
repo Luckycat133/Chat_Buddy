@@ -13,7 +13,25 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov', 'json'],
-      include: ['src/**/*.{js,jsx}'],
+      reportsDirectory: 'test_reports/coverage',
+      // Enforce the unit-coverage gate on regression-critical logic. Rendering,
+      // routing and responsive UX are covered separately by Playwright + Axe.
+      include: [
+        'src/config/apiConfig.js',
+        'src/core/chat/AIPipeline.js',
+        'src/core/chat/ChatEngine.js',
+        'src/core/chat/ChatNormalizer.js',
+        'src/core/chat/ChatPollManager.js',
+        'src/features/chat/components/MermaidRenderer.jsx',
+        'src/features/chat/components/window/MessageTimeline.jsx',
+        'src/features/chat/services/chatService.js',
+        'src/features/chat/services/toolAuthorization.js',
+        'src/utils/formatTime.js',
+        'src/utils/logger.js',
+        'src/utils/inputValidator.js',
+        'src/utils/ragUtils.js',
+        'src/utils/sanitizeUtils.js',
+      ],
       exclude: [
         'src/data/**',           // 静态数据
         'src/test/**',           // 测试工具

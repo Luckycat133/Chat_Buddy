@@ -5,6 +5,7 @@ import { useFriend } from '../../../context/FriendContext';
 import { useUser } from '../../../context/UserContext';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 // AI 正在思考的动画
 function AITypingIndicator({ language }) {
@@ -45,6 +46,7 @@ export default function CommentsSheet({ post, onClose }) {
     const [isAIReplying, setIsAIReplying] = useState(false);
     const inputRef = useRef(null);
     const listBottomRef = useRef(null);
+    const trapRef = useFocusTrap(true, onClose);
 
     const activePost = posts.find(item => item.id === post?.id) || post;
     const suggestions = getCommentSuggestions(activePost, language);
@@ -106,7 +108,6 @@ export default function CommentsSheet({ post, onClose }) {
             setTimeout(async () => {
                 await generateAIComment(activePost.id, activePost.authorId, syntheticReplyTarget, postsSnapshot);
                 setIsAIReplying(false);
-                // eslint-disable-next-line react-hooks/purity
             }, 1000 + Math.random() * 1500);
         }
     };
@@ -122,6 +123,8 @@ export default function CommentsSheet({ post, onClose }) {
             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
 
             <div
+                ref={trapRef}
+                tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="comments-sheet-title"

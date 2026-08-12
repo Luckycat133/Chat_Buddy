@@ -4,6 +4,7 @@ import { useMoments } from '../context/MomentsContext';
 import { useUser } from '../../../context/UserContext';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 const PRESET_LOCATIONS = [
     { en: 'Home', zh: '家里' },
@@ -26,34 +27,36 @@ const VISIBILITY_OPTIONS = [
 ];
 
 export default function PostComposer({ isOpen, onClose }) {
+    if (!isOpen) return null;
+
+    return <PostComposerForm onClose={onClose} />;
+}
+
+function PostComposerForm({ onClose }) {
     const { createPost, draft, saveDraft, clearDraft } = useMoments();
     const { userProfile, getDisplayName } = useUser();
     const { t, language } = useLanguage();
 
-    const [content, setContent] = useState('');
-    const [images, setImages] = useState([]);
+    const hasRestoredDraft = Boolean(draft && (draft.content || draft.images?.length > 0 || draft.location));
+    const [content, setContent] = useState(() => hasRestoredDraft ? (draft.content || '') : '');
+    const [images, setImages] = useState(() => hasRestoredDraft ? (draft.images || []) : []);
     const [isPosting, setIsPosting] = useState(false);
-    const [location, setLocation] = useState('');
+    const [location, setLocation] = useState(() => hasRestoredDraft ? (draft.location || '') : '');
     const [showLocationPicker, setShowLocationPicker] = useState(false);
     const [customLocation, setCustomLocation] = useState('');
     const [visibility, setVisibility] = useState('public');
     const [showVisibilityPicker, setShowVisibilityPicker] = useState(false);
-    const [draftBanner, setDraftBanner] = useState(false);
+    const [draftBanner, setDraftBanner] = useState(hasRestoredDraft);
     const fileInputRef = useRef(null);
     const draftTimerRef = useRef(null);
+    const trapRef = useFocusTrap(true, onClose);
 
-    // Restore draft on open
+    // Briefly announce that a saved draft was restored.
     useEffect(() => {
-        if (!isOpen) return;
-        if (draft && (draft.content || draft.images?.length > 0)) {
-            setContent(draft.content || '');
-            setImages(draft.images || []);
-            setLocation(draft.location || '');
-            setDraftBanner(true);
-            setTimeout(() => setDraftBanner(false), 3000);
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isOpen]);
+        if (!draftBanner) return undefined;
+        const timer = setTimeout(() => setDraftBanner(false), 3000);
+        return () => clearTimeout(timer);
+    }, [draftBanner]);
 
     // Auto-save draft on content/images/location change
     const triggerDraftSave = useCallback(() => {
@@ -64,12 +67,11 @@ export default function PostComposer({ isOpen, onClose }) {
     }, [content, images, location, saveDraft]);
 
     useEffect(() => {
-        if (!isOpen) return;
         if (content || images.length > 0 || location) {
             triggerDraftSave();
         }
         return () => { if (draftTimerRef.current) clearTimeout(draftTimerRef.current); };
-    }, [content, images, location, isOpen, triggerDraftSave]);
+    }, [content, images, location, triggerDraftSave]);
 
     const handleImageSelect = (e) => {
         const files = Array.from(e.target.files);
@@ -166,24 +168,25 @@ export default function PostComposer({ isOpen, onClose }) {
         return opt ? (language === 'zh' ? opt.zh : opt.en) : '';
     };
 
-    if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 z-50 bg-[var(--color-bg-white)] flex flex-col">
+        <div ref={trapRef} tabIndex={-1} className="fixed inset-0 z-50 bg-[var(--color-bg-white)] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="post-composer-title">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
                 <button
+                    type="button"
                     onClick={onClose}
-                    className="text-[var(--color-text-muted)]"
+                    aria-label={t('close') || 'Close'}
+                    className="min-h-11 min-w-11 text-[var(--color-text-muted)]"
                 >
                     <X size={24} />
                 </button>
-                <h3 className="font-medium text-[17px]">{t('new_post') || 'New Moment'}</h3>
+                <h3 id="post-composer-title" className="font-medium text-[17px]">{t('new_post') || 'New Moment'}</h3>
                 <button
+                    type="button"
                     onClick={handlePost}
                     disabled={isPosting || (!content.trim() && images.length === 0)}
                     className={cn(
-                        "px-4 py-1.5 rounded-full font-medium text-[14px] transition-all",
+                        "min-h-11 px-4 py-1.5 rounded-full font-medium text-[14px] transition-all",
                         content.trim() || images.length > 0
                             ? "bg-[var(--color-primary)] text-white"
                             : "bg-[var(--color-bg-app)] text-[var(--color-text-muted)]"

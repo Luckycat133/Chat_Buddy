@@ -95,15 +95,19 @@ export default function FriendsPage() {
                     </div>
                     <div className="flex-1" />
                     <button
+                        type="button"
                         onClick={() => navigate('/friends/groups')}
                         className="btn btn-ghost btn-icon"
+                        aria-label={t('friend_groups') || 'Friend groups'}
                     >
                         <Settings size={20} />
                     </button>
                     <button
+                        type="button"
                         onClick={() => setShowCreator(true)}
                         className="btn btn-ghost btn-icon ml-2"
                         title={t('create_custom_character') || 'Create Custom Character'}
+                        aria-label={t('create_custom_character') || 'Create Custom Character'}
                     >
                         <UserPlus size={20} />
                     </button>
@@ -136,9 +140,11 @@ export default function FriendsPage() {
                         />
                         {searchTerm && (
                             <button
+                                type="button"
                                 onClick={() => setSearchTerm('')}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full
                                     hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] transition-colors"
+                                aria-label={t('clear_search') || 'Clear search'}
                             >
                                 <X size={14} />
                             </button>
@@ -200,12 +206,14 @@ export default function FriendsPage() {
                                 const { signature, recentActivity } = getFriendSubtitle(friend.id, language);
 
                                 return (
-                                    <div
+                                    <button
+                                        type="button"
                                         key={friend.id}
                                         onClick={() => setSelectedFriend(friend)}
-                                        className="card p-4 hover:border-[var(--color-primary)]/40 hover:-translate-y-1
+                                        className="card w-full text-left p-4 hover:border-[var(--color-primary)]/40 hover:-translate-y-1
                                             active:scale-[0.98] cursor-pointer group animate-fade-slide-up"
                                         style={{ animationDelay: `${index * 30 + 200}ms` }}
+                                        aria-label={`${t('view_profile') || 'View profile'}: ${displayName}`}
                                     >
                                         <div className="flex items-center">
                                             <div className="relative w-14 h-14 rounded-2xl overflow-hidden flex-shrink-0 mr-4
@@ -234,7 +242,7 @@ export default function FriendsPage() {
                                                     {friendGroup && (
                                                         <span
                                                             className="badge"
-                                                            style={{ backgroundColor: friendGroup.color + '15', color: friendGroup.color, border: `1px solid ${friendGroup.color}20` }}
+                                                            style={{ backgroundColor: friendGroup.color + '15', color: 'var(--color-text-main)', border: `1px solid ${friendGroup.color}30` }}
                                                         >
                                                             {friendGroup.icon} {language === 'zh' ? friendGroup.name : friendGroup.name_en}
                                                         </span>
@@ -257,7 +265,7 @@ export default function FriendsPage() {
                                                 </div>
                                             )}
                                         </div>
-                                    </div>
+                                    </button>
                                 );
                             })}
                         </div>
@@ -287,9 +295,10 @@ export default function FriendsPage() {
 function FilterTab({ active, onClick, label, count, highlight, color }) {
     return (
         <button
+            type="button"
             onClick={onClick}
             className={cn(
-                "px-4 py-2 rounded-xl text-[13px] font-semibold whitespace-nowrap flex items-center gap-1.5",
+                "min-h-11 px-4 py-2 rounded-xl text-[13px] font-semibold whitespace-nowrap flex items-center gap-1.5",
                 "transition-all duration-300 shadow-sm border",
                 active
                     ? "text-white shadow-md border-transparent animate-aurora"
@@ -302,7 +311,7 @@ function FilterTab({ active, onClick, label, count, highlight, color }) {
             style={active
                 ? { background: 'var(--gradient-aurora)', backgroundSize: '200% 200%' }
                 : !highlight && color
-                    ? { backgroundColor: color + '12', color: color, borderColor: color + '30' }
+                    ? { backgroundColor: color + '12', color: 'var(--color-text-main)', borderColor: color + '40' }
                     : {}
             }
         >

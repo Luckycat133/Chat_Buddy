@@ -8,7 +8,7 @@ import { cn } from '../../../utils/cn';
 export default function MessageSearchPanel({ onClose, onSelectMessage, currentChatId }) {
     const { chats, personas } = useChat();
     const { t, language } = useLanguage();
-    const trapRef = useFocusTrap(true);
+    const trapRef = useFocusTrap(true, onClose);
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedTerm, setDebouncedTerm] = useState('');
     const [searchScope, setSearchScope] = useState(currentChatId ? 'current' : 'all'); // 'all' or 'current'

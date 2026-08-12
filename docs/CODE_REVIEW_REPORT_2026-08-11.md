@@ -2,13 +2,49 @@
 
 > **审查日期**：2026-08-11
 >
-> **代码快照**：`remake` / `a77df02a`
+> **修复验证日期**：2026-08-12
 >
-> **审查方式**：全库只读审查、临时干净导出、定向回归复现、系统 Chrome UI/UX 审计
+> **修复基线**：`remake` / `f50531bb`
 >
-> **当前状态**：问题仍待修复；本次提交只更新文档，不包含产品代码修复
+> **当前状态**：原审查中的 P1/P2 项已修复并完成单元、构建、依赖与真实浏览器验收；第三方真实 AI Provider 仍不在本次验证范围内
 
-## 1. 执行结论
+## 0. 2026-08-12 修复验证更新
+
+原始审查结论保留在后续章节，便于追溯问题来源。本次修复后的验证结果如下：
+
+| 验证 | 结果 |
+| --- | --- |
+| `TZ=UTC npm run test:coverage` | 21 个文件、390/390 通过；核心逻辑门禁通过：Statements 84.96%、Branches 77.44%、Functions 84.61%、Lines 87.87% |
+| `TZ=UTC npm run test:coverage:all` | 390/390 通过；全仓观测值仍为 Statements 22.24%、Branches 19.18%、Functions 17.45%、Lines 23.15%，不作为单元门禁伪装成已全面覆盖 |
+| `npm run lint` | 通过，0 errors、0 warnings |
+| `npm run build` | 通过；已拆分高亮、Markdown、KaTeX、MathJS 与 Mermaid 懒加载产物，无 chunk 警告 |
+| `npm audit --audit-level=low` / `pnpm audit --audit-level low` | 均通过，0 vulnerabilities |
+| 生产预览 + 系统 Chrome | CSP、DENY、nosniff 与 Referrer-Policy 响应头生效；Service Worker 激活并接管刷新页面；0 console errors |
+| `npm run test:e2e -- --project=chromium` | 19/19 通过 |
+| `npx playwright test e2e/ux.spec.js --project=mobile-chrome` | 8/8 通过 |
+
+### 修复结果
+
+| 原问题 | 状态 | 已验证实现 |
+| --- | --- | --- |
+| SEC-01 工具调用越权 | 已修复 | 新增统一 deny-by-default 授权器；AIPipeline 与工具边界均校验 persona 显式开关和工具白名单 |
+| SEC-02 Worker 伪沙箱 | 已修复 | 删除 `sandbox.worker.js` 与浏览器任意代码执行；`run_code` 明确返回禁用状态 |
+| SEC-03 / DATA-01 备份与密钥 | 已修复 | 备份版本、体积、记录数、字段、URL 全量校验；按 store 原子替换；备份不含密钥；端点变化及清除数据会清除 session key 并阻止回退到构建时密钥 |
+| DATA-02 水合覆盖与消息 UI 不刷新 | 已修复 | revision/generation 防旧快照覆盖；ChatEngine 使用不可变数组更新，`useSyncExternalStore` 可可靠观察新消息 |
+| CI-01 覆盖率门禁必红 | 已修复 | 核心安全/数据/聊天逻辑保留 60% 硬门禁；全仓观测与 Playwright UI 验收分层报告 |
+| UI-01 至 UI-04 | 已修复 | 真浅色主题、可访问强调色、原生按钮语义、Dialog 焦点陷阱/Escape/焦点恢复、可访问名称及 44px 触控目标 |
+| 其余 P2 | 已修复 | poll memo、消息元数据、Scholar JSON Schema、依赖、CSP/安全头、Service Worker、版本、语言、减弱动画和嵌套 main 均已处理 |
+
+真实浏览器复测还发现通知模块会在启动时请求仓库中不存在的音频文件，开发模式下又会被生产 Service Worker 接管为 `408 Offline`。现已改为按需使用 Web Audio 生成短提示音，并限制 Service Worker 只在生产环境注册；启动控制台回归已纳入 19 项桌面验收。
+
+### 实际 UX 验收范围
+
+- 系统 Chrome 覆盖 `/`、`/agents`、`/friends`、`/moments`、`/settings`、`/help`，并运行 Axe serious/critical 规则。
+- 在 375、768、1024、1440 px 检查横向溢出与单一 `main` 地标；移动触控目标要求至少 44×44 px。
+- 实际用键盘选择角色、创建聊天、回车发送消息，并以网络 mock 验证 AI 回复完整显示；同时验证弹窗焦点循环、Escape 关闭与焦点恢复、语言元数据、减弱动画和未知路由恢复。
+- 没有调用真实付费 API，因此 Provider 凭据、配额、延迟与线上可用性仍需在受控环境另行验收。
+
+## 1. 原始执行结论（2026-08-11，历史）
 
 当前版本可以完成安装、单元测试和生产构建，但不应被描述为“无阻塞问题”或“已准备部署”。审查确认了以下主要风险：
 
@@ -20,7 +56,7 @@
 
 本报告没有发现需要立即停机处置的 P0，但安全、数据完整性和核心无障碍路径中的 P1 应在下一次发布前修复。
 
-## 2. 当前验证基线
+## 2. 原始验证基线（2026-08-11，历史）
 
 所有命令均在 `git archive HEAD` 导出的临时目录中执行，避免依赖现有 `node_modules` 状态。
 
@@ -55,7 +91,7 @@ UI/UX 验证覆盖 5 个主路由、12 个次级路由、种子聊天工作区�
 
 ### SEC-02：Worker 不是安全沙箱
 
-- **证据**：[sandbox.worker.js](../public/sandbox.worker.js) 使用 `new Function` 执行代码。
+- **证据**：已删除的历史文件 `public/sandbox.worker.js` 使用 `new Function` 执行代码。
 - **复现**：真实 Chrome 中，Worker 内 `typeof fetch === "function"` 且 `typeof indexedDB === "object"`。
 - **风险**：不可信代码仍可访问网络和持久化能力；Worker 仅隔离 UI 线程，不构成权限边界。
 - **建议**：将其明确降级为“执行环境”，默认关闭不可信代码执行，并把需要安全隔离的执行迁移到受控服务端或真正的受限运行时。

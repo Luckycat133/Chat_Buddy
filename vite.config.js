@@ -1,6 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+const SECURITY_HEADERS = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*; worker-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+};
+
 export default defineConfig(({ mode }) => ({
   plugins: [
     react({
@@ -14,7 +21,10 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: 'dist',
-    chunkSizeWarningLimit: 600,
+    // Mermaid 11.16's optional parser is a lazy 669 kB/151 kB-gzip chunk.
+    // Keep the budget just above that known boundary; all eagerly loaded
+    // application chunks remain well below it.
+    chunkSizeWarningLimit: 700,
     minify: 'esbuild',
     target: 'es2020',
     sourcemap: mode === 'production' ? false : true,
@@ -33,11 +43,13 @@ export default defineConfig(({ mode }) => ({
 
           if (
             id.includes('react-markdown') ||
-            id.includes('remark-gfm') ||
-            id.includes('rehype-katex') ||
-            id.includes('/katex/')
+            id.includes('remark-gfm')
           ) {
             return 'vendor-markdown';
+          }
+
+          if (id.includes('rehype-katex') || id.includes('/katex/')) {
+            return 'vendor-katex';
           }
 
           if (
@@ -70,6 +82,7 @@ export default defineConfig(({ mode }) => ({
     port: 5173,
     strictPort: false,
     host: true,
+    headers: SECURITY_HEADERS,
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
@@ -102,11 +115,14 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
+  preview: {
+    headers: SECURITY_HEADERS,
+  },
   optimizeDeps: {
     include: ['react', 'react-dom', 'react-router-dom', 'lucide-react'],
   },
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.4.0'),
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.4.1'),
     __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
   },
 }));

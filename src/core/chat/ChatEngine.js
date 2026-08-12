@@ -60,6 +60,8 @@ export class ChatEngine {
         this.moodMap = {};          // { personaId: moodObject }
         this._scheduledMessages = new Map(); // { `${chatId}:${aiId}`: timeoutId }
         this._saveTimer = null; // Debounce timer for deferred localStorage write
+        this._mutationRevision = 0;
+        this._hydrationGeneration = 0;
 
         // T06: Callback hooks & context provider
         this._onUserMessageCallbacks = [];
@@ -84,9 +86,11 @@ export class ChatEngine {
      */
     init(personas) {
         this.destroy();
+        const hydrationGeneration = ++this._hydrationGeneration;
+        this._mutationRevision = 0;
         this.personas = personas;
         this.chats = this._loadChatsWithMigration();
-        void this._hydrateFromIndexedDB();
+        void this._hydrateFromIndexedDB(hydrationGeneration, this._mutationRevision);
         const { chats: dedupedChats, changed } = this._dedupeDirectSocialChats(this.chats);
         if (changed) {
             this.chats = dedupedChats;
@@ -101,13 +105,24 @@ export class ChatEngine {
         this._notify();
     }
 
-    async _hydrateFromIndexedDB() {
+    async _hydrateFromIndexedDB(generation = this._hydrationGeneration, revisionAtStart = this._mutationRevision) {
         await chatStorage.migrateFromLocalStorage(this.storageKeyCandidates);
+        if (generation !== this._hydrationGeneration) return;
+
         const hydrated = await chatStorage.loadChats();
+        if (generation !== this._hydrationGeneration) return;
         if (!Array.isArray(hydrated)) return;
 
         const normalized = hydrated.map(chat => this._normalizeChat(chat)).filter(Boolean);
         if (JSON.stringify(normalized) === JSON.stringify(this.chats)) return;
+
+        // A user mutation that happens while IndexedDB is loading is newer than
+        // the snapshot. Never replace it with stale persisted state.
+        if (this._mutationRevision !== revisionAtStart) {
+            storage.set(this.storageKey, this.chats);
+            await chatStorage.saveChats(this.chats);
+            return;
+        }
 
         this.chats = this._dedupeDirectSocialChats(normalized).chats;
         storage.set(this.storageKey, this.chats);
@@ -394,7 +409,14 @@ export class ChatEngine {
         this.listeners.forEach(cb => cb(this.getState()));
     }
 
+    _replaceChatAt(index, chat) {
+        const nextChats = [...this.chats];
+        nextChats[index] = chat;
+        this.chats = nextChats;
+    }
+
     save() {
+        this._mutationRevision += 1;
         // Notify listeners first so React can schedule a re-render without delay
         this._notify();
         // Debounce the localStorage write to the next macrotask so the UI
@@ -433,7 +455,7 @@ export class ChatEngine {
         updatedChat.lastMessage = newMessage;
         updatedChat.updatedAt = newMessage.timestamp;
 
-        this.chats[chatIndex] = updatedChat;
+        this._replaceChatAt(chatIndex, updatedChat);
         this.save();
 
         // Trigger AI if user sent message
@@ -464,11 +486,15 @@ export class ChatEngine {
 
         const chat = this.chats[chatIndex];
         const updatedMessages = chat.messages.filter(m => m.id !== messageId);
+        const lastMessage = updatedMessages[updatedMessages.length - 1] || null;
 
-        this.chats[chatIndex] = {
+        this._replaceChatAt(chatIndex, {
             ...chat,
-            messages: updatedMessages
-        };
+            messages: updatedMessages,
+            lastMessage,
+            updatedAt: lastMessage?.timestamp || chat.createdAt || chat.updatedAt,
+            pinnedMessages: (chat.pinnedMessages || []).filter(id => id !== messageId)
+        });
         this.save();
     }
 
@@ -527,7 +553,7 @@ export class ChatEngine {
         const chatIndex = this.chats.findIndex(c => c.id === chatId);
         if (chatIndex === -1) return;
 
-        this.chats[chatIndex] = { ...this.chats[chatIndex], ...updates };
+        this._replaceChatAt(chatIndex, { ...this.chats[chatIndex], ...updates });
         this.save();
     }
 
@@ -535,7 +561,7 @@ export class ChatEngine {
         const chatIndex = this.chats.findIndex(c => c.id === chatId);
         if (chatIndex === -1) return;
 
-        this.chats[chatIndex] = { ...this.chats[chatIndex], isPinned };
+        this._replaceChatAt(chatIndex, { ...this.chats[chatIndex], isPinned });
         this.save();
     }
 
@@ -543,7 +569,7 @@ export class ChatEngine {
         const chatIndex = this.chats.findIndex(c => c.id === chatId);
         if (chatIndex === -1) return;
 
-        this.chats[chatIndex] = { ...this.chats[chatIndex], isUnread };
+        this._replaceChatAt(chatIndex, { ...this.chats[chatIndex], isUnread });
         this.save();
     }
 
@@ -564,12 +590,12 @@ export class ChatEngine {
 
         const chat = this.chats[chatIndex];
         this._cancelSchedulesForChat(chatId);
-        this.chats[chatIndex] = {
+        this._replaceChatAt(chatIndex, {
             ...chat,
             messages: [],
             lastMessage: null,
             pinnedMessages: []
-        };
+        });
         this.save();
     }
 
@@ -591,7 +617,7 @@ export class ChatEngine {
             newPinned = pinnedMessages.filter(id => id !== messageId);
         }
 
-        this.chats[chatIndex] = { ...chat, pinnedMessages: newPinned };
+        this._replaceChatAt(chatIndex, { ...chat, pinnedMessages: newPinned });
         this.save();
     }
 
@@ -654,7 +680,7 @@ export class ChatEngine {
         const newPolls = [...polls];
         newPolls[pollIndex] = poll;
 
-        this.chats[chatIndex] = { ...chat, polls: newPolls };
+        this._replaceChatAt(chatIndex, { ...chat, polls: newPolls });
         this.save();
         return { success: true };
     }
@@ -729,7 +755,7 @@ export class ChatEngine {
         });
 
         if (hasChanges) {
-            this.chats[chatIndex] = { ...chat, messages: updatedMessages };
+            this._replaceChatAt(chatIndex, { ...chat, messages: updatedMessages });
             this.save();
         }
     }
@@ -798,7 +824,7 @@ export class ChatEngine {
 
         const messages = [...chat.messages];
         messages[messageIndex] = { ...messages[messageIndex], recalled: true };
-        this.chats[chatIndex] = { ...chat, messages };
+        this._replaceChatAt(chatIndex, { ...chat, messages });
         this.save();
     }
 
@@ -830,7 +856,7 @@ export class ChatEngine {
 
         const updatedChat = { ...this.chats[chatIndex] };
         updatedChat.messages = [...updatedChat.messages, toolMsg];
-        this.chats[chatIndex] = updatedChat;
+        this._replaceChatAt(chatIndex, updatedChat);
         this._notify(); // Ephemeral — no save yet
         return msgId;
     }
@@ -856,7 +882,7 @@ export class ChatEngine {
 
         const updatedMessages = [...chat.messages];
         updatedMessages[msgIndex] = updatedMsg;
-        this.chats[chatIndex] = { ...chat, messages: updatedMessages };
+        this._replaceChatAt(chatIndex, { ...chat, messages: updatedMessages });
         this.save();
     }
 
@@ -1012,6 +1038,7 @@ Title:`;
      * Cleanup intervals (for unmount)
      */
     destroy() {
+        this._hydrationGeneration += 1;
         if (this._presenceInterval) clearInterval(this._presenceInterval);
         if (this._greetingInterval) clearInterval(this._greetingInterval);
         // Flush any pending deferred save before destroying

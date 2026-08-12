@@ -32,14 +32,22 @@ export const SONAR_MODELS = {
 // ========== Singleton ==========
 
 let aiClientInstance = null;
+let aiClientConfigSignature = null;
 
 /**
  * Get or create the AI API client instance.
  * Config priority: localStorage runtime > .env build-time > defaults
  */
 export function getAIClient() {
-    if (!aiClientInstance) {
-        const config = getConfig();
+    const config = getConfig();
+    const configSignature = JSON.stringify({
+        baseUrl: config.baseUrl || '',
+        apiKey: config.apiKey || '',
+        timeout: config.timeout || 60000,
+        maxRetries: config.maxRetries || 3,
+    });
+
+    if (!aiClientInstance || aiClientConfigSignature !== configSignature) {
         const normalizedBaseUrl = normalizeBaseUrlForDevProxy(config.baseUrl);
 
         aiClientInstance = new APIClient({
@@ -52,6 +60,7 @@ export function getAIClient() {
         if (config.apiKey) {
             aiClientInstance.setAuthToken(config.apiKey);
         }
+        aiClientConfigSignature = configSignature;
     }
     return aiClientInstance;
 }
@@ -69,6 +78,7 @@ export function getAIConfiguration() {
  */
 export function resetAIClient() {
     aiClientInstance = null;
+    aiClientConfigSignature = null;
 }
 
 export default getAIClient;

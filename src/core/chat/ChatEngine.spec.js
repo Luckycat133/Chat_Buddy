@@ -196,6 +196,21 @@ describe('ChatEngine', () => {
     expect(mocks.processTurn).toHaveBeenCalled();
   });
 
+  it('test_when_chat_changes_should_replace_array_reference_for_external_store_subscribers', () => {
+    const engine = createEngineWithChats([
+      { id: 'chat-1', name: 'Chat', participants: ['user-me', 'ai-2'], messages: [] },
+    ]);
+    const previousChats = engine.chats;
+    const listener = vi.fn();
+    engine.subscribe(listener);
+
+    engine.sendMessage('chat-1', 'visible immediately');
+
+    expect(engine.chats).not.toBe(previousChats);
+    expect(listener).toHaveBeenCalled();
+    expect(listener.mock.lastCall[0].chats).toBe(engine.chats);
+  });
+
   it('test_when_group_chat_reaches_threshold_should_trigger_group_memory_extraction', async () => {
     // Given
     const oldMessages = Array.from({ length: 19 }, (_, idx) => ({
@@ -598,6 +613,58 @@ describe('ChatEngine', () => {
     expect(engine.chats).toHaveLength(1);
     expect(engine.chats[0]).toMatchObject({ id: 'chat-indexed' });
     expect(mocks.storage.set).toHaveBeenCalledWith('chat-buddy-chats', expect.arrayContaining([expect.objectContaining({ id: 'chat-indexed' })]));
+  });
+
+  it('test_when_user_sends_during_hydration_should_keep_newer_in_memory_state', async () => {
+    // Given
+    let resolveHydration;
+    mocks.chatStorage.loadChats.mockReturnValueOnce(new Promise((resolve) => {
+      resolveHydration = resolve;
+    }));
+    seedCanonicalChats([{ id: 'chat-1', participants: ['user-me', 'ai-1'], messages: [] }]);
+    const engine = new ChatEngine();
+    createdEngines.push(engine);
+    engine.init(personas);
+
+    // When
+    engine.sendMessage('chat-1', 'new message');
+    resolveHydration([{ id: 'chat-1', participants: ['user-me', 'ai-1'], messages: [] }]);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // Then
+    expect(engine.chats[0].messages).toHaveLength(1);
+    expect(engine.chats[0].messages[0].content).toBe('new message');
+    expect(mocks.chatStorage.saveChats).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({
+        id: 'chat-1',
+        messages: expect.arrayContaining([expect.objectContaining({ content: 'new message' })]),
+      })]),
+    );
+  });
+
+  it('test_when_delete_message_should_recompute_summary_and_remove_pin', () => {
+    // Given
+    const engine = createEngineWithChats([{
+      id: 'chat-1',
+      createdAt: '2026-02-20T00:00:00.000Z',
+      participants: ['user-me', 'ai-1'],
+      messages: [
+        { id: 'm1', senderId: 'user-me', content: 'first', timestamp: '2026-02-21T00:00:00.000Z' },
+        { id: 'm2', senderId: 'ai-1', content: 'second', timestamp: '2026-02-22T00:00:00.000Z' },
+      ],
+      lastMessage: { id: 'm2', senderId: 'ai-1', content: 'second', timestamp: '2026-02-22T00:00:00.000Z' },
+      pinnedMessages: ['m2'],
+    }]);
+
+    // When
+    engine.deleteMessage('chat-1', 'm2');
+
+    // Then
+    expect(engine.chats[0].lastMessage).toMatchObject({ id: 'm1', content: 'first' });
+    expect(engine.chats[0].updatedAt).toBe('2026-02-21T00:00:00.000Z');
+    expect(engine.chats[0].pinnedMessages).toEqual([]);
   });
 
   it('test_when_guarded_mutation_methods_receive_missing_targets_should_noop', () => {

@@ -105,6 +105,7 @@ export const ThemeProvider = ({ children }) => {
             el.style.setProperty('--color-primary-light', palette.light);
             el.style.setProperty('--color-primary-softer', palette.softer);
             el.style.setProperty('--color-primary-glow', palette.glow);
+            el.style.setProperty('--color-on-primary', palette.onPrimary);
         } else {
             el.style.removeProperty('--color-primary');
             el.style.removeProperty('--color-primary-hover');
@@ -112,6 +113,7 @@ export const ThemeProvider = ({ children }) => {
             el.style.removeProperty('--color-primary-light');
             el.style.removeProperty('--color-primary-softer');
             el.style.removeProperty('--color-primary-glow');
+            el.style.removeProperty('--color-on-primary');
         }
     }, [theme.accentColor]);
 

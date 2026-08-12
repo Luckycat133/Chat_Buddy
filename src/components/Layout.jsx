@@ -51,7 +51,6 @@ export default function Layout() {
         { key: 'Escape', ctrl: false, action: () => {
             if (showGlobalSearch) setShowGlobalSearch(false);
             else if (showShortcuts) setShowShortcuts(false);
-            else window.history.back();
         } },
     ], [navigate, showShortcuts, showGlobalSearch]);
 

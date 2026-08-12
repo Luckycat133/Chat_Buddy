@@ -6,7 +6,7 @@ import { useFocusTrap } from '../hooks/useFocusTrap';
 
 export default function KeyboardShortcutsModal({ onClose }) {
     const { t } = useLanguage();
-    const trapRef = useFocusTrap(true);
+    const trapRef = useFocusTrap(true, onClose);
 
     const navShortcuts = SHORTCUT_DEFINITIONS.filter(s => s.category === 'navigation');
     const actionShortcuts = SHORTCUT_DEFINITIONS.filter(s => s.category === 'actions');

@@ -10,7 +10,7 @@
 
 ### Prerequisites
 
-- Node.js `^22.22.2`, `^24.15.0`, or `>=26`
+- Node.js `^20.19.0`, `^22.13.0`, or `>=24.0.0`
 - npm v7+
 
 ### Setup
@@ -56,10 +56,16 @@ If you configure the provider inside the Settings panel instead of `.env`, the A
 | `npm run lint` | Run ESLint |
 | `npm run test` | Run the Vitest suite once |
 | `npm run test:watch` | Start Vitest in watch mode |
-| `npm run test:coverage` | Run tests with V8 coverage |
+| `npm run test:coverage` | Enforce the 60% gate on regression-critical logic |
+| `npm run test:coverage:all` | Generate an observational whole-repository report without a threshold |
 | `npm run test:e2e` | Run the Playwright end-to-end suite |
 | `npm run stress` | Run the UI stress script |
 | `npm run prompt:bench` | Run the prompt regression benchmark |
+
+Coverage is intentionally layered: Vitest gates security, data-integrity, and
+chat-domain logic, while Playwright + Axe gate rendered UI behavior. The
+whole-repository command remains available to expose untested modules without
+making the CI gate permanently red.
 
 ### Project Structure
 
@@ -86,7 +92,7 @@ If you configure the provider inside the Settings panel instead of `.env`, the A
 
 ### 前置要求
 
-- Node.js `^22.22.2`、`^24.15.0` 或 `>=26`
+- Node.js `^20.19.0`、`^22.13.0` 或 `>=24.0.0`
 - npm v7+
 
 ### 配置
@@ -132,10 +138,14 @@ VITE_AI_MODEL=deepseek-chat
 | `npm run lint` | 运行 ESLint |
 | `npm run test` | 单次运行 Vitest 测试 |
 | `npm run test:watch` | 以监听模式运行 Vitest |
-| `npm run test:coverage` | 运行测试并生成 V8 覆盖率 |
+| `npm run test:coverage` | 对安全、数据与聊天核心逻辑执行 60% 覆盖率门禁 |
+| `npm run test:coverage:all` | 生成无门槛的全仓覆盖率观测报告 |
 | `npm run test:e2e` | 运行 Playwright 端到端测试 |
 | `npm run stress` | 运行 UI 压力脚本 |
 | `npm run prompt:bench` | 运行 Prompt 回归基准 |
+
+覆盖率采用分层策略：Vitest 对安全、数据完整性和聊天领域逻辑设置硬门禁，
+Playwright + Axe 验收真实渲染后的 UI；全仓命令继续暴露未覆盖模块，但不制造必然失败的 CI。
 
 ### 目录结构
 

@@ -21,45 +21,58 @@ const DEFAULT_SETTINGS = {
 export const NotificationProvider = ({ children }) => {
     const [settings, setSettings] = useLocalStorage('chat-buddy-notification-settings', DEFAULT_SETTINGS);
     const [unreadCounts, setUnreadCounts] = useLocalStorage('chat-buddy-unread-counts', {}); // { chatId: count }
-    const audioRef = useRef(null);
+    const audioContextRef = useRef(null);
 
-    // Initialize audio
+    // Browser notification permission is only requested when explicitly enabled.
     useEffect(() => {
-        audioRef.current = new Audio();
-        audioRef.current.src = '/sounds/notification.mp3';
-        audioRef.current.volume = settings.soundVolume;
-
-        // Request browser push permission if enabled
         if (settings.browserPush && 'Notification' in window) {
             Notification.requestPermission();
         }
+
+        return () => {
+            audioContextRef.current?.close().catch(() => {});
+            audioContextRef.current = null;
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-    // Update audio volume when settings change
-    useEffect(() => {
-        if (audioRef.current) {
-            audioRef.current.volume = settings.soundVolume;
-        }
-    }, [settings.soundVolume]);
 
     // ========== Sound Notifications ==========
 
     const playNotificationSound = useCallback(() => {
         if (!settings.soundEnabled || settings.doNotDisturb) return;
 
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+
         try {
-            if (audioRef.current) {
-                audioRef.current.currentTime = 0;
-                audioRef.current.play().catch(() => {
-                    // Browser may block autoplay, ignore error
-                });
+            const context = audioContextRef.current || new AudioContext();
+            audioContextRef.current = context;
+
+            const playTone = () => {
+                const oscillator = context.createOscillator();
+                const gain = context.createGain();
+                const now = context.currentTime;
+                const peak = Math.max(0.0001, Math.min(1, settings.soundVolume) * 0.12);
+
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(660, now);
+                oscillator.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.exponentialRampToValueAtTime(peak, now + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+                oscillator.connect(gain);
+                gain.connect(context.destination);
+                oscillator.start(now);
+                oscillator.stop(now + 0.17);
+            };
+
+            if (context.state === 'suspended') {
+                context.resume().then(playTone).catch(() => {});
+            } else {
+                playTone();
             }
         } catch (e) {
-            console.warn('[NotificationContext] Audio play failed, creating new instance:', e?.message);
-            const audio = new Audio('/sounds/notification.mp3');
-            audio.volume = settings.soundVolume;
-            audio.play().catch(() => { });
+            console.warn('[NotificationContext] Audio play failed:', e?.message);
         }
     }, [settings.soundEnabled, settings.doNotDisturb, settings.soundVolume]);
 

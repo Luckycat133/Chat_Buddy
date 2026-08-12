@@ -11,7 +11,7 @@ export default function CheckInPanel({ onClose }) {
     const [checkInResult, setCheckInResult] = useState(null);
     const [showAnimation, setShowAnimation] = useState(false);
 
-    const trapRef = useFocusTrap(true);
+    const trapRef = useFocusTrap(true, onClose);
     const hasChecked = hasCheckedInToday();
 
     // Compute recently unlocked achievements directly (avoids setState in useEffect)

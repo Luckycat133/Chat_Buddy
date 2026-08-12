@@ -4,6 +4,10 @@
 > 本文档说明 Chat_Buddy 项目的安全姿态与已知 trade-off。
 > **注意：本文不是法律意见，部署到公网前请独立安全审计。**
 
+> **2026-08-12 更新**：工具调用现为默认拒绝并受角色白名单约束；浏览器任意代码
+> Worker 已删除；备份导入会先校验再原子写入且不会携带 API key；Mermaid 输出经过
+> 严格模式、限长、超时和 DOMPurify 二次净化；npm 与 pnpm 的 low-level audit 均为 0 漏洞。
+
 ---
 
 ## 1. API 密钥管理（核心问题）
@@ -45,7 +49,7 @@ Vite 自带 dev server proxy（`vite.config.js` `server.proxy`），生产用 Cl
 - Cloudflare Workers / Deno Deploy 接受环境变量 + 提供 API
 - 前端 fetch `/api/*` 路径，由 edge 转发
 
-### 1.4 立即可做（这次没改，列入 P0）
+### 1.4 公网部署前仍需完成
 
 - 把 `VITE_AI_API_KEY` / `VITE_TAVILY_API_KEY` / `VITE_MINIMAX_API_KEY` 从 `.env` **删掉**
 - 在 `Settings` UI 强制用户填入（已有 sessionStorage 实现）
@@ -71,13 +75,20 @@ Vite 自带 dev server proxy（`vite.config.js` `server.proxy`），生产用 Cl
 
 ### 2.3 已知遗留
 
-- `src/components/*.jsx` 89 个 jsx 文件中**有 151 处 `console.log/warn/error/info` 散落**
+- `src/` 中仍有 **149 处 `console.log/warn/error/info`**，其中包含有意保留的重试、降级和错误诊断日志
 - 这些 console 在 dev 模式可读；生产 build 时 Vite 会去掉一部分（取决于 NODE_ENV），但**部分 console.error 仍会留在 prod bundle**（用于错误上报）
 - 风险：prod 用户按 F12 能看到部分错误堆栈。**中等风险**，建议改用 `logger.error` + 自定义 UI toast
 
 ---
 
 ## 3. 依赖漏洞（已修）
+
+### 2026-08-12 验证
+
+- Mermaid 固定为 `11.16.1`，DOMPurify 固定为 `3.4.13`。
+- `npm audit --audit-level=low`：`0 vulnerabilities`。
+- `pnpm audit --audit-level low`：`No known vulnerabilities found`。
+- CI 在 lint job 中执行完整 `npm audit`。
 
 ### 2026-06-10 修复
 
@@ -164,4 +175,4 @@ LanguageProvider
 
 ---
 
-*最后更新: 2026-07-18*
+*最后更新: 2026-08-12*

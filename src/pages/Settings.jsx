@@ -21,6 +21,8 @@ import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
 import { clearAllAppData, exportAllData, importData } from '../config/apiConfig';
 import CharacterMemoryPanel from '../components/CharacterMemoryPanel';
 import { INITIAL_PERSONAS } from '../data/personas';
+import { useFocusTrap } from '../hooks/useFocusTrap';
+import { APP_VERSION } from '../utils/appVersion';
 
 const BackgroundSettingsModal = React.lazy(() => import('../features/background/BackgroundSettingsModal'));
 const ApiConfigPanel = React.lazy(() => import('../components/ApiConfigPanel'));
@@ -55,12 +57,8 @@ export default function Settings() {
     const [showPrivacyModal, setShowPrivacyModal] = useState(false);
     const fileInputRef = React.useRef(null);
     const { resetProfile } = useUser();
-
-    const handleActivationKey = (event, action) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        action();
-    };
+    const memorySelectorRef = useFocusTrap(showMemorySelector, () => setShowMemorySelector(false));
+    const privacyModalRef = useFocusTrap(showPrivacyModal, () => setShowPrivacyModal(false));
 
     const handleExport = async () => {
         try {
@@ -107,7 +105,7 @@ export default function Settings() {
     };
 
     return (
-        <main className="page-container custom-scrollbar" role="main" aria-label={t('settings_control_center')}>
+        <div className="page-container custom-scrollbar" aria-label={t('settings_control_center')}>
             {/* Ambient Background Glow */}
             <div className="page-ambient-glow" aria-hidden="true" />
 
@@ -135,17 +133,17 @@ export default function Settings() {
                                 {t('settings_pilot_house')}
                             </div>
 
-                            <div
-                                className="glass-crystal profile-card rounded-[var(--radius-2xl)] p-6 shadow-floating"
-                                onClick={() => navigate('/profile')}
-                                onKeyDown={(event) => handleActivationKey(event, () => navigate('/profile'))}
-                                role="button"
-                                tabIndex={0}
-                            >
+                            <div className="glass-crystal profile-card rounded-[var(--radius-2xl)] p-6 shadow-floating">
                                 {/* Active Status Ring Animation */}
                                 <div className="absolute top-4 right-4 status-dot animate-pulse" />
 
                                 <div className="flex flex-col items-center text-center">
+                                    <button
+                                        type="button"
+                                        onClick={() => navigate('/profile')}
+                                        className="w-full flex flex-col items-center rounded-[var(--radius-xl)] focus-visible:outline-none"
+                                        aria-label={`${t('profile') || 'Profile'}: ${getDisplayName(language)}`}
+                                    >
                                     <div className="profile-avatar mb-4">
                                         {userProfile.avatar ? (
                                             <img src={userProfile.avatar} alt="Avatar" className="w-full h-full object-cover rounded-[var(--radius-xl)]" />
@@ -163,56 +161,42 @@ export default function Settings() {
                                     <p className="profile-id mb-4">
                                         ID: {userProfile.id}
                                     </p>
+                                    </button>
 
                                     <div className="grid grid-cols-3 gap-2 w-full">
-                                        <div
+                                        <button
+                                            type="button"
                                             className="stat-card"
-                                            onClick={(e) => { e.stopPropagation(); setShowCheckIn(true); }}
-                                            onKeyDown={(event) => {
-                                                event.stopPropagation();
-                                                handleActivationKey(event, () => setShowCheckIn(true));
-                                            }}
-                                            role="button"
-                                            tabIndex={0}
+                                            onClick={() => setShowCheckIn(true)}
                                         >
                                             <div className="stat-card-label">{t('streak_stat')}</div>
                                             <div className="stat-card-value stat-value-streak">
                                                 <Calendar size={14} />
                                                 {streakDays}
                                             </div>
-                                        </div>
-                                        <div
+                                        </button>
+                                        <button
+                                            type="button"
                                             className="stat-card"
-                                            onClick={(e) => { e.stopPropagation(); navigate('/achievements'); }}
-                                            onKeyDown={(event) => {
-                                                event.stopPropagation();
-                                                handleActivationKey(event, () => navigate('/achievements'));
-                                            }}
-                                            role="button"
-                                            tabIndex={0}
+                                            onClick={() => navigate('/achievements')}
                                         >
                                             <div className="stat-card-label">{t('total_points')}</div>
                                             <div className="stat-card-value stat-value-points">
                                                 <Trophy size={14} />
                                                 {points}
                                             </div>
-                                        </div>
-                                        <div
+                                        </button>
+                                        <button
+                                            type="button"
                                             className="stat-card"
-                                            onClick={(e) => { e.stopPropagation(); setShowDailyTasks(true); }}
-                                            onKeyDown={(event) => {
-                                                event.stopPropagation();
-                                                handleActivationKey(event, () => setShowDailyTasks(true));
-                                            }}
-                                            role="button"
-                                            tabIndex={0}
+                                            onClick={() => setShowDailyTasks(true)}
                                         >
                                             <div className="stat-card-label">{t('daily_tasks')}</div>
                                             <div className="stat-card-value stat-value-streak">
                                                 <ClipboardList size={14} />
                                                 {taskProgress.completed}/{taskProgress.total}
                                             </div>
-                                        </div>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -450,7 +434,7 @@ export default function Settings() {
                         <section className="animate-fade-slide-up" style={{ animationDelay: '300ms' }}>
                             <div className="version-footer">
                                 <p>
-                                    Chat Buddy v0.3.1 • Built with ❤️ by Agent Coder
+                                    Chat Buddy v{APP_VERSION} • Built with ❤️ by Agent Coder
                                 </p>
                             </div>
                         </section>
@@ -516,15 +500,17 @@ export default function Settings() {
                           aria-label={t('close') || 'Close'}
                       />
                     <div
+                        ref={memorySelectorRef}
+                        tabIndex={-1}
                         className="relative w-full max-w-sm glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-5"
                         role="document"
                     >
                         <div className="flex items-center justify-between mb-4">
                             <h3 id="memory-selector-title" className="font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
                                 <Brain size={16} className="text-[var(--color-primary)]" />
-                                Select Character
+                                {language === 'zh' ? '选择角色' : 'Select Character'}
                             </h3>
-                            <button onClick={() => setShowMemorySelector(false)} className="btn btn-ghost btn-icon">
+                            <button type="button" onClick={() => setShowMemorySelector(false)} aria-label={t('close') || 'Close'} className="btn btn-ghost btn-icon">
                                 <span style={{ fontSize: '18px', lineHeight: 1 }}>✕</span>
                             </button>
                         </div>
@@ -569,13 +555,13 @@ export default function Settings() {
                           onClick={() => setShowPrivacyModal(false)}
                           aria-label={t('close') || 'Close'}
                       />
-                    <div className="relative w-full max-w-md glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-6" role="document">
+                    <div ref={privacyModalRef} tabIndex={-1} className="relative w-full max-w-md glass-crystal rounded-[var(--radius-2xl)] shadow-floating p-6" role="document">
                         <div className="flex items-center justify-between mb-6">
                             <h3 id="privacy-modal-title" className="font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
                                 <Shield size={20} className="text-[var(--color-primary)]" />
                                 {t('privacy_title')}
                             </h3>
-                            <button onClick={() => setShowPrivacyModal(false)} className="btn btn-ghost btn-icon">
+                            <button type="button" onClick={() => setShowPrivacyModal(false)} aria-label={t('close') || 'Close'} className="btn btn-ghost btn-icon">
                                 <span style={{ fontSize: '18px', lineHeight: 1 }}>✕</span>
                             </button>
                         </div>
@@ -627,7 +613,7 @@ export default function Settings() {
                     </div>
                 </div>
             )}
-        </main>
+        </div>
     );
 }
 
@@ -663,7 +649,9 @@ function ControlCard({ icon, color, label, subLabel, active, onClick }) {
 function SettingItem({ icon, color, label, subLabel, rightContent, onClick, labelClassName }) {
     return (
         <button
+            type="button"
             onClick={onClick}
+            aria-label={subLabel ? `${label}: ${subLabel}` : label}
             className="setting-item w-full text-left transition-all duration-200 hover:translate-x-1 hover:shadow-sm"
         >
             <div className={cn("setting-item-icon", color)}>

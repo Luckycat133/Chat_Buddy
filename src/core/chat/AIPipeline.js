@@ -6,6 +6,7 @@ import { buildMemoryBlock, buildGroupContextBlock } from '../memory/MemoryInject
 import { createLogger, AppError } from '../../utils/logger';
 import { tryProactiveImageGen, analyzeContextForImageGen } from '../../services/proactiveImageService';
 import { buildSkillsSystemBlock } from '../../services/minimaxSkillsManifest';
+import { assertToolAuthorized } from '../../features/chat/services/toolAuthorization';
 
 const log = createLogger('AIPipeline');
 
@@ -194,6 +195,7 @@ export class AIPipeline {
                 let toolMsgId = null;
                 toolHistory.push({ role: 'assistant', content: `[TOOL_CALL: ${toolCall.name} ${JSON.stringify(toolCall.args)}]` });
                 try {
+                    assertToolAuthorized(ai, toolCall.name);
                     toolMsgId = this.callbacks.onToolStart?.(chatId, ai.id, toolCall.name, toolCall.args) ?? null;
                     const toolOutput = await executeTool(toolCall.name, toolCall.args, {
                         personas,
@@ -221,6 +223,7 @@ export class AIPipeline {
             let toolMsgId = null;
             try {
                 const args = JSON.parse(argsStr);
+                assertToolAuthorized(ai, toolName);
 
                 toolMsgId = this.callbacks.onToolStart?.(chatId, ai.id, toolName, args) ?? null;
 
@@ -258,6 +261,7 @@ export class AIPipeline {
             this.log(`[Memory Request] ${ai.name} → ${targetName} about "${topic}"`);
 
             try {
+                assertToolAuthorized(ai, 'MEMORY_REQUEST');
                 const toolOutput = await executeTool('MEMORY_REQUEST', { target: targetName, topic }, { personas, requesterId: ai.id });
                 const newHistory = [
                     ...initialHistory,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Server,
@@ -28,6 +28,7 @@ import {
 } from "../config/apiConfig";
 import { resetAIClient } from "../services/api/aiClient";
 import { cn } from "../utils/cn";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 // Common model suggestions for the datalist
 const COMMON_MODELS = [
@@ -66,7 +67,7 @@ export default function ApiConfigPanel({ onClose }) {
   const [saved, setSaved] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [showProfileInput, setShowProfileInput] = useState(false);
-  const panelRef = useRef(null);
+  const panelRef = useFocusTrap(true, onClose);
 
   // Close on outside click
   useEffect(() => {
@@ -75,7 +76,7 @@ export default function ApiConfigPanel({ onClose }) {
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
+  }, [onClose, panelRef]);
 
   const updateField = (field, value) => {
     setConfig((prev) => ({ ...prev, [field]: value }));

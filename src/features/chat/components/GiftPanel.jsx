@@ -8,7 +8,7 @@ import { cn } from '../../../utils/cn';
 export default function GiftPanel({ recipientId, recipientName, onClose, onGiftSent }) {
     const { gifts, sendGift, points, getIntimacy, getIntimacyLevel } = useSocial();
     const { t, language } = useLanguage();
-    const trapRef = useFocusTrap(true);
+    const trapRef = useFocusTrap(true, onClose);
     const [selectedGift, setSelectedGift] = useState(null);
     const [sending, setSending] = useState(false);
     const [result, setResult] = useState(null);

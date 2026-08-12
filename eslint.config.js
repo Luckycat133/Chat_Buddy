@@ -11,15 +11,11 @@ export default defineConfig([
     'e2e',
     'playwright-report',
     'test-results',
+    'test_reports',
+    '.playwright-cli',
     '*.cjs',
     'playwright.config.js',
   ]),
-  {
-    files: ['public/sandbox.worker.js'],
-    languageOptions: {
-      globals: { ...globals.browser, ...globals.worker },
-    },
-  },
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -64,7 +60,7 @@ export default defineConfig([
     },
   },
   {
-    files: ['vite.config.js', 'vitest.config.js'],
+    files: ['vite.config.js', 'vitest.config.js', 'vitest.full-coverage.config.js'],
     languageOptions: {
       globals: globals.node,
     },

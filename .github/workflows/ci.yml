@@ -1,5 +1,8 @@
 name: CI
 
+env:
+  TZ: UTC
+
 on:
   push:
     branches: [main, remake]
@@ -31,6 +34,9 @@ jobs:
 
       - name: Run linter
         run: npm run lint
+
+      - name: Audit dependencies
+        run: npm audit
 
   test:
     name: Unit Tests
@@ -145,5 +151,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: coverage-report
-          path: coverage/
+          path: test_reports/coverage/
           retention-days: 14

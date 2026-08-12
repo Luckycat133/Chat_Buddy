@@ -51,15 +51,16 @@ export default function CreateChat() {
         <div className="flex-1 h-full bg-[var(--color-bg-app)] overflow-hidden flex flex-col pb-16 md:pb-0">
             {/* Header */}
             <div className="bg-[var(--color-bg-app)] px-3 py-2 flex items-center justify-between border-b border-[var(--color-border)]">
-                <button onClick={() => navigate(-1)} className="text-[var(--color-text-main)] text-[16px]">
+                <button type="button" onClick={() => navigate(-1)} className="min-h-11 px-2 text-[var(--color-text-main)] text-[16px]">
                     {t('cancel') || 'Cancel'}
                 </button>
                 <h1 className="text-[17px] font-medium text-[var(--color-text-main)]">{t('create_title')}</h1>
                 <button
+                    type="button"
                     onClick={handleCreate}
                     disabled={selectedIds.length === 0}
                     className={cn(
-                        "text-[16px] font-medium",
+                        "min-h-11 px-2 text-[16px] font-medium",
                         selectedIds.length > 0 ? "text-[var(--color-primary)]" : "text-[var(--color-text-muted)]"
                     )}
                 >
@@ -76,7 +77,7 @@ export default function CreateChat() {
                         placeholder={t('search')}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-[var(--color-bg-white)] border-none rounded py-1.5 pl-8 pr-3 text-sm placeholder:text-[#B2B2B2] focus:outline-none"
+                        className="w-full min-h-11 bg-[var(--color-bg-white)] border-none rounded py-1.5 pl-8 pr-3 text-sm placeholder:text-[#B2B2B2] focus:outline-none"
                     />
                 </div>
             </div>
@@ -101,10 +102,13 @@ export default function CreateChat() {
                     const pName = language === 'zh' ? (persona.name_zh || persona.name) : persona.name;
 
                     return (
-                        <div
+                        <button
+                            type="button"
                             key={persona.id}
                             onClick={() => toggleSelection(persona.id)}
-                            className="flex items-center px-4 py-2.5 border-b border-[var(--color-border-light)] active:bg-[#ECECEC] cursor-pointer"
+                            className="w-full min-h-11 flex items-center text-left px-4 py-2.5 border-b border-[var(--color-border-light)] active:bg-[var(--color-bg-active)] cursor-pointer"
+                            aria-pressed={isSelected}
+                            aria-label={`${isSelected ? (t('deselect') || 'Deselect') : (t('select') || 'Select')} ${pName}`}
                         >
                             {/* Checkbox */}
                             <div className={cn(
@@ -113,7 +117,7 @@ export default function CreateChat() {
                                     ? "bg-[var(--color-primary)] border-[var(--color-primary)]"
                                     : "border-[#C7C7CC]"
                             )}>
-                                {isSelected && <Check size={12} className="text-white" strokeWidth={3} />}
+                                {isSelected && <Check size={12} className="text-[var(--color-on-primary)]" strokeWidth={3} />}
                             </div>
 
                             {/* Avatar */}
@@ -123,7 +127,7 @@ export default function CreateChat() {
 
                             {/* Name */}
                             <span className="text-[16px] text-[var(--color-text-main)]">{pName}</span>
-                        </div>
+                        </button>
                     );
                 })}
             </div>

@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 /**
  * T15: ScholarResultCard
  * Visual citation card for Scholar agent search results.

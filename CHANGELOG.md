@@ -106,6 +106,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- **Deny-by-default agent tools and safe rich content** (2026-08-12)
+  - Added one authorization policy for native, textual, memory, and service-boundary tool calls
+  - Removed the browser arbitrary-code worker and disabled `run_code` until a real restricted runtime exists
+  - Added strict backup validation, credential stripping, CSP/hosting security headers, and sanitized/time-bounded Mermaid rendering
 - **Session-only API secrets** (`src/config/apiConfig.js`, `src/components/ApiConfigPanel.jsx`)
   - Stopped persisting API keys in localStorage-backed runtime config and provider profiles
   - Added legacy config/profile sanitization so previously saved API keys are stripped from persistent browser storage
@@ -113,14 +117,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Security, data-integrity, CI, and UX remediation** (2026-08-12)
+  - Prevented stale hydration from overwriting new messages and made ChatEngine snapshots immutable for React subscribers
+  - Recomputed message metadata after deletion, fixed poll memoization and Scholar tool schemas, and refreshed AI clients on config changes
+  - Added a real light theme, accessible accent contrast, semantic controls, dialog focus management, 44px touch targets, language metadata, and reduced-motion handling
+  - Added Playwright + Axe acceptance coverage: 19/19 Chromium tests and 8/8 mobile UX tests
+  - Replaced the missing notification audio asset with an on-demand Web Audio tone and prevented production Service Workers from controlling development sessions
 - **Deterministic AIPipeline final-response handling** (`src/core/chat/AIPipeline.js`, `src/core/chat/AIPipeline.spec.js`)
   - Prevented optional recall simulation from overriding `[SCHEDULE]` and `[MULTI]` control-tag parsing
   - Added deterministic test coverage for the recall branch to stop intermittent test failures
   - Hardened async memory extraction to avoid calling `.catch()` on non-Promise return values
-- **Coverage gate aligned with audited test surface** (`vitest.config.js`, `docs/TEST_COVERAGE_ANALYSIS.md`)
-  - Expanded the focused Vitest suite from 65 to 112 passing tests across the four gated production files
-  - Raised verified coverage to `97.40%` statements, `85.73%` branches, `93.13%` functions, and `97.40%` lines
-  - Kept `90%` thresholds for statements/functions/lines while normalizing the branch gate to `85%` for the current branch-heavy UI/domain surface
+- **Layered coverage gate** (`vitest.config.js`, `vitest.full-coverage.config.js`, `docs/TEST_COVERAGE_ANALYSIS.md`)
+  - Verified 390/390 tests and a 60% hard gate on regression-critical logic
+  - Current gated coverage is 84.96% statements, 77.44% branches, 84.61% functions, and 87.87% lines
+  - Kept an honest whole-repository observation command; UI behavior is gated separately by Playwright + Axe
 
 ### Added — UI Accessibility & Interaction Improvements (2026-03-08)
 

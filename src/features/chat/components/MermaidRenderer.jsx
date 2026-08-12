@@ -1,7 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
+import DOMPurify from 'dompurify';
 import mermaid from 'mermaid';
 import { useTheme } from '../../../context/ThemeContext';
 import { GitGraph } from 'lucide-react';
+
+const MAX_DIAGRAM_LENGTH = 20_000;
+const MAX_SVG_LENGTH = 2_000_000;
+const RENDER_TIMEOUT_MS = 5_000;
+
+function withTimeout(operation) {
+    let timeoutId;
+    return Promise.race([
+        operation,
+        new Promise((_, reject) => {
+            timeoutId = setTimeout(() => reject(new Error('Diagram rendering timed out')), RENDER_TIMEOUT_MS);
+        }),
+    ]).finally(() => clearTimeout(timeoutId));
+}
 
 /**
  * T08: Mermaid Diagram Renderer
@@ -15,6 +30,7 @@ export default function MermaidRenderer({ content }) {
 
     useEffect(() => {
         if (!containerRef.current) return;
+        let cancelled = false;
 
         const renderDiagram = async () => {
             setIsLoading(true);
@@ -28,6 +44,7 @@ export default function MermaidRenderer({ content }) {
                     securityLevel: 'strict',
                     fontFamily: 'system-ui, -apple-system, sans-serif',
                     suppressErrorRendering: true, // Crucial: prevents Mermaid from drawing the giant bomb SVG
+                    flowchart: { htmlLabels: false },
                 });
 
                 // Clear previous content safely
@@ -36,44 +53,68 @@ export default function MermaidRenderer({ content }) {
                 }
 
                 const trimmedContent = content.trim();
-
-                // 1. Validate syntax explicitly. This will throw if content is invalid.
-                // In some versions, parse returns a promise, in others it's synchronous.
-                if (mermaid.parseAsync) {
-                    await mermaid.parseAsync(trimmedContent);
-                } else {
-                    await mermaid.parse(trimmedContent, { suppressErrors: true });
+                if (trimmedContent.length > MAX_DIAGRAM_LENGTH) {
+                    throw new Error('Diagram is too large to render safely');
+                }
+                if (!trimmedContent) {
+                    throw new Error('Diagram is empty');
                 }
 
-                // Generate a unique ID for this diagram
-                const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
+                const { svg } = await withTimeout((async () => {
+                    // Validate syntax explicitly before rendering.
+                    if (mermaid.parseAsync) {
+                        await mermaid.parseAsync(trimmedContent);
+                    } else {
+                        await mermaid.parse(trimmedContent, { suppressErrors: true });
+                    }
 
-                // 2. Render the diagram
-                const { svg } = await mermaid.render(id, trimmedContent);
+                    const id = `mermaid-${Math.random().toString(36).slice(2, 11)}`;
+                    return mermaid.render(id, trimmedContent);
+                })());
+
+                if (cancelled) return;
 
                 // Fail-safe: if mermaid still returns an error SVG silently
                 if (svg.includes('Syntax error in text') || svg.includes('error-icon')) {
                     throw new Error('Invalid Mermaid syntax');
                 }
+                if (svg.length > MAX_SVG_LENGTH) {
+                    throw new Error('Diagram output is too large to display safely');
+                }
 
-                // Parse and insert SVG safely
+                // Mermaid's strict mode is the first layer; sanitize its SVG output again
+                // before it reaches the document so future parser changes stay contained.
+                const sanitizedSvg = DOMPurify.sanitize(svg, {
+                    USE_PROFILES: { svg: true, svgFilters: true },
+                    FORBID_TAGS: ['foreignObject'],
+                });
                 const parser = new DOMParser();
-                const doc = parser.parseFromString(svg, 'image/svg+xml');
+                const doc = parser.parseFromString(sanitizedSvg, 'image/svg+xml');
                 const svgElement = doc.documentElement;
-                
+                if (svgElement.localName !== 'svg' || doc.querySelector('parsererror')) {
+                    throw new Error('Diagram output was not valid SVG');
+                }
+
                 // Add maximum bounds so huge diagrams don't break the layout
                 svgElement.setAttribute('style', 'max-width: 100%; height: auto;');
-                
-                containerRef.current.appendChild(svgElement);
+
+                if (!cancelled && containerRef.current) {
+                    containerRef.current.appendChild(svgElement);
+                }
             } catch (err) {
-                console.error('Mermaid render error:', err);
-                setError(err.message || 'Failed to render diagram');
+                if (!cancelled) {
+                    console.warn('Mermaid render error:', err);
+                    setError(err.message || 'Failed to render diagram');
+                }
             } finally {
-                setIsLoading(false);
+                if (!cancelled) setIsLoading(false);
             }
         };
 
         renderDiagram();
+        return () => {
+            cancelled = true;
+        };
     }, [content, isDarkMode]);
 
     if (error) {

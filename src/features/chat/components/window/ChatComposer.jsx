@@ -13,9 +13,9 @@ import StickerPicker from '../../../../components/StickerPicker';
 import FileUploader from '../../../../components/FileUploader';
 
 // Menu Button Helper
-// eslint-disable-next-line no-unused-vars
 const MenuButton = ({ icon: IconComponent, label, onClick, color = "text-[var(--color-text-secondary)]", bg = "bg-[var(--color-bg-hover)]" }) => (
     <button
+        type="button"
         onClick={onClick}
         className="plus-menu-btn group"
         aria-label={label}
@@ -120,10 +120,10 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
         inputRef.current?.focus();
     };
 
-    const handleSend = (e) => {
+    const handleSend = (e, submittedValue = inputValue) => {
         e.preventDefault();
-        if (!inputValue.trim()) return;
-        onSendMessage(inputValue, quotedMessage?.id || null);
+        if (!submittedValue.trim()) return;
+        onSendMessage(submittedValue, quotedMessage?.id || null);
         setInputValue('');
         // T07: Clear draft on send
         clearDraft();
@@ -285,9 +285,9 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                     e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
                                 }}
                                 onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                                         e.preventDefault();
-                                        handleSend(e);
+                                        handleSend(e, e.currentTarget.value);
                                         // Reset height
                                         if (inputRef.current) inputRef.current.style.height = 'auto';
                                     }
@@ -301,6 +301,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                 <div className="mention-dropdown glass-crystal animate-scale-spring">
                                     {mentionCandidates.map(p => (
                                         <button
+                                            type="button"
                                             key={p.id}
                                             onClick={() => handleMentionSelect(p)}
                                             className="mention-item"

@@ -45,8 +45,8 @@
 独立发现：
 
 - [../src/config/apiConfig.js](../src/config/apiConfig.js) 通过 [../src/services/storage/StorageService.js](../src/services/storage/StorageService.js) 将 API 配置持久化到 `localStorage`，其中包含 `apiKey`。
-- [../public/sandbox.worker.js](../public/sandbox.worker.js) 使用 `new Function('console', code)` 执行动态 JavaScript；该执行环境隔离于主线程，但不是强安全沙箱。
-- [../public/sandbox.worker.js](../public/sandbox.worker.js) 运行 Python 时依赖远程 CDN 的 Pyodide 资源，供应链和可控性风险高于本地托管。
+- 已删除的历史文件 `public/sandbox.worker.js` 使用 `new Function('console', code)` 执行动态 JavaScript；该执行环境隔离于主线程，但不是强安全沙箱。
+- 该历史 Worker 运行 Python 时依赖远程 CDN 的 Pyodide 资源，供应链和可控性风险高于本地托管。
 - 文件上传校验并非完全缺失；[../src/utils/fileUtils.js](../src/utils/fileUtils.js) 已实现扩展名、MIME、空字节和 JSON 结构检查，但尚未做到更严格的内容指纹校验。
 
 ### B. 架构审查智能体
@@ -142,7 +142,7 @@
 
 #### 3. 安全：浏览器端“代码沙箱”不是强安全边界
 
-- 证据：[../public/sandbox.worker.js](../public/sandbox.worker.js)、[../src/features/chat/services/toolService.js](../src/features/chat/services/toolService.js)
+- 证据：已删除的历史文件 `public/sandbox.worker.js`、[toolService.js](../src/features/chat/services/toolService.js)
 - 风险：`new Function()` 执行任意代码，Worker 虽隔离主线程，但不等于安全沙箱；远程 Pyodide 资源也增加供应链与可控性风险。
 - 建议：
   - 不要把当前 Worker 视为安全执行边界，只能视为“隔离 UI 的执行环境”。

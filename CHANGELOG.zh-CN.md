@@ -66,6 +66,10 @@ Chat Buddy 的所有重要变更都将记录在此文件中。
 
 ### 安全
 
+- **工具默认拒绝与富内容安全加固**（2026-08-12）
+  - 为原生、文本、记忆及服务边界工具调用增加统一授权策略
+  - 删除浏览器任意代码 Worker；在具备真正受限运行时前禁用 `run_code`
+  - 增加备份严格校验、凭据剥离、CSP/托管安全头，以及 Mermaid 净化、限长和超时
 - **API 密钥改为会话级保存**（`src/config/apiConfig.js`、`src/components/ApiConfigPanel.jsx`）
   - 不再把 API 密钥持久化到 localStorage 运行时配置或服务方案中
   - 增加旧配置清理逻辑，将历史持久化密钥从浏览器长期存储中移除
@@ -73,14 +77,20 @@ Chat Buddy 的所有重要变更都将记录在此文件中。
 
 ### 修复
 
+- **安全、数据完整性、CI 与 UX 综合修复**（2026-08-12）
+  - 防止旧水合快照覆盖新消息，并让 ChatEngine 快照采用不可变更新以通知 React
+  - 修复删除消息元数据、投票 memo、Scholar 工具 Schema，以及配置变化后的 AI client 刷新
+  - 增加真浅色主题、可访问强调色、语义控件、弹窗焦点管理、44px 触控目标、语言元数据与减弱动画
+  - 新增 Playwright + Axe 验收：Chromium 19/19、移动端 UX 8/8 通过
+  - 用按需 Web Audio 提示音替代缺失音频文件，并阻止生产 Service Worker 接管开发会话
 - **AIPipeline 最终响应流程改为确定性解析**（`src/core/chat/AIPipeline.js`、`src/core/chat/AIPipeline.spec.js`）
   - 防止可选的消息撤回模拟覆盖 `[SCHEDULE]` 和 `[MULTI]` 控制标签解析
   - 为撤回分支补充确定性测试，修复间歇性测试失败
   - 加固异步记忆提取逻辑，避免对非 Promise 返回值调用 `.catch()`
-- **覆盖率门槛与已审计测试面保持一致**（`vitest.config.js`、`docs/TEST_COVERAGE_ANALYSIS.md`）
-  - 将聚焦的 Vitest 套件从 65 个通过测试扩展到 112 个，通过覆盖 4 个纳入门槛的生产文件
-  - 已验证覆盖率提升至：语句 `97.40%`、分支 `85.73%`、函数 `93.13%`、行 `97.40%`
-  - 继续保持语句/函数/行 `90%` 门槛，并将分支门槛调整为更符合当前高防御分支 UI/Domain 代码面的 `85%`
+- **分层覆盖率门禁**（`vitest.config.js`、`vitest.full-coverage.config.js`、`docs/TEST_COVERAGE_ANALYSIS.md`）
+  - 390/390 项测试通过；对回归关键逻辑保持 60% 硬门禁
+  - 当前门禁覆盖率：语句 84.96%、分支 77.44%、函数 84.61%、行 87.87%
+  - 保留真实的全仓观测命令；UI 行为由 Playwright + Axe 独立门禁
 
 ---
 

@@ -74,7 +74,7 @@ export default function AccentColorPicker() {
                         key={preset.id}
                         onClick={() => handlePreset(preset)}
                         className={cn(
-                            "w-9 h-9 rounded-full transition-all duration-300 relative",
+                            "w-11 h-11 rounded-full transition-all duration-300 relative",
                             "hover:scale-110 active:scale-95",
                             isSelected(preset) && "ring-2 ring-offset-2 ring-offset-[var(--color-bg-card)] ring-[var(--color-text-main)] scale-110"
                         )}
@@ -88,7 +88,7 @@ export default function AccentColorPicker() {
                 <button
                     onClick={() => colorInputRef.current?.click()}
                     className={cn(
-                        "w-9 h-9 rounded-full transition-all duration-300 relative",
+                        "w-11 h-11 rounded-full transition-all duration-300 relative",
                         "border-2 border-dashed border-[var(--color-border)]",
                         "hover:scale-110 active:scale-95 flex items-center justify-center",
                         "hover:border-[var(--color-primary)]",

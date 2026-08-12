@@ -78,7 +78,7 @@ AI集成: OpenAI Compatible API
 
 ### 失败测试详情
 
-**文件**: [AIPipeline.js L84](file:///Users/Shared/projects/Chat_Buddy/src/core/chat/AIPipeline.js#L84)  
+**文件**: [AIPipeline.js L84](../src/core/chat/AIPipeline.js#L84)
 **测试用例**: `test_when_parse_native_tool_marker_is_malformed_should_return_null_or_empty_args`  
 **错误类型**: `ReferenceError: payload is not defined`  
 **严重程度**: 中  
@@ -137,7 +137,7 @@ AI集成: OpenAI Compatible API
 #### BUG-001: 聊天列表筛选逻辑缺陷
 - **严重程度**: 🔴 高  
 - **问题类型**: 功能缺陷  
-- **位置**: [ChatList.jsx L224-L229](file:///Users/Shared/projects/Chat_Buddy/src/features/chat/ChatList.jsx#L224-L229)  
+- **位置**: [ChatList.jsx L224-L229](../src/features/chat/ChatList.jsx#L224-L229)
 - **描述**: 任务专家类型的聊天会话被硬编码过滤掉，用户无法在聊天列表中看到这些会话  
 - **重现步骤**:
   1. 创建一个任务型聊天（Task Agent）
@@ -157,7 +157,7 @@ AI集成: OpenAI Compatible API
 #### BUG-002: AIPipeline工具解析器变量未定义
 - **严重程度**: 🟠 高  
 - **问题类型**: 功能缺陷  
-- **位置**: [AIPipeline.js L84](file:///Users/Shared/projects/Chat_Buddy/src/core/chat/AIPipeline.js#L84)  
+- **位置**: [AIPipeline.js L84](../src/core/chat/AIPipeline.js#L84)
 - **描述**: catch块中引用了未定义的变量payload，导致解析失败时抛出ReferenceError  
 - **重现步骤**:
   1. 发送消息给AI
@@ -171,7 +171,7 @@ AI集成: OpenAI Compatible API
 #### BUG-003: 排行榜功能不完整
 - **严重程度**: 🟠 高  
 - **问题类型**: 功能缺陷  
-- **位置**: [LeaderboardPage.jsx L60-L63](file:///Users/Shared/projects/Chat_Buddy/src/pages/LeaderboardPage.jsx#L60-L63)  
+- **位置**: [LeaderboardPage.jsx L60-L63](../src/pages/LeaderboardPage.jsx#L60-L63)
 - **描述**: 仅亲密度排行实现了完整排序逻辑，其他维度只显示当前用户数据  
 - **重现步骤**:
   1. 进入排行榜页面
@@ -203,21 +203,21 @@ AI集成: OpenAI Compatible API
 #### BUG-006: React Hooks规则违反（多处）
 - **严重程度**: 🟡 中  
 - **位置**: 
-  - [ChatWindow.jsx L120, L133](file:///Users/Shared/projects/Chat_Buddy/src/features/chat/ChatWindow.jsx#L120)
-  - [useChatService.js L33, L38](file:///Users/Shared/projects/Chat_Buddy/src/features/chat/hooks/useChatService.js#L33)
-  - [MomentsPage.jsx L107](file:///Users/Shared/projects/Chat_Buddy/src/features/moments/MomentsPage.jsx#L107)
+  - [ChatWindow.jsx L120, L133](../src/features/chat/ChatWindow.jsx#L120)
+  - [useChatService.js L33, L38](../src/features/chat/hooks/useChatService.js#L33)
+  - [MomentsPage.jsx L107](../src/features/moments/MomentsPage.jsx#L107)
 - **描述**: 在Effect中直接调用setState、在渲染期间重新赋值外部变量  
 - **影响**: 可能导致不必要的重渲染、性能下降、React 19严格模式警告
 
 #### BUG-007: MomentsPage纯函数违规
 - **严重程度**: 🟡 中  
-- **位置**: [MomentsPage.jsx L28](file:///Users/Shared/projects/Chat_Buddy/src/features/moments/MomentsPage.jsx#L28)  
+- **位置**: [MomentsPage.jsx L28](../src/features/moments/MomentsPage.jsx#L28)
 - **描述**: 在useMemo依赖项计算中调用Date.now()  
 - **影响**: 可能导致组件不稳定，每次渲染产生不同结果
 
 #### BUG-008: CommentsSheet纯函数违规
 - **严重程度**: 🟡 中  
-- **位置**: [CommentsSheet.jsx L109](file:///Users/Shared/projects/Chat_Buddy/src/features/moments/components/CommentsSheet.jsx#L109)  
+- **位置**: [CommentsSheet.jsx L109](../src/features/moments/components/CommentsSheet.jsx#L109)
 - **描述**: 使用Math.random()生成延迟时间  
 - **影响**: 不确定的延迟时间可能影响用户体验一致性
 
@@ -232,13 +232,13 @@ AI集成: OpenAI Compatible API
 
 #### BUG-010: MomentsSidebar memoization无法保持
 - **严重程度**: 🟡 中  
-- **位置**: [MomentsSidebar.jsx L43](file:///Users/Shared/projects/Chat_Buddy/src/features/moments/components/MomentsSidebar.jsx#L43)  
+- **位置**: [MomentsSidebar.jsx L43](../src/features/moments/components/MomentsSidebar.jsx#L43)
 - **描述**: React Compiler跳过优化，因为手动memoization无法保留  
 - **影响**: 可能导致不必要的重新渲染
 
 #### BUG-011: 控制字符在正则表达式中
 - **严重程度**: 🟡 中  
-- **位置**: [sanitizeUtils.js L36](file:///Users/Shared/projects/Chat_Buddy/src/utils/sanitizeUtils.js#L36)  
+- **位置**: [sanitizeUtils.js L36](../src/utils/sanitizeUtils.js#L36)
 - **描述**: 正则表达式包含\x00, \x1f控制字符  
 - **影响**: 可能导致安全风险或兼容性问题
 

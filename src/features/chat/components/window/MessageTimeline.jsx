@@ -543,7 +543,7 @@ const MessageItem = memo(function MessageItem({
                     )}
 
                     <div className={cn(
-                        "flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity self-center",
+                        "flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 transition-opacity self-center",
                         isMe ? "mr-1 flex-row-reverse" : "ml-1"
                     )}>
                         {!isMe && type === 'text' && content && (
@@ -553,8 +553,10 @@ const MessageItem = memo(function MessageItem({
                             />
                         )}
                         <button
+                            type="button"
                             onClick={(e) => onContextMenu(e, msg)}
-                            className="p-2 rounded-full hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] active:scale-95 transition-all duration-200 cursor-pointer"
+                            aria-label={t('message_actions') || 'Message actions'}
+                            className="min-w-11 min-h-11 flex items-center justify-center rounded-full hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] active:scale-95 transition-all duration-200 cursor-pointer"
                         >
                             <MoreHorizontal size={14} />
                         </button>
@@ -570,6 +572,7 @@ const MessageItem = memo(function MessageItem({
         prev.msg.content === next.msg.content &&
         prev.msg.recalled === next.msg.recalled &&
         prev.msg.readBy === next.msg.readBy &&
+        prev.chat?.polls === next.chat?.polls &&
         prev.highlightedMessageId === next.highlightedMessageId &&
         prev.language === next.language &&
         prev.bubbleStyle === next.bubbleStyle

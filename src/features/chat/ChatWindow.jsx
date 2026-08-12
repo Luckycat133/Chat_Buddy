@@ -65,7 +65,7 @@ export default function ChatWindow({ chatId: propChatId }) {
     const [canRecallMessage, setCanRecallMessage] = useState(false);
     const [quotedMessage, setQuotedMessage] = useState(null);
     const [toast, setToast] = useState(null);
-    const [focusedMessageId, setFocusedMessageId] = useState(null);
+    const [manuallyFocusedMessageId, setManuallyFocusedMessageId] = useState(null);
 
     // T07: Bookmark states
     const [showBookmarkPanel, setShowBookmarkPanel] = useState(false);
@@ -178,7 +178,7 @@ export default function ChatWindow({ chatId: propChatId }) {
             });
             return;
         }
-        setFocusedMessageId(messageId);
+        setManuallyFocusedMessageId(messageId);
     }, [chat?.id, navigate]);
 
     const handleNavigateToBookmark = useCallback((chatId, messageId) => {
@@ -186,7 +186,7 @@ export default function ChatWindow({ chatId: propChatId }) {
     }, [navigateToMessage]);
 
     const handleFocusHandled = useCallback(() => {
-        setFocusedMessageId(null);
+        setManuallyFocusedMessageId(null);
         if (!location.state?.targetMessageId) return;
 
         const nextState = location.state ? { ...location.state } : {};
@@ -239,14 +239,7 @@ export default function ChatWindow({ chatId: propChatId }) {
     })();
 
     const targetMessageIdFromRoute = location.state?.targetMessageId;
-
-    // Receive target message from route state (global search / settings search / bookmark jumps).
-    // Syncs from external navigation state - imperative but necessary for route-driven focus.
-    useEffect(() => {
-        if (targetMessageIdFromRoute) {
-            setFocusedMessageId(targetMessageIdFromRoute);
-        }
-    }, [targetMessageIdFromRoute]);
+    const focusedMessageId = manuallyFocusedMessageId || targetMessageIdFromRoute || null;
 
     // Determine character for theming (DM only) - derived from chat state
     const isDM = chat?.participants?.length === 2;

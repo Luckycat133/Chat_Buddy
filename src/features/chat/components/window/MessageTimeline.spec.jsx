@@ -435,6 +435,30 @@ describe('MessageTimeline', () => {
     expect(onVotePoll).toHaveBeenCalledWith('poll-1', 'a', 'switch');
   });
 
+  it('test_when_poll_state_changes_should_rerender_memoized_message', () => {
+    const baseChat = {
+      id: 'chat-1',
+      participants: ['user-me', 'ai-1'],
+      polls: [{ id: 'poll-1', question: 'Old question', options: [{ id: 'a', text: 'Alpha' }] }],
+      messages: [{ id: 'm1', senderId: 'ai-1', content: '[POLL:poll-1]', timestamp: '2026-02-23T00:00:00.000Z' }],
+    };
+    const view = renderTimeline(baseChat);
+
+    view.rerender(
+      <MessageTimeline
+        chat={{ ...baseChat, polls: [{ id: 'poll-1', question: 'Updated question', options: [{ id: 'a', text: 'Alpha' }] }] }}
+        currentUser={currentUser}
+        personas={personas}
+        typingIndicators={{}}
+        onContextMenu={vi.fn()}
+        onVotePoll={vi.fn()}
+        onMentionClick={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('poll-message')).toHaveTextContent('Updated question');
+  });
+
   it('test_when_message_types_include_gift_and_red_packet_should_render_metadata_text', () => {
     // Given
     const chat = {
@@ -594,7 +618,7 @@ describe('MessageTimeline', () => {
     renderTimeline(chat, { onContextMenu });
     fireEvent.click(screen.getByTestId('image-message'));
     fireEvent.contextMenu(screen.getByText('https://cdn.example/image.png'));
-    fireEvent.click(screen.getByRole('button', { name: '' }));
+    fireEvent.click(screen.getByRole('button', { name: 'message_actions' }));
 
     // Then
     expect(screen.getByTestId('image-lightbox')).toHaveTextContent('true');

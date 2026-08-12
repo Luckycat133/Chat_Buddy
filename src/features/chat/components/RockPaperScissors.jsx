@@ -23,7 +23,7 @@ const OUTCOMES = {
 export default function RockPaperScissors({ aiName, onClose, onResult }) {
     const { t } = useLanguage();
     const { addPoints, updateTaskProgress } = useSocial();
-    const trapRef = useFocusTrap(true);
+    const trapRef = useFocusTrap(true, onClose);
     const [playerChoice, setPlayerChoice] = useState(null);
     const [aiChoice, setAiChoice] = useState(null);
     const [result, setResult] = useState(null);

@@ -8,7 +8,7 @@ import { cn } from '../../../utils/cn';
 export default function ForwardModal({ message, onClose, onForward }) {
     const { chats, personas } = useChat();
     const { t, language } = useLanguage();
-    const trapRef = useFocusTrap(true);
+    const trapRef = useFocusTrap(true, onClose);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedChats, setSelectedChats] = useState([]);
 

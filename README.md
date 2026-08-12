@@ -12,17 +12,17 @@
 > deployments must use a server-side proxy or require each user to enter their own
 > key at runtime.
 >
-> **Latest review:** the current security, data-integrity, CI, and UI/UX findings
-> are tracked in the [2026-08-11 comprehensive review](docs/CODE_REVIEW_REPORT_2026-08-11.md).
+> **Latest review:** the security, data-integrity, CI, and UI/UX remediation was
+> verified on 2026-08-12 in the [comprehensive review](docs/CODE_REVIEW_REPORT_2026-08-11.md).
 
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)
+![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19+-61DAFB.svg)
-![Tests](https://img.shields.io/badge/tests-372%20passing-success.svg)
-![Coverage](https://img.shields.io/badge/coverage-21.48%25-red.svg)
+![Tests](https://img.shields.io/badge/tests-390%20passing-success.svg)
+![Core Coverage](https://img.shields.io/badge/core%20lines-87.87%25-success.svg)
 
 **AI Chat Companion**
 
@@ -103,7 +103,7 @@ Meet your favorite anime characters:
 
 | Requirement | Version |
 |-------------|---------|
-| Node.js | `^22.22.2`, `^24.15.0`, or `>=26` |
+| Node.js | `^20.19.0`, `^22.13.0`, or `>=24.0.0` |
 | npm | v7+ |
 | DeepSeek API Key | Optional, for AI responses |
 
@@ -237,7 +237,7 @@ We welcome contributions! Please follow these guidelines:
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
-**Current Web Version**: v0.3.3
+**Current Web Version**: v0.4.1
 
 ### Recent Updates
 - 🖼️ **Immersive Background System**: 20+ AI-generated backgrounds for each persona
@@ -245,7 +245,7 @@ See [CHANGELOG.md](CHANGELOG.md) for version history.
 - 📱 **iOS 26 Style**: Refined border-radius and subtle animations
 - 🎨 **Per-Chat Backgrounds**: Custom background for each conversation
 - 🧠 **Specialized AI Agents**: 6 task-focused assistants (Coder, Muse, Scholar, etc.)
-- 🛠️ **ReAct Tool Calling**: AI can execute code, search, generate images
+- 🛡️ **Authorized Tool Calling**: deny-by-default persona tool allowlists; arbitrary browser code execution is disabled
 - 📸 Enhanced AI Moments with dynamic posting and smart comments
 - 📍 Location tags and visibility settings (Public/Private/etc.)
 - 💬 Reply threads and emoji reactions in Moments

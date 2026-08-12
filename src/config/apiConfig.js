@@ -12,6 +12,10 @@ const CONFIG_KEY = 'api-config';
 const PROFILES_KEY = 'api-profiles';
 const LOCAL_STORAGE_PREFIX = 'chat-buddy';
 const SESSION_API_KEY_KEY = `${LOCAL_STORAGE_PREFIX}:session-api-key`;
+const BLOCK_ENV_API_KEY_SENTINEL = '__CHAT_BUDDY_BLOCK_ENV_API_KEY__';
+const CURRENT_BACKUP_VERSION = 2;
+const MAX_BACKUP_SIZE_BYTES = 50 * 1024 * 1024;
+const MAX_BACKUP_RECORDS_PER_STORE = 100000;
 
 const INDEXED_DB_SCHEMAS = [
     {
@@ -90,15 +94,16 @@ function getSessionStorage() {
     return window.sessionStorage;
 }
 
-function setSessionApiKey(apiKey) {
+function setSessionApiKey(apiKey, { blockEnv = false } = {}) {
     const value = typeof apiKey === 'string' ? apiKey : '';
-    sessionApiKeyCache = value;
+    const storedValue = value || (blockEnv ? BLOCK_ENV_API_KEY_SENTINEL : '');
+    sessionApiKeyCache = storedValue;
 
     try {
         const sessionStorage = getSessionStorage();
         if (!sessionStorage) return;
 
-        if (value) sessionStorage.setItem(SESSION_API_KEY_KEY, value);
+        if (storedValue) sessionStorage.setItem(SESSION_API_KEY_KEY, storedValue);
         else sessionStorage.removeItem(SESSION_API_KEY_KEY);
     } catch (e) {
         console.warn('[apiConfig] sessionStorage write failed (best-effort):', e?.message);
@@ -172,7 +177,9 @@ export function getConfig() {
         ...(saved || {}),
     };
 
-    if (sessionApiKey) {
+    if (sessionApiKey === BLOCK_ENV_API_KEY_SENTINEL) {
+        merged.apiKey = '';
+    } else if (sessionApiKey) {
         merged.apiKey = sessionApiKey;
     }
 
@@ -202,7 +209,7 @@ export function saveConfig(config) {
         }
     }
     storage.set(CONFIG_KEY, toSave);
-    if (typeof apiKey === 'string') setSessionApiKey(apiKey);
+    if (typeof apiKey === 'string') setSessionApiKey(apiKey, { blockEnv: !apiKey });
 }
 
 /** Wipe runtime overrides (revert to .env / defaults) */
@@ -370,13 +377,14 @@ async function clearStoreRecords(schema) {
     });
 }
 
-async function restoreStoreRecords(schema, records = []) {
+async function replaceStoreRecords(schema, records = []) {
     const db = await openDatabase(schema);
     if (!db || !db.objectStoreNames.contains(schema.storeName)) return 0;
 
     return new Promise((resolve, reject) => {
         const tx = db.transaction(schema.storeName, 'readwrite');
         const store = tx.objectStore(schema.storeName);
+        store.clear();
         let written = 0;
         records.forEach((record) => {
             store.put(record);
@@ -385,6 +393,112 @@ async function restoreStoreRecords(schema, records = []) {
         tx.oncomplete = () => resolve(written);
         tx.onerror = () => reject(tx.error);
     });
+}
+
+function isPlainObject(value) {
+    return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isAllowedStorageKey(key) {
+    return typeof key === 'string' && key.length <= 200 && (
+        key.startsWith('chat-buddy:') || key.startsWith('chat-buddy-')
+    );
+}
+
+function assertSafeBaseUrl(baseUrl) {
+    if (baseUrl === undefined || baseUrl === null || baseUrl === '') return;
+    if (typeof baseUrl !== 'string' || baseUrl.length > 2048) throw new Error('invalid_backup_base_url');
+    if (baseUrl.startsWith('/') && !baseUrl.startsWith('//')) return;
+
+    let parsed;
+    try {
+        parsed = new URL(baseUrl);
+    } catch {
+        throw new Error('invalid_backup_base_url');
+    }
+    if (parsed.protocol === 'http:' && !['localhost', '127.0.0.1', '[::1]'].includes(parsed.hostname)) {
+        throw new Error('invalid_backup_base_url');
+    }
+    if (!['https:', 'http:'].includes(parsed.protocol)) throw new Error('invalid_backup_base_url');
+}
+
+function parseBackupValue(value) {
+    if (typeof value !== 'string') return value;
+    try {
+        return JSON.parse(value);
+    } catch {
+        return value;
+    }
+}
+
+function sanitizeBackupValue(key, value) {
+    const parsed = parseBackupValue(value);
+
+    if (key === 'chat-buddy:api-config' || key === 'chat-buddy-api-config') {
+        if (!isPlainObject(parsed)) throw new Error('invalid_backup_api_config');
+        assertSafeBaseUrl(parsed.baseUrl);
+        return stripApiKey(parsed);
+    }
+
+    if (key === 'chat-buddy:api-profiles' || key === 'chat-buddy-api-profiles') {
+        if (!Array.isArray(parsed)) throw new Error('invalid_backup_api_profiles');
+        return parsed.map((profile) => {
+            if (!isPlainObject(profile) || !isPlainObject(profile.config)) {
+                throw new Error('invalid_backup_api_profiles');
+            }
+            assertSafeBaseUrl(profile.config.baseUrl);
+            return { ...profile, config: stripApiKey(profile.config) };
+        });
+    }
+
+    return parsed;
+}
+
+function validateBackupPayload(data) {
+    if (!isPlainObject(data) || !isPlainObject(data._meta) || data._meta.app !== 'Chat Buddy') {
+        throw new Error('invalid_backup');
+    }
+
+    const isV2 = Object.hasOwn(data, 'localStorage') || Object.hasOwn(data, 'indexedDB');
+    const expectedVersion = isV2 ? CURRENT_BACKUP_VERSION : 1;
+    if (data._meta.version !== expectedVersion) throw new Error('unsupported_backup_version');
+
+    const rawLocalStorage = isV2
+        ? data.localStorage
+        : Object.fromEntries(Object.entries(data).filter(([key]) => key !== '_meta'));
+    if (!isPlainObject(rawLocalStorage)) throw new Error('invalid_backup_storage');
+
+    const localStorageData = {};
+    for (const [key, value] of Object.entries(rawLocalStorage)) {
+        if (!isAllowedStorageKey(key)) throw new Error(`invalid_backup_key:${key}`);
+        localStorageData[key] = sanitizeBackupValue(key, value);
+    }
+
+    const indexedDBData = isV2 ? (data.indexedDB || {}) : {};
+    if (!isPlainObject(indexedDBData)) throw new Error('invalid_backup_indexeddb');
+
+    const allowedDatabases = new Set(INDEXED_DB_SCHEMAS.map((schema) => schema.dbName));
+    for (const dbName of Object.keys(indexedDBData)) {
+        if (!allowedDatabases.has(dbName) || !isPlainObject(indexedDBData[dbName])) {
+            throw new Error(`invalid_backup_database:${dbName}`);
+        }
+    }
+
+    for (const schema of INDEXED_DB_SCHEMAS) {
+        const database = indexedDBData[schema.dbName];
+        if (!database) continue;
+        const storeNames = Object.keys(database);
+        if (storeNames.some((storeName) => storeName !== schema.storeName)) {
+            throw new Error(`invalid_backup_store:${schema.dbName}`);
+        }
+        const records = database[schema.storeName];
+        if (records === undefined) continue;
+        if (!Array.isArray(records) || records.length > MAX_BACKUP_RECORDS_PER_STORE || records.some((record) => !isPlainObject(record))) {
+            throw new Error(`invalid_backup_records:${schema.dbName}`);
+        }
+    }
+
+    return { localStorageData, indexedDBData };
 }
 
 function getLocalStorageBackupData() {
@@ -403,6 +517,8 @@ function getLocalStorageBackupData() {
 }
 
 export async function clearAllAppData() {
+    setSessionApiKey('', { blockEnv: true });
+
     Object.keys(localStorage).forEach((key) => {
         if (key.startsWith('chat-buddy:') || key.startsWith('chat-buddy-')) {
             localStorage.removeItem(key);
@@ -452,7 +568,7 @@ export async function exportAllData() {
         _meta: {
             app: 'Chat Buddy',
             exportedAt: new Date().toISOString(),
-            version: 2,
+            version: CURRENT_BACKUP_VERSION,
             includesIndexedDB: true
         },
         localStorage: getLocalStorageBackupData(),
@@ -477,42 +593,36 @@ export async function exportAllData() {
  */
 export function importData(file) {
     return new Promise((resolve, reject) => {
+        if (!file || file.size > MAX_BACKUP_SIZE_BYTES) {
+            reject(new Error('backup_too_large'));
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
                 const data = JSON.parse(e.target.result);
-                if (!data._meta || data._meta.app !== 'Chat Buddy') {
-                    reject(new Error('invalid_backup'));
-                    return;
-                }
+                const { localStorageData, indexedDBData } = validateBackupPayload(data);
 
                 let count = 0;
 
-                // v2 format with localStorage/indexedDB split
-                if (data.localStorage || data.indexedDB) {
-                    for (const [key, value] of Object.entries(data.localStorage || {})) {
-                        localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
-                        count++;
+                if (isBrowserIndexedDBAvailable()) {
+                    for (const schema of INDEXED_DB_SCHEMAS) {
+                        const records = indexedDBData?.[schema.dbName]?.[schema.storeName];
+                        if (!Array.isArray(records)) continue;
+                        count += await replaceStoreRecords(schema, records);
                     }
-
-                    if (isBrowserIndexedDBAvailable() && data.indexedDB) {
-                        for (const schema of INDEXED_DB_SCHEMAS) {
-                            const records = data.indexedDB?.[schema.dbName]?.[schema.storeName];
-                            if (!Array.isArray(records)) continue;
-                            await clearStoreRecords(schema);
-                            count += await restoreStoreRecords(schema, records);
-                        }
-                    }
-                    resolve(count);
-                    return;
                 }
 
-                // v1 legacy format
-                for (const [key, value] of Object.entries(data)) {
-                    if (key === '_meta') continue;
+                // Imported endpoints must never inherit the credential from the
+                // current tab. The user must explicitly re-enter the API key.
+                setSessionApiKey('', { blockEnv: true });
+
+                for (const [key, value] of Object.entries(localStorageData)) {
                     localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
                     count++;
                 }
+
                 resolve(count);
             } catch (err) {
                 reject(err);

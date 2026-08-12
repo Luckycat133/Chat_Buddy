@@ -19,7 +19,7 @@ import {
 } from '../../../data/learnerProfile';
 
 // Import math.js for symbolic math
-import { evaluate, derivative, simplify } from 'mathjs';
+import { evaluate, derivative, simplify } from 'mathjs/number';
 
 // Import immersive translation service
 import { translateWithReflection, detectDomain } from '../../../services/ai/translationService';
@@ -46,6 +46,7 @@ import {
 
 // T12: Memory Exchange for inter-character memory tool
 import { requestMemory } from '../../../core/memory/MemoryExchange';
+import { assertToolAuthorized } from './toolAuthorization';
 
 /**
  * Execute a named tool with provided arguments
@@ -54,6 +55,9 @@ import { requestMemory } from '../../../core/memory/MemoryExchange';
  * @returns {Promise<string>} Tool output
  */
 export async function executeTool(toolName, args, extras = {}) {
+    const requester = (extras.personas || []).find((persona) => persona.id === extras.requesterId);
+    assertToolAuthorized(requester, toolName);
+
     console.log(`[ToolService] Executing ${toolName} with args:`, args);
 
     // Simulate minimal network delay for UX
@@ -275,78 +279,14 @@ function trackProgressTool(topicKeyword, status, misconception) {
 
 // ========== Programming Tool Implementations ==========
 
-// T13: Singleton sandbox worker for isolated code execution
-let _sandboxWorker = null;
-let _workerRequestCounter = 0;
-const _workerCallbacks = new Map(); // requestId → { resolve, reject }
-
-function getSandboxWorker() {
-    if (_sandboxWorker) return _sandboxWorker;
-    _sandboxWorker = new Worker('/sandbox.worker.js');
-    _sandboxWorker.onmessage = (event) => {
-        const { type, requestId, status, output } = event.data;
-        if (type === 'STATUS') {
-            console.log('[SandboxWorker]', output);
-            return;
-        }
-        if (type === 'RESULT' && _workerCallbacks.has(requestId)) {
-            const { resolve } = _workerCallbacks.get(requestId);
-            _workerCallbacks.delete(requestId);
-            resolve({ status, output });
-        }
-    };
-    _sandboxWorker.onerror = (err) => {
-        console.error('[SandboxWorker] Uncaught error:', err);
-        // Reject all pending and reset
-        _workerCallbacks.forEach(({ reject }) => reject(new Error('Worker crashed')));
-        _workerCallbacks.clear();
-        _sandboxWorker = null;
-    };
-    return _sandboxWorker;
-}
-
 /**
- * T13: Execute code in the isolated sandbox worker with a 10-second timeout.
- * Supports 'javascript' and 'python'.
+ * Arbitrary code execution is intentionally unavailable in the browser build.
+ * A same-origin Worker still has ambient network and storage capabilities and
+ * is not a security boundary for model-generated code.
  */
 async function executeInSandbox(code, language = 'javascript') {
     if (!code) return "Error: No code provided";
-
-    const requestId = ++_workerRequestCounter;
-    const TIMEOUT_MS = language === 'python' ? 30000 : 10000; // Python WASM needs more time
-
-    return new Promise((resolve) => {
-        const timeout = setTimeout(() => {
-            if (_workerCallbacks.has(requestId)) {
-                _workerCallbacks.delete(requestId);
-                // Kill and recreate worker to stop infinite loops
-                try { _sandboxWorker?.terminate(); } catch (_) { /* */ }
-                _sandboxWorker = null;
-                resolve(`[Execution Timeout] Code exceeded ${TIMEOUT_MS / 1000}s limit and was terminated.`);
-            }
-        }, TIMEOUT_MS);
-
-        _workerCallbacks.set(requestId, {
-            resolve: ({ status, output }) => {
-                clearTimeout(timeout);
-                const label = status === 'error' ? '[Execution Error]' : '[Execution Result]';
-                resolve(`${label}\n${output}`);
-            },
-            reject: (err) => {
-                clearTimeout(timeout);
-                resolve(`[Execution Error]\n${err.message}`);
-            },
-        });
-
-        try {
-            getSandboxWorker().postMessage({ type: 'EXECUTE', requestId, language, code });
-        } catch (err) {
-            clearTimeout(timeout);
-            _workerCallbacks.delete(requestId);
-            _sandboxWorker = null;
-            resolve(`[Execution Error]\n${err.message}`);
-        }
-    });
+    return `[Code Execution Disabled]\n${language} code is not executed in the browser. Use a trusted, isolated runtime outside Chat Buddy.`;
 }
 
 // ========== Research Tool Implementations ==========

@@ -3,23 +3,12 @@ import { X, Bookmark, MessageSquare, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { getBookmarks, removeBookmark } from '../services/BookmarkService';
 import { formatTimeSeparator } from '../../../utils/formatTime';
+import { useFocusTrap } from '../../../hooks/useFocusTrap';
 
 export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, personas }) {
     const { t, language } = useLanguage();
-    const [bookmarks, setBookmarks] = React.useState([]);
-
-    const handleBookmarkKeyDown = (event, bookmark) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        handleNavigate(bookmark);
-    };
-
-    // Load bookmarks when panel opens
-    React.useEffect(() => {
-        if (isOpen) {
-            setBookmarks(getBookmarks());
-        }
-    }, [isOpen]);
+    const [bookmarks, setBookmarks] = React.useState(() => getBookmarks());
+    const trapRef = useFocusTrap(isOpen, onClose);
 
     const handleRemove = (e, messageId) => {
         e.stopPropagation();
@@ -57,7 +46,14 @@ export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, pe
             />
 
             {/* Panel */}
-            <div className="relative w-full max-w-md h-full bg-[var(--color-bg-white)] shadow-2xl animate-slide-in-right flex flex-col">
+            <div
+                ref={trapRef}
+                tabIndex={-1}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="bookmarks-title"
+                className="relative w-full max-w-md h-full bg-[var(--color-bg-white)] shadow-2xl animate-slide-in-right flex flex-col"
+            >
                 {/* Header */}
                 <div className="flex items-center justify-between px-4 py-4 border-b border-[var(--color-border)]">
                     <div className="flex items-center gap-3">
@@ -65,7 +61,7 @@ export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, pe
                             <Bookmark className="text-[var(--color-primary)]" size={20} />
                         </div>
                         <div>
-                            <h2 className="font-semibold text-[var(--color-text-main)]">
+                            <h2 id="bookmarks-title" className="font-semibold text-[var(--color-text-main)]">
                                 {t('bookmarks_title') || 'Bookmarks'}
                             </h2>
                             <p className="text-xs text-[var(--color-text-muted)]">
@@ -74,8 +70,10 @@ export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, pe
                         </div>
                     </div>
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="p-2 hover:bg-[var(--color-bg-hover)] rounded-full transition-colors"
+                        aria-label={t('close') || 'Close'}
+                        className="min-h-11 min-w-11 flex items-center justify-center hover:bg-[var(--color-bg-hover)] rounded-full transition-colors"
                     >
                         <X size={20} className="text-[var(--color-text-muted)]" />
                     </button>
@@ -98,13 +96,9 @@ export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, pe
                     ) : (
                         <div className="space-y-3">
                             {bookmarks.map((bookmark) => (
-                                <div
+                                <article
                                     key={bookmark.messageId}
-                                    onClick={() => handleNavigate(bookmark)}
-                                    onKeyDown={(event) => handleBookmarkKeyDown(event, bookmark)}
-                                    role="button"
-                                    tabIndex={0}
-                                    className="group p-4 bg-[var(--color-bg-app)] rounded-xl border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 hover:shadow-md transition-all cursor-pointer"
+                                    className="group p-4 bg-[var(--color-bg-app)] rounded-xl border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 hover:shadow-md transition-all"
                                 >
                                     {/* Chat name and time */}
                                     <div className="flex items-center justify-between mb-2">
@@ -129,19 +123,23 @@ export default function BookmarkPanel({ isOpen, onClose, onNavigateToMessage, pe
 
                                     {/* Actions */}
                                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--color-border-light)]">
-                                        <span className="text-xs text-[var(--color-primary)] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleNavigate(bookmark)}
+                                            className="min-h-11 px-2 text-xs text-[var(--color-primary)] flex items-center gap-1 group-hover:translate-x-1 transition-transform"
+                                        >
                                             {t('view_message') || 'View Message'}
                                             <ArrowRight size={12} />
-                                        </span>
+                                        </button>
                                         <button
                                             type="button"
                                             onClick={(e) => handleRemove(e, bookmark.messageId)}
-                                            className="text-xs text-[var(--color-text-muted)] hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50"
+                                            className="min-h-11 px-3 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-danger)] transition-colors rounded hover:bg-red-50"
                                         >
                                             {t('remove') || 'Remove'}
                                         </button>
                                     </div>
-                                </div>
+                                </article>
                             ))}
                         </div>
                     )}

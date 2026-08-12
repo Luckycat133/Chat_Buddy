@@ -152,8 +152,11 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
                         {isOwn && (
                             <div className="relative">
                                 <button
+                                    type="button"
                                     onClick={() => setShowMenu(!showMenu)}
-                                    className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
+                                    className="min-w-11 min-h-11 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-main)]"
+                                    aria-label={t('post_options') || 'Post options'}
+                                    aria-expanded={showMenu}
                                 >
                                     <MoreHorizontal size={18} />
                                 </button>
@@ -220,8 +223,11 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
                             {/* Reaction Picker */}
                             <div className="relative">
                                 <button
+                                    type="button"
                                     onClick={() => setShowReactions(!showReactions)}
-                                    className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                    className="min-w-11 min-h-11 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                    aria-label={t('add_reaction') || 'Add reaction'}
+                                    aria-expanded={showReactions}
                                 >
                                     <SmilePlus size={16} />
                                 </button>
@@ -231,9 +237,11 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
                                         <div className="absolute bottom-6 right-0 bg-[var(--color-bg-white)] rounded-full shadow-lg border border-[var(--color-border)] z-20 flex gap-1 p-1">
                                             {REACTION_EMOJIS.map(emoji => (
                                                 <button
+                                                    type="button"
                                                     key={emoji}
                                                     onClick={() => handleReaction(emoji)}
-                                                    className="w-8 h-8 flex items-center justify-center hover:bg-[var(--color-bg-app)] rounded-full text-[18px] transition-transform hover:scale-125"
+                                                    className="w-11 h-11 flex items-center justify-center hover:bg-[var(--color-bg-app)] rounded-full text-[18px] transition-transform hover:scale-110"
+                                                    aria-label={`${t('react_with') || 'React with'} ${emoji}`}
                                                 >
                                                     {emoji}
                                                 </button>
@@ -245,17 +253,21 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
 
                             {/* Repost / Forward */}
                             <button
+                                type="button"
                                 onClick={() => setShowRepostSheet(true)}
-                                className="text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                className="min-w-11 min-h-11 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
                                 title={t('repost') || 'Share to Chat'}
+                                aria-label={t('repost') || 'Share to Chat'}
                             >
                                 <Forward size={16} />
                             </button>
 
                             {/* Comment */}
                             <button
+                                type="button"
                                 onClick={() => onCommentClick(post)}
-                                className="flex items-center gap-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                className="min-w-11 min-h-11 flex items-center justify-center gap-1 text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors"
+                                aria-label={t('comment') || 'Comment'}
                             >
                                 <MessageCircle size={16} />
                                 {commentCount > 0 && <span className="text-[12px]">{commentCount}</span>}
@@ -263,10 +275,11 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
 
                             {/* Like */}
                             <button
+                                type="button"
                                 aria-label={hasLiked ? (t('unlike') || 'Unlike') : (t('like') || 'Like')}
                                 onClick={() => toggleLike(post.id)}
                                 className={cn(
-                                    "flex items-center gap-1 transition-colors",
+                                    "min-w-11 min-h-11 flex items-center justify-center gap-1 transition-colors",
                                     hasLiked ? "text-red-500" : "text-[var(--color-text-muted)] hover:text-red-500"
                                 )}
                             >

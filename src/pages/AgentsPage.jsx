@@ -115,8 +115,10 @@ export default function AgentsPage() {
                     </div>
                     {/* Create button */}
                     <button
+                        type="button"
                         onClick={openCreate}
-                        className="shrink-0 mt-1 flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-on-primary)] font-bold text-sm shadow-glow transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
+                        aria-label={t('create_agent')}
+                        className="shrink-0 mt-1 min-h-11 flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-[var(--color-on-primary)] font-bold text-sm shadow-glow transition-all duration-200 hover:-translate-y-0.5 active:scale-95"
                     >
                         <Plus size={17} />
                         <span className="hidden sm:inline">{t('create_agent')}</span>
@@ -165,15 +167,20 @@ export default function AgentsPage() {
                         const isCustom = Boolean(agent.isCustom);
 
                         return (
-                            <div
+                            <article
                                 key={agent.id}
-                                onClick={() => handleChat(agent.id)}
                                 className={cn(
-                                    "group relative rounded-[var(--radius-2xl)] overflow-hidden cursor-pointer transition-all duration-500 hover:shadow-glow-strong ring-1 ring-[var(--color-border)] animate-fade-slide-up",
+                                    "group relative rounded-[var(--radius-2xl)] overflow-hidden cursor-pointer transition-all duration-500 hover:shadow-glow-strong ring-1 ring-[var(--color-border)] focus-within:ring-2 focus-within:ring-[var(--color-primary)] focus-within:ring-offset-2 animate-fade-slide-up",
                                     isFeatured ? "md:col-span-2 md:row-span-1" : "col-span-1"
                                 )}
                                 style={{ animationDelay: `${index * 50 + 150}ms` }}
                             >
+                                <button
+                                    type="button"
+                                    onClick={() => handleChat(agent.id)}
+                                    className="absolute inset-0 z-10 cursor-pointer focus:outline-none"
+                                    aria-label={t('agent_start_chat_with', { name: displayName })}
+                                />
                                 {/* Background Image/Gradient */}
                                 <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-105">
                                     {agent.avatar ? (
@@ -196,9 +203,11 @@ export default function AgentsPage() {
                                     <div className="absolute top-4 right-4 flex items-center gap-2">
                                         {isCustom && (
                                             <button
+                                                type="button"
                                                 onClick={(e) => openEdit(e, agent)}
-                                                className="glass rounded-full p-2 opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 hover:bg-white/20"
+                                                className="relative z-20 glass rounded-full min-w-11 min-h-11 flex items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transform translate-y-2 group-hover:translate-y-0 focus:translate-y-0 transition-all duration-300 hover:bg-white/20"
                                                 title={t('btn_edit')}
+                                                aria-label={`${t('btn_edit')} ${displayName}`}
                                             >
                                                 <Pencil size={16} className="text-[var(--color-text-main)]" />
                                             </button>
@@ -233,7 +242,7 @@ export default function AgentsPage() {
                                             </h3>
                                         </div>
 
-                                        <p className="text-white/90 line-clamp-2 md:line-clamp-3 mb-4 text-sm font-medium leading-relaxed opacity-90 group-hover:opacity-100 drop-shadow">
+                                        <p className="text-[var(--color-text-secondary)] line-clamp-2 md:line-clamp-3 mb-4 text-sm font-medium leading-relaxed opacity-90 group-hover:opacity-100 drop-shadow">
                                             {desc || t('custom_agent_desc')}
                                         </p>
 
@@ -251,7 +260,7 @@ export default function AgentsPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </article>
                         );
                     })}
                 </div>

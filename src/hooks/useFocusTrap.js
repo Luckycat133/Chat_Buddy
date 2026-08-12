@@ -11,9 +11,14 @@ const FOCUSABLE_SELECTOR =
  * @param {boolean} isActive - Whether the trap is active
  * @returns {React.RefObject} - Attach to the container element
  */
-export function useFocusTrap(isActive = true) {
+export function useFocusTrap(isActive = true, onClose) {
     const containerRef = useRef(null);
     const previousFocusRef = useRef(null);
+    const onCloseRef = useRef(onClose);
+
+    useEffect(() => {
+        onCloseRef.current = onClose;
+    }, [onClose]);
 
     useEffect(() => {
         if (!isActive || !containerRef.current) return;
@@ -27,15 +32,32 @@ export function useFocusTrap(isActive = true) {
                 .filter(el => !el.closest('[hidden]') && el.offsetParent !== null);
 
         // Focus first focusable element
-        requestAnimationFrame(() => {
+        const focusFrame = requestAnimationFrame(() => {
             const elements = getFocusable();
-            if (elements.length > 0) elements[0].focus();
+            const preferred = container.querySelector('[autofocus]');
+            if (preferred instanceof HTMLElement && preferred.offsetParent !== null) {
+                preferred.focus();
+            } else if (elements.length > 0) {
+                elements[0].focus();
+            } else {
+                container.focus();
+            }
         });
 
         const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && onCloseRef.current) {
+                e.preventDefault();
+                e.stopPropagation();
+                onCloseRef.current();
+                return;
+            }
             if (e.key !== 'Tab') return;
             const elements = getFocusable();
-            if (elements.length === 0) return;
+            if (elements.length === 0) {
+                e.preventDefault();
+                container.focus();
+                return;
+            }
 
             const first = elements[0];
             const last = elements[elements.length - 1];
@@ -56,8 +78,11 @@ export function useFocusTrap(isActive = true) {
         container.addEventListener('keydown', handleKeyDown);
 
         return () => {
+            cancelAnimationFrame(focusFrame);
             container.removeEventListener('keydown', handleKeyDown);
-            previousFocusRef.current?.focus();
+            if (previousFocusRef.current instanceof HTMLElement && previousFocusRef.current.isConnected) {
+                previousFocusRef.current.focus({ preventScroll: true });
+            }
         };
     }, [isActive]);
 

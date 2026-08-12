@@ -263,7 +263,12 @@ function useMomentsAI({
         if (posts.length === 0) {
             const initialAIs = [...INITIAL_PERSONAS].sort(() => Math.random() - 0.5).slice(0, 4);
             initialAIs.forEach((persona, index) => {
-                const timeoutId = setTimeout(() => generateDynamicAIPost(persona.id), index * 2000);
+                // Populate a new feed locally. Opening the app must never make
+                // hidden, billable network requests before the user acts.
+                const timeoutId = setTimeout(
+                    () => generateDynamicAIPost(persona.id, { localOnly: true }),
+                    index * 2000
+                );
                 timeoutIdsRef.current.push(timeoutId);
             });
         }

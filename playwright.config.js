@@ -1,4 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
+import { existsSync } from 'node:fs';
+
+const macChromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const localChromiumLaunch = !process.env.CI && existsSync(macChromePath)
+  ? { launchOptions: { executablePath: macChromePath } }
+  : {};
 
 export default defineConfig({
   testDir: './e2e',
@@ -19,7 +25,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], ...localChromiumLaunch },
     },
     {
       name: 'firefox',
@@ -31,13 +37,20 @@ export default defineConfig({
     },
     {
       name: 'mobile-chrome',
-      use: { ...devices['Pixel 5'] },
+      use: { ...devices['Pixel 5'], ...localChromiumLaunch },
     },
   ],
-  webServer: process.env.CI ? {
-    command: 'npm run preview',
-    url: 'http://localhost:4173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  } : undefined,
+  webServer: process.env.CI
+    ? {
+        command: 'npm run preview',
+        url: 'http://localhost:4173',
+        reuseExistingServer: false,
+        timeout: 120 * 1000,
+      }
+    : {
+        command: 'npm run dev -- --host 127.0.0.1',
+        url: 'http://localhost:5173',
+        reuseExistingServer: true,
+        timeout: 120 * 1000,
+      },
 });

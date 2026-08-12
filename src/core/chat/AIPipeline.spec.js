@@ -73,7 +73,9 @@ const personas = [
     style: "casual",
     typingSpeed: "normal",
     agentType: "task-specialist",
+    toolsEnabled: true,
     tools: [{ name: "execute_math" }],
+    memory: { enabled: true, longTermEnabled: true },
   },
 ];
 
@@ -151,6 +153,40 @@ describe("AIPipeline", () => {
       "final answer",
       "ai-1",
     );
+  });
+
+  it("test_when_tools_are_disabled_should_reject_text_tool_call_without_execution", async () => {
+    // Given
+    const { pipeline, callbacks } = createPipeline();
+    const disabledPersonas = [{ ...personas[0], toolsEnabled: false }];
+    mocks.callAI
+      .mockResolvedValueOnce('[TOOL_CALL: execute_math {"expression":"1+1"}]')
+      .mockResolvedValueOnce('tool was denied');
+
+    // When
+    await pipeline.processTurn(baseChat, disabledPersonas, { id: "ai-1" });
+
+    // Then
+    expect(mocks.executeTool).not.toHaveBeenCalled();
+    expect(callbacks.onToolStart).not.toHaveBeenCalled();
+    expect(callbacks.onMessage).toHaveBeenCalledWith("chat-1", "tool was denied", "ai-1");
+  });
+
+  it("test_when_tool_is_not_declared_should_reject_native_tool_call_without_execution", async () => {
+    // Given
+    const { pipeline } = createPipeline();
+    const nativePayload = JSON.stringify({
+      function: { name: "run_code", arguments: JSON.stringify({ code: "fetch('/')" }) },
+    });
+    mocks.callAI
+      .mockResolvedValueOnce(`[TOOL_CALL_NATIVE:${nativePayload}]`)
+      .mockResolvedValueOnce("native tool was denied");
+
+    // When
+    await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
+
+    // Then
+    expect(mocks.executeTool).not.toHaveBeenCalled();
   });
 
   it("test_when_native_tool_response_contains_multiple_calls_should_execute_each_call", async () => {

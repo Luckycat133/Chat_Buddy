@@ -3,11 +3,12 @@
  * Create or edit a custom AI agent.
  * iOS 26 Liquid Glass design — reusable from AgentsPage and future character creation.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Bot, Sparkles, Trash2 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useLanguage } from '../context/LanguageContext';
 import { AGENT_SKILLS } from '../data/agentSkills';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 const GRADIENT_OPTIONS = [
     { label: 'Ocean',    value: 'from-blue-500 to-cyan-400',    preview: 'linear-gradient(135deg, #3b82f6, #22d3ee)' },
@@ -35,39 +36,26 @@ const CATEGORY_ORDER = ['programming', 'creative', 'research', 'education', 'emo
  * @param {Function} props.onDelete  - (agentId) => void
  * @param {Function} props.onClose
  */
-export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onClose }) {
-    const { language, t } = useLanguage();
+export default function AgentEditorModal(props) {
+    if (!props.isOpen) return null;
 
-    const [name, setName]           = useState('');
-    const [nameZh, setNameZh]       = useState('');
-    const [personality, setPersonality] = useState('');
-    const [systemPrompt, setSystemPrompt] = useState('');
-    const [selectedSkills, setSelectedSkills] = useState([]);
-    const [color, setColor]         = useState(GRADIENT_OPTIONS[0].value);
+    return <AgentEditorForm key={props.agent?.id || 'new-agent'} {...props} />;
+}
+
+function AgentEditorForm({ agent, onSave, onDelete, onClose }) {
+    const { language, t } = useLanguage();
+    const trapRef = useFocusTrap(true, onClose);
+
+    const [name, setName]           = useState(() => agent?.name || '');
+    const [nameZh, setNameZh]       = useState(() => agent?.name_zh || '');
+    const [personality, setPersonality] = useState(() => agent?.personality || '');
+    const [systemPrompt, setSystemPrompt] = useState(() => agent?.systemPrompt || '');
+    const [selectedSkills, setSelectedSkills] = useState(() => agent?.skills || []);
+    const [color, setColor]         = useState(() => agent?.color || GRADIENT_OPTIONS[0].value);
     const [saving, setSaving]       = useState(false);
     const [error, setError]         = useState('');
 
     const isEdit = Boolean(agent?.id);
-
-    // Populate fields when editing
-    useEffect(() => {
-        if (!isOpen) return;
-        if (agent) {
-            setName(agent.name || '');
-            setNameZh(agent.name_zh || '');
-            setPersonality(agent.personality || '');
-            setSystemPrompt(agent.systemPrompt || '');
-            setSelectedSkills(agent.skills || []);
-            setColor(agent.color || GRADIENT_OPTIONS[0].value);
-        } else {
-            setName(''); setNameZh(''); setPersonality('');
-            setSystemPrompt(''); setSelectedSkills([]);
-            setColor(GRADIENT_OPTIONS[0].value);
-        }
-        setError('');
-    }, [isOpen, agent]);
-
-    if (!isOpen) return null;
 
     const toggleSkill = (skillId) => {
         setSelectedSkills(prev =>
@@ -110,12 +98,12 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
     const selectedGradient = GRADIENT_OPTIONS.find(g => g.value === color) || GRADIENT_OPTIONS[0];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="agent-editor-title">
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
             {/* Sheet */}
-            <div className={cn(
+            <div ref={trapRef} tabIndex={-1} className={cn(
                 'relative z-10 w-full max-w-lg max-h-[90vh] flex flex-col',
                 'glass-strong rounded-3xl border border-[var(--color-border)] shadow-floating',
                 'animate-scale-spring',
@@ -129,7 +117,7 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                         <Bot size={20} className="text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <h2 className="font-display font-bold text-lg text-[var(--color-text-main)]">
+                        <h2 id="agent-editor-title" className="font-display font-bold text-lg text-[var(--color-text-main)]">
                             {isEdit
                                 ? (language === 'zh' ? '编辑助手' : 'Edit Agent')
                                 : (language === 'zh' ? '创建自定义助手' : 'Create Custom Agent')}
@@ -138,7 +126,7 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                             {language === 'zh' ? '定义专属 AI 助手的角色和能力' : 'Define a specialized AI assistant'}
                         </p>
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-xl hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] transition-colors">
+                    <button type="button" onClick={onClose} aria-label={t('close')} className="min-h-11 min-w-11 p-2 rounded-xl hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] transition-colors">
                         <X size={18} />
                     </button>
                 </div>
@@ -152,6 +140,7 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                                 {t('agent_editor_name')} *
                             </span>
                             <input
+                                autoFocus
                                 value={name}
                                 onChange={e => setName(e.target.value)}
                                 placeholder={t('agent_editor_name_placeholder')}
@@ -210,8 +199,10 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                                     key={g.value}
                                     onClick={() => setColor(g.value)}
                                     title={g.label}
+                                    aria-label={g.label}
+                                    aria-pressed={color === g.value}
                                     className={cn(
-                                        'w-8 h-8 rounded-xl transition-all duration-200',
+                                        'w-11 h-11 rounded-xl transition-all duration-200',
                                         color === g.value ? 'ring-2 ring-[var(--color-primary)] ring-offset-2 ring-offset-transparent scale-110' : 'hover:scale-105',
                                     )}
                                     style={{ background: g.preview }}
@@ -238,9 +229,11 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                                                 return (
                                                     <button
                                                         key={s.id}
+                                                        type="button"
                                                         onClick={() => toggleSkill(s.id)}
+                                                        aria-pressed={active}
                                                         className={cn(
-                                                            'px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all duration-150',
+                                                            'min-h-11 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all duration-150',
                                                             active
                                                                 ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)] border-[var(--color-primary)]'
                                                                 : 'bg-[var(--color-bg-hover)] text-[var(--color-text-secondary)] border-[var(--color-border)] hover:border-[var(--color-primary)]/50',
@@ -266,8 +259,10 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                 <div className="flex items-center gap-3 px-6 py-4 border-t border-[var(--color-border-light)] shrink-0">
                     {isEdit && (
                         <button
+                            type="button"
                             onClick={handleDelete}
-                            className="p-2.5 rounded-xl text-red-400 hover:bg-red-400/10 transition-colors"
+                            aria-label={t('delete')}
+                            className="min-h-11 min-w-11 p-2.5 rounded-xl text-red-400 hover:bg-red-400/10 transition-colors"
                             title={t('delete')}
                         >
                             <Trash2 size={18} />
@@ -275,15 +270,17 @@ export default function AgentEditorModal({ isOpen, agent, onSave, onDelete, onCl
                     )}
                     <div className="flex-1" />
                     <button
+                        type="button"
                         onClick={onClose}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] transition-colors"
+                        className="min-h-11 px-4 py-2 rounded-xl text-sm font-semibold text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] transition-colors"
                     >
                         {t('cancel')}
                     </button>
                     <button
+                        type="button"
                         onClick={handleSave}
                         disabled={saving}
-                        className="px-5 py-2 rounded-xl text-sm font-bold text-[var(--color-on-primary)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-50 transition-colors"
+                        className="min-h-11 px-5 py-2 rounded-xl text-sm font-bold text-[var(--color-on-primary)] bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] disabled:opacity-50 transition-colors"
                     >
                         {saving ? t('saving') : t('save')}
                     </button>

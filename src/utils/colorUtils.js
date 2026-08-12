@@ -50,6 +50,29 @@ function hexToRgb(hex) {
     };
 }
 
+function toLinearChannel(value) {
+    const channel = value / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+}
+
+function relativeLuminance(hex) {
+    const { r, g, b } = hexToRgb(hex);
+    return 0.2126 * toLinearChannel(r) + 0.7152 * toLinearChannel(g) + 0.0722 * toLinearChannel(b);
+}
+
+function contrastRatio(first, second) {
+    const lighter = Math.max(first, second);
+    const darker = Math.min(first, second);
+    return (lighter + 0.05) / (darker + 0.05);
+}
+
+export function getAccessibleTextColor(background) {
+    const luminance = relativeLuminance(background);
+    const blackContrast = contrastRatio(luminance, 0);
+    const whiteContrast = contrastRatio(luminance, 1);
+    return blackContrast >= whiteContrast ? '#000000' : '#ffffff';
+}
+
 /**
  * Given a hex color, compute 6 derived CSS values:
  * primary, hover, active, light, softer, glow
@@ -65,5 +88,6 @@ export function computeAccentPalette(hexColor) {
         light: hslToHex(h, Math.min(s, 100), Math.min(l + 25, 95)),
         softer: hslToHex(h, Math.max(s - 15, 0), Math.min(l + 35, 97)),
         glow: `rgba(${r}, ${g}, ${b}, 0.35)`,
+        onPrimary: getAccessibleTextColor(hexColor),
     };
 }
