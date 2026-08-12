@@ -16,6 +16,7 @@ const BLOCK_ENV_API_KEY_SENTINEL = '__CHAT_BUDDY_BLOCK_ENV_API_KEY__';
 const CURRENT_BACKUP_VERSION = 2;
 const MAX_BACKUP_SIZE_BYTES = 50 * 1024 * 1024;
 const MAX_BACKUP_RECORDS_PER_STORE = 100000;
+const PERSISTED_CONFIG_KEYS = ['baseUrl', 'model', 'temperature', 'maxTokens', 'timeout', 'maxRetries'];
 
 const INDEXED_DB_SCHEMAS = [
     {
@@ -126,8 +127,11 @@ function getSessionApiKey() {
 
 function stripApiKey(config = {}) {
     if (!config || typeof config !== 'object') return null;
-    const { apiKey: _apiKey, ...rest } = config;
-    return rest;
+    const sanitized = {};
+    for (const key of PERSISTED_CONFIG_KEYS) {
+        if (Object.hasOwn(config, key)) sanitized[key] = config[key];
+    }
+    return sanitized;
 }
 
 // ─── Config read ────────────────────────────────────────────
@@ -148,12 +152,13 @@ function getSavedConfig() {
 
     if (saved.apiKey) {
         setSessionApiKey(saved.apiKey);
-        const sanitized = stripApiKey(saved);
-        storage.set(CONFIG_KEY, sanitized);
-        return sanitized;
     }
 
-    return saved;
+    const sanitized = stripApiKey(saved);
+    if (JSON.stringify(saved) !== JSON.stringify(sanitized)) {
+        storage.set(CONFIG_KEY, sanitized);
+    }
+    return sanitized;
 }
 
 /**
@@ -199,11 +204,12 @@ export function isConfigured() {
  * (from aiClient.js) to pick up changes.
  */
 export function saveConfig(config) {
-    const { apiKey, ...restConfig } = config || {};
+    const apiKey = config?.apiKey;
+    const publicConfig = stripApiKey(config) || {};
 
     // Only persist non-default, non-empty fields
     const toSave = {};
-    for (const [k, v] of Object.entries(restConfig)) {
+    for (const [k, v] of Object.entries(publicConfig)) {
         if (v !== '' && v !== null && v !== undefined) {
             toSave[k] = v;
         }
@@ -226,12 +232,14 @@ export function getProfiles() {
 
     let changed = false;
     const sanitizedProfiles = profiles.map((profile) => {
-        if (!profile?.config?.apiKey) return profile;
-        changed = true;
-        return {
+        if (!profile?.config || typeof profile.config !== 'object') return profile;
+        const sanitizedConfig = stripApiKey(profile.config);
+        const sanitizedProfile = {
             ...profile,
-            config: stripApiKey(profile.config)
+            config: sanitizedConfig
         };
+        if (JSON.stringify(profile) !== JSON.stringify(sanitizedProfile)) changed = true;
+        return sanitizedProfile;
     });
 
     if (changed) storage.set(PROFILES_KEY, sanitizedProfiles);

@@ -6,6 +6,7 @@ import { useUser } from '../../../context/UserContext';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
 import RepostSheet from './RepostSheet';
+import { sanitizeImageURL } from '../../../utils/sanitizeUtils';
 
 const REACTION_EMOJIS = ['😂', '❤️', '👍', '🔥', '😮', '😢'];
 
@@ -25,6 +26,7 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
     const likeCount = post.likes.length;
     const commentCount = post.comments.length;
     const reactions = post.reactions || {};
+    const avatar = sanitizeImageURL(isOwn ? userProfile.avatar : author.avatar);
 
     // Get display name
     const getAuthorName = () => {
@@ -32,14 +34,6 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
             return getUserDisplayName(language);
         }
         return getDisplayName(author, language);
-    };
-
-    // Get avatar
-    const getAvatar = () => {
-        if (isOwn) {
-            return userProfile.avatar;
-        }
-        return author.avatar;
     };
 
     // Format relative time
@@ -133,8 +127,8 @@ export default function MomentCard({ post, onCommentClick, onHashtagClick }) {
             <div className="flex items-start gap-3">
                 {/* Avatar */}
                 <div className="w-10 h-10 rounded-[4px] overflow-hidden flex-shrink-0 bg-[var(--color-primary)]">
-                    {getAvatar() ? (
-                        <img src={getAvatar()} alt={getAuthorName()} className="w-full h-full object-cover" />
+                    {avatar ? (
+                        <img src={avatar} alt={getAuthorName()} className="w-full h-full object-cover" />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-white font-bold">
                             {getAuthorName().charAt(0).toUpperCase()}

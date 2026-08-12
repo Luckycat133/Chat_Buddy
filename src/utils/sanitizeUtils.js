@@ -1,3 +1,5 @@
+import DOMPurify from 'dompurify';
+
 const HTML_ENTITY_MAP = {
     '&': '&amp;',
     '<': '&lt;',
@@ -42,16 +44,31 @@ export function sanitizeFileName(name) {
         .slice(0, 255);
 }
 
-const OPEN_DANGEROUS_RE = /<\s*(script|iframe|object|embed|form|input|textarea|select|button|link|meta|base)[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi;
-const SELF_CLOSE_DANGEROUS_RE = /<\s*(script|iframe|object|embed|form|input|textarea|select|button|link|meta|base)[^>]*\/\s*>/gi;
-const STRAY_CLOSE_RE = /<\s*\/\s*(script|iframe|object|embed|form|input|textarea|select|button|link|meta|base)\s*>/gi;
-
 export function stripDangerousHTML(html) {
     if (typeof html !== 'string') return '';
-    return html
-        .replace(OPEN_DANGEROUS_RE, '')
-        .replace(SELF_CLOSE_DANGEROUS_RE, '')
-        .replace(STRAY_CLOSE_RE, '');
+    return DOMPurify.sanitize(html, {
+        FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'textarea', 'select', 'button', 'link', 'meta', 'base'],
+        FORBID_ATTR: ['style'],
+        ALLOW_DATA_ATTR: false,
+    });
+}
+
+const SAFE_IMAGE_DATA_RE = /^data:image\/(?:avif|gif|jpeg|png|webp);base64,[a-z0-9+/=\s]+$/i;
+
+export function sanitizeImageURL(value) {
+    if (typeof value !== 'string') return '';
+    const normalized = value.trim();
+    if (!normalized) return '';
+    if (normalized.startsWith('/') && !normalized.startsWith('//')) return normalized;
+    if (normalized.startsWith('blob:')) return normalized;
+    if (SAFE_IMAGE_DATA_RE.test(normalized)) return normalized;
+
+    try {
+        const parsed = new URL(normalized);
+        return parsed.protocol === 'https:' || parsed.protocol === 'http:' ? parsed.href : '';
+    } catch {
+        return '';
+    }
 }
 
 export function sanitizeObjectStrings(obj, maxDepth = 5) {

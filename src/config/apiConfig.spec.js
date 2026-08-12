@@ -54,6 +54,22 @@ describe('apiConfig', () => {
         expect(sessionStorage.getItem(sessionStorage.key(0))).toBe('sk-session-only');
     });
 
+    it('test_when_save_config_contains_unknown_secret_fields_should_drop_them', () => {
+        saveConfig({
+            baseUrl: 'https://api.example.com/v1',
+            model: 'gpt-4o',
+            apiKey: 'sk-session-only',
+            authorization: 'Bearer should-not-persist',
+            accessToken: 'should-not-persist',
+        });
+
+        const persistedConfig = JSON.parse(localStorage.getItem('chat-buddy:api-config'));
+        expect(persistedConfig).toEqual({
+            baseUrl: 'https://api.example.com/v1',
+            model: 'gpt-4o',
+        });
+    });
+
     it('test_when_legacy_persisted_config_contains_api_key_should_migrate_key_to_session_storage', () => {
         // Given
         localStorage.setItem('chat-buddy:api-config', JSON.stringify({

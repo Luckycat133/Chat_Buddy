@@ -5,6 +5,7 @@ import {
     sanitizeURL,
     sanitizeFileName,
     stripDangerousHTML,
+    sanitizeImageURL,
     sanitizeObjectStrings,
 } from './sanitizeUtils';
 
@@ -97,6 +98,26 @@ describe('sanitizeUtils', () => {
 
         it('test_when_html_is_normal_should_preserve', () => {
             expect(stripDangerousHTML('<p>Hello</p>')).toBe('<p>Hello</p>');
+        });
+
+        it('test_when_tag_or_attribute_uses_variant_spacing_should_remove_it', () => {
+            expect(stripDangerousHTML('<script >alert(1)</script><p onclick="alert(2)">safe</p>')).toBe('<p>safe</p>');
+        });
+    });
+
+    describe('sanitizeImageURL', () => {
+        it('allows local, web, blob, and raster data images', () => {
+            expect(sanitizeImageURL('/avatars/default.png')).toBe('/avatars/default.png');
+            expect(sanitizeImageURL('https://example.com/avatar.png')).toBe('https://example.com/avatar.png');
+            expect(sanitizeImageURL('blob:https://example.com/id')).toBe('blob:https://example.com/id');
+            expect(sanitizeImageURL('data:image/png;base64,aGVsbG8=')).toBe('data:image/png;base64,aGVsbG8=');
+        });
+
+        it('rejects executable and SVG data URLs', () => {
+            expect(sanitizeImageURL('javascript:alert(1)')).toBe('');
+            expect(sanitizeImageURL('data:text/html,<script>alert(1)</script>')).toBe('');
+            expect(sanitizeImageURL('data:image/svg+xml,<svg onload="alert(1)"/>')).toBe('');
+            expect(sanitizeImageURL('//evil.example/avatar.png')).toBe('');
         });
     });
 

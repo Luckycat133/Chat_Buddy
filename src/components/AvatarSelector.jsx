@@ -3,6 +3,7 @@ import { X, Camera, Upload, Check } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
 import AvatarUploadModal from './AvatarUploadModal';
+import { sanitizeImageURL } from '../utils/sanitizeUtils';
 
 // Preset avatars from public/avatars
 // Default user avatars first, then character avatars
@@ -53,6 +54,8 @@ export default function AvatarSelector({ isOpen, onClose, currentAvatar, onSelec
     // so when isOpen becomes true it remounts with fresh useState(currentAvatar).
 
     if (!isOpen) return null;
+
+    const safeSelectedAvatar = sanitizeImageURL(selectedAvatar);
 
     const handlePresetSelect = (avatarPath) => {
         setSelectedAvatar(avatarPath);
@@ -153,9 +156,9 @@ export default function AvatarSelector({ isOpen, onClose, currentAvatar, onSelec
                 <div className="flex justify-center py-6 bg-[var(--color-bg-app)]">
                     <div className="relative">
                         <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg">
-                            {selectedAvatar ? (
+                            {safeSelectedAvatar ? (
                                 <img
-                                    src={selectedAvatar}
+                                    src={safeSelectedAvatar}
                                     alt="Avatar preview"
                                     className="w-full h-full object-cover"
                                 />

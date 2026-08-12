@@ -7,6 +7,7 @@
 > **2026-08-12 更新**：工具调用现为默认拒绝并受角色白名单约束；浏览器任意代码
 > Worker 已删除；备份导入会先校验再原子写入且不会携带 API key；Mermaid 输出经过
 > 严格模式、限长、超时和 DOMPurify 二次净化；npm 与 pnpm 的 low-level audit 均为 0 漏洞。
+> 输入富文本同样使用 DOMPurify 解析式净化；朋友圈图片 API key 仅保留在内存中，并自动移除旧持久化值。
 
 ---
 
@@ -152,7 +153,7 @@ LanguageProvider
 - [ ] Vite build 加 `build.sourcemap: false`（默认 false 但要确认）
 - [ ] 跑 `npm audit` 必须 0 high/critical
 - [ ] 跑 E2E（`npx playwright test`）通过
-- [ ] 检查 `coverage/` 目录未部署
+- [x] 旧 `coverage/` 生成目录已从版本控制删除；新报告只写入被忽略的 `test_reports/coverage/`
 - [ ] 部署到 Cloudflare Pages / Vercel 时设置环境变量**仅服务端**用（Vercel 区分 `VITE_` vs 非 `VITE_`）
 
 ---

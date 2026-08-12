@@ -248,7 +248,7 @@ const MessageItem = memo(function MessageItem({
             }
         } else if (content.startsWith('[GAME:')) {
             type = 'game';
-            content = content.replace('[GAME:', '').replace(']', '');
+            content = content.slice('[GAME:'.length, content.endsWith(']') ? -1 : undefined);
         } else if (content.startsWith('[POLL:')) {
             type = 'poll';
             const match = content.match(/\[POLL:(.+?)\]/);

@@ -1,13 +1,9 @@
 import { createLogger } from '../utils/logger';
+import DOMPurify from 'dompurify';
 
 const log = createLogger('inputValidator');
 
 const MAX_TEXT_LENGTH = 50000;
-const SCRIPT_PATTERN = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
-const EVENT_HANDLER_PATTERN = /\bon\w+\s*=\s*["'][^"']*["']/gi;
-const JAVASCRIPT_URL_PATTERN = /javascript\s*:/gi;
-const DATA_URL_PATTERN = /data\s*:/gi;
-
 const ALLOWED_TAGS = new Set([
   'b', 'i', 'em', 'strong', 'code', 'pre', 'p', 'br',
   'ul', 'ol', 'li', 'a', 'blockquote', 'h1', 'h2', 'h3',
@@ -25,12 +21,12 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, c => map[c] || c);
 }
 
-function stripScripts(str) {
-  return String(str)
-    .replace(SCRIPT_PATTERN, '')
-    .replace(EVENT_HANDLER_PATTERN, '')
-    .replace(JAVASCRIPT_URL_PATTERN, 'blocked:')
-    .replace(DATA_URL_PATTERN, 'blocked:');
+function sanitizeMarkup(str) {
+  return DOMPurify.sanitize(String(str), {
+    ALLOWED_TAGS: [...ALLOWED_TAGS],
+    ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'class'],
+    ALLOW_DATA_ATTR: false,
+  });
 }
 
 export function sanitizeInput(input, options = {}) {
@@ -47,10 +43,10 @@ export function sanitizeInput(input, options = {}) {
     input = input.slice(0, maxLength);
   }
 
-  input = stripScripts(input);
-
   if (stripHtml) {
     input = escapeHtml(input);
+  } else {
+    input = sanitizeMarkup(input);
   }
 
   return input.trim();
@@ -75,9 +71,7 @@ export function validateChatName(name) {
 }
 
 export function sanitizeHtmlLight(html) {
-  return String(html)
-    .replace(SCRIPT_PATTERN, '')
-    .replace(EVENT_HANDLER_PATTERN, '');
+  return sanitizeMarkup(html);
 }
 
 export function isValidUrl(url) {

@@ -123,13 +123,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added a real light theme, accessible accent contrast, semantic controls, dialog focus management, 44px touch targets, language metadata, and reduced-motion handling
   - Added Playwright + Axe acceptance coverage: 19/19 Chromium tests and 8/8 mobile UX tests
   - Replaced the missing notification audio asset with an on-demand Web Audio tone and prevented production Service Workers from controlling development sessions
+  - Replaced regex-only HTML filtering with DOMPurify, allowlisted avatar image sources, removed legacy persisted Moments image keys, and constrained persistent API configuration fields
+  - Declared read-only CI workflow permissions and removed 222 generated coverage artifacts from version control
 - **Deterministic AIPipeline final-response handling** (`src/core/chat/AIPipeline.js`, `src/core/chat/AIPipeline.spec.js`)
   - Prevented optional recall simulation from overriding `[SCHEDULE]` and `[MULTI]` control-tag parsing
   - Added deterministic test coverage for the recall branch to stop intermittent test failures
   - Hardened async memory extraction to avoid calling `.catch()` on non-Promise return values
 - **Layered coverage gate** (`vitest.config.js`, `vitest.full-coverage.config.js`, `docs/TEST_COVERAGE_ANALYSIS.md`)
-  - Verified 390/390 tests and a 60% hard gate on regression-critical logic
-  - Current gated coverage is 84.96% statements, 77.44% branches, 84.61% functions, and 87.87% lines
+  - Verified 396/396 tests and a 60% hard gate on regression-critical logic
+  - Current gated coverage is 85.09% statements, 77.68% branches, 84.88% functions, and 88.00% lines
   - Kept an honest whole-repository observation command; UI behavior is gated separately by Playwright + Axe
 
 ### Added — UI Accessibility & Interaction Improvements (2026-03-08)

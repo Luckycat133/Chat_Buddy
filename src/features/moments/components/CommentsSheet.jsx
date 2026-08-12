@@ -6,6 +6,7 @@ import { useUser } from '../../../context/UserContext';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
 import { useFocusTrap } from '../../../hooks/useFocusTrap';
+import { sanitizeImageURL } from '../../../utils/sanitizeUtils';
 
 // AI 正在思考的动画
 function AITypingIndicator({ language }) {
@@ -202,7 +203,7 @@ export default function CommentsSheet({ post, onClose }) {
                                 const commenterName = isOwn
                                     ? getUserDisplayName(language)
                                     : getDisplayName(commenter, language);
-                                const avatar = isOwn ? userProfile?.avatar : commenter?.avatar;
+                                const avatar = sanitizeImageURL(isOwn ? userProfile?.avatar : commenter?.avatar);
                                 const isAI = !isOwn && comment.authorId?.startsWith('ai-');
 
                                 return (

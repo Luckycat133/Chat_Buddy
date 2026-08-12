@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Upload, Check, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { cn } from '../utils/cn';
+import { sanitizeImageURL } from '../utils/sanitizeUtils';
 
 /**
  * Phase 4: Avatar Upload Modal
@@ -58,6 +59,8 @@ export default function AvatarUploadModal({ isOpen, onClose, currentAvatar, onUp
     }, [crop, zoom, imageUrl]);
 
     if (!isOpen) return null;
+
+    const safeCurrentAvatar = sanitizeImageURL(currentAvatar);
 
     const handleFileSelect = (e) => {
         const file = e.target.files?.[0];
@@ -171,9 +174,9 @@ export default function AvatarUploadModal({ isOpen, onClose, currentAvatar, onUp
                         <div className="space-y-4">
                             <div className="text-center py-8">
                                 <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-[var(--color-bg-active)] flex items-center justify-center">
-                                    {currentAvatar ? (
+                                    {safeCurrentAvatar ? (
                                         <img
-                                            src={currentAvatar}
+                                            src={safeCurrentAvatar}
                                             alt="Current"
                                             className="w-full h-full rounded-full object-cover"
                                         />

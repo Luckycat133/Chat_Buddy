@@ -14,8 +14,8 @@
 
 | 验证 | 结果 |
 | --- | --- |
-| `TZ=UTC npm run test:coverage` | 21 个文件、390/390 通过；核心逻辑门禁通过：Statements 84.96%、Branches 77.44%、Functions 84.61%、Lines 87.87% |
-| `TZ=UTC npm run test:coverage:all` | 390/390 通过；全仓观测值仍为 Statements 22.24%、Branches 19.18%、Functions 17.45%、Lines 23.15%，不作为单元门禁伪装成已全面覆盖 |
+| `TZ=UTC npm run test:coverage` | 22 个文件、396/396 通过；核心逻辑门禁通过：Statements 85.09%、Branches 77.68%、Functions 84.88%、Lines 88.00% |
+| `TZ=UTC npm run test:coverage:all` | 396/396 通过；全仓观测值仍为 Statements 22.39%、Branches 19.45%、Functions 17.55%、Lines 23.26%，不作为单元门禁伪装成已全面覆盖 |
 | `npm run lint` | 通过，0 errors、0 warnings |
 | `npm run build` | 通过；已拆分高亮、Markdown、KaTeX、MathJS 与 Mermaid 懒加载产物，无 chunk 警告 |
 | `npm audit --audit-level=low` / `pnpm audit --audit-level low` | 均通过，0 vulnerabilities |
@@ -36,6 +36,8 @@
 | 其余 P2 | 已修复 | poll memo、消息元数据、Scholar JSON Schema、依赖、CSP/安全头、Service Worker、版本、语言、减弱动画和嵌套 main 均已处理 |
 
 真实浏览器复测还发现通知模块会在启动时请求仓库中不存在的音频文件，开发模式下又会被生产 Service Worker 接管为 `408 Offline`。现已改为按需使用 Web Audio 生成短提示音，并限制 Service Worker 只在生产环境注册；启动控制台回归已纳入 19 项桌面验收。
+
+推送后的 CodeQL 复核进一步暴露了历史正则清洗、头像 URL、图片 API key 持久化及工作流权限问题。当前实现已改为 DOMPurify 解析式清洗、栅格图片 URL 白名单、图片密钥仅内存保存并迁移删除旧值、配置持久化字段白名单和 CI `contents: read` 最小权限；同时删除 222 个误提交的旧覆盖率生成文件。新增回归已计入 396 项单元测试，最终 CodeQL 状态以本次补充提交的远端扫描结果为准。
 
 ### 实际 UX 验收范围
 

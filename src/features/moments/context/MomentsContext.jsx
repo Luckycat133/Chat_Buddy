@@ -68,10 +68,10 @@ export const MomentsProvider = ({ children }) => {
 
 // Internal provider to access state/actions for AI Hook
 const InternalMomentsProvider = ({ children }) => {
-    const { momentsData, setMomentsData } = useMomentsState();
+    const { setMomentsData, setImageApiKey } = useMomentsState();
 
     return (
-        <MomentsActionProvider momentsData={momentsData} setMomentsData={setMomentsData}>
+        <MomentsActionProvider setMomentsData={setMomentsData} setImageApiKey={setImageApiKey}>
             <MomentsAIOrchestrator />
             {children}
         </MomentsActionProvider>

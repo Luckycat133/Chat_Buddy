@@ -59,7 +59,7 @@ export const useMomentsActions = () => {
     return context;
 };
 
-export const MomentsActionProvider = ({ children, setMomentsData }) => {
+export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey }) => {
     const { language, resolvedAiLanguage } = useLanguage();
     const preferredLanguage = resolvedAiLanguage || language || 'zh';
 
@@ -304,12 +304,12 @@ export const MomentsActionProvider = ({ children, setMomentsData }) => {
     }, [getLocalizedName, preferredLanguage, setMomentsData]);
 
     const setImageApiConfig = useCallback((apiKey, apiUrl) => {
+        setImageApiKey(typeof apiKey === 'string' ? apiKey : '');
         setMomentsData(prev => ({
             ...prev,
-            imageApiKey: apiKey,
             imageApiUrl: apiUrl,
         }));
-    }, [setMomentsData]);
+    }, [setImageApiKey, setMomentsData]);
 
     const saveDraft = useCallback((draft) => {
         setMomentsData(prev => ({ ...prev, draft }));

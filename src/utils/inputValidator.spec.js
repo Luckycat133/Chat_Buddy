@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   sanitizeInput,
+  sanitizeHtmlLight,
   validateEmail,
   validateUsername,
   isValidUrl,
@@ -33,8 +34,14 @@ describe('sanitizeInput', () => {
     expect(sanitizeInput('<b>bold</b>', { stripHtml: true })).toBe('&lt;b&gt;bold&lt;/b&gt;');
   });
 
-  it('strips javascript: URLs', () => {
-    expect(sanitizeInput('javascript:alert(1)')).not.toContain('javascript:');
+  it('treats URL-like strings as inert text', () => {
+    expect(sanitizeInput('javascript:alert(1)')).toBe('javascript:alert(1)');
+  });
+
+  it('uses a parser-backed allowlist when markup is requested', () => {
+    const input = '<b onclick="alert(1)">safe</b><script >alert(1)</script>';
+    expect(sanitizeInput(input, { stripHtml: false })).toBe('<b>safe</b>');
+    expect(sanitizeHtmlLight('<a href="javascript:alert(1)">link</a>')).toBe('<a>link</a>');
   });
 
   it('handles non-string input', () => {
