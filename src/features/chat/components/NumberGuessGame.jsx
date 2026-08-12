@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { useSocial } from '../../../context/SocialContext';
 import { useLanguage } from '../../../context/LanguageContext';
 import { cn } from '../../../utils/cn';
+import { secureRandomInt } from '../../../utils/randomUtils';
 
 const MAX_ATTEMPTS = 7;
 const WIN_POINTS = 30;
@@ -12,7 +13,7 @@ export default function NumberGuessGame({ aiName, onClose, onResult }) {
     const { addPoints, updateTaskProgress } = useSocial();
 
     // Lazy state initializer — runs once at mount, not on re-renders
-    const [secret, setSecret] = useState(() => Math.floor(Math.random() * 100) + 1);
+    const [secret, setSecret] = useState(() => secureRandomInt(100) + 1);
     const [guess, setGuess] = useState('');
     const [attempts, setAttempts] = useState(0);
     const [feedback, setFeedback] = useState(null); // { type: 'high'|'low'|'correct'|'fail', msg: string }
@@ -58,7 +59,7 @@ export default function NumberGuessGame({ aiName, onClose, onResult }) {
     };
 
     const handlePlayAgain = () => {
-        setSecret(Math.floor(Math.random() * 100) + 1);
+        setSecret(secureRandomInt(100) + 1);
         setGuess('');
         setAttempts(0);
         setFeedback(null);

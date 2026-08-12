@@ -19,7 +19,7 @@ deterministic unit regressions.
 | Functions | 84.88% | 60% |
 | Lines | 88.00% | 60% |
 
-The run completed with 22 test files and 396/396 passing tests.
+The run completed with 23 test files and 398/398 passing tests.
 
 ## Layered quality model
 
@@ -28,8 +28,8 @@ repository uses three explicit layers:
 
 1. `npm run test:coverage` — a hard 60% gate for regression-critical unit logic.
 2. `npm run test:coverage:all` — an observational report over every source file,
-   with no threshold. The latest whole-repository values are 22.39% statements,
-   19.45% branches, 17.55% functions, and 23.26% lines.
+   with no threshold. The latest whole-repository values are 22.46% statements,
+   19.53% branches, 17.57% functions, and 23.34% lines.
 3. `npm run test:e2e -- --project=chromium` — rendered behavior and UX. The
    current suite passes 19/19 tests; the mobile UX project passes 8/8.
 

@@ -85,12 +85,13 @@ Chat Buddy 的所有重要变更都将记录在此文件中。
   - 用按需 Web Audio 提示音替代缺失音频文件，并阻止生产 Service Worker 接管开发会话
   - 用 DOMPurify 替代纯正则 HTML 清洗，限制头像图片来源，移除朋友圈历史持久化图片密钥，并对白名单外配置字段拒绝持久化
   - 为 CI 声明只读权限，并从版本控制移除 222 个旧覆盖率生成文件
+  - 数字猜谜秘密值改用无模偏差的 Web Crypto 随机数
 - **AIPipeline 最终响应流程改为确定性解析**（`src/core/chat/AIPipeline.js`、`src/core/chat/AIPipeline.spec.js`）
   - 防止可选的消息撤回模拟覆盖 `[SCHEDULE]` 和 `[MULTI]` 控制标签解析
   - 为撤回分支补充确定性测试，修复间歇性测试失败
   - 加固异步记忆提取逻辑，避免对非 Promise 返回值调用 `.catch()`
 - **分层覆盖率门禁**（`vitest.config.js`、`vitest.full-coverage.config.js`、`docs/TEST_COVERAGE_ANALYSIS.md`）
-  - 396/396 项测试通过；对回归关键逻辑保持 60% 硬门禁
+  - 398/398 项测试通过；对回归关键逻辑保持 60% 硬门禁
   - 当前门禁覆盖率：语句 85.09%、分支 77.68%、函数 84.88%、行 88.00%
   - 保留真实的全仓观测命令；UI 行为由 Playwright + Axe 独立门禁
 

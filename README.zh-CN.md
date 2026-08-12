@@ -5,7 +5,7 @@
 ![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19-61DAFB.svg)
-![Tests](https://img.shields.io/badge/tests-396%20passing-success.svg)
+![Tests](https://img.shields.io/badge/tests-398%20passing-success.svg)
 ![核心覆盖率](https://img.shields.io/badge/core%20lines-88.00%25-success.svg)
 
 **AI 聊天伴侣**
