@@ -1,26 +1,18 @@
 /**
  * T10: IdiomChain (成语接龙)
  * Chinese idiom chain game — only available in Chinese mode.
- * AI responds with an idiom starting with the last character of the previous idiom.
+ * A local idiom bank responds instantly without a model request.
  * Awards points on success.
  */
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Trophy, RefreshCw, BookOpen } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useSocial } from '../../../context/SocialContext';
-import { callAI } from '../services/chatService';
+import { findNextIdiom, getRandomSeedIdiom, isKnownIdiom } from '../../../data/localGameContent';
 import { cn } from '../../../utils/cn';
 
-// Seed idioms to start the game
-const SEED_IDIOMS = ['一石二鸟', '马到成功', '半途而废', '画龙点睛', '守株待兔', '对牛弹琴', '四面楚歌', '亡羊补牢'];
-
-function getRandomSeed() {
-    return SEED_IDIOMS[Math.floor(Math.random() * SEED_IDIOMS.length)];
-}
-
-// Basic validation: must be 4 Chinese characters
 function isValidIdiom(text) {
-    return /^[\u4e00-\u9fff]{4}$/.test(text.trim());
+    return /^[\u4e00-\u9fff]{4}$/.test(text.trim()) && isKnownIdiom(text);
 }
 
 export default function IdiomChain({ aiName: _aiName, onClose, onAwardPoints: _onAwardPoints }) {
@@ -28,7 +20,6 @@ export default function IdiomChain({ aiName: _aiName, onClose, onAwardPoints: _o
     const { addPoints, updateTaskProgress } = useSocial();
     const [chain, setChain] = useState([]);
     const [input, setInput] = useState('');
-    const [aiThinking, setAiThinking] = useState(false);
     const [gameOver, setGameOver] = useState(false);
     const [score, setScore] = useState(0);
     const [error, setError] = useState('');
@@ -43,7 +34,7 @@ export default function IdiomChain({ aiName: _aiName, onClose, onAwardPoints: _o
     }, [chain]);
 
     const startGame = () => {
-        const seed = getRandomSeed();
+        const seed = getRandomSeedIdiom();
         setChain([{ text: seed, isAI: true }]);
         setStarted(true);
         setGameOver(false);
@@ -52,23 +43,8 @@ export default function IdiomChain({ aiName: _aiName, onClose, onAwardPoints: _o
         setTimeout(() => inputRef.current?.focus(), 100);
     };
 
-    const getAIResponse = async (lastIdiom) => {
-        const lastChar = lastIdiom[lastIdiom.length - 1];
-        const prompt = `成语接龙游戏。请给出一个以"${lastChar}"开头的四字成语，只输出成语本身，不要任何解释或标点。如果无法找到合适的成语，只输出"认输"两字。`;
-        try {
-            const response = await callAI([
-                { role: 'system', content: '你是成语接龙游戏的裁判，只输出四字成语或认输，不输出其他任何内容。' },
-                { role: 'user', content: prompt }
-            ], { maxTokens: 20 });
-            const text = String(response || '').trim();
-            return text;
-        } catch {
-            return '认输';
-        }
-    };
-
-    const handleSubmit = async () => {
-        if (!started || gameOver || aiThinking) return;
+    const handleSubmit = () => {
+        if (!started || gameOver) return;
         const idiom = input.trim();
         setError('');
 
@@ -95,11 +71,7 @@ export default function IdiomChain({ aiName: _aiName, onClose, onAwardPoints: _o
         setInput('');
         setScore(s => s + 1);
 
-        // Get AI response
-        setAiThinking(true);
-        await new Promise(r => setTimeout(r, 600)); // slight delay for realism
-        const aiResponse = await getAIResponse(idiom);
-        setAiThinking(false);
+        const aiResponse = findNextIdiom(idiom, [...chain.map(entry => entry.text), idiom]) || '认输';
 
         if (aiResponse === '认输' || !isValidIdiom(aiResponse)) {
             // AI gives up — user wins!
@@ -180,18 +152,6 @@ export default function IdiomChain({ aiName: _aiName, onClose, onAwardPoints: _o
                             </div>
                         ))
                     )}
-                    {aiThinking && (
-                        <div className="flex justify-start">
-                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-400 to-orange-500 flex items-center justify-center text-white text-[10px] font-bold mr-2 mt-1">AI</div>
-                            <div className="bg-[var(--color-bg-hover)] px-4 py-2.5 rounded-[var(--radius-xl)]">
-                                <div className="flex gap-1">
-                                    <span className="w-1.5 h-1.5 bg-[var(--color-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                    <span className="w-1.5 h-1.5 bg-[var(--color-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                    <span className="w-1.5 h-1.5 bg-[var(--color-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {/* Input + Error */}
@@ -208,13 +168,12 @@ export default function IdiomChain({ aiName: _aiName, onClose, onAwardPoints: _o
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                             placeholder={chain.length > 0 ? `${t('idiom_input_hint')} "${chain[chain.length - 1]?.text?.slice(-1)}"...` : t('idiom_enter')}
-                            disabled={aiThinking}
                             className="flex-1 input-modern text-sm py-2.5"
                             maxLength={4}
                         />
                         <button
                             onClick={handleSubmit}
-                            disabled={aiThinking || !input.trim()}
+                            disabled={!input.trim()}
                             className="p-2.5 rounded-[var(--radius-xl)] bg-gradient-to-r from-red-500 to-orange-500 text-white disabled:opacity-50 transition-all hover:opacity-90"
                         >
                             <Send size={16} />

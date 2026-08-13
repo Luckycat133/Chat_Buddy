@@ -115,7 +115,6 @@ describe('ChatEngine', () => {
     mocks.cleanMessageContent.mockReset();
     mocks.cleanMessageContent.mockImplementation((content) => String(content || '').trim());
     mocks.callAI.mockReset();
-    mocks.callAI.mockResolvedValue('Auto title');
     mocks.extractGroupMemoriesAsync.mockClear();
     mocks.processTurn.mockClear();
     mocks.checkReEngagement.mockReset();
@@ -192,14 +191,8 @@ describe('ChatEngine', () => {
     // Then
     expect(engine.chats[0].messages).toHaveLength(1);
     expect(onUserMessage).toHaveBeenCalledWith('chat-1', ['ai-1']);
-    expect(mocks.callAI).toHaveBeenCalled();
-    expect(mocks.callAI).toHaveBeenCalledWith(
-      expect.any(Array),
-      expect.objectContaining({
-        maxTokens: 32,
-        disableReasoning: true,
-      })
-    );
+    expect(mocks.callAI).not.toHaveBeenCalled();
+    expect(engine.chats[0].name).toBe('hello world');
     expect(mocks.processTurn).toHaveBeenCalled();
   });
 
@@ -225,6 +218,103 @@ describe('ChatEngine', () => {
 
     expect(mocks.cleanMessageContent).toHaveBeenCalledWith('[SCHEDULE:1] const first = xs[0];');
     expect(engine.chats[0].messages[0].content).toBe('const first = xs[0];');
+  });
+
+  it('test_when_ai_repeats_its_speaker_label_should_strip_all_leading_labels', () => {
+    const engine = createEngineWithChats([
+      { id: 'chat-1', name: 'Luna', participants: ['user-me', 'ai-1'], messages: [] },
+    ]);
+    mocks.cleanMessageContent.mockImplementation((content) => content);
+
+    engine.sendMessage('chat-1', 'Luna: Luna：月光正好。', 'ai-1');
+
+    expect(engine.chats[0].messages[0].content).toBe('月光正好。');
+  });
+
+  it('test_when_direct_chat_ai_is_busy_should_keep_the_next_user_message_unsent', () => {
+    const engine = createEngineWithChats([
+      { id: 'chat-1', name: 'Luna', participants: ['user-me', 'ai-1'], messages: [] },
+    ]);
+    engine.typingIndicators['chat-1'] = ['ai-1'];
+
+    const result = engine.sendMessage('chat-1', '等你回复完再说');
+
+    expect(result).toEqual({ success: false, error: 'ai_busy' });
+    expect(engine.chats[0].messages).toHaveLength(0);
+    expect(mocks.processTurn).not.toHaveBeenCalled();
+  });
+
+  it('test_when_direct_ai_turn_starts_should_mark_busy_immediately_until_pipeline_finishes', async () => {
+    let resolveTurn;
+    mocks.processTurn.mockImplementationOnce(() => new Promise(resolve => { resolveTurn = resolve; }));
+    const engine = createEngineWithChats([
+      { id: 'chat-1', name: 'Luna', participants: ['user-me', 'ai-1'], messages: [] },
+    ]);
+
+    engine.sendMessage('chat-1', '第一条');
+
+    expect(engine.typingIndicators['chat-1']).toEqual(['ai-1']);
+    expect(engine.sendMessage('chat-1', '第二条')).toEqual({ success: false, error: 'ai_busy' });
+
+    resolveTurn();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(engine.typingIndicators['chat-1']).toBeUndefined();
+  });
+
+  it('test_when_ai_turn_fails_should_store_a_retryable_error_and_retry_the_same_user_turn', async () => {
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        name: 'Luna',
+        participants: ['user-me', 'ai-1'],
+        messages: [{ id: 'user-1', senderId: 'user-me', content: '你好', timestamp: '2026-08-13T00:00:00.000Z' }],
+      },
+    ]);
+
+    engine.aiPipeline.callbacks.onError('chat-1', 'ai-1', {
+      status: 504,
+      userMessageId: 'user-1',
+      language: 'zh',
+    });
+    const errorMessage = engine.chats[0].messages.at(-1);
+
+    expect(errorMessage).toMatchObject({
+      senderId: 'ai-1',
+      type: 'ai_error',
+      status: 'error',
+      retryUserMessageId: 'user-1',
+    });
+    expect(errorMessage.content).toContain('504');
+
+    const retryResult = engine.retryAIResponse('chat-1', errorMessage.id);
+    expect(retryResult).toEqual({ success: true });
+    expect(engine.chats[0].messages.some(message => message.id === errorMessage.id)).toBe(false);
+    expect(mocks.processTurn).toHaveBeenCalledWith(
+      expect.objectContaining({ lastMessage: expect.objectContaining({ id: 'user-1' }) }),
+      personas,
+      expect.objectContaining({ id: 'ai-1' }),
+      expect.any(Object),
+    );
+  });
+
+  it('test_when_user_moves_on_after_a_failed_turn_should_remove_the_stale_retry_card', () => {
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        name: 'Luna',
+        participants: ['user-me', 'ai-1'],
+        messages: [
+          { id: 'user-1', senderId: 'user-me', content: '第一问', timestamp: '2026-08-13T00:00:00.000Z' },
+          { id: 'error-1', senderId: 'ai-1', type: 'ai_error', content: '失败', retryUserMessageId: 'user-1', timestamp: '2026-08-13T00:01:00.000Z' },
+        ],
+      },
+    ]);
+
+    engine.sendMessage('chat-1', '换个话题继续');
+
+    expect(engine.chats[0].messages.map(message => message.id)).not.toContain('error-1');
+    expect(engine.chats[0].messages.at(-1).content).toBe('换个话题继续');
   });
 
   it('test_when_chat_changes_should_replace_array_reference_for_external_store_subscribers', () => {
@@ -760,7 +850,7 @@ describe('ChatEngine', () => {
     expect(fallbackMessage.inputSummary).toBe('Running tool: mystery_tool…');
   });
 
-  it('test_when_schedule_delay_is_satisfied_should_trigger_ai_process_turn', () => {
+  it('test_when_schedule_delay_is_satisfied_should_send_local_template_without_llm', () => {
     // Given
     const engine = createEngineWithChats([
       {
@@ -775,10 +865,14 @@ describe('ChatEngine', () => {
     vi.advanceTimersByTime(60_000);
 
     // Then
-    expect(mocks.processTurn).toHaveBeenCalledWith(engine.chats[0], personas, personas[0]);
+    expect(mocks.processTurn).not.toHaveBeenCalled();
+    expect(engine.chats[0].messages.at(-1)).toMatchObject({
+      senderId: 'ai-1',
+      content: '回来时跟我说一声，我还在这里。',
+    });
   });
 
-  it('test_when_group_chat_random_gate_fails_without_mentions_should_skip_ai_response', () => {
+  it('test_when_group_chat_has_no_mentions_should_select_exactly_one_responder', () => {
     // Given
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.1);
     const engine = createEngineWithChats([
@@ -795,7 +889,13 @@ describe('ChatEngine', () => {
     engine._triggerAIResponse(engine.chats[0]);
 
     // Then
-    expect(mocks.processTurn).not.toHaveBeenCalled();
+    expect(mocks.processTurn).toHaveBeenCalledTimes(1);
+    expect(mocks.processTurn).toHaveBeenCalledWith(
+      engine.chats[0],
+      personas,
+      expect.objectContaining({ id: 'ai-1' }),
+      expect.objectContaining({ isGroupChat: true })
+    );
     randomSpy.mockRestore();
   });
 

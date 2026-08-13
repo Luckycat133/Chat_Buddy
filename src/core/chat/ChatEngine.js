@@ -1,12 +1,51 @@
 import { storage } from '../../services/storage/StorageService';
 import { AIPipeline } from './AIPipeline';
 import chatStorage from '../../services/storage/ChatStorageService';
-import { cleanMessageContent, callAI } from '../../features/chat/services/chatService';
+import { cleanMessageContent } from '../../features/chat/services/chatService';
 import { extractGroupMemoriesAsync } from '../memory/ContextCompressor'; // T12 Opt-3
 import { getPresenceMap } from '../presence/PresenceService';
 import { checkReEngagement } from '../presence/GreetingService';
 import { getMoodMap } from '../presence/MoodService';
 import { addBookmark, removeBookmark, getBookmarks, isBookmarked } from '../../features/chat/services/BookmarkService';
+
+function _escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function _stripLeadingSpeakerLabels(content, persona) {
+    const labels = [persona?.name, persona?.name_zh].filter(Boolean);
+    if (!labels.length || typeof content !== 'string') return content;
+
+    const alternatives = labels.map(_escapeRegExp).join('|');
+    const labelPattern = new RegExp(`^\\s*(?:\\*\\*)?(?:${alternatives})\\s*[:：](?:\\*\\*)?\\s*`, 'i');
+    let result = content;
+    for (let count = 0; count < 5; count += 1) {
+        const stripped = result.replace(labelPattern, '');
+        if (stripped === result) break;
+        result = stripped;
+    }
+    return result.trim();
+}
+
+export function deriveChatTitle(content) {
+    const normalized = String(content || '')
+        .replace(/```[\s\S]*?```/g, ' ')
+        .replace(/\[[A-Z_]+(?::[^\]]*)?\]/g, ' ')
+        .replace(/^[#>*\-\s]+/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (!normalized) return '';
+
+    const firstThought = normalized.split(/[\n。！？!?;；]/)[0].trim() || normalized;
+    if (/[\u4e00-\u9fff]/.test(firstThought)) {
+        const chars = Array.from(firstThought);
+        return chars.slice(0, 18).join('') + (chars.length > 18 ? '…' : '');
+    }
+
+    const words = firstThought.split(/\s+/).filter(Boolean);
+    const title = words.slice(0, 6).join(' ');
+    return title.length > 48 ? `${title.slice(0, 47)}…` : title;
+}
 
 // T13: Build a human-readable summary of tool input arguments
 function _buildToolInputSummary(toolName, args) {
@@ -15,7 +54,7 @@ function _buildToolInputSummary(toolName, args) {
         search_docs: `Searching docs: "${args?.query || ''}"`,
         analyze_code: 'Analyzing code…',
         web_search: `Searching: "${args?.query || ''}"`,
-        sonar_search: `Sonar search: "${args?.query || ''}"`,
+        sonar_search: `Web search: "${args?.query || ''}"`,
         deep_research: `Deep research: "${args?.query || ''}"`,
         fact_check: `Fact-checking: "${args?.claim || ''}"`,
         cite_sources: 'Generating citations…',
@@ -73,6 +112,7 @@ export class ChatEngine {
             onEditing: this._handleAIEditing.bind(this),
             onRecall: this._handleAIRecall.bind(this),
             onMessage: this._handleAIMessage.bind(this),
+            onError: this._handleAIError.bind(this),
             onSchedule: this._handleAISchedule.bind(this),
             onLog: (msg, data) => console.log(`[ChatEngine] ${msg}`, data),
             // T13: Tool event callbacks for real-time visualization
@@ -437,13 +477,27 @@ export class ChatEngine {
         // through the AI marker cleaner used to silently delete valid code such as
         // `items[0]` before it reached the model.
         const normalized = typeof content === 'string' ? content.trim() : '';
-        const cleaned = senderId === 'user-me'
+        let cleaned = senderId === 'user-me'
             ? normalized
             : cleanMessageContent(normalized);
+        if (senderId !== 'user-me') {
+            cleaned = _stripLeadingSpeakerLabels(
+                cleaned,
+                this.personas.find(persona => persona.id === senderId)
+            );
+        }
         if (!cleaned) return;
 
         const chatIndex = this.chats.findIndex(c => c.id === chatId);
         if (chatIndex === -1) return;
+        const targetChat = this.chats[chatIndex];
+        const isDirectChat = targetChat.participants?.length === 2;
+        const isAIResponding = Boolean(
+            this.typingIndicators[chatId]?.length || this.editingIndicators[chatId]?.length
+        );
+        if (senderId === 'user-me' && isDirectChat && isAIResponding) {
+            return { success: false, error: 'ai_busy' };
+        }
 
         const newMessage = {
             id: crypto.randomUUID(),
@@ -457,7 +511,10 @@ export class ChatEngine {
 
         // Mutation
         const updatedChat = { ...this.chats[chatIndex] };
-        updatedChat.messages = [...updatedChat.messages, newMessage];
+        const messagesBeforeAppend = senderId === 'user-me'
+            ? updatedChat.messages.filter(message => message.type !== 'ai_error')
+            : updatedChat.messages;
+        updatedChat.messages = [...messagesBeforeAppend, newMessage];
         updatedChat.lastMessage = newMessage;
         updatedChat.updatedAt = newMessage.timestamp;
 
@@ -473,9 +530,10 @@ export class ChatEngine {
             this._checkAutoNaming(updatedChat);
             this._triggerAIResponse(updatedChat);
 
-            // T12 Opt-3: Group chat memory extraction (fire-and-forget, rate-limited)
+            // Group memories are captured locally on every durable user turn;
+            // this never fans out to the configured language model.
             const isGroupChat = updatedChat.participants.length > 2;
-            if (isGroupChat && updatedChat.messages.length >= 20 && updatedChat.messages.length % 10 === 0) {
+            if (isGroupChat) {
                 const aiParticipants = updatedChat.participants
                     .filter(id => id !== 'user-me')
                     .map(id => this.personas.find(p => p.id === id))
@@ -484,6 +542,7 @@ export class ChatEngine {
                 Promise.resolve(extractGroupMemoriesAsync(updatedChat.messages, chatId, aiParticipants)).catch(() => { });
             }
         }
+        return { success: true, messageId: newMessage.id };
     }
 
     deleteMessage(chatId, messageId) {
@@ -839,6 +898,74 @@ export class ChatEngine {
         this.sendMessage(chatId, content, aiId);
     }
 
+    _handleAIError(chatId, aiId, details = {}) {
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        if (chatIndex === -1) return;
+
+        const statusSuffix = Number.isFinite(details.status) ? `（${details.status}）` : '';
+        const isEnglish = details.language === 'en';
+        const content = isEnglish
+            ? `I couldn't get a reply from the service${statusSuffix ? ` (${details.status})` : ''}. You can retry this message.`
+            : `暂时没能从服务获得回复${statusSuffix}，可以重试这条消息。`;
+        const existingError = this.chats[chatIndex].messages.find(
+            message => message.type === 'ai_error' &&
+                message.senderId === aiId &&
+                message.retryUserMessageId === details.userMessageId
+        );
+        if (existingError) return;
+
+        const errorMessage = {
+            id: crypto.randomUUID(),
+            senderId: aiId,
+            type: 'ai_error',
+            status: 'error',
+            errorCode: details.code || 'reply_failed',
+            errorStatus: details.status || null,
+            retryUserMessageId: details.userMessageId || null,
+            content,
+            timestamp: new Date().toISOString(),
+            readBy: [],
+        };
+        const chat = this.chats[chatIndex];
+        this._replaceChatAt(chatIndex, {
+            ...chat,
+            messages: [...chat.messages, errorMessage],
+            lastMessage: errorMessage,
+            updatedAt: errorMessage.timestamp,
+        });
+        this.save();
+    }
+
+    retryAIResponse(chatId, errorMessageId) {
+        const chatIndex = this.chats.findIndex(chat => chat.id === chatId);
+        if (chatIndex === -1) return { success: false, error: 'chat_not_found' };
+        if (this.typingIndicators[chatId]?.length || this.editingIndicators[chatId]?.length) {
+            return { success: false, error: 'ai_busy' };
+        }
+
+        const chat = this.chats[chatIndex];
+        const errorMessage = chat.messages.find(message => message.id === errorMessageId && message.type === 'ai_error');
+        if (!errorMessage) return { success: false, error: 'error_message_not_found' };
+
+        const userMessage = chat.messages.find(message => message.id === errorMessage.retryUserMessageId && message.senderId === 'user-me');
+        const latestUserMessage = [...chat.messages].reverse().find(message => message.senderId === 'user-me');
+        if (!userMessage || latestUserMessage?.id !== userMessage.id) {
+            return { success: false, error: 'turn_is_stale' };
+        }
+
+        const messages = chat.messages.filter(message => message.id !== errorMessageId);
+        const updatedChat = {
+            ...chat,
+            messages,
+            lastMessage: userMessage,
+            updatedAt: userMessage.timestamp,
+        };
+        this._replaceChatAt(chatIndex, updatedChat);
+        this.save();
+        this._triggerAIResponse(updatedChat);
+        return { success: true };
+    }
+
     // T13: Tool event – insert ephemeral loading card into message list
     _handleToolStart(chatId, aiId, toolName, args) {
         const chatIndex = this.chats.findIndex(c => c.id === chatId);
@@ -920,7 +1047,7 @@ export class ChatEngine {
                 if (!lastMsg) return;
                 const timeDiff = Date.now() - new Date(lastMsg.timestamp).getTime();
                 if (timeDiff > parsedMinutes * 60 * 1000 * 0.8) {
-                    this.aiPipeline.processTurn(chat, this.personas, ai);
+                    this.sendMessage(chatId, '回来时跟我说一声，我还在这里。', ai.id);
                 }
             }
         }, parsedMinutes * 60 * 1000);
@@ -929,14 +1056,29 @@ export class ChatEngine {
     }
 
     _triggerAIResponse(chat) {
-        // Logic to determine WHICH AI should respond
         const candidates = chat.participants
             .filter(id => id !== 'user-me')
             .map(id => this.personas.find(p => p.id === id))
             .filter(Boolean);
 
-        // T12: Collect recent group-chat messages for context injection
-        // A "group" chat has more than 2 participants
+        if (candidates.length === 0) return;
+        if (String(chat.lastMessage?.content || '').startsWith('[System]')) return;
+
+        const isDirect = chat.participants.length === 2;
+        const messageText = String(chat.lastMessage?.content || '');
+        const mentioned = candidates.filter((ai) =>
+            [ai.name, ai.name_zh]
+                .filter(Boolean)
+                .some((name) => messageText.includes(`@${name}`))
+        );
+
+        // A direct chat has one responder. A group also spends at most one LLM
+        // request per user turn: explicit mention wins, otherwise rotate locally.
+        const ai = isDirect
+            ? candidates[0]
+            : mentioned[0] || candidates[Math.floor(Math.random() * candidates.length)];
+        if (!ai) return;
+
         const recentGroupMessages = this.chats
             .filter(c => c.id !== chat.id && c.participants.length > 2)
             .flatMap(c => c.messages.slice(-5).map(m => ({
@@ -944,21 +1086,20 @@ export class ChatEngine {
                 participants: c.participants
             })))
             .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-            .slice(-10); // at most 10 recent group messages across all groups
+            .slice(-4);
 
-        candidates.forEach((ai) => {
-            // Check if AI was mentioned or if it's 1-on-1
-            const isMentioned = chat.lastMessage.content.includes(`@${ai.name}`);
-            const isDirect = chat.participants.length === 2;
-
-            // Should respond?
-            if (isDirect || isMentioned || Math.random() > 0.3) {
-                // T06: Get affinity/mood context; T12: add group context
-                const baseContext = this._contextProvider?.(ai.id) || {};
-                const context = { ...baseContext, recentGroupMessages };
-                this.aiPipeline.processTurn(chat, this.personas, ai, context);
-            }
-        });
+        const baseContext = this._contextProvider?.(ai.id) || {};
+        const context = { ...baseContext, recentGroupMessages, isGroupChat: !isDirect };
+        this._handleAITyping(chat.id, ai.id, true);
+        Promise.resolve(this.aiPipeline.processTurn(chat, this.personas, ai, context))
+            .catch(error => {
+                console.error('[ChatEngine] AI turn failed:', error);
+                this._handleAIError(chat.id, ai.id, {
+                    code: 'pipeline_error',
+                    userMessageId: chat.lastMessage?.senderId === 'user-me' ? chat.lastMessage.id : null,
+                });
+            })
+            .finally(() => this._handleAITyping(chat.id, ai.id, false));
     }
 
     _checkAutoNaming(chat) {
@@ -972,38 +1113,12 @@ export class ChatEngine {
         // Only for Task Agents
         if (!ai || ai.agentType !== 'task-specialist') return;
 
-        // Construct a prompt specifically for naming
         const firstMessage = chat.messages[0]?.content;
         if (!firstMessage) return;
-        const namingPrompt = `
-Generate a clear chat title (max 6 words) from this first message.
-No quotes, no punctuation, title text only.
-
-Message: "${firstMessage}"
-Title:`;
-
-        // Call AI Service directly for the name
-        // We use a light model if possible, but standard callAI logic handles it
-        callAI([
-            { role: 'system', content: 'You generate concise topic titles.' },
-            { role: 'user', content: namingPrompt }
-        ], {
-            maxTokens: 32,
-            temperature: 0.3,
-            // Short titles need visible output, not a reasoning trace. Without
-            // this, reasoning-first OpenRouter models can consume the complete
-            // token budget and leave the topic stuck as "New Topic".
-            disableReasoning: true
-        }).then(title => {
-            if (title && this.chats.find(c => c.id === chat.id)) {
-                // Clean up quotes just in case
-                const cleanTitle = title.replace(/["']/g, '').trim();
-                console.log(`[ChatEngine] Auto-naming chat ${chat.id} -> ${cleanTitle}`);
-
-                // Update chat name
-                this.updateChat(chat.id, { name: cleanTitle });
-            }
-        }).catch(err => console.error('[ChatEngine] Auto-naming failed:', err));
+        const title = deriveChatTitle(firstMessage);
+        if (title && this.chats.find(c => c.id === chat.id)) {
+            this.updateChat(chat.id, { name: title });
+        }
     }
     // =========================================================================
     // T05: Presence & Greeting

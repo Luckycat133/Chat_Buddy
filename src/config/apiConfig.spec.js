@@ -26,6 +26,10 @@ describe('apiConfig', () => {
         vi.unstubAllEnvs();
     });
 
+    it('test_when_using_default_chat_config_should_not_retry_provider_requests_automatically', () => {
+        expect(getConfig().maxRetries).toBe(0);
+    });
+
     it('test_when_save_config_contains_api_key_should_store_key_in_session_only', () => {
         // When
         saveConfig({

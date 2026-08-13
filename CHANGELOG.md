@@ -104,6 +104,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > Planned features not yet assigned to a specific version.
 
+### Performance
+
+- **One-model-request turn budget** (2026-08-13)
+  - Limited ordinary persona, Agent, and group turns to one configured text-model request; group chats now select one eligible responder instead of fanning out to every participant
+  - Removed automatic title generation, LLM memory extraction, recall rewrites, proactive images, background Moment generation, recursive model-backed tools, and automatic API retries
+  - Moved durable memory capture, titles, Moment templates, quizzes, idiom games, palettes, learning-state tools, and deterministic arithmetic to local code with zero text-model requests
+  - Capped provider context to six recent messages / 5,000 characters and applied smaller per-Agent output budgets; Scholar now uses one Tavily retrieval plus one bounded synthesis
+  - Kept image generation and text-to-speech behind explicit user actions, with TTS caching for repeat playback
+- **Fixed OpenRouter free model**
+  - Standardized the default and settings preset on `nvidia/nemotron-3.5-lightning:free`; automatic fallback models remain disabled
+  - Added visible manual retry behavior for provider failures so a failed turn cannot silently spend additional requests
+
 ### Security
 
 - **Deny-by-default agent tools and safe rich content** (2026-08-12)
@@ -117,13 +129,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Real OpenRouter Agent/persona validation** (2026-08-13)
-  - Added an OpenRouter quick-fill preset using `nvidia/nemotron-3-ultra-550b-a55b:free`
+- **Real OpenRouter Agent/persona and request-budget validation** (2026-08-13)
+  - Validated `nvidia/nemotron-3.5-lightning:free` with concise Chinese, React debugging, cross-topic memory recall, Aurora support, Muse translation, and Scholar synthesis
+  - Verified local math and trivia at zero provider requests, group chat at one responder/one model request, explicit Pixel image generation at one MiniMax request, and cached repeat TTS at zero additional requests
+  - Updated Scholar's official-source filter for the current OpenRouter free-router documentation URL while retaining one Tavily request
+  - Prevented question sentences from being stored as long-term facts and replaced base64 image source text in Agent topic previews with a localized photo label
   - Preserved user-authored and model-generated bracket syntax such as `items[1]`, `items[0]`, citations, and tuple labels while continuing to remove explicit internal control tags
   - Fixed mixed Chinese-plus-code language detection so identifiers no longer force an English system instruction
-  - Disabled reasoning for short OpenRouter title requests so reasoning-first models return a visible topic title within the token budget
   - Switched MiniMax Moment images to the official durable `base64` response instead of expiring cross-origin URLs, and kept blob workers limited to the Vite development CSP
-  - Verified real Coder and Luna conversations through OpenRouter, then added bracket preservation to the Chrome E2E path
+  - Added request-budget, local-memory, local-game, context-window, and Scholar evidence regression coverage
 
 - **Security, data-integrity, CI, and UX remediation** (2026-08-12)
   - Prevented stale hydration from overwriting new messages and made ChatEngine snapshots immutable for React subscribers

@@ -5,10 +5,6 @@ import {
     callMomentsAI,
     getTimeContext,
     getRandomLocation,
-    generatePostSystemPrompt,
-    generateCommentSystemPrompt,
-    generateBirthdayPostSystemPrompt,
-    generateHolidayPostSystemPrompt,
     evaluateInterestMatch,
 } from '../services/momentsService';
 import {
@@ -16,29 +12,18 @@ import {
     buildFallbackMomentComment,
     buildFallbackMomentPost,
     buildLocalMomentFeedback,
-    buildMomentFeedbackPrompt,
     buildMomentWritingAssistPrompt,
     createLocalWritingAssist,
     detectMomentLanguage,
-    normalizeGeneratedMomentText,
     parseMomentAssistResponse,
     sanitizeMomentText,
 } from '../services/momentsContentService';
 import { isRenderableMomentImage } from '../services/momentsMediaService';
-import { generateMomentsImage, isMiniMaxConfigured } from '../../../services/minimaxService';
 
 const MomentsActionContext = createContext();
 
 function createId(prefix) {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function extractJsonObject(raw) {
-    if (!raw) return null;
-    const fencedMatch = raw.match(/```json\s*([\s\S]*?)```/i) || raw.match(/```\s*([\s\S]*?)```/i);
-    if (fencedMatch?.[1]) return fencedMatch[1].trim();
-    const objectMatch = raw.match(/\{[\s\S]*\}/);
-    return objectMatch?.[0] || null;
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -338,37 +323,8 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
 
         const fallback = buildLocalMomentFeedback(targetPost, postLanguage);
         const personaName = getLocalizedName(persona?.id, postLanguage);
-        let feedback = fallback;
-
-        const response = await callMomentsAI([
-            { role: 'system', content: buildMomentFeedbackPrompt(postLanguage, getLocalizedName(targetPost.authorId, postLanguage)) },
-            {
-                role: 'user',
-                content: `Post:\n${targetPost.content}\n\nLocation: ${targetPost.location || 'N/A'}`,
-            },
-        ], 180);
-
-        const jsonCandidate = extractJsonObject(response || '');
-        if (jsonCandidate) {
-            try {
-                const parsed = JSON.parse(jsonCandidate);
-                feedback = {
-                    summary: sanitizeMomentText(parsed.summary || fallback.summary, postLanguage),
-                    nextMove: sanitizeMomentText(parsed.nextMove || fallback.nextMove, postLanguage),
-                    suggestedComment: normalizeGeneratedMomentText(
-                        parsed.suggestedComment,
-                        postLanguage,
-                        fallback.suggestedComment
-                    ),
-                };
-            } catch (e) {
-                console.warn('[MomentsActions] Feedback parsing failed:', e?.message);
-                feedback = fallback;
-            }
-        }
-
         const normalizedFeedback = {
-            ...feedback,
+            ...fallback,
             authorId: persona?.id || 'ai-1',
             authorName: personaName,
             generatedAt: new Date().toISOString(),
@@ -388,27 +344,7 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
         return normalizedFeedback;
     }, [getLocalizedName, preferredLanguage, setMomentsData]);
 
-    const maybeGenerateCachedImages = useCallback(async (text, persona, location, options = {}, chance = 0.4) => {
-        if (!isMiniMaxConfigured() || Math.random() >= chance) return [];
-
-        try {
-            const imageResult = await generateMomentsImage(
-                text,
-                { ...persona, id: persona.id },
-                location,
-                options
-            );
-
-            if (!imageResult?.imageUrl) return [];
-
-            return [imageResult.imageUrl];
-        } catch (error) {
-            console.warn(`[MomentsAI] Image generation failed, falling back to text-only post: ${error.message}`);
-            return [];
-        }
-    }, []);
-
-    const generateDynamicAIPost = useCallback(async (aiId, options = {}) => {
+    const generateDynamicAIPost = useCallback(async (aiId, _options = {}) => {
         const persona = INITIAL_PERSONAS.find(item => item.id === aiId);
         if (!persona) return false;
 
@@ -421,23 +357,9 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
             location,
         });
 
-        const response = options.localOnly
-            ? fallbackPost
-            : await callMomentsAI([
-                { role: 'system', content: generatePostSystemPrompt(persona, timeContext, location, preferredLanguage) },
-                { role: 'user', content: 'Generate a post.' },
-            ], 160);
-
-        const finalContent = normalizeGeneratedMomentText(response, preferredLanguage, fallbackPost);
-        const images = await maybeGenerateCachedImages(
-            finalContent,
-            persona,
-            location,
-            { aspectRatio: '4:3' },
-            0.4
-        );
-
-        createPost(finalContent, images, null, aiId, {
+        // Background social activity is local by design. Browsing Moments must
+        // never spend text or image requests without a direct user action.
+        createPost(fallbackPost, [], null, aiId, {
             location,
             language: preferredLanguage,
         });
@@ -451,7 +373,7 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
         }));
 
         return true;
-    }, [createPost, maybeGenerateCachedImages, preferredLanguage, setMomentsData]);
+    }, [createPost, preferredLanguage, setMomentsData]);
 
     const generateAIComment = useCallback(async (postId, aiId, replyToComment = null, postsSnapshot = []) => {
         const post = postsSnapshot.find(item => item.id === postId);
@@ -462,11 +384,6 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
 
         const postLanguage = post.language || preferredLanguage;
         const postAuthorName = getLocalizedName(post.authorId, postLanguage);
-        const existingComments = (post.comments || []).slice(-5).map(comment => {
-            const authorName = getLocalizedName(comment.authorId, postLanguage);
-            return `${authorName}: ${comment.content}`;
-        }).join('\n');
-
         const fallbackComment = buildFallbackMomentComment({
             persona,
             language: postLanguage,
@@ -475,30 +392,14 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
             replyToComment,
         });
 
-        const response = await callMomentsAI([
-            {
-                role: 'system',
-                content: generateCommentSystemPrompt(
-                    persona,
-                    postAuthorName,
-                    post.content,
-                    existingComments,
-                    replyToComment,
-                    postLanguage
-                ),
-            },
-            { role: 'user', content: 'Write your comment.' },
-        ], 90);
-
-        const finalComment = normalizeGeneratedMomentText(response, postLanguage, fallbackComment);
         const replyData = replyToComment ? {
             commentId: replyToComment.commentId,
             authorId: replyToComment.authorId,
             authorName: replyToComment.authorName,
         } : null;
 
-        addComment(postId, finalComment, aiId, replyData);
-        return finalComment;
+        addComment(postId, fallbackComment, aiId, replyData);
+        return fallbackComment;
     }, [addComment, getLocalizedName, preferredLanguage]);
 
     const generateStoryPost = useCallback(async (aiId, eventType, eventName) => {
@@ -514,29 +415,16 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
             location,
         });
 
-        const response = await callMomentsAI([
-            {
-                role: 'system',
-                content: eventType === 'birthday'
-                    ? generateBirthdayPostSystemPrompt(persona, preferredLanguage)
-                    : generateHolidayPostSystemPrompt(persona, eventName, preferredLanguage),
-            },
-            { role: 'user', content: 'Generate a post.' },
-        ], 160);
+        const eventDetail = preferredLanguage === 'zh'
+            ? eventType === 'birthday'
+                ? '今天也想把这份生日的小开心分享给你。'
+                : `今天是${eventName || '特别的日子'}，愿你也有一点轻松的节日心情。`
+            : eventType === 'birthday'
+                ? 'Sharing a small birthday joy with you today.'
+                : `It is ${eventName || 'a special day'}—hope it brings you a lighter moment.`;
+        const finalContent = `${fallbackPost} ${eventDetail}`;
 
-        const finalContent = normalizeGeneratedMomentText(response, preferredLanguage, fallbackPost);
-        const imageSeed = eventType === 'birthday'
-            ? `${finalContent} birthday celebration`
-            : `${finalContent} ${eventName || 'holiday'} celebration`;
-        const images = await maybeGenerateCachedImages(
-            imageSeed,
-            persona,
-            location,
-            { aspectRatio: '1:1', promptOptimizer: true },
-            0.7
-        );
-
-        createPost(finalContent, images, null, aiId, {
+        createPost(finalContent, [], null, aiId, {
             location,
             language: preferredLanguage,
         });
@@ -550,7 +438,7 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
         }));
 
         return true;
-    }, [createPost, maybeGenerateCachedImages, preferredLanguage, setMomentsData]);
+    }, [createPost, preferredLanguage, setMomentsData]);
 
     const value = {
         createPost,

@@ -58,7 +58,7 @@ export function buildToolInputSummary(toolName, args) {
     search_docs: `Searching docs: "${args?.query || ''}"`,
     analyze_code: 'Analyzing code…',
     web_search: `Searching: "${args?.query || ''}"`,
-    sonar_search: `Sonar search: "${args?.query || ''}"`,
+    sonar_search: `Web search: "${args?.query || ''}"`,
     deep_research: `Deep research: "${args?.query || ''}"`,
     fact_check: `Fact-checking: "${args?.claim || ''}"`,
     cite_sources: 'Generating citations…',

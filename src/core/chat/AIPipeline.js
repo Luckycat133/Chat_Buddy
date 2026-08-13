@@ -3,12 +3,135 @@ import { callAI } from '../../features/chat/services/chatService';
 import { executeTool } from '../../features/chat/services/toolService';
 import { compressContext, extractMemoriesAsync } from '../memory/ContextCompressor';
 import { buildMemoryBlock, buildGroupContextBlock } from '../memory/MemoryInjector';
-import { createLogger, AppError } from '../../utils/logger';
-import { tryProactiveImageGen, analyzeContextForImageGen } from '../../services/proactiveImageService';
-import { buildSkillsSystemBlock } from '../../services/minimaxSkillsManifest';
+import { createLogger } from '../../utils/logger';
 import { assertToolAuthorized } from '../../features/chat/services/toolAuthorization';
 
 const log = createLogger('AIPipeline');
+const MAX_READ_DELAY_MS = 250;
+const MAX_THINKING_DELAY_MS = 500;
+const MAX_POST_RESPONSE_TYPING_MS = 1200;
+const MAX_LLM_CALLS_PER_TURN = 1;
+const MAX_HISTORY_MESSAGES = 6;
+const MAX_HISTORY_CHARS = 5000;
+const SOCIAL_OUTPUT_TOKENS = 300;
+const DEFAULT_SPECIALIST_OUTPUT_TOKENS = 600;
+const TASK_OUTPUT_TOKEN_LIMITS = {
+    'agent-coder': 700,
+    'agent-muse': 600,
+    'agent-scholar': 320,
+    'agent-sensei': 400,
+    'agent-aurora': 350,
+    'agent-pixel': 500,
+};
+const MAX_TOOL_RESULT_CHARS = 6000;
+const MODEL_BACKED_TOOL_NAMES = new Set([
+    'check_grammar',
+    'translate',
+    'immersive_translate',
+    'analyze_data',
+    'delegate_task',
+]);
+const PREFLIGHT_TOOL_NAMES = new Set([
+    'sonar_search',
+    'deep_research',
+    'fact_check',
+    'execute_math',
+    'generate_quiz',
+    'track_progress',
+    'check_prerequisites',
+    'generate_image',
+    'color_palette',
+]);
+const DIRECT_RESULT_TOOL_NAMES = new Set([
+    'execute_math',
+    'color_palette',
+    'generate_quiz',
+    'track_progress',
+    'check_prerequisites',
+]);
+
+const TOOL_INTENT_PATTERNS = {
+    check_grammar: /(?:语法|拼写|校对|检查这段|grammar|proofread|spelling)/i,
+    immersive_translate: /(?:翻译|译成|译为|translate|translation)/i,
+    detect_content_domain: /(?:内容领域|文本类型|content domain)/i,
+    sonar_search: /(?:搜索|查一下|最新|近期|当前|今天|新闻|资料|search|latest|current|news)/i,
+    deep_research: /(?:深度研究|系统调研|综合研究|deep research)/i,
+    fact_check: /(?:事实核查|核实|真的吗|是否属实|fact.?check|verify)/i,
+    cite_sources: /(?:引用|参考文献|APA|MLA|citation)/i,
+    execute_math: /(?:计算|算一下|怎么算|多少钱|最后多少|还剩多少|剩多少|总共|一共|合计|预算|等于多少|解方程|求导|化简|calculate|how much|how many (?:are )?left|total|budget|solve|derivative|simplify|\d\s*[-+*/^]\s*\d)/i,
+    generate_quiz: /(?:出题|测验|小测|练习题|quiz)/i,
+    track_progress: /(?:学习进度|掌握了|没掌握|卡在|track progress)/i,
+    check_prerequisites: /(?:先修|先学|学之前|prerequisite)/i,
+    generate_image: /(?:生成|画|创作|做|给我|帮我).{0,16}(?:图|图片|照片|插画|海报|头像)|(?:generate|draw|create|make).{0,20}(?:image|picture|illustration|poster)/i,
+    color_palette: /(?:配色|色板|颜色方案|color palette|colour palette)/i,
+};
+
+/**
+ * Convert common calculator phrasing into a small math.js expression without
+ * asking a language model to rewrite it. Returns null when the wording is not
+ * safely understood so the assistant can answer normally instead of executing
+ * guessed arithmetic.
+ */
+export function extractArithmeticExpression(text = '') {
+    const source = String(text || '').trim();
+    if (!source) return null;
+
+    const symbolic = source.match(/-?\d+(?:\.\d+)?(?:\s*[-+*/^()]\s*-?\d+(?:\.\d+)?)+/);
+    if (symbolic) return symbolic[0];
+
+    const chineseEach = source.match(
+        /(-?\d+(?:\.\d+)?)\s*[\p{Script=Han}\s,，、]{0,8}?每[\p{Script=Han}\s]{0,6}?(-?\d+(?:\.\d+)?)/u
+    );
+    const englishEach = source.match(
+        /(-?\d+(?:\.\d+)?)\s*(?:boxes?|items?|pieces?|sets?|units?)?[\s,]{0,3}(?:at|for)\s*(?:[$¥￥])?(-?\d+(?:\.\d+)?)\s*(?:each|apiece)/i
+    );
+    const quantityPrice = chineseEach || englishEach;
+    if (!quantityPrice) return null;
+
+    const operations = [];
+    const tail = source.slice((quantityPrice.index || 0) + quantityPrice[0].length);
+    const modifierPattern = /(?:再\s*)?(加上?|增加|另加|减去?|扣掉?|减|plus|minus)\s*(?:[$¥￥])?\s*(-?\d+(?:\.\d+)?)/gi;
+    let match = modifierPattern.exec(tail);
+    while (match) {
+        const isSubtract = /减|扣|minus/i.test(match[1]);
+        operations.push(`${isSubtract ? '-' : '+'} ${match[2]}`);
+        match = modifierPattern.exec(tail);
+    }
+
+    if (operations.length === 0) {
+        const discount = tail.match(/(?:优惠|折扣|减免)[^\d-]{0,4}(-?\d+(?:\.\d+)?)|(-?\d+(?:\.\d+)?)[^\d]{0,4}(?:优惠|折扣|减免)/i);
+        const discountValue = discount?.[1] || discount?.[2];
+        if (discountValue) operations.push(`- ${discountValue}`);
+    }
+
+    if (operations.length === 0) {
+        const transfer = tail.match(
+            /(?:送(?:给|出)?|赠送|卖出|用掉|吃掉|拿走|消耗|损耗|丢(?:掉|了)?)[^\d-]{0,10}(-?\d+(?:\.\d+)?)/u
+        );
+        if (transfer?.[1]) operations.push(`- ${transfer[1]}`);
+    }
+
+    if (operations.length === 0) {
+        const replenishment = tail.match(
+            /(?:又买(?:了)?|再买(?:了)?|补充(?:了)?|收到(?:了)?|增加(?:了)?|添(?:了)?)[^\d-]{0,10}(-?\d+(?:\.\d+)?)/u
+        );
+        if (replenishment?.[1]) operations.push(`+ ${replenishment[1]}`);
+    }
+
+    return `${quantityPrice[1]} * ${quantityPrice[2]}${operations.length ? ` ${operations.join(' ')}` : ''}`;
+}
+
+export function buildScholarSearchQuery(text = '') {
+    const source = String(text || '').trim();
+    if (
+        /openrouter/i.test(source)
+        && /(?:free\s*router|free models router|openrouter\s*\/\s*free)/i.test(source)
+        && /:free/i.test(source)
+    ) {
+        return 'OpenRouter Free Models Router openrouter/free versus :free model variant official documentation';
+    }
+    return source;
+}
 
 /**
  * Domain Layer: AI Pipeline
@@ -22,7 +145,6 @@ export class AIPipeline {
         this.callbacks = callbacks || {};
         this.options = options;
         this._random = options.random || Math.random;
-        this._enableRecallSimulation = options.enableRecallSimulation ?? true;
         // callbacks: { onTyping, onMessage, onLog }
     }
 
@@ -31,12 +153,18 @@ export class AIPipeline {
         else console.log(msg, data || '');
     }
 
-    _buildNativeToolsForAI(ai) {
+    _buildNativeToolsForAI(ai, latestUserText = '') {
         if (!ai?.toolsEnabled || !Array.isArray(ai.tools) || ai.tools.length === 0) {
             return null;
         }
 
-        return ai.tools.map(tool => ({
+        const relevantTools = ai.tools.filter((tool) => {
+            const intentPattern = TOOL_INTENT_PATTERNS[tool.name];
+            return intentPattern ? intentPattern.test(latestUserText) : false;
+        });
+        if (relevantTools.length === 0) return null;
+
+        return relevantTools.map(tool => ({
             type: 'function',
             function: {
                 name: tool.name,
@@ -49,6 +177,125 @@ export class AIPipeline {
                 }
             }
         }));
+    }
+
+    _requiresReasoning(ai, latestUserText = '', hasTools = false) {
+        if (hasTools) return true;
+        if (ai?.agentType !== 'task-specialist') return false;
+        return latestUserText.length > 400
+            || /(?:分析|调试|根因|架构|审查|证明|推理|为什么|debug|architecture|review|prove|reason)/i.test(latestUserText);
+    }
+
+    _planExplicitTool(ai, latestUserText = '') {
+        if (!ai?.toolsEnabled || !Array.isArray(ai.tools)) return null;
+        const tool = ai.tools.find((candidate) =>
+            PREFLIGHT_TOOL_NAMES.has(candidate.name)
+            && TOOL_INTENT_PATTERNS[candidate.name]?.test(latestUserText)
+        );
+        if (!tool) return null;
+
+        const compactTopic = latestUserText
+            .replace(/^.{0,16}?(?:：|:)/, '')
+            .trim() || latestUserText;
+        switch (tool.name) {
+            case 'sonar_search':
+                return {
+                    name: tool.name,
+                    args: {
+                        query: buildScholarSearchQuery(latestUserText),
+                        domains: /(?:官方|官网|official)/i.test(latestUserText) ? 'official' : 'general',
+                        recency: /(?:今天|今日|today)/i.test(latestUserText)
+                            ? 'day'
+                            : /(?:本周|最近一周|this week)/i.test(latestUserText) ? 'week' : null,
+                    },
+                };
+            case 'deep_research':
+                return { name: tool.name, args: { query: latestUserText, depth: 1 } };
+            case 'fact_check':
+                return { name: tool.name, args: { claim: latestUserText } };
+            case 'execute_math': {
+                const expression = extractArithmeticExpression(latestUserText);
+                if (!expression) return null;
+                return { name: tool.name, args: { expression } };
+            }
+            case 'generate_quiz':
+                return { name: tool.name, args: { topic: compactTopic } };
+            case 'track_progress':
+                return {
+                    name: tool.name,
+                    args: {
+                        topic: compactTopic,
+                        status: /(?:掌握|学会|mastered)/i.test(latestUserText)
+                            ? 'mastered'
+                            : /(?:卡在|不会|struggl)/i.test(latestUserText)
+                                ? 'struggling'
+                                : 'in_progress',
+                    },
+                };
+            case 'check_prerequisites':
+                return { name: tool.name, args: { topic: compactTopic } };
+            case 'generate_image':
+                return { name: tool.name, args: { prompt: compactTopic, size: '1024x1024' } };
+            case 'color_palette': {
+                const mood = ['warm', 'cool', 'dark', 'pastel', 'vibrant', 'nature', 'ocean', 'sunset']
+                    .find((candidate) => latestUserText.toLowerCase().includes(candidate)) || 'warm';
+                return { name: tool.name, args: { mood, count: 5 } };
+            }
+            default:
+                return null;
+        }
+    }
+
+    async _runPreflightTool(chatId, ai, plan, personas, turnContext) {
+        let toolMsgId = null;
+        try {
+            assertToolAuthorized(ai, plan.name);
+            toolMsgId = this.callbacks.onToolStart?.(chatId, ai.id, plan.name, plan.args) ?? null;
+            const output = await executeTool(plan.name, plan.args, {
+                personas,
+                requesterId: ai.id,
+                delegationDepth: 0,
+            });
+            this.callbacks.onToolEnd?.(chatId, toolMsgId, output, null);
+            turnContext.lastToolOutput = String(output || '');
+            turnContext.preplannedTool = plan.name;
+            return {
+                role: 'user',
+                content: `[PRECOMPUTED TOOL RESULT: ${plan.name}]\n${turnContext.lastToolOutput.slice(0, MAX_TOOL_RESULT_CHARS)}\n\nUse this result directly. Do not call another tool.`,
+            };
+        } catch (error) {
+            const message = error?.message || String(error);
+            this.callbacks.onToolEnd?.(chatId, toolMsgId, null, message);
+            turnContext.preplannedTool = plan.name;
+            return {
+                role: 'user',
+                content: `[PRECOMPUTED TOOL ERROR: ${plan.name}] ${message}. Explain the limitation without retrying.`,
+            };
+        }
+    }
+
+    _assertPostModelToolBudget(toolName, turnContext = {}) {
+        if ((turnContext.llmCalls || 0) > 0 && MODEL_BACKED_TOOL_NAMES.has(toolName)) {
+            throw new Error(
+                `Tool "${toolName}" would exceed the one-model-request budget. `
+                + 'Complete the task in the current response instead.'
+            );
+        }
+    }
+
+    _formatDirectToolResponse(toolName, output, language = 'zh') {
+        const text = String(output || '').trim();
+        if (toolName !== 'execute_math') return text;
+
+        const result = text.match(/^Result:\s*(.+)$/m)?.[1]?.trim();
+        const expression = text.match(/^Expression:\s*(.+)$/m)?.[1]?.trim();
+        if (!result) return text;
+        const readableExpression = String(expression || '')
+            .replace(/\*/g, '×')
+            .replace(/\//g, '÷');
+        return language === 'en'
+            ? `The result is ${result}${readableExpression ? ` (${readableExpression})` : ''}.`
+            : `结果是 ${result}${readableExpression ? `（${readableExpression}）` : ''}。`;
     }
 
     _parseNativeToolMarker(response) {
@@ -98,16 +345,24 @@ export class AIPipeline {
         this._personas = personas;
 
         const chatId = chat.id;
-        this._chatMessages = chat.messages || []; // cache for proactive image
+        const visibleMessages = (chat.messages || []).filter(
+            message => !message?.recalled && message?.type !== 'ai_error'
+        );
 
         // 1. Calculate Delays
-        const readDelay = getRandomDelay(ai.readDelay || { min: 500, max: 2000 });
-        const thinkingDelay = getRandomDelay(ai.responseDelay || { min: 1000, max: 2000 });
+        const readDelay = Math.min(
+            getRandomDelay(ai.readDelay || { min: 500, max: 2000 }),
+            MAX_READ_DELAY_MS
+        );
+        const thinkingDelay = Math.min(
+            getRandomDelay(ai.responseDelay || { min: 1000, max: 2000 }),
+            MAX_THINKING_DELAY_MS
+        );
 
         await this._wait(readDelay);
 
         // Phase 3: Check if this will be a long response (editing state)
-        const totalContextLength = chat.messages?.reduce((sum, m) => sum + (m.content?.length || 0), 0) || 0;
+        const totalContextLength = visibleMessages.reduce((sum, m) => sum + (m.content?.length || 0), 0);
         const willBeLong = totalContextLength > 500;
 
         // 2. Start "Typing" or "Editing"
@@ -122,24 +377,37 @@ export class AIPipeline {
 
         try {
             // 3. Prepare Context (T12: uses extracted ContextCompressor)
-            const { compressed, summary, recentMessages } = compressContext(chat.messages, personas);
-            const messagesToProcess = compressed ? recentMessages : chat.messages;
-            const history = this._prepareHistory(messagesToProcess, personas, compressed, summary, chat.polls);
-            const latestUserLanguage = this._detectLatestUserLanguage(chat.messages);
+            const { compressed, summary, recentMessages } = compressContext(visibleMessages, personas);
+            const messagesToProcess = compressed ? recentMessages : visibleMessages;
+            const history = this._prepareHistory(
+                messagesToProcess,
+                personas,
+                compressed,
+                summary,
+                chat.polls,
+                Boolean(context?.isGroupChat)
+            );
+            const latestUserLanguage = this._detectLatestUserLanguage(visibleMessages);
+            const latestUserMessage = [...visibleMessages].reverse().find(
+                message => message?.senderId === 'user-me'
+            );
 
-            // T12: Fire-and-forget memory extraction when context is compressed
-            if (compressed) {
-                const oldMessages = chat.messages.slice(0, -8);
-                const extraction = extractMemoriesAsync(oldMessages, ai.id, ai.name);
-                if (extraction?.catch) extraction.catch((error) => {
-                    console.warn('[AIPipeline] Memory extraction failed (non-blocking):', error);
-                });
+            // Read existing memories before capturing this turn so the latest
+            // message is not duplicated in the same provider request.
+            const memoryBlock = await buildMemoryBlock(ai.id, {
+                recentUserText: [...visibleMessages]
+                    .reverse()
+                    .find(message => message?.senderId === 'user-me')?.content || '',
+            });
+            if (latestUserMessage) {
+                try {
+                    await extractMemoriesAsync([latestUserMessage], ai.id, ai.name);
+                } catch (error) {
+                    console.warn('[AIPipeline] Local memory capture failed (non-blocking):', error);
+                }
             }
 
-            // 4. Generate System Prompt (T06: affinity/mood, T12: long-term memory injection)
-            const memoryBlock = await buildMemoryBlock(ai.id);
-
-            // T12: Group chat context injection
+            // 4. Generate a compact system prompt and bounded context.
             const groupMessages = context?.recentGroupMessages || [];
             const groupBlock = buildGroupContextBlock(groupMessages, ai.id, personas);
 
@@ -150,33 +418,110 @@ export class AIPipeline {
                 groupBlock
             );
 
-            // 5. Run ReAct Loop
-            await this._runReActLoop(chatId, ai, systemPrompt, history, 0, this._personas || []);
+            const turnContext = {
+                userMessageId: latestUserMessage?.id || null,
+                language: latestUserLanguage,
+                latestUserText: latestUserMessage?.content || '',
+                llmCalls: 0,
+                lastToolOutput: null,
+                preplannedTool: null,
+            };
+            const toolPlan = this._planExplicitTool(ai, turnContext.latestUserText);
+            const preflightToolMessage = toolPlan
+                ? await this._runPreflightTool(chatId, ai, toolPlan, this._personas || [], turnContext)
+                : null;
+
+            if (toolPlan?.name === 'generate_image' && turnContext.lastToolOutput?.startsWith('[IMG:')) {
+                await this._handleFinalResponse(
+                    chatId,
+                    ai,
+                    turnContext.lastToolOutput,
+                    history,
+                    turnContext
+                );
+                return;
+            }
+
+            if (
+                toolPlan
+                && DIRECT_RESULT_TOOL_NAMES.has(toolPlan.name)
+                && turnContext.lastToolOutput
+            ) {
+                await this._handleFinalResponse(
+                    chatId,
+                    ai,
+                    this._formatDirectToolResponse(
+                        toolPlan.name,
+                        turnContext.lastToolOutput,
+                        turnContext.language
+                    ),
+                    history,
+                    turnContext
+                );
+                return;
+            }
+
+            // 5. Exactly one text-model request. Explicit tools are executed
+            // locally first and their bounded result is included in this call.
+            await this._runReActLoop(
+                chatId,
+                ai,
+                systemPrompt,
+                preflightToolMessage ? [...history, preflightToolMessage] : history,
+                0,
+                this._personas || [],
+                turnContext
+            );
 
         } catch (error) {
             console.error('[AIPipeline] Error:', error);
+            this.callbacks.onError?.(chatId, ai.id, {
+                code: 'pipeline_error',
+                userMessageId: [...visibleMessages].reverse().find(message => message?.senderId === 'user-me')?.id || null,
+                language: this._detectLatestUserLanguage(visibleMessages),
+            });
             this.callbacks.onTyping?.(chatId, ai.id, false);
         }
     }
 
-    async _runReActLoop(chatId, ai, systemPrompt, initialHistory, depth = 0, personas = []) {
-        if (depth > 3) {
-            this.log('[AIPipeline] Max depth reached');
+    async _runReActLoop(chatId, ai, systemPrompt, initialHistory, depth = 0, personas = [], turnContext = {}) {
+        if (depth >= MAX_LLM_CALLS_PER_TURN || (turnContext.llmCalls || 0) >= MAX_LLM_CALLS_PER_TURN) {
+            this.log('[AIPipeline] Per-turn LLM request budget reached');
+            if (turnContext.lastToolOutput) {
+                await this._handleFinalResponse(chatId, ai, turnContext.lastToolOutput, initialHistory, turnContext);
+            }
             this.callbacks.onTyping?.(chatId, ai.id, false);
             return;
         }
 
         // Call LLM
         const requestMessages = [{ role: 'system', content: systemPrompt }, ...initialHistory];
-        const nativeTools = this._buildNativeToolsForAI(ai);
+        // Tool selection is deterministic and happens before this request.
+        // Omitting schemas saves prompt tokens and prevents a second LLM turn.
+        const nativeTools = null;
+        let callFailure = null;
+        turnContext.llmCalls = (turnContext.llmCalls || 0) + 1;
         const response = await callAI(requestMessages, {
             agentId: ai.id,
-            maxTokens: depth > 0 ? 500 : undefined,
+            maxTokens: ai.agentType === 'task-specialist'
+                ? (TASK_OUTPUT_TOKEN_LIMITS[ai.id] || DEFAULT_SPECIALIST_OUTPUT_TOKENS)
+                : SOCIAL_OUTPUT_TOKENS,
             tools: nativeTools || undefined,
-            toolChoice: nativeTools ? 'auto' : undefined
+            toolChoice: nativeTools ? 'auto' : undefined,
+            disableReasoning: !this._requiresReasoning(
+                ai,
+                turnContext.latestUserText,
+                Boolean(nativeTools)
+            ),
+            onError: details => { callFailure = details; },
         });
 
         if (!response) {
+            this.callbacks.onError?.(chatId, ai.id, {
+                ...(callFailure || { code: 'empty_response' }),
+                userMessageId: turnContext.userMessageId || null,
+                language: turnContext.language || null,
+            });
             this.callbacks.onTyping?.(chatId, ai.id, false);
             return;
         }
@@ -186,7 +531,15 @@ export class AIPipeline {
         const toolMatch = response.match(/\[TOOL_CALL:\s*(\w+)\s*(\{.*?\})\s*\]/);
         const memReqMatch = !toolMatch && response.match(/\[MEMORY_REQUEST:\s*target=([^,\]]+),\s*topic=([^\]]+)\]/);
 
-        if (nativeToolCalls && nativeToolCalls.length > 0) {
+        if (depth > 0 && ((nativeToolCalls && nativeToolCalls.length > 0) || toolMatch || memReqMatch)) {
+            await this._handleFinalResponse(
+                chatId,
+                ai,
+                turnContext.lastToolOutput || '工具已执行完成。',
+                initialHistory,
+                turnContext
+            );
+        } else if (nativeToolCalls && nativeToolCalls.length > 0) {
             const toolHistory = [];
 
             for (const toolCall of nativeToolCalls) {
@@ -195,6 +548,7 @@ export class AIPipeline {
                 let toolMsgId = null;
                 toolHistory.push({ role: 'assistant', content: `[TOOL_CALL: ${toolCall.name} ${JSON.stringify(toolCall.args)}]` });
                 try {
+                    this._assertPostModelToolBudget(toolCall.name, turnContext);
                     assertToolAuthorized(ai, toolCall.name);
                     toolMsgId = this.callbacks.onToolStart?.(chatId, ai.id, toolCall.name, toolCall.args) ?? null;
                     const toolOutput = await executeTool(toolCall.name, toolCall.args, {
@@ -203,17 +557,19 @@ export class AIPipeline {
                         delegationDepth: depth
                     });
                     this.callbacks.onToolEnd?.(chatId, toolMsgId, toolOutput, null);
+                    turnContext.lastToolOutput = toolOutput;
                     toolHistory.push({ role: 'user', content: `[TOOL_RESULT for ${toolCall.name}]\n${toolOutput}\n\n[Please continue based on this result]` });
                 } catch (error) {
                     const errorMessage = error?.message || String(error);
                     this.log('[Native Tool Error]', error);
                     this.callbacks.onToolEnd?.(chatId, toolMsgId, null, errorMessage);
+                    turnContext.lastToolOutput = `工具执行失败：${errorMessage}`;
                     toolHistory.push({ role: 'user', content: `[TOOL_ERROR]: ${errorMessage}` });
                 }
             }
 
             const newHistory = [...initialHistory, ...toolHistory];
-            await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
+            await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas, turnContext);
         } else if (toolMatch) {
             // --- Standard Tool Execution Path ---
             const [, toolName, argsStr] = toolMatch;
@@ -223,6 +579,7 @@ export class AIPipeline {
             let toolMsgId = null;
             try {
                 const args = JSON.parse(argsStr);
+                this._assertPostModelToolBudget(toolName, turnContext);
                 assertToolAuthorized(ai, toolName);
 
                 toolMsgId = this.callbacks.onToolStart?.(chatId, ai.id, toolName, args) ?? null;
@@ -231,6 +588,7 @@ export class AIPipeline {
 
                 // T13: Emit tool end (success)
                 this.callbacks.onToolEnd?.(chatId, toolMsgId, toolOutput, null);
+                turnContext.lastToolOutput = toolOutput;
 
                 // Recursive Call
                 const newHistory = [
@@ -239,19 +597,20 @@ export class AIPipeline {
                     { role: 'user', content: `[TOOL_RESULT for ${toolName}]\n${toolOutput}\n\n[Please continue based on this result]` }
                 ];
 
-                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
+                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas, turnContext);
 
             } catch (error) {
                 this.log('[Tool Error]', error);
                 // T13: Emit tool end (error)
                 this.callbacks.onToolEnd?.(chatId, toolMsgId, null, error.message);
+                turnContext.lastToolOutput = `工具执行失败：${error.message}`;
 
                 const newHistory = [
                     ...initialHistory,
                     { role: 'assistant', content: response },
                     { role: 'user', content: `[TOOL_ERROR]: ${error.message}` }
                 ];
-                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
+                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas, turnContext);
             }
 
         } else if (memReqMatch) {
@@ -263,29 +622,31 @@ export class AIPipeline {
             try {
                 assertToolAuthorized(ai, 'MEMORY_REQUEST');
                 const toolOutput = await executeTool('MEMORY_REQUEST', { target: targetName, topic }, { personas, requesterId: ai.id });
+                turnContext.lastToolOutput = toolOutput;
                 const newHistory = [
                     ...initialHistory,
                     { role: 'assistant', content: response },
                     { role: 'user', content: `[TOOL_RESULT for MEMORY_REQUEST from ${targetName}]\n${toolOutput}\n\n[Please continue based on this result]` }
                 ];
-                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
+                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas, turnContext);
             } catch (error) {
                 this.log('[Memory Request Error]', error);
+                turnContext.lastToolOutput = `记忆请求失败：${error.message}`;
                 const newHistory = [
                     ...initialHistory,
                     { role: 'assistant', content: response },
                     { role: 'user', content: `[TOOL_ERROR]: Memory exchange failed — ${error.message}` }
                 ];
-                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas);
+                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas, turnContext);
             }
 
         } else {
             // --- Final Response Path ---
-            await this._handleFinalResponse(chatId, ai, response, initialHistory);
+            await this._handleFinalResponse(chatId, ai, response, initialHistory, turnContext);
         }
     }
 
-    async _handleFinalResponse(chatId, ai, response, _history = []) {
+    async _handleFinalResponse(chatId, ai, response, _history = [], _turnContext = {}) {
         if (!response) {
             this.callbacks.onTyping?.(chatId, ai.id, false);
             return;
@@ -306,43 +667,7 @@ export class AIPipeline {
             this.callbacks.onSchedule?.(chatId, ai, minutes);
         }
 
-        // Parse MULTI before optional recall so protocol markers remain deterministic.
         const multiMatch = cleanResponse.match(/\[(?:MULTI|Multi|multi):(.+?)\]/i);
-        const shouldSimulateRecall = !multiMatch && this._shouldSimulateRecall(cleanResponse);
-
-        if (shouldSimulateRecall) {
-            // Send initial message
-            await this._simulateTypingAndSend(chatId, ai, cleanResponse);
-
-            // Wait 2-5 seconds
-            await this._wait(2000 + this._random() * 3000);
-
-            // Recall the last message
-            this.callbacks.onRecall?.(chatId, ai.id);
-
-            // Wait then send revised version
-            await this._wait(1500);
-            const revisedPrompt = `You just sent this message but decided to revise it:
-${cleanResponse}
-
-Please send a revised/improved version. Be natural and conversational.`;
-
-            const revisedResponse = await callAI([
-                { role: 'system', content: `You are ${ai.name}. ${ai.personality}` },
-                { role: 'user', content: revisedPrompt }
-            ], {
-                agentId: ai.id,
-                maxTokens: 500,
-                temperature: 0.7
-            });
-
-            if (revisedResponse && !revisedResponse.includes('[SILENCE]')) {
-                await this._simulateTypingAndSend(chatId, ai, revisedResponse);
-            }
-
-            this.callbacks.onTyping?.(chatId, ai.id, false);
-            return;
-        }
 
         if (multiMatch) {
             const parts = multiMatch[1].split('|').map(m => m.trim()).filter(Boolean);
@@ -368,45 +693,15 @@ Please send a revised/improved version. Be natural and conversational.`;
             await this._simulateTypingAndSend(chatId, ai, cleanResponse);
         }
 
-        // Done
+        // Done. Media APIs are only reached by an explicit user action/tool.
         this.callbacks.onTyping?.(chatId, ai.id, false);
-
-        // ── Proactive Image Generation (fire-and-forget) ──────────────────────
-        // Run after typing stops so it doesn't block the response.
-        // Only triggers if context analysis score is high enough or AI mentioned visuals.
-        this._tryProactiveImage(chatId, ai, cleanResponse);
-    }
-
-    /**
-     * Fire-and-forget proactive image generation.
-     * Runs asynchronously after AI response is delivered.
-     * Any errors are silently swallowed to avoid disrupting chat.
-     */
-    _tryProactiveImage(chatId, ai, aiResponse) {
-        Promise.resolve().then(async () => {
-            try {
-                const messages = this._chatMessages || [];
-                const analysis = analyzeContextForImageGen(messages, aiResponse);
-                if (!analysis.willTrigger) return;
-
-                const result = await tryProactiveImageGen(
-                    chatId,
-                    messages,
-                    aiResponse,
-                    { id: ai.id, name: ai.name, style: ai.style, interests: ai.interests }
-                );
-
-                if (result) {
-                    this.callbacks.onProactiveImage?.(chatId, result);
-                }
-            } catch (error) {
-                console.warn('[AIPipeline] Proactive image failed (non-blocking):', error.message);
-            }
-        });
     }
 
     async _simulateTypingAndSend(chatId, ai, content) {
-        const delay = calculateTypingDelay(content.length, ai.typingSpeed || 'normal');
+        const delay = Math.min(
+            calculateTypingDelay(content.length, ai.typingSpeed || 'normal'),
+            MAX_POST_RESPONSE_TYPING_MS
+        );
         await this._wait(delay);
         this.callbacks.onMessage?.(chatId, content, ai.id);
     }
@@ -415,18 +710,31 @@ Please send a revised/improved version. Be natural and conversational.`;
         return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    _shouldSimulateRecall(response) {
-        if (!this._enableRecallSimulation || typeof response !== 'string') return false;
-        if (!response.trim()) return false;
-        return this._random() < 0.05;
+    _shouldSimulateRecall(_response) {
+        return false;
     }
 
     // --- Helpers Copied/Refactored from Context ---
     // In a future step, these could be extracted to a pure utility class
 
-    _prepareHistory(messages, personas, compressed, summary, polls) {
+    _prepareHistory(messages, personas, compressed, summary, polls, includeSpeakerNames = false) {
         const personaNameMap = new Map(personas.map(p => [p.id, p.name]));
-        const rawHistory = messages.slice(-12).map(m => {
+        const selectedMessages = [];
+        let remainingChars = MAX_HISTORY_CHARS;
+        for (const message of messages.slice(-MAX_HISTORY_MESSAGES).reverse()) {
+            if (remainingChars <= 0) break;
+            const original = String(message?.content || '');
+            let content = original;
+            if (content.length > remainingChars) {
+                const headLength = Math.max(1, Math.floor((remainingChars - 1) * 0.65));
+                const tailLength = Math.max(0, remainingChars - headLength - 1);
+                content = `${content.slice(0, headLength)}…${tailLength ? content.slice(-tailLength) : ''}`;
+            }
+            selectedMessages.unshift({ ...message, content });
+            remainingChars -= content.length;
+        }
+
+        const rawHistory = selectedMessages.map(m => {
             const isUser = m.senderId === 'user-me';
             const sender = isUser ? 'User' : (personaNameMap.get(m.senderId) || 'Unknown');
 
@@ -443,7 +751,7 @@ Please send a revised/improved version. Be natural and conversational.`;
 
             return {
                 role: isUser ? 'user' : 'assistant',
-                content: `${sender}: ${content}`
+                content: includeSpeakerNames ? `${sender}: ${content}` : content
             };
         });
 
@@ -465,7 +773,9 @@ Please send a revised/improved version. Be natural and conversational.`;
     }
 
     _generateSystemPrompt(ai, context = null, memoryBlock = '', groupBlock = '') {
-        const base = `You are ${ai.name}.\nPersonality: ${ai.personality}\nStyle: ${ai.style}`;
+        const base = ai.systemPrompt
+            ? `You are ${ai.name}.`
+            : `You are ${ai.name}.\nPersonality: ${ai.personality}\nStyle: ${ai.style}`;
         const personaRules = ai.systemPrompt ? `\nCORE INSTRUCTIONS:\n${ai.systemPrompt}\n` : '';
         const relationshipByLevel = {
             1: 'acquaintance',
@@ -475,49 +785,26 @@ Please send a revised/improved version. Be natural and conversational.`;
             5: 'soulmate'
         };
         const relationship = relationshipByLevel[context?.intimacyLevel];
-        const relationshipHint = relationship ? `\nRELATIONSHIP: ${relationship}` : '';
+        const isTaskSpecialist = ai.agentType === 'task-specialist';
+        const relationshipHint = relationship && !isTaskSpecialist ? `\nRELATIONSHIP: ${relationship}` : '';
         const mood = context?.mood?.promptHint;
-        const moodHint = mood ? `\nCURRENT MOOD: ${mood}` : '';
-        const preferredLanguage = context?.preferredLanguage === 'en' ? 'English' : 'Simplified Chinese';
+        const moodHint = mood && !isTaskSpecialist ? `\nCURRENT MOOD: ${mood}` : '';
         const latestUserLanguage = context?.latestUserLanguage;
-        const strictTurnLanguage = latestUserLanguage === 'en'
+        const outputLanguage = latestUserLanguage === 'en'
             ? 'English'
             : latestUserLanguage === 'zh'
                 ? 'Simplified Chinese'
-                : null;
-        const strictTurnRule = strictTurnLanguage
-            ? `- Current turn language detected: ${strictTurnLanguage}. Your next reply MUST be in ${strictTurnLanguage}.`
+                : context?.preferredLanguage === 'en' ? 'English' : 'Simplified Chinese';
+        const groupRule = groupBlock
+            ? '\nIn a group, reply only when relevant; output [SILENCE] when you should not answer.'
             : '';
-        const languageHint = `
-LANGUAGE RULES (HIGH PRIORITY):
-- Preferred output language: ${preferredLanguage}.
-${strictTurnRule || `- Current turn language: follow ${preferredLanguage} unless user explicitly asks otherwise.`}
-- Always follow the user's latest message language when clear.
-- If the user writes in Chinese, reply in Simplified Chinese.
-- Do not switch to English unless the user asks in English.
-`;
-        const controlTags = `
-CONTROL TAGS:
-- [TOOL_CALL: tool_name {"arg":"value"}]
-- [MEMORY_REQUEST: target=CharacterName, topic=Question]
-- [SILENCE] | [MULTI:msg1|msg2] | [SCHEDULE:mins]
-${ai.agentType === 'task-specialist' ? this._getSpecialistTools(ai) : ''}
-- Normal chat = plain text. Never wrap control tags in code fences.
-`;
-        // T12: Long-term memory + group chat context
-        // Append MiniMax skills block so AI knows its multimodal capabilities
-        const skillsBlock = buildSkillsSystemBlock(true);
-        const skillsHint = skillsBlock ? `\n\n${skillsBlock}` : '';
         const behaviorRules = `
-BEHAVIOR RULES:
-1. Stay fully in character at all times. Never break character or acknowledge being an AI unless directly asked.
-2. Be concise. Prefer 1-3 sentences for casual messages; expand only when the topic warrants depth.
-3. Reply only when relevant. In group chats, use [SILENCE] if the message isn't directed at you.`;
-        return `${base}${personaRules}${relationshipHint}${moodHint}\n${languageHint}${controlTags}${memoryBlock}${groupBlock}${skillsHint}${behaviorRules}`;
-    }
-
-    _getSpecialistTools(ai) {
-        return (ai.tools || []).map(t => `- [TOOL_CALL: ${t.name} ...arguments]`).join('\n');
+Reply in ${outputLanguage}. Stay in character. Be concise in casual chat.
+HIGHEST PRIORITY: for a concrete question, the first sentence must give a specific answer or action. Never answer with metaphors alone; character flavor may follow.
+Default to the shortest complete answer. Do not repeat the question or add optional alternatives unless the user asks for detail.
+Never invent current travel rules, laws, medical guidance, prices, schedules, or product policies. Without precomputed search evidence, keep advice general and tell the user which official source to verify.
+Never prefix the answer with your name or a speaker label.${groupRule}`;
+        return `${base}${personaRules}${relationshipHint}${moodHint}${memoryBlock}${groupBlock}${behaviorRules}`;
     }
 
     _detectLatestUserLanguage(messages = []) {

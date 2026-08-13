@@ -1,10 +1,9 @@
 /**
  * Tool Service - Handles execution of AI tool calls
- * Implements real capabilities with knowledge graph, learner profile, math.js, and Perplexity Sonar
+ * Implements real capabilities with knowledge graph, learner profile, math.js, and Tavily search
  */
 
 import { callAI } from './chatService';
-import { getAIClient, getAIConfiguration } from '../../../services/api/aiClient';
 import {
     KNOWLEDGE_NODES,
     QUIZ_BANK,
@@ -24,17 +23,7 @@ import { evaluate, derivative, simplify } from 'mathjs/number';
 // Import immersive translation service
 import { translateWithReflection, detectDomain } from '../../../services/ai/translationService';
 import { getCombinedGlossary } from '../../../data/glossary';
-
-// Import Perplexity Sonar service for Scholar agent
-import {
-    sonarSearch,
-    deepResearch,
-    factCheck,
-    formatCitationsForDisplay,
-    generateAPACitation,
-    DOMAIN_PRESETS,
-    RECENCY_OPTIONS
-} from '../../../services/perplexityService';
+import { generateMomentsImage, isMiniMaxConfigured } from '../../../services/minimaxService';
 
 // Import Tavily real-time web search service
 import {
@@ -59,9 +48,6 @@ export async function executeTool(toolName, args, extras = {}) {
     assertToolAuthorized(requester, toolName);
 
     console.log(`[ToolService] Executing ${toolName} with args:`, args);
-
-    // Simulate minimal network delay for UX
-    await new Promise(resolve => setTimeout(resolve, 500));
 
     try {
         switch (toolName) {
@@ -105,7 +91,7 @@ export async function executeTool(toolName, args, extras = {}) {
             case 'analyze_data':
                 return executeDataAnalysis(args);
 
-            // ========== Scholar Research Tools (Perplexity Sonar) ==========
+            // ========== Scholar Research Tools (single Tavily retrieval) ==========
             case 'sonar_search':
                 return executeSonarSearch(args.query, args.domains, args.recency);
             case 'deep_research':
@@ -464,80 +450,33 @@ ${result}`;
  * AI-based image generation description (simulated since no image API available)
  */
 async function executeGenerateImage(args) {
-    const { prompt, size = '1024x1024' } = args;
+    const { prompt } = args;
     if (!prompt) return "[Image Generation Error] No prompt provided";
 
-    // Attempt real image generation via OpenAI-compatible endpoint first.
-    try {
-        const aiClient = getAIClient();
-        const cfg = getAIConfiguration();
-        const imageModel = args.model || cfg.imageModel || cfg.model || 'gpt-image-1';
-
-        const response = await aiClient.post('/images/generations', {
-            model: imageModel,
-            prompt,
-            size,
-            response_format: 'b64_json'
-        });
-
-        const data = await response.json().catch(() => null);
-        if (response.ok && Array.isArray(data?.data) && data.data.length > 0) {
-            const first = data.data[0];
-            const imageUrl = first.url || (first.b64_json ? `data:image/png;base64,${first.b64_json}` : null);
-            if (imageUrl) {
-                return `## Image Generation Result
-
-**Prompt:** "${prompt}"
-**Model:** ${imageModel}
-**Size:** ${size}
-
-${imageUrl.startsWith('data:')
-        ? '[Image generated as base64 data URL. Use compatible renderer to preview.]'
-        : `Generated image URL: ${imageUrl}`}`;
-            }
+    // Image generation is an explicit media request and uses the dedicated
+    // MiniMax image provider, never the configured text model.
+    if (isMiniMaxConfigured()) {
+        try {
+            const result = await generateMomentsImage(
+                prompt,
+                { id: 'agent-pixel', name: 'Pixel', style: args.style || 'creative' },
+                null,
+                { aspectRatio: args.aspectRatio || '1:1', promptOptimizer: true }
+            );
+            return `[IMG:${result.imageUrl}]`;
+        } catch (err) {
+            return `[Image Generation Error] ${err?.message || String(err)}`;
         }
-    } catch (err) {
-        console.warn('[toolService] Image generation failed, falling back to simulation:', err?.message || err);
     }
 
-    const systemPrompt = `You are an image generation describer. The user wants to generate an image with the prompt: "${prompt}".
-
-Describe what the generated image would look like in vivid detail:
-1. Main subject and composition
-2. Colors and lighting
-3. Style and mood
-4. Any notable details
-
-Then acknowledge that this is a simulated response and suggest connecting an actual image generation API for real images.`;
-
-    try {
-        const result = await callAI(
-            [{ role: 'user', content: `Describe what an image with prompt "${prompt}" would look like` }],
-            { systemPrompt, maxTokens: 400, temperature: 0.7 }
-        );
-
-        return `## Image Generation Request
-
-**Prompt:** "${prompt}"
-**Requested Size:** ${size}
-
----
-
-${result}
-
----
-
-💡 *Note: This is a simulated description. To generate actual images, connect an image generation API (like DALL-E, Midjourney, or Stable Diffusion) in your settings.*`;
-    } catch (error) {
-        console.error('[Image Generation Error]', error);
-        return `[Image Generation Error] ${error.message}`;
-    }
+    return '[Image Generation Error] No image provider is configured.';
 }
 
 /**
- * AI-based color palette generation
+ * Generate a useful palette locally. This intentionally avoids spending a
+ * second language-model request on deterministic color data.
  */
-async function executeColorPalette(args) {
+function executeColorPalette(args) {
     const { mood, baseColor, count = 5 } = args;
 
     // Predefined palettes as fallback
@@ -552,45 +491,26 @@ async function executeColorPalette(args) {
         sunset: ['#FF595E', '#FFCA3A', '#8AC926', '#1982C4', '#6A4C93']
     };
 
-    const systemPrompt = `Generate a ${count}-color palette${mood ? ` for a "${mood}" mood` : ''}${baseColor ? ` based on ${baseColor}` : ''}.
+    const safeCount = Math.max(1, Math.min(Number(count) || 5, 8));
+    const normalizedBase = /^#[0-9a-f]{6}$/i.test(baseColor || '')
+        ? baseColor.toUpperCase()
+        : null;
+    const selected = [...(palettes[mood] || palettes.warm)];
+    if (normalizedBase) selected[0] = normalizedBase;
 
-For each color, provide:
-- Hex code
-- Color name
-- Suggested usage (e.g., primary, accent, background)
-
-Format:
-**Color Name**: #HEXCODE - Usage description
-
-Also include a brief description of the overall palette mood and best use cases.`;
-
-    try {
-        const result = await callAI(
-            [{ role: 'user', content: 'Generate a color palette' }],
-            { systemPrompt, maxTokens: 500, temperature: 0.6 }
-        );
-
-        // Also provide a fallback palette if AI fails
-        const fallback = palettes[mood] || palettes.warm;
-
-        return `## Color Palette Generated
-
-${result}
-
----
-
-**Quick Reference Palette:** ${fallback.slice(0, count).join(', ')}
-
-💡 *Tip: Use these colors consistently across your design for visual harmony.*`;
-    } catch (error) {
-        console.error('[Color Palette Error]', error);
-        const fallback = palettes[mood] || palettes.warm;
-        return `## Color Palette (${mood || 'warm'})
-
-${fallback.slice(0, count).join(', ')}
-
-*Error generating detailed palette: ${error.message}*`;
+    const roles = ['主色', '辅助色', '强调色', '浅背景', '深色文字', '次要强调', '边框', '状态色'];
+    const colors = selected.slice(0, safeCount);
+    while (colors.length < safeCount) {
+        colors.push(selected[colors.length % selected.length]);
     }
+
+    return `## ${mood || 'warm'} 配色方案
+
+${colors.map((color, index) => `${index + 1}. **${roles[index]}**: ${color}`).join('\n')}
+
+快速复制：${colors.join(', ')}
+
+建议先用主色、浅背景和深色文字搭建层级，再用强调色控制在关键操作上。`;
 }
 
 // ========== Legacy Mock Implementations ==========
@@ -711,10 +631,54 @@ function detectContentDomain(text) {
 💡 您可以在翻译时指定 \`domain\` 参数来覆盖自动检测。`;
 }
 
-// ========== Scholar Perplexity Sonar Tool Implementations ==========
+// ========== Scholar Tavily Retrieval Implementations ==========
+
+function mapScholarDomains(domains = 'general', query = '') {
+    switch (domains?.toLowerCase()) {
+        case 'official': {
+            const explicitDomain = String(query).match(/(?:https?:\/\/)?(?:www\.)?([a-z0-9-]+(?:\.[a-z0-9-]+)+)/i)?.[1];
+            if (explicitDomain) return [explicitDomain.toLowerCase()];
+            const officialDomains = {
+                openrouter: 'openrouter.ai',
+                openai: 'openai.com',
+                github: 'github.com',
+                react: 'react.dev',
+                vite: 'vite.dev',
+                tavily: 'docs.tavily.com',
+            };
+            const normalized = String(query).toLowerCase();
+            const matchedBrand = Object.keys(officialDomains).find((brand) => normalized.includes(brand));
+            return matchedBrand ? [officialDomains[matchedBrand]] : [];
+        }
+        case 'academic':
+            return ['arxiv.org', 'nature.com', 'sciencedirect.com', 'ieee.org'];
+        case 'news':
+            return ['reuters.com', 'apnews.com', 'bbc.com'];
+        case 'tech':
+            return ['github.com', 'developer.mozilla.org', 'stackoverflow.com'];
+        default:
+            return [];
+    }
+}
+
+function recencyToDays(recency) {
+    return {
+        hour: 1,
+        day: 1,
+        week: 7,
+        month: 30,
+        year: 365,
+    }[recency] || undefined;
+}
+
+export function filterOpenRouterFreeComparisonResults(results = []) {
+    return results.filter((item) =>
+        /\/routing\/model-variants\/free|\/routing\/routers\/free-router|\/openrouter\/free\/?$/i.test(item?.url || '')
+    );
+}
 
 /**
- * Execute a Sonar search with domain and recency filtering
+ * Execute one retrieval request with domain and recency filtering.
  * @param {string} query - Search query
  * @param {string} domains - Domain preset ('academic', 'news', 'tech', 'general')
  * @param {string} recency - Recency filter ('hour', 'day', 'week', 'month', 'year')
@@ -726,61 +690,47 @@ async function executeSonarSearch(query, domains = 'general', recency = null) {
     }
 
     try {
-        console.log(`[ToolService] Sonar search: "${query}" | domains: ${domains} | recency: ${recency}`);
-
-        // Map domain preset string to actual domains array
-        let domainFilter = [];
-        switch (domains?.toLowerCase()) {
-            case 'academic':
-                domainFilter = DOMAIN_PRESETS.ACADEMIC;
-                break;
-            case 'news':
-                domainFilter = DOMAIN_PRESETS.NEWS;
-                break;
-            case 'tech':
-                domainFilter = DOMAIN_PRESETS.TECH;
-                break;
-            default:
-                domainFilter = DOMAIN_PRESETS.GENERAL;
-        }
-
-        // Map recency string to valid option
-        let recencyFilter = null;
-        if (recency && RECENCY_OPTIONS[recency.toUpperCase()]) {
-            recencyFilter = RECENCY_OPTIONS[recency.toUpperCase()];
-        }
-
-        const result = await sonarSearch(query, {
-            domainFilter,
-            recency: recencyFilter,
-            maxTokens: 1024
+        console.log(`[ToolService] Scholar search: "${query}" | domains: ${domains} | recency: ${recency}`);
+        const topic = domains === 'news' || recency ? 'news' : 'general';
+        const result = await tavilySearch(query, {
+            searchDepth: 'basic',
+            maxResults: domains === 'official' ? 3 : 4,
+            includeAnswer: false,
+            includeRawContent: false,
+            includeDomains: mapScholarDomains(domains, query),
+            topic,
+            days: topic === 'news' ? recencyToDays(recency) : undefined,
+        });
+        const isOpenRouterFreeComparison = /openrouter\/free/i.test(query) && /:free/i.test(query);
+        const resultForSynthesis = isOpenRouterFreeComparison
+            ? {
+                ...result,
+                results: filterOpenRouterFreeComparisonResults(result.results),
+            }
+            : result;
+        const evidenceRule = isOpenRouterFreeComparison
+            ? '[SYNTHESIS LIMIT] Compare only model selection: openrouter/free chooses from the free-model pool; :free fixes the requested model family. Use exactly two bullets plus full source URLs. Do not discuss rate-limit numbers, provider routing, or add example model IDs.\n\n'
+            : '';
+        return evidenceRule + formatTavilyResults(resultForSynthesis, {
+            includeSnippets: true,
+            includeUrls: true,
+            maxSnippetChars: isOpenRouterFreeComparison ? 160 : 180,
         });
 
-        // Format the response for the AI to use
-        let output = `🔍 **Sonar 搜索结果** | Query: "${query}"
-
-${result.answer}
-
----
-
-📚 **来源 (${result.searchResults.length} 条)**:
-${formatCitationsForDisplay(result.searchResults)}`;
-
-        return output;
-
     } catch (error) {
-        console.error('[ToolService] Sonar search error:', error);
-        return `[Sonar Search Error] ${error.message}
+        console.error('[ToolService] Scholar search error:', error);
+        return `[Search Error] ${error.message}
 
 请检查：
-1. Perplexity API 密钥是否已在 .env 中配置
+1. Tavily API 密钥是否已在 .env 中配置
 2. 网络连接是否正常
 3. 查询是否有效`;
     }
 }
 
 /**
- * Execute deep multi-hop research
+ * Execute one deeper retrieval request. Synthesis remains the single configured
+ * chat-model call made by AIPipeline.
  * @param {string} query - Research question
  * @param {number} depth - Search depth (1-3 hops)
  * @returns {Promise<string>} Comprehensive research results
@@ -793,33 +743,17 @@ async function executeDeepResearch(query, depth = 2) {
     try {
         console.log(`[ToolService] Deep research: "${query}" | depth: ${depth}`);
 
-        const result = await deepResearch(query, {
-            depth: Math.min(parseInt(depth) || 2, 3),
-            domainFilter: DOMAIN_PRESETS.ACADEMIC // Default to academic for deep research
+        const result = await tavilySearch(query, {
+            searchDepth: 'advanced',
+            maxResults: Math.min(6, Math.max(4, (parseInt(depth) || 1) * 4)),
+            includeAnswer: false,
+            includeRawContent: false,
+            includeDomains: mapScholarDomains('academic'),
+            topic: 'general',
         });
+        return `📖 **深度检索素材** | Query: "${query}"
 
-        let output = `📖 **深度研究结果** | Query: "${query}"
-🔄 完成 ${result.hopsCompleted} 轮搜索
-
----
-
-## 综合分析
-
-${result.synthesis}
-
----
-
-## 📚 所有来源 (${result.allSources.length} 条)
-
-${result.allSources.map((s, i) => `[${i + 1}] ${s.title}${s.hopNumber ? ` (Hop ${s.hopNumber})` : ''}
-    ${s.url}`).join('\n')}
-
----
-
-## 🔍 搜索轨迹
-${result.searchQueries.map((q, i) => `${i + 1}. ${q.substring(0, 100)}...`).join('\n')}`;
-
-        return output;
+${formatTavilyResults(result, { includeSnippets: true, includeUrls: true, maxSnippetChars: 220 })}`;
 
     } catch (error) {
         console.error('[ToolService] Deep research error:', error);
@@ -828,7 +762,8 @@ ${result.searchQueries.map((q, i) => `${i + 1}. ${q.substring(0, 100)}...`).join
 }
 
 /**
- * Execute fact-checking on a claim
+ * Retrieve evidence for fact-checking in one request. The current chat model
+ * performs the verdict and explanation in its normal single response.
  * @param {string} claim - The claim to verify
  * @returns {Promise<string>} Fact-check verdict with sources
  */
@@ -840,48 +775,17 @@ async function executeFactCheck(claim) {
     try {
         console.log(`[ToolService] Fact check: "${claim}"`);
 
-        const result = await factCheck(claim);
+        const result = await tavilySearch(claim, {
+            searchDepth: 'basic',
+            maxResults: 4,
+            includeAnswer: false,
+            includeRawContent: false,
+        });
+        return `🔬 **事实核查证据** | Claim: "${claim}"
 
-        // Map verdict to emoji and Chinese
-        const verdictMap = {
-            verified: { emoji: '✅', text: '已验证 (Verified)', color: 'green' },
-            disputed: { emoji: '⚠️', text: '存在争议 (Disputed)', color: 'yellow' },
-            unverifiable: { emoji: '❓', text: '无法验证 (Unverifiable)', color: 'gray' }
-        };
+请仅依据以下来源判定为“已验证 / 存在争议 / 无法验证”，并说明置信度：
 
-        const confidenceMap = {
-            high: '🔵 高置信度',
-            medium: '🟡 中置信度',
-            low: '🔴 低置信度'
-        };
-
-        const v = verdictMap[result.verdict] || verdictMap.unverifiable;
-        const c = confidenceMap[result.confidence] || confidenceMap.low;
-
-        let output = `🔬 **事实核查结果** | Claim: "${claim}"
-
----
-
-## 判定结果
-${v.emoji} **${v.text}**
-${c}
-
----
-
-## 分析说明
-${result.explanation}
-
-${result.key_evidence ? `
-### 关键证据
-${result.key_evidence.map((e, i) => `${i + 1}. ${e}`).join('\n')}
-` : ''}
-
----
-
-## 📚 参考来源 (${result.sources?.length || 0} 条)
-${result.sources ? formatCitationsForDisplay(result.sources) : '无来源数据'}`;
-
-        return output;
+${formatTavilyResults(result, { includeSnippets: true, includeUrls: true, maxSnippetChars: 180 })}`;
 
     } catch (error) {
         console.error('[ToolService] Fact check error:', error);
@@ -912,13 +816,21 @@ function executeCiteSources(sources, format = 'apa') {
     let output = `📝 **学术引用 (${formatUpper} 格式)**\n\n`;
 
     sources.forEach((source, i) => {
+        const { title = 'Untitled source', url = '', date } = source || {};
+        let domain = 'Unknown source';
+        try {
+            domain = new URL(url).hostname;
+        } catch {
+            // Keep malformed source data visible instead of throwing.
+        }
+        const accessDate = new Date().toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+
         if (formatUpper === 'APA') {
-            output += `[${i + 1}] ${generateAPACitation(source)}\n\n`;
+            output += `[${i + 1}] ${title}. (${date || 'n.d.'}). ${domain}. Retrieved ${accessDate}, from ${url}\n\n`;
         } else {
             // MLA format
-            const { title, url, date } = source;
-            const domain = new URL(url).hostname;
-            const accessDate = new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
             output += `[${i + 1}] "${title}." *${domain}*, ${date || 'n.d.'} Web. ${accessDate}. <${url}>\n\n`;
         }
     });

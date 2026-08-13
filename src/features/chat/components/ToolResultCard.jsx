@@ -16,7 +16,7 @@ const TOOL_META = {
     search_docs:          { icon: Database,    labelEn: 'Doc Search',       labelZh: '文档搜索' },
     analyze_code:         { icon: FileSearch,  labelEn: 'Code Analysis',    labelZh: '代码分析' },
     web_search:           { icon: Globe,       labelEn: 'Web Search',       labelZh: '网络搜索' },
-    sonar_search:         { icon: Search,      labelEn: 'Sonar Search',     labelZh: 'Sonar 搜索' },
+    sonar_search:         { icon: Search,      labelEn: 'Web Search',       labelZh: '实时搜索' },
     deep_research:        { icon: Brain,       labelEn: 'Deep Research',    labelZh: '深度研究' },
     fact_check:           { icon: CheckCircle, labelEn: 'Fact Check',       labelZh: '事实核查' },
     cite_sources:         { icon: FileSearch,  labelEn: 'Citations',        labelZh: '引用生成' },

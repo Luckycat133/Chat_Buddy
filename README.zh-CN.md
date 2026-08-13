@@ -177,9 +177,9 @@ npm run build
 | ----------------- | ---- | ------------------------------------------- |
 | `VITE_AI_API_URL` | 是   | API基础URL（如 `https://openrouter.ai/api/v1`） |
 | `VITE_AI_API_KEY` | 是   | AI回复的API密钥                             |
-| `VITE_AI_MODEL`   | 是   | 模型名称（如 `nvidia/nemotron-3-ultra-550b-a55b:free`） |
+| `VITE_AI_MODEL`   | 是   | 模型名称（默认 `nvidia/nemotron-3.5-lightning:free`） |
 
-> **支持的API提供商**：OpenRouter、DeepSeek、Perplexity、OpenAI及其他兼容OpenAI的API。设置面板已提供 OpenRouter 快速选项。
+> **Provider 配置**：默认快速选项为 OpenRouter，并固定使用一个免费模型；也可手动填写其他兼容 OpenAI 的端点。设置页输入的运行时密钥只存在 `sessionStorage`；构建期 `VITE_*` 变量仍会进入前端产物，生产环境应改用服务端代理。
 
 > **安全说明**：如果你在应用内设置面板中输入凭证，API 密钥只保存在当前浏览器会话中。保存的服务方案只保留地址和模型，不保存密钥。
 
@@ -199,7 +199,15 @@ npm run build
 1. 在输入框中输入消息
 2. 按回车或点击发送
 3. AI会根据其性格和上下文回复
-4. 在群聊中，AI之间也可能互相交流
+4. 群聊每个用户回合只选择一位合适的 AI 回复，避免多角色并发消耗请求
+
+### 请求预算
+
+- 普通虚拟角色或 Agent 回复最多调用一次当前文本模型；不自动切换模型，也不做隐藏重试。
+- 会话标题、长期记忆提取、朋友圈后台内容、知识竞答、成语游戏、配色和确定性数学均在本地完成，模型请求为 0。
+- 明确要求学者联网时使用 1 次 Tavily 检索 + 1 次文本模型综合；明确生成图片时只调用 1 次 MiniMax 图片接口，不调用文本模型。
+- 朗读只在用户点击后调用，音频生成后会缓存，重复播放不再请求。
+- Provider 失败会显示可见错误和手动“重试”，不会在后台继续花请求。
 
 ### 设置
 
@@ -220,7 +228,7 @@ npm run build
 - 前端：React 19, Vite
 - 样式：TailwindCSS
 - 状态：Clean Architecture (ChatEngine + Context)
-- AI：OpenRouter / DeepSeek / Perplexity / OpenAI 兼容 API
+- AI：固定的 OpenRouter / OpenAI 兼容文本模型；Tavily 与 MiniMax 只用于用户明确触发的搜索和媒体操作
 - 存储：LocalStorage（轻量设置）+ IndexedDB（聊天/文档主数据、媒体与背景资源）
 
 ### 项目结构

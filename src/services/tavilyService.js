@@ -4,7 +4,7 @@
  * Provides real-time web search for AI systems via the Tavily API.
  * Features:
  *  - Rate limiting (max 5 req/s, 1000 req/day by default)
- *  - Automatic retry with exponential backoff on 429/5xx
+ *  - One network attempt per explicit search; the UI owns any retry
  *  - Relevance score filtering (discard low-quality results)
  *  - Encrypted HTTPS transport (enforced by the Tavily endpoint)
  *  - Secure key retrieval from Vite environment variables
@@ -102,12 +102,12 @@ function getTavilyApiKey() {
 // ─── Core Fetch ───────────────────────────────────────────────────────────────
 
 /**
- * Low-level POST to Tavily API with retry logic.
+ * Low-level POST to Tavily API. A search action has a strict one-request budget.
  * @param {Object} body - JSON request body
- * @param {number} [retriesLeft=2] - remaining retries
+ * @param {number} [retriesLeft=0] - remaining retries (non-zero only for an explicit caller override)
  * @returns {Promise<Object>} parsed JSON response
  */
-async function tavilyPost(body, retriesLeft = 2) {
+async function tavilyPost(body, retriesLeft = 0) {
     const apiKey = getTavilyApiKey();
     const url = `${TAVILY_BASE_URL}${TAVILY_SEARCH_ENDPOINT}`;
 
@@ -128,7 +128,7 @@ async function tavilyPost(body, retriesLeft = 2) {
 
         // Rate limited or server error → exponential backoff retry
         if ((response.status === 429 || response.status >= 500) && retriesLeft > 0) {
-            const backoffMs = (3 - retriesLeft) * 1500 + Math.random() * 500;
+            const backoffMs = 1000 + Math.random() * 500;
             console.warn(`[TavilyService] HTTP ${response.status}, retrying in ${Math.round(backoffMs)}ms…`);
             await new Promise(r => setTimeout(r, backoffMs));
             return tavilyPost(body, retriesLeft - 1);
@@ -307,10 +307,11 @@ export async function tavilyNewsSearch(query, options = {}) {
  * @param {Object} [options]
  * @param {boolean} [options.includeSnippets=true] - Include content excerpts
  * @param {boolean} [options.includeUrls=true] - Include source URLs
+ * @param {number} [options.maxSnippetChars=300] - Per-result excerpt cap
  * @returns {string}
  */
 export function formatTavilyResults(searchResponse, options = {}) {
-    const { includeSnippets = true, includeUrls = true } = options;
+    const { includeSnippets = true, includeUrls = true, maxSnippetChars = 300 } = options;
     const { query, answer, results } = searchResponse;
 
     if (!results || results.length === 0) {
@@ -328,19 +329,59 @@ export function formatTavilyResults(searchResponse, options = {}) {
     // Individual results
     parts.push(`**搜索来源 (${results.length} 条):**\n`);
     results.forEach((r, i) => {
-        const scoreLabel = r.score >= 0.7 ? '✅' : r.score >= 0.5 ? '⚠️' : '❓';
+        const scoreLabel = typeof r.score === 'number'
+            ? `相关度 ${Math.round(r.score * 100)}%`
+            : '相关度未知';
         const date = r.publishedDate ? ` (${r.publishedDate.slice(0, 10)})` : '';
 
-        parts.push(`[${i + 1}] ${scoreLabel} **${r.title || 'Untitled'}**${date}`);
+        parts.push(`[${i + 1}] ${scoreLabel} — **${r.title || 'Untitled'}**${date}`);
         if (includeUrls) parts.push(`    ${r.url}`);
         if (includeSnippets && r.content) {
-            const snippet = r.content.length > 300 ? r.content.slice(0, 297) + '…' : r.content;
+            const cap = Math.max(80, Math.min(Number(maxSnippetChars) || 300, 600));
+            const snippet = buildRelevantSnippet(r.content, query, cap);
             parts.push(`    ${snippet}`);
         }
         parts.push('');
     });
 
     return parts.join('\n');
+}
+
+function buildRelevantSnippet(content, query, cap) {
+    const cleaned = String(content || '')
+        .replace(/> ## Documentation Index[\s\S]*?exploring further\.\s*/i, '')
+        .replace(/Favicon for openrouter/gi, '')
+        .replace(/OpenRouter \| Documentation home page(?:light logo)?(?:dark logo)?/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (cleaned.length <= cap) return cleaned;
+
+    const queryTerms = [...new Set(
+        String(query || '')
+            .toLocaleLowerCase()
+            .match(/[a-z0-9][a-z0-9:/.-]{2,}/g) || []
+    )].filter(term => !['versus', 'official', 'documentation'].includes(term));
+
+    const segments = cleaned
+        .split(/(?<=[.!?。！？])\s+|\s+(?=#+\s)|\s+(?=##\s)/)
+        .map(segment => segment.trim())
+        .filter(segment => segment.length >= 24);
+    const scored = segments.map((segment, index) => {
+        const lower = segment.toLocaleLowerCase();
+        const score = queryTerms.reduce(
+            (sum, term) => sum + (lower.includes(term) ? 1 : 0),
+            0
+        );
+        return { segment, index, score };
+    });
+    const relevant = scored
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score || a.index - b.index)
+        .slice(0, 2)
+        .map(item => item.segment)
+        .join(' ');
+    const selected = relevant || cleaned;
+    return selected.length > cap ? `${selected.slice(0, cap - 1)}…` : selected;
 }
 
 /**

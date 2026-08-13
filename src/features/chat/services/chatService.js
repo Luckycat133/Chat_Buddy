@@ -196,6 +196,14 @@ function isOpenRouterEndpoint(value = '') {
     }
 }
 
+function reportCallFailure(options, details) {
+    try {
+        options?.onError?.(details);
+    } catch (callbackError) {
+        console.warn('[AI] Failure callback threw:', callbackError);
+    }
+}
+
 /**
  * Call the AI API with the given messages history
  * @param {Array} messages - List of message objects {role, content}
@@ -213,6 +221,7 @@ export async function callAI(messages, options = {}) {
 
     if (!config.apiKey) {
         console.error('AI API Key not configured. Set VITE_AI_API_KEY in .env');
+        reportCallFailure(options, { code: 'missing_api_key' });
         return null;
     }
 
@@ -241,8 +250,9 @@ export async function callAI(messages, options = {}) {
     // REMOVED: Default token limits. Let the model/provider decide the limit to prevent truncation.
     const maxTokens = options.maxTokens;
     const temperature = options.temperature ?? 0.8;
-    // Allow overriding model (e.g. for Perplexity Sonar search)
-    const selectedModel = options.model || config.model;
+    // Every text feature shares the single configured model. Specialized
+    // providers (search/image/speech) use their own explicit service clients.
+    const selectedModel = config.model;
 
     const requestBody = {
         model: selectedModel,
@@ -295,6 +305,11 @@ export async function callAI(messages, options = {}) {
                 }
                 const msg = data?.error?.message || `HTTP ${response.status}`;
                 console.error('API Error:', msg, options.agentId ? `(Agent: ${options.agentId})` : '');
+                reportCallFailure(options, {
+                    code: 'http_error',
+                    status: response.status,
+                    message: msg,
+                });
                 return null;
             }
 
@@ -307,6 +322,23 @@ export async function callAI(messages, options = {}) {
 
             if (data?.error) {
                 console.error('API Error:', data.error, options.agentId ? `(Agent: ${options.agentId})` : '');
+                reportCallFailure(options, {
+                    code: 'provider_error',
+                    message: data.error?.message || String(data.error),
+                });
+                return null;
+            }
+
+            // OpenRouter can return HTTP 200 while the selected upstream failed,
+            // placing the actual error on the first choice.
+            const choiceError = data?.choices?.[0]?.error;
+            if (choiceError) {
+                console.error('API Provider Error:', choiceError, options.agentId ? `(Agent: ${options.agentId})` : '');
+                reportCallFailure(options, {
+                    code: 'provider_error',
+                    status: Number(choiceError.code) || null,
+                    message: choiceError.message || String(choiceError),
+                });
                 return null;
             }
 
@@ -321,12 +353,17 @@ export async function callAI(messages, options = {}) {
             }
 
             // Endpoint is reachable but payload has no usable content.
+            reportCallFailure(options, { code: 'empty_response' });
             return null;
         }
 
         return null;
     } catch (error) {
         console.error('API Call Failed:', error, options.agentId ? `(Agent: ${options.agentId})` : '');
+        reportCallFailure(options, {
+            code: error?.name === 'AbortError' ? 'timeout' : 'network_error',
+            message: error?.message || String(error),
+        });
         return null;
     }
 }

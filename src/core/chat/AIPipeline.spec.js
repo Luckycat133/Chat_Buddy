@@ -43,7 +43,7 @@ vi.mock("../../services/minimaxSkillsManifest", () => ({
   buildSkillsSystemBlock: mocks.buildSkillsSystemBlock,
 }));
 
-import { AIPipeline } from "./AIPipeline";
+import { AIPipeline, buildScholarSearchQuery, extractArithmeticExpression } from "./AIPipeline";
 
 function createPipeline(options = {}) {
   const callbacks = {
@@ -53,6 +53,7 @@ function createPipeline(options = {}) {
     onSchedule: vi.fn(),
     onLog: vi.fn(),
     onRecall: vi.fn(),
+    onError: vi.fn(),
     onToolStart: vi.fn(() => 'tool-msg-1'),
     onToolEnd: vi.fn(),
   };
@@ -131,13 +132,151 @@ describe("AIPipeline", () => {
     expect(callbacks.onMessage).not.toHaveBeenCalled();
   });
 
-  it("test_when_tool_call_success_should_recurse_with_tool_result", async () => {
+  it("test_when_provider_fails_should_report_a_retryable_turn_error", async () => {
+    const { pipeline, callbacks } = createPipeline();
+    mocks.callAI.mockImplementationOnce((_messages, options) => {
+      options.onError?.({ code: "http_error", status: 504 });
+      return Promise.resolve(null);
+    });
+
+    await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
+
+    expect(callbacks.onError).toHaveBeenCalledWith(
+      "chat-1",
+      "ai-1",
+      expect.objectContaining({
+        code: "http_error",
+        status: 504,
+        userMessageId: "m1",
+      }),
+    );
+  });
+
+  it("test_when_normal_chat_has_agent_tools_should_use_exactly_one_llm_call_without_tool_schemas", async () => {
+    const { pipeline } = createPipeline();
+    mocks.callAI.mockResolvedValueOnce("好的，我们继续聊。");
+
+    await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
+
+    expect(mocks.executeTool).not.toHaveBeenCalled();
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
+    expect(mocks.callAI.mock.calls[0][1]).toEqual(expect.objectContaining({
+      maxTokens: 600,
+      tools: undefined,
+      toolChoice: undefined,
+      disableReasoning: true,
+    }));
+  });
+
+  it("test_when_explicit_math_request_should_answer_locally_without_an_llm_call", async () => {
+    const { pipeline, callbacks } = createPipeline();
+    const chat = {
+      ...baseChat,
+      messages: [{ ...baseChat.messages[0], content: "帮我计算 3 * 27 - 15" }],
+    };
+    mocks.executeTool.mockResolvedValueOnce("[Math Result]\nExpression: 3 * 27 - 15\nResult: 66");
+
+    await pipeline.processTurn(chat, personas, { id: "ai-1" });
+
+    expect(mocks.executeTool).toHaveBeenCalledWith(
+      "execute_math",
+      { expression: "3 * 27 - 15" },
+      { personas, requesterId: "ai-1", delegationDepth: 0 },
+    );
+    expect(mocks.callAI).not.toHaveBeenCalled();
+    expect(callbacks.onMessage).toHaveBeenCalledWith(
+      "chat-1",
+      "结果是 66（3 × 27 - 15）。",
+      "ai-1",
+    );
+  });
+
+  it("test_when_user_asks_natural_language_budget_should_compute_with_zero_llm_calls", async () => {
+    const { pipeline } = createPipeline();
+    const chat = {
+      ...baseChat,
+      messages: [{
+        ...baseChat.messages[0],
+        content: "我在算搬家纸箱预算，3箱每箱27元，再减15元优惠，最后多少钱？",
+      }],
+    };
+    mocks.executeTool.mockResolvedValueOnce("[Math Result]\nResult: 66");
+
+    await pipeline.processTurn(chat, personas, { id: "ai-1" });
+
+    expect(mocks.executeTool).toHaveBeenCalledWith(
+      "execute_math",
+      { expression: "3 * 27 - 15" },
+      { personas, requesterId: "ai-1", delegationDepth: 0 },
+    );
+    expect(mocks.callAI).not.toHaveBeenCalled();
+  });
+
+  it("test_when_math_wording_is_ambiguous_should_not_guess_an_expression", () => {
+    expect(extractArithmeticExpression("帮我算一下这份复杂预算")).toBeNull();
+    expect(extractArithmeticExpression("3 boxes at $27 each minus 15")).toBe("3 * 27 - 15");
+    expect(extractArithmeticExpression(
+      "我买了3箱苹果，每箱27个，送给邻居15个，还剩多少？",
+    )).toBe("3 * 27 - 15");
+  });
+
+  it("test_when_user_asks_a_natural_language_inventory_problem_should_use_zero_llm_calls", async () => {
+    const { pipeline } = createPipeline();
+    const chat = {
+      ...baseChat,
+      messages: [{
+        ...baseChat.messages[0],
+        content: "我买了3箱苹果，每箱27个，送给邻居15个，还剩多少？请直接告诉我结果。",
+      }],
+    };
+    mocks.executeTool.mockResolvedValueOnce("[Math Result]\nExpression: 3 * 27 - 15\nResult: 66");
+
+    await pipeline.processTurn(chat, personas, { id: "ai-1" });
+
+    expect(mocks.executeTool).toHaveBeenCalledWith(
+      "execute_math",
+      { expression: "3 * 27 - 15" },
+      { personas, requesterId: "ai-1", delegationDepth: 0 },
+    );
+    expect(mocks.callAI).not.toHaveBeenCalled();
+  });
+
+  it("test_when_openrouter_free_router_is_compared_should_use_a_precise_official_search_query", () => {
+    expect(buildScholarSearchQuery(
+      "请用 OpenRouter 官方资料比较 free router 和固定 :free 模型",
+    )).toBe(
+      "OpenRouter Free Models Router openrouter/free versus :free model variant official documentation",
+    );
+    expect(buildScholarSearchQuery("查询今天的天气")).toBe("查询今天的天气");
+  });
+
+  it("test_when_history_contains_recalled_or_error_messages_should_exclude_them_from_context", async () => {
+    const { pipeline } = createPipeline();
+    const chat = {
+      ...baseChat,
+      messages: [
+        baseChat.messages[0],
+        { id: "draft", senderId: "ai-1", content: "discarded", recalled: true },
+        { id: "error", senderId: "ai-1", content: "failed", type: "ai_error" },
+        { id: "m2", senderId: "user-me", content: "continue" },
+      ],
+    };
+    mocks.compressContext.mockImplementationOnce((messages) => ({ compressed: false, messages }));
+    mocks.callAI.mockResolvedValueOnce("answer");
+
+    await pipeline.processTurn(chat, personas, { id: "ai-1" });
+
+    expect(mocks.compressContext).toHaveBeenCalledWith(
+      [baseChat.messages[0], chat.messages[3]],
+      personas,
+    );
+  });
+
+  it("test_when_text_tool_marker_appears_should_execute_once_and_return_result_without_second_llm", async () => {
     // Given
     const { pipeline, callbacks } = createPipeline();
     mocks.executeTool.mockResolvedValue("tool output");
-    mocks.callAI
-      .mockResolvedValueOnce('[TOOL_CALL: execute_math {"expression":"1+1"}]')
-      .mockResolvedValueOnce("final answer");
+    mocks.callAI.mockResolvedValueOnce('[TOOL_CALL: execute_math {"expression":"1+1"}]');
 
     // When
     await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
@@ -150,7 +289,27 @@ describe("AIPipeline", () => {
     );
     expect(callbacks.onMessage).toHaveBeenCalledWith(
       "chat-1",
-      "final answer",
+      "tool output",
+      "ai-1",
+    );
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
+  });
+
+  it("test_when_model_requests_another_model_backed_tool_should_block_the_hidden_request", async () => {
+    const { pipeline, callbacks } = createPipeline();
+    const muse = {
+      ...personas[0],
+      tools: [{ name: "check_grammar" }],
+    };
+    mocks.callAI.mockResolvedValueOnce('[TOOL_CALL: check_grammar {"text":"hello"}]');
+
+    await pipeline.processTurn(baseChat, [muse], { id: "ai-1" });
+
+    expect(mocks.executeTool).not.toHaveBeenCalled();
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
+    expect(callbacks.onMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.stringContaining("one-model-request budget"),
       "ai-1",
     );
   });
@@ -159,9 +318,7 @@ describe("AIPipeline", () => {
     // Given
     const { pipeline, callbacks } = createPipeline();
     const disabledPersonas = [{ ...personas[0], toolsEnabled: false }];
-    mocks.callAI
-      .mockResolvedValueOnce('[TOOL_CALL: execute_math {"expression":"1+1"}]')
-      .mockResolvedValueOnce('tool was denied');
+    mocks.callAI.mockResolvedValueOnce('[TOOL_CALL: execute_math {"expression":"1+1"}]');
 
     // When
     await pipeline.processTurn(baseChat, disabledPersonas, { id: "ai-1" });
@@ -169,7 +326,12 @@ describe("AIPipeline", () => {
     // Then
     expect(mocks.executeTool).not.toHaveBeenCalled();
     expect(callbacks.onToolStart).not.toHaveBeenCalled();
-    expect(callbacks.onMessage).toHaveBeenCalledWith("chat-1", "tool was denied", "ai-1");
+    expect(callbacks.onMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.stringContaining("工具执行失败"),
+      "ai-1",
+    );
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
   });
 
   it("test_when_tool_is_not_declared_should_reject_native_tool_call_without_execution", async () => {
@@ -209,9 +371,7 @@ describe("AIPipeline", () => {
     mocks.executeTool
       .mockResolvedValueOnce("2")
       .mockResolvedValueOnce("4");
-    mocks.callAI
-      .mockResolvedValueOnce(`[TOOL_CALL_NATIVE:${nativePayload}]`)
-      .mockResolvedValueOnce("native final");
+    mocks.callAI.mockResolvedValueOnce(`[TOOL_CALL_NATIVE:${nativePayload}]`);
 
     // When
     await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
@@ -229,15 +389,12 @@ describe("AIPipeline", () => {
       { expression: "2+2" },
       { personas, requesterId: "ai-1", delegationDepth: 0 },
     );
-    const secondCallMessages = mocks.callAI.mock.calls[1][0];
-    expect(
-      secondCallMessages.filter((m) => m.role === "assistant" && m.content.includes("[TOOL_CALL: execute_math")).length,
-    ).toBe(2);
     expect(callbacks.onMessage).toHaveBeenCalledWith(
       "chat-1",
-      "native final",
+      "4",
       "ai-1",
     );
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
     expect(callbacks.onToolStart).toHaveBeenNthCalledWith(
       1,
       "chat-1",
@@ -264,9 +421,7 @@ describe("AIPipeline", () => {
       },
     });
     mocks.executeTool.mockRejectedValueOnce(new Error("tool failed"));
-    mocks.callAI
-      .mockResolvedValueOnce(`[TOOL_CALL_NATIVE:${nativePayload}]`)
-      .mockResolvedValueOnce("after native error");
+    mocks.callAI.mockResolvedValueOnce(`[TOOL_CALL_NATIVE:${nativePayload}]`);
 
     // When
     await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
@@ -280,40 +435,34 @@ describe("AIPipeline", () => {
     );
     expect(callbacks.onMessage).toHaveBeenCalledWith(
       "chat-1",
-      "after native error",
+      expect.stringContaining("工具执行失败：tool failed"),
       "ai-1",
     );
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
   });
 
-  it("test_when_tool_call_json_invalid_should_recurse_with_tool_error", async () => {
+  it("test_when_tool_call_json_is_invalid_should_report_locally_without_retrying_llm", async () => {
     // Given
     const { pipeline, callbacks } = createPipeline();
-    mocks.callAI
-      .mockResolvedValueOnce("[TOOL_CALL: execute_math {oops}]")
-      .mockResolvedValueOnce("fallback answer");
+    mocks.callAI.mockResolvedValueOnce("[TOOL_CALL: execute_math {oops}]");
 
     // When
     await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
 
     // Then
-    const secondCallMessages = mocks.callAI.mock.calls[1][0];
-    expect(
-      secondCallMessages.some((m) => m.content.includes("[TOOL_ERROR]")),
-    ).toBe(true);
     expect(callbacks.onMessage).toHaveBeenCalledWith(
       "chat-1",
-      "fallback answer",
+      expect.stringContaining("工具执行失败"),
       "ai-1",
     );
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
   });
 
-  it("test_when_memory_request_success_should_recurse_with_memory_result", async () => {
+  it("test_when_memory_request_marker_appears_should_return_local_result_without_second_llm", async () => {
     // Given
     const { pipeline, callbacks } = createPipeline();
     mocks.executeTool.mockResolvedValue("memory result");
-    mocks.callAI
-      .mockResolvedValueOnce("[MEMORY_REQUEST: target=Luna, topic=food]")
-      .mockResolvedValueOnce("after memory");
+    mocks.callAI.mockResolvedValueOnce("[MEMORY_REQUEST: target=Luna, topic=food]");
 
     // When
     await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
@@ -326,9 +475,10 @@ describe("AIPipeline", () => {
     );
     expect(callbacks.onMessage).toHaveBeenCalledWith(
       "chat-1",
-      "after memory",
+      "memory result",
       "ai-1",
     );
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
   });
 
   it("test_when_response_contains_silence_should_not_send_message", async () => {
@@ -387,7 +537,7 @@ describe("AIPipeline", () => {
     expect(callbacks.onMessage).not.toHaveBeenCalled();
   });
 
-  it("test_when_context_is_compressed_should_trigger_async_memory_extraction", async () => {
+  it("test_when_context_is_compressed_should_capture_latest_memory_locally_without_extra_llm_call", async () => {
     // Given
     const { pipeline } = createPipeline();
     const manyMessages = Array.from({ length: 20 }, (_, idx) => ({
@@ -412,10 +562,11 @@ describe("AIPipeline", () => {
 
     // Then
     expect(mocks.extractMemoriesAsync).toHaveBeenCalledWith(
-      manyMessages.slice(0, -8),
+      [manyMessages.at(-2)],
       "ai-1",
       "Luna",
     );
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
   });
 
   it("test_when_context_is_long_should_toggle_editing_before_typing", async () => {
@@ -443,29 +594,45 @@ describe("AIPipeline", () => {
     expect(callbacks.onTyping).toHaveBeenCalledWith("chat-1", "ai-1", true);
   });
 
-  it("test_when_memory_request_tool_throws_should_continue_with_tool_error_history", async () => {
+  it("test_when_persona_delays_are_large_should_cap_artificial_waits_for_live_chat", async () => {
+    const { pipeline } = createPipeline();
+    mocks.getRandomDelay
+      .mockReturnValueOnce(8_000)
+      .mockReturnValueOnce(8_000);
+    mocks.callAI.mockResolvedValueOnce("done");
+
+    await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
+
+    expect(pipeline._wait.mock.calls[0][0]).toBeLessThanOrEqual(250);
+    expect(pipeline._wait.mock.calls[1][0]).toBeLessThanOrEqual(500);
+  });
+
+  it("test_when_rendered_reply_is_long_should_cap_post_response_typing_delay", async () => {
+    const { pipeline, callbacks } = createPipeline();
+    mocks.calculateTypingDelay.mockReturnValueOnce(3_000);
+
+    await pipeline._simulateTypingAndSend("chat-1", personas[0], "a long answer");
+
+    expect(pipeline._wait).toHaveBeenCalledWith(1_200);
+    expect(callbacks.onMessage).toHaveBeenCalledWith("chat-1", "a long answer", "ai-1");
+  });
+
+  it("test_when_memory_request_tool_throws_should_report_locally_without_second_llm", async () => {
     // Given
     const { pipeline, callbacks } = createPipeline();
     mocks.executeTool.mockRejectedValue(new Error("memory unavailable"));
-    mocks.callAI
-      .mockResolvedValueOnce("[MEMORY_REQUEST: target=Luna, topic=history]")
-      .mockResolvedValueOnce("fallback after memory error");
+    mocks.callAI.mockResolvedValueOnce("[MEMORY_REQUEST: target=Luna, topic=history]");
 
     // When
     await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
 
     // Then
-    const secondCallMessages = mocks.callAI.mock.calls[1][0];
-    expect(
-      secondCallMessages.some((m) =>
-        m.content.includes("Memory exchange failed"),
-      ),
-    ).toBe(true);
     expect(callbacks.onMessage).toHaveBeenCalledWith(
       "chat-1",
-      "fallback after memory error",
+      expect.stringContaining("记忆请求失败：memory unavailable"),
       "ai-1",
     );
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
   });
 
   it("test_when_process_turn_dependencies_throw_should_catch_and_stop_typing", async () => {
@@ -504,33 +671,25 @@ describe("AIPipeline", () => {
     expect(callbacks.onMessage).not.toHaveBeenCalled();
   });
 
-  it("test_when_recall_simulation_enabled_should_recall_and_send_revised_message", async () => {
+  it("test_when_legacy_recall_option_is_enabled_should_still_keep_one_llm_request", async () => {
     // Given
     const { pipeline, callbacks } = createPipeline({
       enableRecallSimulation: true,
       random: () => 0,
     });
-    mocks.callAI
-      .mockResolvedValueOnce("draft reply")
-      .mockResolvedValueOnce("revised reply");
+    mocks.callAI.mockResolvedValueOnce("draft reply");
 
     // When
     await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
 
     // Then
-    expect(callbacks.onRecall).toHaveBeenCalledWith("chat-1", "ai-1");
-    expect(callbacks.onMessage).toHaveBeenNthCalledWith(
-      1,
+    expect(callbacks.onRecall).not.toHaveBeenCalled();
+    expect(callbacks.onMessage).toHaveBeenCalledWith(
       "chat-1",
       "draft reply",
       "ai-1",
     );
-    expect(callbacks.onMessage).toHaveBeenNthCalledWith(
-      2,
-      "chat-1",
-      "revised reply",
-      "ai-1",
-    );
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
   });
 
   it("test_when_prepare_history_starts_with_assistant_should_prepend_summary_user_message", () => {
@@ -555,37 +714,46 @@ describe("AIPipeline", () => {
     expect(history[1].content).toContain("Poll created");
   });
 
-  it("test_when_generate_system_prompt_uses_context_should_emit_relationship_mood_and_tool_lines", () => {
+  it("test_when_building_persona_prompt_should_prioritize_a_direct_answer_for_concrete_requests", () => {
+    const { pipeline } = createPipeline();
+
+    const prompt = pipeline._generateSystemPrompt(personas[0]);
+
+    expect(prompt).toContain('the first sentence must give a specific answer or action');
+  });
+
+  it("test_when_generate_system_prompt_uses_context_should_emit_relationship_and_mood_without_tool_manifest", () => {
     // Given
     const { pipeline } = createPipeline();
+    const socialPersona = { ...personas[0], agentType: 'social' };
 
     // When
     const soulmate = pipeline._generateSystemPrompt(
-      personas[0],
+      socialPersona,
       { intimacyLevel: 5, mood: { promptHint: "happy" } },
       "\nMEMORY\n",
       "\nGROUP\n",
     );
     const closeFriend = pipeline._generateSystemPrompt(
-      personas[0],
+      socialPersona,
       { intimacyLevel: 4 },
       "",
       "",
     );
     const goodFriend = pipeline._generateSystemPrompt(
-      personas[0],
+      socialPersona,
       { intimacyLevel: 3 },
       "",
       "",
     );
     const friend = pipeline._generateSystemPrompt(
-      personas[0],
+      socialPersona,
       { intimacyLevel: 2 },
       "",
       "",
     );
     const acquaintance = pipeline._generateSystemPrompt(
-      personas[0],
+      socialPersona,
       { intimacyLevel: 1 },
       "",
       "",
@@ -594,11 +762,23 @@ describe("AIPipeline", () => {
     // Then
     expect(soulmate).toContain("RELATIONSHIP: soulmate");
     expect(soulmate).toContain("CURRENT MOOD: happy");
-    expect(soulmate).toContain("[TOOL_CALL: execute_math ...arguments]");
+    expect(soulmate).not.toContain("TOOL_CALL");
+    expect(soulmate).not.toContain("MINIMAX MULTIMODAL SKILLS");
     expect(closeFriend).toContain("RELATIONSHIP: close friend");
     expect(goodFriend).toContain("RELATIONSHIP: good friend");
     expect(friend).toContain("RELATIONSHIP: friend");
     expect(acquaintance).toContain("RELATIONSHIP: acquaintance");
+  });
+
+  it("test_when_task_specialist_prompt_is_built_should_omit_social_mood_tokens", () => {
+    const { pipeline } = createPipeline();
+    const prompt = pipeline._generateSystemPrompt(
+      personas[0],
+      { intimacyLevel: 5, mood: { promptHint: "happy" } },
+    );
+
+    expect(prompt).not.toContain("RELATIONSHIP:");
+    expect(prompt).not.toContain("CURRENT MOOD:");
   });
 
   it("test_when_generate_system_prompt_without_optional_context_should_keep_base_rules_only", () => {
@@ -621,8 +801,7 @@ describe("AIPipeline", () => {
 
     // Then
     expect(prompt).toContain("You are Edge");
-    expect(prompt).toContain("BEHAVIOR RULES:");
-    expect(prompt).toContain("Be concise.");
+    expect(prompt).toContain("Be concise in casual chat");
     expect(prompt.includes("RELATIONSHIP:")).toBe(false);
     expect(prompt.includes("CURRENT MOOD:")).toBe(false);
   });
@@ -653,23 +832,23 @@ describe("AIPipeline", () => {
     expect(empty).toBeNull();
   });
 
-  it("test_when_build_native_tools_for_ai_receives_sparse_tool_metadata_should_fill_defaults", () => {
+  it("test_when_build_native_tools_for_ai_detects_matching_intent_should_fill_defaults", () => {
     // Given
     const { pipeline } = createPipeline();
 
     // When
     const tools = pipeline._buildNativeToolsForAI({
       toolsEnabled: true,
-      tools: [{ name: "lookup" }],
-    });
+      tools: [{ name: "execute_math" }],
+    }, "请计算 3 * 27");
 
     // Then
     expect(tools).toEqual([
       {
         type: "function",
         function: {
-          name: "lookup",
-          description: "Tool: lookup",
+          name: "execute_math",
+          description: "Tool: execute_math",
           parameters: {
             type: "object",
             properties: {},
@@ -757,14 +936,14 @@ describe("AIPipeline", () => {
     expect(disabled._shouldSimulateRecall("hello")).toBe(false);
   });
 
-  it("test_when_get_specialist_tools_has_no_tools_should_return_empty_string", () => {
-    // Given
+  it("test_when_tool_intent_is_absent_should_not_send_tool_schemas", () => {
     const { pipeline } = createPipeline();
 
-    // When
-    const result = pipeline._getSpecialistTools({ tools: null });
+    const result = pipeline._buildNativeToolsForAI({
+      toolsEnabled: true,
+      tools: [{ name: "execute_math" }],
+    }, "今天心情不错");
 
-    // Then
-    expect(result).toBe("");
+    expect(result).toBeNull();
   });
 });

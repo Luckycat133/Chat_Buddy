@@ -75,6 +75,7 @@ export const LOCALES = {
         select_chat: 'Select a chat',
         send: 'Send',
         is_typing: 'is typing...',
+        wait_for_ai_reply: 'Please wait for this reply to finish. Your draft is still here.',
         people_typing: 'people typing...',
         // AI Capabilities
         ai_capabilities: 'AI Capabilities',
@@ -397,6 +398,7 @@ export const LOCALES = {
         // ChatComposer
         hold_to_talk: 'Hold to Talk',
         sticker: 'Sticker',
+        photo: 'Photo',
         gift: 'Gift',
         red_packet: 'Red Packet',
         game: 'Game',
@@ -554,7 +556,7 @@ export const LOCALES = {
         api_key_placeholder: 'sk-...',
         api_key_session_notice: 'Saved only for the current browser session. It is not stored in persistent settings or provider profiles.',
         model_name: 'Model Name',
-        model_name_placeholder: 'gpt-4o / deepseek-chat / sonar-pro',
+        model_name_placeholder: 'nvidia/nemotron-3.5-lightning:free',
         temperature: 'Temperature',
         temperature_desc: 'Higher = more creative, Lower = more precise',
         test_connection: 'Test Connection',
@@ -725,7 +727,7 @@ export const LOCALES = {
         game_number_guess: 'Number Guess',
         game_number_guess_desc: 'Guess my secret number in 7 tries',
         game_trivia: 'Trivia Quiz',
-        game_trivia_desc: 'AI-generated questions across various topics',
+        game_trivia_desc: 'Instant questions from the local quiz bank',
 
         // T10: Idiom Chain
         idiom_chain_title: 'Idiom Chain (成语接龙)',
@@ -1121,6 +1123,7 @@ export const LOCALES = {
         select_chat: '\u9009\u62E9\u4E00\u4E2A\u804A\u5929',
         send: '\u53D1\u9001',
         is_typing: '\u6B63\u5728\u8F93\u5165...',
+        wait_for_ai_reply: '\u8BF7\u7B49\u8FD9\u6761\u56DE\u590D\u5B8C\u6210\u540E\u518D\u53D1\u9001\uFF0C\u8349\u7A3F\u5DF2\u4FDD\u7559\u3002',
         people_typing: '\u4EBA\u6B63\u5728\u8F93\u5165...',
         // AI Capabilities
         ai_capabilities: 'AI \u80FD\u529B\u6743\u9650',
@@ -1441,6 +1444,7 @@ export const LOCALES = {
         // \u804A\u5929\u7F16\u8F91\u5668
         hold_to_talk: '\u6309\u4F4F\u8BF4\u8BDD',
         sticker: '\u8D34\u7EB8',
+        photo: '\u7167\u7247',
         gift: '\u793C\u7269',
         red_packet: '\u7EA2\u5305',
         game: '\u6E38\u620F',
@@ -1598,7 +1602,7 @@ export const LOCALES = {
         api_key_placeholder: 'sk-...',
         api_key_session_notice: '仅在当前浏览器会话中保存，不会写入持久设置或服务方案。',
         model_name: '模型名称',
-        model_name_placeholder: 'gpt-4o / deepseek-chat / sonar-pro',
+        model_name_placeholder: 'nvidia/nemotron-3.5-lightning:free',
         temperature: '温度',
         temperature_desc: '越高越有创意，越低越精确',
         test_connection: '测试连接',
@@ -1769,7 +1773,7 @@ export const LOCALES = {
         game_number_guess: '猜数字',
         game_number_guess_desc: '7次机会猜出秘密数字',
         game_trivia: '知识竞答',
-        game_trivia_desc: 'AI生成各类话题的问题',
+        game_trivia_desc: '从本地题库即时出题，无需等待',
 
         // T10: 成语接龙
         idiom_chain_title: '成语接龙',

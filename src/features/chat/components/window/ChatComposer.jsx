@@ -27,7 +27,7 @@ const MenuButton = ({ icon: IconComponent, label, onClick, color = "text-[var(--
     </button>
 );
 
-export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSticker, quotedMessage: externalQuotedMessage, onCancelQuote, onOpenGift, onOpenRedPacket, onOpenGame, onOpenPoll, onError }) {
+export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSticker, quotedMessage: externalQuotedMessage, onCancelQuote, onOpenGift, onOpenRedPacket, onOpenGame, onOpenPoll, onError, isWaitingForReply = false }) {
     const { t, language } = useLanguage();
     const { personas } = useChat();
 
@@ -49,6 +49,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
     const [recordingStart, setRecordingStart] = useState(0);
     const [isRecordingMode, setIsRecordingMode] = useState(false);
     const prevDraftContentRef = useRef(draftContent);
+    const draftSyncFrameRef = useRef(null);
 
     // Mention state
     const [showMentionDropdown, setShowMentionDropdown] = useState(false);
@@ -58,12 +59,22 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
     // T07: Sync input with draft when chat changes
     useEffect(() => {
         if (draftContent !== prevDraftContentRef.current) {
-            // Defer setState to avoid cascading renders
-            requestAnimationFrame(() => {
+            // Record the intended value before deferring. Otherwise a send can
+            // clear the draft while an older frame is still queued, and that
+            // stale frame restores the message that was just sent.
+            prevDraftContentRef.current = draftContent;
+            draftSyncFrameRef.current = requestAnimationFrame(() => {
                 setInputValue(draftContent || '');
-                prevDraftContentRef.current = draftContent;
+                draftSyncFrameRef.current = null;
             });
         }
+
+        return () => {
+            if (draftSyncFrameRef.current !== null) {
+                cancelAnimationFrame(draftSyncFrameRef.current);
+                draftSyncFrameRef.current = null;
+            }
+        };
     }, [draftContent]);
 
     // Combine external and internal quoted message
@@ -123,7 +134,15 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
     const handleSend = (e, submittedValue = inputValue) => {
         e.preventDefault();
         if (!submittedValue.trim()) return;
-        onSendMessage(submittedValue, quotedMessage?.id || null);
+        if (isWaitingForReply) {
+            onError?.(t('wait_for_ai_reply'));
+            return;
+        }
+        const result = onSendMessage(submittedValue, quotedMessage?.id || null);
+        if (result?.success === false) {
+            onError?.(t('wait_for_ai_reply'));
+            return;
+        }
         setInputValue('');
         // T07: Clear draft on send
         clearDraft();
@@ -243,6 +262,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                         type="button"
                         className={cn("composer-btn mb-0.5", isRecordingMode && "active")}
                         onClick={() => setIsRecordingMode(!isRecordingMode)}
+                        disabled={isWaitingForReply}
                         aria-label={isRecordingMode ? t('keyboard') || 'Keyboard' : t('voice') || 'Voice'}
                     >
                         {isRecordingMode ? <Keyboard size={24} /> : <Mic size={24} />}
@@ -337,8 +357,9 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                         {inputValue.trim() ? (
                             <button
                                 type="submit"
-                                className="composer-send-btn"
+                                className={cn("composer-send-btn", isWaitingForReply && "opacity-50 cursor-not-allowed")}
                                 aria-label={t('send') || 'Send'}
+                                disabled={isWaitingForReply}
                             >
                                 <Send size={22} className="ml-0.5" />
                             </button>
@@ -349,6 +370,7 @@ export default function ChatComposer({ chat, onSendMessage, onSendFile, onSendSt
                                 style={showPlusMenu ? { background: 'var(--character-gradient, var(--gradient-aurora))' } : {}}
                                 onClick={() => { closeAll(); setShowPlusMenu(!showPlusMenu); }}
                                 aria-label={t('more') || 'More'}
+                                disabled={isWaitingForReply}
                             >
                                 <Plus size={24} />
                             </button>

@@ -226,6 +226,28 @@ describe('MessageTimeline', () => {
     expect(screen.getByTestId('typing-ai-1')).toBeInTheDocument();
   });
 
+  it('test_when_ai_reply_failed_should_render_an_accessible_retry_action', () => {
+    helpers.language = 'zh';
+    const onRetryAI = vi.fn();
+    const chat = {
+      id: 'chat-1',
+      participants: ['user-me', 'ai-1'],
+      polls: [],
+      messages: [{
+        id: 'error-1',
+        senderId: 'ai-1',
+        type: 'ai_error',
+        content: '回复失败，请重试。',
+        timestamp: '2026-08-13T00:00:00.000Z',
+      }],
+    };
+
+    renderTimeline(chat, { onRetryAI });
+    expect(screen.getByRole('alert')).toHaveTextContent('回复失败，请重试。');
+    fireEvent.click(screen.getByRole('button', { name: 'retry' }));
+    expect(onRetryAI).toHaveBeenCalledWith('chat-1', 'error-1');
+  });
+
   it('test_when_link_is_not_http_should_not_show_link_preview_component', () => {
     // Given
     const chat = {

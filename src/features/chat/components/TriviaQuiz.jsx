@@ -1,13 +1,13 @@
 /**
- * T10: AI Trivia Quiz
- * AI generates questions from chat context or general knowledge.
+ * T10: Local Trivia Quiz
+ * Questions come from a reviewed local bank, so opening a game costs no tokens.
  * Multiple choice, score tracking, points reward.
  */
 import React, { useState, useCallback } from 'react';
-import { X, Brain, Trophy, RefreshCw, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { X, Brain, Trophy, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useSocial } from '../../../context/SocialContext';
-import { callAI } from '../services/chatService';
+import { getLocalQuizQuestions } from '../../../data/localGameContent';
 import { cn } from '../../../utils/cn';
 
 const QUIZ_LENGTH = 5;
@@ -15,41 +15,6 @@ const POINTS_PER_CORRECT = 6;
 
 const CATEGORIES_EN = ['General Knowledge', 'Science', 'History', 'Pop Culture', 'Technology', 'Math'];
 const CATEGORIES_ZH = ['常识', '科学', '历史', '流行文化', '科技', '数学'];
-
-async function generateQuizQuestion(category, language) {
-    const prompt = language === 'zh'
-        ? `生成一道关于"${category}"的选择题。格式必须是严格的JSON：
-{"question": "题目", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "简短解释"}
-correct是正确选项的下标(0-3)。只输出JSON，不加任何其他内容。`
-        : `Generate a multiple-choice trivia question about "${category}". Return ONLY valid JSON:
-{"question": "question text", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "brief explanation"}
-correct is the index (0-3) of the correct option. Output only JSON.`;
-
-    try {
-        const response = await callAI([
-            { role: 'system', content: 'You are a trivia question generator. Output only valid JSON.' },
-            { role: 'user', content: prompt }
-        ], { max_tokens: 300, temperature: 0.8 });
-
-        const text = response?.choices?.[0]?.message?.content?.trim() || '';
-        // Extract JSON from the response (handle code block wrapping)
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('No JSON found');
-        const parsed = JSON.parse(jsonMatch[0]);
-        if (!parsed.question || !Array.isArray(parsed.options) || parsed.options.length < 2) throw new Error('Invalid format');
-        return parsed;
-    } catch (_e) {
-        // Fallback question if AI fails
-        return {
-            question: language === 'zh' ? `关于${category}：什么是人工智能？` : `About ${category}: What does AI stand for?`,
-            options: language === 'zh'
-                ? ['人工智能', '自动化系统', '高级接口', '分析引擎']
-                : ['Artificial Intelligence', 'Automated Interface', 'Advanced Integration', 'Analytical Input'],
-            correct: 0,
-            explanation: language === 'zh' ? 'AI代表人工智能，即机器模拟人类智能的技术。' : 'AI stands for Artificial Intelligence — machines simulating human intelligence.'
-        };
-    }
-}
 
 export default function TriviaQuiz({ aiName: _aiName, onClose }) {
     const { t, language } = useLanguage();
@@ -60,26 +25,18 @@ export default function TriviaQuiz({ aiName: _aiName, onClose }) {
     const [currentQ, setCurrentQ] = useState(0);
     const [selected, setSelected] = useState(null);
     const [answers, setAnswers] = useState([]);
-    const [loading, setLoading] = useState(false);
     const [showExplain, setShowExplain] = useState(false);
 
     const categories = language === 'zh' ? CATEGORIES_ZH : CATEGORIES_EN;
 
-    const startQuiz = useCallback(async (cat) => {
+    const startQuiz = useCallback((cat) => {
         setCategory(cat);
         setPhase('playing');
-        setLoading(true);
         setCurrentQ(0);
         setAnswers([]);
         setSelected(null);
         setShowExplain(false);
-
-        // Generate all questions in parallel
-        const generated = await Promise.all(
-            Array.from({ length: QUIZ_LENGTH }, () => generateQuizQuestion(cat, language))
-        );
-        setQuestions(generated);
-        setLoading(false);
+        setQuestions(getLocalQuizQuestions(cat, language, QUIZ_LENGTH));
     }, [language]);
 
     const handleAnswer = (optIdx) => {
@@ -94,7 +51,7 @@ export default function TriviaQuiz({ aiName: _aiName, onClose }) {
     const handleNext = () => {
         if (currentQ + 1 >= questions.length) {
             // Calculate final score
-            const correctCount = answers.filter(a => a.isCorrect).length + (selected === questions[currentQ].correct ? 1 : 0);
+            const correctCount = answers.filter(a => a.isCorrect).length;
             const pts = correctCount * POINTS_PER_CORRECT;
             addPoints(pts);
             updateTaskProgress?.('task_game', 1);
@@ -201,12 +158,7 @@ export default function TriviaQuiz({ aiName: _aiName, onClose }) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto px-5 py-4">
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center py-12 gap-3">
-                            <Loader2 size={32} className="text-indigo-500 animate-spin" />
-                            <p className="text-sm text-[var(--color-text-muted)]">{t('trivia_generating')}</p>
-                        </div>
-                    ) : q ? (
+                    {q ? (
                         <>
                             <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-3">
                                 Q{currentQ + 1}/{questions.length}
@@ -263,7 +215,7 @@ export default function TriviaQuiz({ aiName: _aiName, onClose }) {
                     ) : null}
                 </div>
 
-                {!loading && selected !== null && (
+                {selected !== null && (
                     <div className="px-5 pb-5 pt-3 border-t border-[var(--color-border)]">
                         <button
                             onClick={handleNext}

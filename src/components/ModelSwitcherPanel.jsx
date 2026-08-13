@@ -1,6 +1,6 @@
 /**
  * T15: ModelSwitcherPanel
- * Manual model switching + token usage dashboard.
+ * Single-model selection + token usage dashboard.
  * Reads/writes to localStorage apiConfig, shows usage stats.
  */
 import React, { useRef, useState } from 'react';
@@ -13,51 +13,16 @@ import { resetAIClient } from '../services/api/aiClient';
 
 const MODEL_PRESETS = [
     {
-        id: 'deepseek-chat',
-        name: 'DeepSeek Chat',
-        provider: 'DeepSeek',
-        desc: 'Fast, cost-effective general assistant',
-        desc_zh: '快速、低成本的通用助手',
+        id: 'nvidia/nemotron-3.5-lightning:free',
+        name: 'Nemotron 3.5 Lightning',
+        provider: 'OpenRouter',
+        desc: 'Fixed free default for responsive chat and agent tasks',
+        desc_zh: '固定免费默认模型，适合快速对话与智能体任务',
         badge: 'Recommended',
         badge_zh: '推荐',
-        color: 'from-blue-400 to-indigo-500',
-        input_price: 0.14,   // USD per M tokens
-        output_price: 0.28,
-    },
-    {
-        id: 'deepseek-reasoner',
-        name: 'DeepSeek R1',
-        provider: 'DeepSeek',
-        desc: 'Chain-of-thought reasoning model',
-        desc_zh: '思维链推理模型',
-        badge: 'Reasoning',
-        badge_zh: '推理',
-        color: 'from-purple-400 to-pink-500',
-        input_price: 0.55,
-        output_price: 2.19,
-    },
-    {
-        id: 'claude-sonnet-4-6',
-        name: 'Claude Sonnet 4.6',
-        provider: 'Anthropic',
-        desc: 'Balanced performance and capability',
-        desc_zh: '均衡的性能与能力',
-        badge: 'Advanced',
-        badge_zh: '高级',
-        color: 'from-orange-400 to-red-500',
-        input_price: 3.0,
-        output_price: 15.0,
-    },
-    {
-        id: 'gpt-4o-mini',
-        name: 'GPT-4o Mini',
-        provider: 'OpenAI',
-        desc: 'Lightweight GPT-4 class model',
-        desc_zh: '轻量级 GPT-4 级模型',
-        badge: null,
-        color: 'from-emerald-400 to-teal-500',
-        input_price: 0.15,
-        output_price: 0.60,
+        color: 'from-emerald-400 to-cyan-500',
+        input_price: 0,
+        output_price: 0,
     },
     {
         id: 'custom',
@@ -98,13 +63,13 @@ export default function ModelSwitcherPanel({ onClose }) {
     const { t, language } = useLanguage();
     const [currentModel, setCurrentModel] = useState(() => {
         const cfg = getApiConfig();
-        const model = cfg.model || import.meta.env?.VITE_AI_MODEL || 'deepseek-chat';
+        const model = cfg.model || import.meta.env?.VITE_AI_MODEL || 'nvidia/nemotron-3.5-lightning:free';
         const preset = MODEL_PRESETS.find(m => m.id === model);
         return preset ? model : 'custom';
     });
     const [customModel, setCustomModel] = useState(() => {
         const cfg = getApiConfig();
-        const model = cfg.model || import.meta.env?.VITE_AI_MODEL || 'deepseek-chat';
+        const model = cfg.model || import.meta.env?.VITE_AI_MODEL || 'nvidia/nemotron-3.5-lightning:free';
         const preset = MODEL_PRESETS.find(m => m.id === model);
         return preset ? '' : model;
     });
@@ -209,7 +174,7 @@ export default function ModelSwitcherPanel({ onClose }) {
                                 type="text"
                                 value={customModel}
                                 onChange={e => setCustomModel(e.target.value)}
-                                placeholder="e.g. mistral-7b, llama3-70b..."
+                                placeholder="e.g. openai/gpt-oss-20b:free"
                                 className="mt-2 w-full input-modern text-sm"
                             />
                         </label>

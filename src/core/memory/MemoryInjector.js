@@ -8,7 +8,14 @@
 import { memoryStore } from './MemoryStore';
 
 // Max facts to inject per turn to stay within token budget
-const MAX_FACTS_TO_INJECT = 10;
+const MAX_FACTS_TO_INJECT = 4;
+const MAX_FACT_CHARS = 120;
+
+function truncateFact(fact) {
+    const chars = Array.from(String(fact || '').trim());
+    if (chars.length <= MAX_FACT_CHARS) return chars.join('');
+    return `${chars.slice(0, MAX_FACT_CHARS - 1).join('')}…`;
+}
 
 /**
  * Build the memory block to append to a character's system prompt.
@@ -17,12 +24,33 @@ const MAX_FACTS_TO_INJECT = 10;
  * @param {string} characterId
  * @returns {Promise<string>} Formatted memory context block
  */
-export async function buildMemoryBlock(characterId) {
+function normalizeForComparison(value) {
+    return String(value || '')
+        .toLocaleLowerCase()
+        .replace(/[\s\p{P}\p{S}]+/gu, '');
+}
+
+function alreadyPresentInRecentContext(fact, recentUserText) {
+    const recent = normalizeForComparison(recentUserText);
+    if (!recent) return false;
+
+    const normalizedFact = normalizeForComparison(fact)
+        .replace(/^用户曾说/u, '');
+    if (!normalizedFact) return false;
+
+    return normalizedFact.includes(recent) || recent.includes(normalizedFact);
+}
+
+export async function buildMemoryBlock(characterId, options = {}) {
     try {
         const facts = await memoryStore.getRelevantFacts(characterId, MAX_FACTS_TO_INJECT);
         if (!facts || facts.length === 0) return '';
 
-        const lines = facts.map((f) => `• ${f.fact}`).join('\n');
+        const lines = facts
+            .filter((fact) => !alreadyPresentInRecentContext(fact.fact, options.recentUserText))
+            .map((f) => `• ${truncateFact(f.fact)}`)
+            .join('\n');
+        if (!lines) return '';
         return `\nWHAT YOU REMEMBER ABOUT THE USER:\n${lines}\n`;
     } catch (err) {
         console.warn('[MemoryInjector] buildMemoryBlock failed silently:', err);

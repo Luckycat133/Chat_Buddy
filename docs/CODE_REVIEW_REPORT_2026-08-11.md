@@ -14,6 +14,7 @@
 
 | 验证 | 结果 |
 | --- | --- |
+| `npm test`（请求预算修复后的当前套件） | 31 个文件、443/443 通过 |
 | `TZ=UTC npm run test:coverage` | 24 个文件、407/407 通过；核心逻辑门禁通过：Statements 85.04%、Branches 77.83%、Functions 84.91%、Lines 87.95% |
 | `TZ=UTC npm run test:coverage:all` | 407/407 通过；全仓观测值为 Statements 22.57%、Branches 19.77%、Functions 17.68%、Lines 23.45%，不作为单元门禁伪装成已全面覆盖 |
 | `npm run lint` | 通过，0 errors、0 warnings |
@@ -26,10 +27,35 @@
 | 远端 CodeQL | JavaScript/TypeScript 与 Python 均成功：[运行记录](https://github.com/Luckycat133/Chat_Buddy/actions/runs/31614255014)；开放告警 0 |
 | Dependabot | 开放告警 0 |
 
-### 2026-08-13 真实 OpenRouter Provider 验收
+### 2026-08-13 请求预算与最终 Provider 复验
+
+用户提供的 OpenRouter 活动截图显示一次验收期内累计 276 次调用，且分散到多个候选模型。计数中包含候选模型验证和多轮真实 UX 测试，但代码审查也确认原实现存在自动标题、LLM 记忆提取、群聊多角色 fan-out、后台朋友圈生成、递归工具、主动图片和自动重试等隐式消耗路径。本轮已改为可验证的固定预算：
+
+| 用户动作 | 当前动态请求预算 | 真实浏览器结果 |
+| --- | ---: | --- |
+| 普通角色 / Agent 回复 | 1 次固定 OpenRouter 模型 | Aurora、Muse 均为 1 次；无 fallback、无自动重试 |
+| 群聊用户消息 | 1 位角色、1 次模型 | 两位角色群聊只选择麦克斯回复，没有并发 fan-out |
+| 长期记忆、标题、朋友圈后台内容 | 0 次模型 | 记忆由 IndexedDB 本地提取；跨话题准确回忆“下周演讲、担心忘词、绿色钢笔”；朋友圈空闲 10 秒无动态请求 |
+| 数学、知识竞答、成语、配色、学习状态 | 0 次模型 | 自然语言库存题本地得到 66；科学竞答启动和答题均无动态请求 |
+| Scholar 明确联网 | 1 次 Tavily + 1 次模型 | 两个请求各一次，展示两条当前 OpenRouter 官方文档链接 |
+| Pixel 明确生成图片 | 1 次 MiniMax，0 次 OpenRouter | 橘猫抱蓝色小鱼插画生成成功；会话摘要显示“[照片]”而非 base64 源码 |
+| 用户点击朗读 | 首次 1 次 MiniMax TTS，重复 0 次 | 第二次播放命中缓存 |
+
+最终默认模型固定为 [`nvidia/nemotron-3.5-lightning:free`](https://openrouter.ai/nvidia/nemotron-3.5-lightning:free)，不使用会随机选择模型的 `openrouter/free` 路由器。OpenRouter 当前公开元数据标示其输入/输出价格为 0、上下文上限 1,000,000，并支持 tools、tool choice 与 reasoning 参数。定向验证中，中文规划为 87 input + 108 output token，React 闭包修复为 121 + 167 token，均正常 `stop`；应用内 Aurora 记忆和 Muse 翻译也连续成功。
+
+候选淘汰有实际依据：Nemotron 3 Ultra 曾消耗 645 token 却以 `length` 结束且页面只得到一个汉字；Gemma 4 31B 首轮为 100 token 的正确回复，但下一次应用请求返回 429；Ling 3.0 Tiny 返回 502；Nemotron 3 Super 在 180-token 上限仍被截断。因此没有把“单次 HTTP 200”当成默认模型可用证据，也没有配置自动备用模型掩盖失败。免费上游容量仍可能变化，失败会在 UI 中显示并由用户手动重试。
+
+上下文现最多保留 6 条近期消息 / 5,000 字符，并按 Agent 设置更小的输出上限。提问句不会再被保存为长期事实；本地记忆只保存耐久陈述句。Scholar 的证据摘要优先保留最相关句子，并更新为当前官方免费路由文档路径：
+
+- https://openrouter.ai/docs/guides/routing/routers/free-router
+- https://openrouter.ai/docs/guides/routing/model-variants/free
+
+### 2026-08-13 早期 OpenRouter Provider 验收（历史记录）
+
+> 以下为同日较早阶段的验收记录；其中 Nemotron 3 Ultra 的默认模型结论已被上方后续复验替代，其余方括号、语言检测、图片和安全修复证据仍有效。
 
 - 从 `crouter` 已登记的 macOS Keychain 项读取 OpenRouter key，并只比较、不输出地确认它与 Git 忽略的本机 `.env` 一致。浏览器持久配置只保存地址和模型；密钥没有写入 localStorage 或 Git。设置面板密码值可能进入 Playwright 快照/trace，因此相关临时资源已立即删除。
-- 根据 OpenRouter [官方免费模型榜单](https://openrouter.ai/collections/free-models)和[免费变体说明](https://openrouter.ai/docs/guides/routing/model-variants/free)，选择 `nvidia/nemotron-3-ultra-550b-a55b:free`：官方 API 元数据为 1,000,000 token 上下文，输入/输出价格均为 0，并支持 tools、tool choice 与 reasoning 参数。
+- 当时根据 OpenRouter [官方免费模型榜单](https://openrouter.ai/collections/free-models)和[免费变体说明](https://openrouter.ai/docs/guides/routing/model-variants/free)暂选 `nvidia/nemotron-3-ultra-550b-a55b:free`；后续真实群聊暴露空白 token / 截断问题，现已替换。
 - API 直连预检返回 HTTP 200，2,633 ms，实际响应模型与请求模型一致。网页设置中的连接测试也通过，持久配置只保存 `https://openrouter.ai/api/v1` 与模型名。
 - 任务 Agent“代码”真实对话发现用户代码 `xs[1]` 和模型回复 `xs[0]` 被本地控制标签清洗误删。请求/响应取证证明模型原始输出正确；修复后请求体、原始响应和最终页面三层均保留方括号，Agent 给出正确最小 diff。该轮免费容量下自动标题与对话请求的浏览器网络耗时分别为 46,819 ms 和 48,858 ms。
 - 虚拟角色“露娜”真实回复耗时 21,570 ms，返回简体中文并保持温柔、星空意象和简短提问的角色设定；页面 0 console errors。

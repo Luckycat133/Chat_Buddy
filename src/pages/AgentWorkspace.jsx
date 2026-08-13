@@ -47,6 +47,16 @@ export default function AgentWorkspace() {
         return trimmed;
     };
 
+    const formatMessagePreview = (content) => {
+        const value = String(content || '');
+        if (value.startsWith('[IMG:')) return `[${t('photo') || 'Photo'}]`;
+        if (value.startsWith('[STICKER:')) return `[${t('sticker') || 'Sticker'}]`;
+        if (value.startsWith('[FILE]')) return `[${t('file') || 'File'}]`;
+        if (value.startsWith('[GIFT:')) return `[${t('gift') || 'Gift'}]`;
+        if (value.startsWith('[RED_PACKET:')) return `[${t('red_packet') || 'Red Packet'}]`;
+        return value;
+    };
+
     if (!agent) {
         return (
             <div className="flex items-center justify-center h-full text-[var(--color-text-muted)]">
@@ -134,7 +144,7 @@ export default function AgentWorkspace() {
                                             "text-xs line-clamp-1 min-h-[1.5em] flex-1",
                                             isActive ? "text-[var(--color-text-secondary)]" : "text-[var(--color-text-muted)]"
                                         )}>
-                                            {lastMsg ? lastMsg.content : (t('agent_empty_chat') || (language === 'zh' ? '(空对话)' : '(Empty)'))}
+                                            {lastMsg ? formatMessagePreview(lastMsg.content) : (t('agent_empty_chat') || (language === 'zh' ? '(空对话)' : '(Empty)'))}
                                         </p>
                                     </div>
                                 </div>

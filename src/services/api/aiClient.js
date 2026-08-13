@@ -7,28 +7,6 @@ import APIClient from './APIClient';
 import { getConfig } from '../../config/apiConfig';
 import { normalizeBaseUrlForDevProxy } from '../../utils/apiUtils';
 
-// ========== Model Constants ==========
-
-/**
- * Chat Model Options for routing (llama-based, Perplexity defaults)
- * These are fallback presets — the user's configured model always takes priority.
- */
-export const CHAT_MODELS = {
-    small: 'llama-3.1-sonar-small-128k-chat',
-    large: 'llama-3.1-sonar-large-128k-chat',
-    online: 'llama-3.1-sonar-small-128k-online'
-};
-
-/**
- * Sonar Model Options (for Scholar/research)
- */
-export const SONAR_MODELS = {
-    SMALL: 'llama-3.1-sonar-small-128k-online',
-    LARGE: 'llama-3.1-sonar-large-128k-online',
-    PRO: 'sonar-pro',
-    REASONING: 'sonar-reasoning-pro'
-};
-
 // ========== Singleton ==========
 
 let aiClientInstance = null;
@@ -44,7 +22,7 @@ export function getAIClient() {
         baseUrl: config.baseUrl || '',
         apiKey: config.apiKey || '',
         timeout: config.timeout || 60000,
-        maxRetries: config.maxRetries || 3,
+        maxRetries: 0,
     });
 
     if (!aiClientInstance || aiClientConfigSignature !== configSignature) {
@@ -53,7 +31,7 @@ export function getAIClient() {
         aiClientInstance = new APIClient({
             baseURL: normalizedBaseUrl,
             timeout: config.timeout || 60000,
-            maxRetries: config.maxRetries || 3,
+            maxRetries: 0,
             headers: { 'Content-Type': 'application/json' }
         });
 

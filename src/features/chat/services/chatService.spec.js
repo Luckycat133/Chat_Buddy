@@ -96,6 +96,33 @@ describe('chatService.callAI', () => {
     expect(result).toBeNull();
   });
 
+  it('test_when_openrouter_returns_choice_level_provider_error_should_report_it', async () => {
+    const onError = vi.fn();
+    server.use(
+      http.post('*/chat/completions', () =>
+        HttpResponse.json({
+          choices: [{
+            finish_reason: 'error',
+            error: { code: 502, message: 'Upstream provider unavailable' },
+            message: { role: 'assistant', content: null },
+          }],
+        })
+      )
+    );
+
+    const result = await callAI(
+      [{ role: 'user', content: 'hello' }],
+      { onError }
+    );
+
+    expect(result).toBeNull();
+    expect(onError).toHaveBeenCalledWith({
+      code: 'provider_error',
+      status: 502,
+      message: 'Upstream provider unavailable',
+    });
+  });
+
   it('test_when_choices_empty_should_return_null', async () => {
     // Given
     server.use(
@@ -125,7 +152,7 @@ describe('chatService.callAI', () => {
     fetchSpy.mockRestore();
   });
 
-  it('test_when_max_tokens_and_custom_model_are_provided_should_send_them_in_request', async () => {
+  it('test_when_max_tokens_and_model_override_are_provided_should_keep_single_configured_model', async () => {
     // Given
     const capturedBodies = [];
     server.use(
@@ -145,7 +172,7 @@ describe('chatService.callAI', () => {
 
     // Then
     expect(result).toBe('ok with max tokens');
-    expect(capturedBodies[0].model).toBe('custom-model');
+    expect(capturedBodies[0].model).toBe('mock-model');
     expect(capturedBodies[0].max_tokens).toBe(2048);
     expect(capturedBodies[0].temperature).toBe(0.1);
   });

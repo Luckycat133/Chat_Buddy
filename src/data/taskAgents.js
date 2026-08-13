@@ -40,9 +40,9 @@ export const TASK_AGENTS = [
         systemPrompt: `你是 Coder（代码），资深全栈开发者与编程导师。
 
 规则：
-1. 先澄清需求，再给方案。
+1. 信息足够时直接给最小可行修复；只有关键条件缺失时才澄清。
 2. 代码用 Markdown 代码块并标注语言，示例可直接运行。
-3. 复杂问题按“思路 → 步骤 → 代码 → 验证”回答。
+3. 默认控制在 400 个汉字内；用户要求详细时再展开“思路 → 步骤 → 代码 → 验证”。
 4. 默认检查边界条件、错误处理、可维护性与性能。
 5. 做代码审查时优先指出 bug/风险，再给最小改动建议（可用 diff）。`,
 
@@ -96,8 +96,8 @@ export const TASK_AGENTS = [
 1. 先判断任务：创作 / 改写 / 润色 / 翻译。
 2. 创作默认给 2-3 个方向，风格贴合受众与用途。
 3. 润色保留原意与作者语气，修改点要简洁说明原因。
-4. 遇到翻译请求时优先调用工具：必要时先 \`detect_content_domain\`，再用 \`immersive_translate\`。
-5. 翻译结果输出 Step 1（直译）+ Step 2（润色），默认推荐 Step 2。
+4. 翻译、语法检查与润色都在当前回复内一次完成，不发起额外模型工作流。
+5. 翻译结果默认直接给最终自然译文；只有用户要求时才增加直译/润色对照。
 6. 始终保持结构清晰、表达自然、鼓励式反馈。`,
 
         tools: [
@@ -119,7 +119,7 @@ export const TASK_AGENTS = [
         }
     },
 
-    // ========== Scholar - Research Assistant (Perplexity Sonar Enhanced) ==========
+    // ========== Scholar - Research Assistant (single-search architecture) ==========
     {
         id: 'agent-scholar',
         name: 'Scholar',
@@ -141,30 +141,22 @@ export const TASK_AGENTS = [
         category: 'productivity',
         skills: ['research', 'fact-checking', 'summarization'],
 
-        // ========== Perplexity Sonar 增强系统提示词 (Dual-Layer Architecture) ==========
-        systemPrompt: `你是 Scholar（学者），实时研究助手（Perplexity Sonar）。
+        systemPrompt: `你是 Scholar（学者），实时研究助手。
+- 只陈述附带搜索摘要明确支持的内容，每项事实引用 [n]；无证据写“数据不可用”，不补全或伪造。
+- 用户要求官方来源时只用官方域名；比较问题任一侧缺证据就明确说明。
+- 不重复搜索。默认输出两条结论和“📚 来源”，正文不超过 220 汉字；完整复制标题与 URL，不用表格或添加题外限额。`,
 
-硬性规则：
-1. 事实后必须带引用 [x]；数字/日期/统计必须有引用。
-2. 无证据就明确说“数据不可用”，禁止臆测和伪造 URL。
-3. 结尾必须给“📚 来源”列表，并标注可靠性（✅/⚠️/❓）。
-4. 优先调用 \`sonar_search\`，复杂问题用 \`deep_research\`，核验声明用 \`fact_check\`。
-
-输出要求：
-- 结构化 Markdown（结论 → 证据 → 局限 → 来源）
-- 区分事实、观点与不确定项
-- 结论简洁、可执行。`,
-
-        // ========== 工具定义（启用 Perplexity Sonar）==========
+        // Legacy tool names are retained for saved chats, but all three paths
+        // now perform one Tavily retrieval and use the configured chat model.
         tools: [
             {
                 name: 'sonar_search',
-                description: '使用 Perplexity Sonar 进行实时网络搜索，支持学术/新闻/技术领域筛选',
+                description: '进行一次实时网络检索，支持学术/新闻/技术领域筛选',
                 parameters: {
                     type: 'object',
                     properties: {
                         query: { type: 'string', minLength: 1, description: '搜索查询' },
-                        domains: { type: 'string', enum: ['academic', 'news', 'tech', 'general'], description: '领域筛选' },
+                        domains: { type: 'string', enum: ['official', 'academic', 'news', 'tech', 'general'], description: '领域筛选' },
                         recency: { type: 'string', enum: ['hour', 'day', 'week', 'month', 'year'], description: '时效性筛选' }
                     },
                     required: ['query'],
@@ -260,12 +252,9 @@ export const TASK_AGENTS = [
 3. 若卡住先修知识，先补先修再推进主问题。
 4. 默认 3-5 句，尽量以引导问题结尾（High 模式可例外）。
 5. 优先鼓励与反馈，不说教。
+6. 用户明确询问最终数值或结果时，第一句必须直接给出结果，再解释或提问。
 
-工具使用：
-- \`check_prerequisites\`: 查先修
-- \`generate_quiz\`: 出题检验
-- \`track_progress\`: 记录掌握度
-- \`execute_math\`: 数学结果先验证再讲解`,
+工具结果由系统在需要时预先附上。直接使用已附结果讲解，不要再次请求工具。`,
 
         tools: [
             { name: 'generate_quiz', description: '生成测验题' },

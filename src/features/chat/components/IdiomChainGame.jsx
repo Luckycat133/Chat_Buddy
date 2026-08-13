@@ -2,25 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Trophy, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../../../context/LanguageContext';
 import { useSocial } from '../../../context/SocialContext';
-import { callAI } from '../services/chatService';
+import { findNextIdiom, getIdiomMeaning, isKnownIdiom } from '../../../data/localGameContent';
 
 const POINTS_PER_ROUND = 5;
-
-const SYSTEM_PROMPT = `你是一个成语接龙游戏的裁判和选手。
-规则：每个成语必须以上一个成语的最后一个汉字开头。
-当用户提交一个成语时，你需要：
-1. 验证该成语是否为真实的中文成语
-2. 验证它是否以要求的字开头（接龙是否合法）
-3. 如果合法，提供一个新的成语（以用户成语的最后一个字开头）让用户继续接龙
-4. 如果不合法，指出原因并结束游戏
-
-请严格返回以下 JSON 格式（不要用 markdown 代码块包裹）：
-{
-  "valid": true/false,
-  "reason": "如果无效，说明原因",
-  "ai_idiom": "你的接龙成语（valid为true时必填）",
-  "ai_idiom_meaning": "你的成语简要解释（valid为true时提供）"
-}`;
 
 export default function IdiomChainGame({ aiName, onClose, onResult }) {
     const { t, language } = useLanguage();
@@ -29,7 +13,6 @@ export default function IdiomChainGame({ aiName, onClose, onResult }) {
     const [input, setInput] = useState('');
     const [rounds, setRounds] = useState(0);
     const [history, setHistory] = useState([]); // [{type:'user'|'ai', idiom, meaning?, valid}]
-    const [loading, setLoading] = useState(false);
     const [gameOver, setGameOver] = useState(false);
     const [totalPts, setTotalPts] = useState(0);
     const [requiredChar, setRequiredChar] = useState('');
@@ -47,10 +30,10 @@ export default function IdiomChainGame({ aiName, onClose, onResult }) {
         }
     }, [history]);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         const userIdiom = input.trim();
-        if (!userIdiom || loading || gameOver) return;
+        if (!userIdiom || gameOver) return;
 
         // Basic validation: must be 4 Chinese characters
         if (!/^[\u4e00-\u9fa5]{4}$/.test(userIdiom)) {
@@ -64,81 +47,58 @@ export default function IdiomChainGame({ aiName, onClose, onResult }) {
             return;
         }
 
-        setInput('');
-        setLoading(true);
-
-        // Add user's entry immediately
-        setHistory(h => [...h, { type: 'user', idiom: userIdiom }]);
-
-        const contextMsg = requiredChar
-            ? `用户提交成语："${userIdiom}"，需要验证它是否以"${requiredChar}"开头，并且是真实的成语。`
-            : `游戏开始，用户的第一个成语是："${userIdiom}"，验证它是否是真实的成语。`;
-
-        try {
-            const raw = await callAI([
-                { role: 'user', content: contextMsg }
-            ], {
-                systemPrompt: SYSTEM_PROMPT,
-                temperature: 0.3,
-                maxTokens: 300,
-            });
-
-            let result = null;
-            try {
-                // Strip possible markdown code fences
-                const cleaned = (raw || '').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-                result = JSON.parse(cleaned);
-            } catch (e) {
-                console.warn('[IdiomChain] JSON parse failed:', e?.message);
-                setHistory(h => [...h, { type: 'error', msg: '判定失败，请重试' }]);
-                setLoading(false);
-                return;
-            }
-
-            if (!result.valid) {
-                // Game over — invalid idiom
-                const newRounds = rounds;
-                setGameOver(true);
-                setHistory(h => [...h, {
-                    type: 'fail',
-                    msg: result.reason || t('idiom_fail_msg'),
-                }]);
-                updateTaskProgress('task_game', 1);
-                onResult?.({ result: 'lose', rounds: newRounds, points: totalPts });
-            } else {
-                // Valid — award points and add AI response
-                const newRounds = rounds + 1;
-                const newPts = totalPts + POINTS_PER_ROUND;
-                addPoints(POINTS_PER_ROUND);
-                setRounds(newRounds);
-                setTotalPts(newPts);
-
-                const aiIdiom = result.ai_idiom || '';
-                const nextChar = aiIdiom ? aiIdiom[aiIdiom.length - 1] : '';
-
-                setHistory(h => [...h, {
-                    type: 'ai',
-                    idiom: aiIdiom,
-                    meaning: result.ai_idiom_meaning || '',
-                    round: newRounds,
-                }]);
-
-                setRequiredChar(nextChar);
-                setTimeout(() => inputRef.current?.focus(), 100);
-            }
-        } catch (e) {
-            console.warn('[IdiomChain] Network error:', e?.message);
-            setHistory(h => [...h, { type: 'error', msg: '网络错误，请重试' }]);
-        } finally {
-            setLoading(false);
+        if (!isKnownIdiom(userIdiom)) {
+            setHistory(h => [...h, {
+                type: 'error',
+                msg: language === 'zh' ? '当前常用成语词库未收录这个词，请换一个试试' : 'This idiom is not in the local common-idiom bank.',
+            }]);
+            return;
         }
+
+        if (history.some(item => item.idiom === userIdiom)) {
+            setHistory(h => [...h, { type: 'error', msg: language === 'zh' ? '这个成语已经用过了' : 'That idiom has already been used.' }]);
+            return;
+        }
+
+        setInput('');
+        const used = history.map(item => item.idiom).filter(Boolean);
+        const aiIdiom = findNextIdiom(userIdiom, [...used, userIdiom]);
+        const newRounds = rounds + 1;
+        const newPts = totalPts + POINTS_PER_ROUND;
+        addPoints(POINTS_PER_ROUND);
+        setRounds(newRounds);
+        setTotalPts(newPts);
+
+        if (!aiIdiom) {
+            setHistory(h => [
+                ...h,
+                { type: 'user', idiom: userIdiom },
+                { type: 'win', msg: language === 'zh' ? '本地词库接不上了，你赢了！' : 'The local bank has no reply—you win!' },
+            ]);
+            setGameOver(true);
+            updateTaskProgress('task_game', 1);
+            onResult?.({ result: 'win', rounds: newRounds, points: newPts });
+            return;
+        }
+
+        setHistory(h => [
+            ...h,
+            { type: 'user', idiom: userIdiom },
+            {
+                type: 'ai',
+                idiom: aiIdiom,
+                meaning: getIdiomMeaning(aiIdiom),
+                round: newRounds,
+            },
+        ]);
+        setRequiredChar(aiIdiom.slice(-1));
+        setTimeout(() => inputRef.current?.focus(), 100);
     };
 
     const handleReset = () => {
         setInput('');
         setRounds(0);
         setHistory([]);
-        setLoading(false);
         setGameOver(false);
         setTotalPts(0);
         setRequiredChar('');
@@ -242,15 +202,11 @@ export default function IdiomChainGame({ aiName, onClose, onResult }) {
                             )}
                         </div>
                     ))}
-                    {loading && (
-                        <div className="flex justify-start">
-                            <div className="bg-[var(--color-bg-hover)] rounded-[var(--radius-xl)] rounded-tl-sm px-4 py-3">
-                                <div className="flex gap-1">
-                                    <div className="w-2 h-2 bg-[var(--color-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                    <div className="w-2 h-2 bg-[var(--color-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                    <div className="w-2 h-2 bg-[var(--color-text-muted)] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                                </div>
-                            </div>
+                    {history.some(item => item.type === 'win') && (
+                        <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-[var(--radius-lg)] p-3 text-center">
+                            <p className="text-emerald-700 dark:text-emerald-300 font-semibold text-sm">
+                                {history.find(item => item.type === 'win')?.msg}
+                            </p>
                         </div>
                     )}
                 </div>
@@ -275,13 +231,12 @@ export default function IdiomChainGame({ aiName, onClose, onResult }) {
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     placeholder={placeholder}
-                                    disabled={loading}
                                     maxLength={4}
                                     className="input-modern flex-1 text-center text-lg font-bold"
                                 />
                                 <button
                                     type="submit"
-                                    disabled={!input.trim() || loading}
+                                    disabled={!input.trim()}
                                     className="btn btn-primary px-4"
                                 >
                                     {t('idiom_submit')}

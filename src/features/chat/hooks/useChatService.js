@@ -77,6 +77,7 @@ export function useChatService() {
     const isMessageBookmarked = useCallback((msgId) => chatEngine.isMessageBookmarked(msgId), []);
     const markMessagesAsRead = useCallback((chatId, readerId) => chatEngine.markMessagesAsRead(chatId, readerId), []);
     const getMessageReadStatus = useCallback((msgId, chatId) => chatEngine.getMessageReadStatus(msgId, chatId), []);
+    const retryAIResponse = useCallback((chatId, errorMessageId) => chatEngine.retryAIResponse(chatId, errorMessageId), []);
 
     return {
         chats: state.chats,
@@ -110,6 +111,7 @@ export function useChatService() {
 
         markMessagesAsRead,
         getMessageReadStatus,
+        retryAIResponse,
 
         engine: chatEngine,
     };

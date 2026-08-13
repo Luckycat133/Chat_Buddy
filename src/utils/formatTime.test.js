@@ -272,7 +272,8 @@ describe('formatTimeSeparator', () => {
     });
 
     it('应该返回"Yesterday HH:mm"当消息在昨天', () => {
-      const timestamp = new Date('2026-02-07T16:00:00Z').toISOString();
+      // 15:00Z is 23:00 in Asia/Shanghai; 16:00Z would already be local today.
+      const timestamp = new Date('2026-02-07T15:00:00Z').toISOString();
       const result = formatTimeSeparator(timestamp, 'en');
       expect(result).toContain('Yesterday');
       expect(result).toMatch(/\d{2}:\d{2}/);

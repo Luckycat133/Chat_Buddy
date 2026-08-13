@@ -85,7 +85,9 @@ const DEFAULT_CONFIG = {
     temperature: 0.8,
     maxTokens: null,      // null = let provider decide
     timeout: 60000,       // 60 s
-    maxRetries: 3,
+    // A failed chat request is surfaced with an explicit retry button. Hidden
+    // automatic retries would spend another provider request without consent.
+    maxRetries: 0,
 };
 
 let sessionApiKeyCache = null;

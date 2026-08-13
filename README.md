@@ -132,9 +132,9 @@ npm run dev
 |----------|----------|-------------|
 | `VITE_AI_API_URL` | Yes | API Base URL (e.g., `https://api.deepseek.com`) |
 | `VITE_AI_API_KEY` | Yes | Your API key for AI responses |
-| `VITE_AI_MODEL` | Yes | Model name (e.g., `deepseek-chat`, `sonar`) |
+| `VITE_AI_MODEL` | Yes | Model name (default: `nvidia/nemotron-3.5-lightning:free`) |
 
-> **Supported Providers**: OpenRouter, DeepSeek, Perplexity, OpenAI, and other OpenAI-compatible APIs. The API settings panel includes an OpenRouter preset for `nvidia/nemotron-3-ultra-550b-a55b:free`.
+> **Provider setup**: the default preset uses OpenRouter with one fixed free model. Other OpenAI-compatible endpoints can be configured manually. Runtime keys entered in Settings live in `sessionStorage` only; build-time `VITE_*` secrets are still embedded in the client bundle, so production deployments should use a server-side proxy.
 
 ---
 
@@ -152,7 +152,15 @@ npm run dev
 1. Type your message in the input field
 2. Press Enter or click Send
 3. AIs will respond based on their personality and context
-4. In groups, AIs may also respond to each other
+4. In a group, one eligible AI responds to each user turn to avoid model fan-out
+
+### Request Budget
+
+- A normal persona or Agent reply uses at most one request to the configured text model. There are no automatic model fallbacks or hidden retries.
+- Conversation titles, long-term memory capture, Moments background activity, quizzes, idiom games, palettes, and deterministic math run locally with zero model requests.
+- An explicit Scholar search uses one Tavily retrieval plus one text-model synthesis. Explicit image generation uses one MiniMax image request and no text-model request.
+- Text-to-speech runs only after the user clicks Read Aloud; the generated audio is cached for repeat playback.
+- Provider errors remain visible with a manual Retry action instead of spending another request automatically.
 
 ### Settings
 
@@ -172,7 +180,7 @@ npm run dev
 - Frontend: React 19, Vite
 - Styling: TailwindCSS
 - State: Clean Architecture (ChatEngine + Context)
-- AI: DeepSeek / Perplexity API
+- AI: one configured OpenRouter/OpenAI-compatible text model; Tavily and MiniMax only for explicit search/media actions
 - Storage: LocalStorage (settings) + IndexedDB (chats, documents, and media)
 
 ### Project Structure

@@ -23,38 +23,7 @@ const LazyMarkdownCodeBlock = lazy(() => import('../MarkdownCodeBlock'));
 const LazyMermaidRenderer = lazy(() => import('../MermaidRenderer'));
 import ToolResultCard from '../ToolResultCard';
 import TTSButton from '../TTSButton';
-import ProactiveImageCard from '../ProactiveImageCard';
 // Skill Recommendation Bubble removed per user request
-import { useImageGen } from '../../../../hooks/useImageGen';
-
-/**
- * Per-AI-message extras: proactive image card + skill recommendation bubble.
- * Isolated to its own component to contain the useImageGen hook state.
- */
-const AIMessageExtras = memo(function AIMessageExtras({ msg, persona, messages }) {
-    const { state, result, error, params, updateParams, generate } = useImageGen(
-        msg.chatId || 'unknown',
-        persona,
-        messages
-    );
-
-    return (
-        <>
-            {/* Proactive Image Card */}
-            {(state !== 'idle' || result) && (
-                <ProactiveImageCard
-                    state={state}
-                    result={result}
-                    error={error}
-                    params={params}
-                    onUpdateParams={updateParams}
-                    onRegenerate={() => generate({ force: true })}
-                    personaName={persona?.name || 'AI'}
-                />
-            )}
-        </>
-    );
-});
 
 /**
  * T07: Highlight @mentions in message content
@@ -534,14 +503,6 @@ const MessageItem = memo(function MessageItem({
                         ))}
                     </div>
 
-                    {!isMe && type === 'text' && content && (
-                        <AIMessageExtras
-                            msg={{ ...msg, chatId: chat?.id }}
-                            persona={personas?.find(p => p.id === msg.senderId)}
-                            messages={chat?.messages || []}
-                        />
-                    )}
-
                     <div className={cn(
                         "flex items-center gap-1 opacity-0 group-hover/msg:opacity-100 group-focus-within/msg:opacity-100 transition-opacity self-center",
                         isMe ? "mr-1 flex-row-reverse" : "ml-1"
@@ -589,9 +550,10 @@ export default function MessageTimeline({
     onVotePoll,
     onMentionClick,
     focusMessageId,
-    onFocusHandled
+    onFocusHandled,
+    onRetryAI,
 }) {
-    const { language } = useLanguage();
+    const { language, t } = useLanguage();
     const { bubbleStyle } = useTheme();
     const messagesEndRef = useRef(null);
     const messageRefs = useRef(new Map());
@@ -649,6 +611,25 @@ export default function MessageTimeline({
     return (
         <div className="flex-1 overflow-y-auto p-3 pb-20 md:pb-4" data-bubble-style={bubbleStyle}>
             {chat.messages.map((msg, index) => {
+                if (msg.type === 'ai_error') {
+                    return (
+                        <div
+                            key={`error-${msg.id}`}
+                            role="alert"
+                            className="mx-auto my-3 flex max-w-xl items-center justify-between gap-3 rounded-2xl border border-[var(--color-danger)]/30 bg-[var(--color-bg-white)] px-4 py-3 text-sm text-[var(--color-text-main)] shadow-sm"
+                        >
+                            <span>{msg.content}</span>
+                            <button
+                                type="button"
+                                className="min-h-11 shrink-0 rounded-full bg-[var(--color-primary)] px-4 font-semibold text-white transition-opacity hover:opacity-90"
+                                onClick={() => onRetryAI?.(chat.id, msg.id)}
+                                aria-label={t('retry')}
+                            >
+                                {t('retry')}
+                            </button>
+                        </div>
+                    );
+                }
                 if (msg.type === 'tool_event') {
                     return (
                         <ToolResultCard

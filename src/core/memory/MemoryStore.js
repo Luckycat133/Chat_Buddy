@@ -25,7 +25,7 @@ const STORE_NAME = 'memories';
 const DAYS_PER_IMPORTANCE = 3; // importance 1 → 3 days, 5 → 15 days, 10 → 30 days
 const MIN_IMPORTANCE_TO_KEEP = 5; // facts below this are more aggressively decayed
 
-class MemoryStore {
+export class MemoryStore {
     constructor() {
         this._db = null;
         this._initPromise = null;
@@ -83,7 +83,7 @@ class MemoryStore {
             // Deduplicate: check if a very similar fact already exists
             const existing = await this.getFactsByCharacter(characterId);
             const isDuplicate = existing.some(
-                (m) => this._similarity(m.fact, normalizedFact) > 0.85
+                (m) => this._similarity(m.fact, normalizedFact) > 0.78
             );
             if (isDuplicate) return null;
 
@@ -296,8 +296,44 @@ class MemoryStore {
      * Returns 0-1 where 1 = identical.
      */
     _similarity(a, b) {
-        const setA = new Set(a.toLowerCase().split(/\s+/));
-        const setB = new Set(b.toLowerCase().split(/\s+/));
+        const normalize = (value) => String(value || '')
+            .toLocaleLowerCase()
+            .replace(/[\s\p{P}\p{S}]+/gu, '');
+        const normalizedA = normalize(a);
+        const normalizedB = normalize(b);
+        if (!normalizedA || !normalizedB) return 0;
+        if (normalizedA === normalizedB) return 1;
+        if (normalizedA.includes(normalizedB) || normalizedB.includes(normalizedA)) {
+            const coverage = Math.min(normalizedA.length, normalizedB.length)
+                / Math.max(normalizedA.length, normalizedB.length);
+            if (coverage >= 0.7) return 0.9;
+        }
+
+        const tokenize = (value) => {
+            const tokens = value.match(/[a-z0-9]+|[\p{Script=Han}]/gu) || [];
+            const result = [];
+            let cjkRun = '';
+            const flushCjk = () => {
+                if (!cjkRun) return;
+                if (cjkRun.length === 1) result.push(cjkRun);
+                for (let index = 0; index < cjkRun.length - 1; index += 1) {
+                    result.push(cjkRun.slice(index, index + 2));
+                }
+                cjkRun = '';
+            };
+            for (const token of tokens) {
+                if (/^\p{Script=Han}$/u.test(token)) cjkRun += token;
+                else {
+                    flushCjk();
+                    result.push(token);
+                }
+            }
+            flushCjk();
+            return result;
+        };
+
+        const setA = new Set(tokenize(normalizedA));
+        const setB = new Set(tokenize(normalizedB));
         const intersection = [...setA].filter((w) => setB.has(w)).length;
         const union = new Set([...setA, ...setB]).size;
         return union === 0 ? 0 : intersection / union;

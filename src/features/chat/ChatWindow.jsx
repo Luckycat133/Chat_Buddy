@@ -44,7 +44,7 @@ export default function ChatWindow({ chatId: propChatId }) {
     const location = useLocation();
     const navigate = useNavigate();
     const id = propChatId || paramChatId;
-    const { chats, personas, currentUser, sendMessage, updateChat, typingIndicators, editingIndicators, deleteMessage, pinMessage, votePoll, presenceMap, triggerGreeting, bookmarkMessage, unbookmarkMessage, markMessagesAsRead } = useChat();
+    const { chats, personas, currentUser, sendMessage, retryAIResponse, updateChat, typingIndicators, editingIndicators, deleteMessage, pinMessage, votePoll, presenceMap, triggerGreeting, bookmarkMessage, unbookmarkMessage, markMessagesAsRead } = useChat();
     const { t, language } = useLanguage();
     const { addDocument } = useDocuments();
     const { updateTaskProgress } = useSocial();
@@ -281,6 +281,7 @@ export default function ChatWindow({ chatId: propChatId }) {
                 onVotePoll={(pollId, optId, action) => votePoll(chat.id, pollId, optId, action)}
                 focusMessageId={focusedMessageId}
                 onFocusHandled={handleFocusHandled}
+                onRetryAI={retryAIResponse}
             />
 
             <ChatComposer
@@ -289,17 +290,24 @@ export default function ChatWindow({ chatId: propChatId }) {
                 personas={personas}
                 headerInfo={{ id: chat.participants[1], name: chat.name }} // Approx for sticker picker
                 quotedMessage={quotedMessage}
+                isWaitingForReply={Boolean(
+                    typingIndicators?.[chat.id]?.length || editingIndicators?.[chat.id]?.length
+                )}
                 onSendMessage={(content, qId) => {
-                    sendMessage(chat.id, content, qId);
+                    const result = sendMessage(chat.id, content, qId);
+                    if (result?.success === false) return result;
                     if (content.startsWith('[STICKER:')) {
                         updateTaskProgress('task_sticker', 1);
                     } else if (!content.startsWith('[')) {
                         updateTaskProgress('task_messages', 1);
                     }
+                    return result;
                 }}
                 onSendSticker={(stickerUrl) => {
-                    sendMessage(chat.id, `[STICKER:${stickerUrl}]`);
+                    const result = sendMessage(chat.id, `[STICKER:${stickerUrl}]`);
+                    if (result?.success === false) return result;
                     updateTaskProgress('task_sticker', 1);
+                    return result;
                 }}
                 onCancelQuote={() => setQuotedMessage(null)}
                 // Menu Actions

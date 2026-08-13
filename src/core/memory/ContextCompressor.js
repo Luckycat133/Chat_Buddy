@@ -1,223 +1,167 @@
 /**
- * Domain Layer: Context Compressor
- * Extracted from chatService.js and extended with async memory extraction.
+ * Token-efficient context and memory helpers.
  *
- * Responsibilities:
- * 1. Compress long conversation history into a summary (unchanged behaviour).
- * 2. When compression is triggered, fire an async LLM call to extract key facts
- *    about the user from the compressed messages → save to MemoryStore.
+ * Memory capture is deliberately local and deterministic. A normal chat turn
+ * must never spend a second LLM request just to remember what the user said.
  */
 
-import { callAI } from '../../features/chat/services/chatService';
 import { memoryStore } from './MemoryStore';
 
-// Trigger compression when message count exceeds this threshold
-const COMPRESSION_THRESHOLD = 15;
-// Keep this many recent messages uncompressed for immediate context
-const RECENT_WINDOW = 8;
+const COMPRESSION_THRESHOLD = 8;
+const RECENT_WINDOW = 6;
+const MAX_SUMMARY_SNIPPETS = 2;
+const MAX_SUMMARY_SNIPPET_CHARS = 80;
+const MAX_MEMORY_FACT_CHARS = 160;
 
-// Rate-limit: at most one extraction call per character per hour
-const EXTRACTION_RATE_LIMIT_MS = 60 * 60 * 1000; // 1 hour
-const _lastExtractionTime = new Map(); // characterId → timestamp
+const DURABLE_ZH_PATTERN = /(?:我.{0,10}(?:叫|名叫|住在|来自|工作|上班|生活|喜欢|爱|偏好|习惯|通常|每天|每周|工作日|周末|准备|计划|打算|担心|最离不开|睡|过敏)|(?:我家|家里|它|他|她).{0,32}(?:叫|名叫|住|来自|工作|公司|养|喜欢|爱|偏好|习惯|通常|每天|每周|工作日|周末|准备|计划|打算|担心|最离不开|换成|搬|睡|过敏|玩具))/;
+const DURABLE_EN_PATTERN = /\b(?:my\s+\w+|i\s+(?:am|live|work|have|own|like|love|prefer|usually|always|never|plan|intend|want|worry))\b/i;
+const DURABLE_ENTITY_PATTERN = /(?:猫|狗|宠物|孩子|伴侣|家人|cat|dog|pet).{0,24}(?:叫|喜欢|玩具|name|likes?|toy)/i;
+const DO_NOT_REMEMBER_PATTERN = /(?:别记|不要记|别保存|不要保存|do not remember|don't remember|forget this)/i;
+
+function normalizeText(value) {
+    return String(value || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function truncateText(value, maxChars) {
+    const chars = Array.from(normalizeText(value));
+    if (chars.length <= maxChars) return chars.join('');
+    return `${chars.slice(0, Math.max(1, maxChars - 1)).join('')}…`;
+}
+
+function isDurableUserMessage(content) {
+    if (
+        !content
+        || content.startsWith('[')
+        || DO_NOT_REMEMBER_PATTERN.test(content)
+        || /[?？]/u.test(content)
+    ) return false;
+    return DURABLE_ZH_PATTERN.test(content)
+        || DURABLE_EN_PATTERN.test(content)
+        || DURABLE_ENTITY_PATTERN.test(content);
+}
+
+function compactDurableStatement(content) {
+    const segments = content
+        .split(/(?<=[。！？!?；;])/u)
+        .map(segment => segment.trim())
+        .filter(Boolean);
+    const durable = segments.filter(segment => isDurableUserMessage(segment));
+    return durable.join('');
+}
+
+function classifyMemory(content) {
+    if (/(?:喜欢|爱|偏好|不喜欢|想要|安静|prefer|like|love|dislike)/i.test(content)) {
+        return 'preference';
+    }
+    if (/(?:准备|计划|打算|月底|最近|搬|将要|plan|intend|moving|recently)/i.test(content)) {
+        return 'event';
+    }
+    return 'fact';
+}
+
+function scoreImportance(content) {
+    let importance = 5;
+    if (/(?:叫|名叫|搬|住|来自|公司|工作日|每天|家人|孩子|伴侣|猫|狗|宠物|named|moving|live|work)/i.test(content)) {
+        importance += 2;
+    }
+    if (/(?:担心|最离不开|过敏|必须|never|allergic|worry)/i.test(content)) {
+        importance += 1;
+    }
+    return Math.min(9, importance);
+}
 
 /**
- * Compress context for token optimization.
- * Mirrors the original compressContext() function from chatService.js.
- *
- * @param {Array} messages - Full chat message array
- * @param {Array} personas - All persona definitions
- * @returns {{ compressed: boolean, summary?: string, recentMessages?: Array }}
+ * Select compact, durable user statements suitable for long-term recall.
+ * The original wording is retained to avoid inventing facts locally.
  */
-export function compressContext(messages, personas) {
-    if (messages.length <= COMPRESSION_THRESHOLD) {
-        return { compressed: false, messages };
+export function extractLocalMemoryItems(messages = [], maxItems = 4) {
+    if (!Array.isArray(messages) || maxItems <= 0) return [];
+
+    const seen = new Set();
+    const items = [];
+    for (const message of messages) {
+        if (message?.senderId !== 'user-me') continue;
+        const content = normalizeText(message.content);
+        const compact = truncateText(compactDurableStatement(content), MAX_MEMORY_FACT_CHARS);
+        if (!compact) continue;
+        const dedupeKey = compact.toLocaleLowerCase();
+        if (seen.has(dedupeKey)) continue;
+        seen.add(dedupeKey);
+
+        items.push({
+            fact: `用户曾说：“${compact}”`,
+            importance: scoreImportance(compact),
+            category: classifyMemory(compact),
+        });
+    }
+
+    return items.slice(-maxItems);
+}
+
+/**
+ * Persist user memories in IndexedDB only. Kept under the old async API name
+ * so callers do not need a migration and, crucially, no provider is contacted.
+ */
+export async function extractMemoriesAsync(messages, characterId, characterName = characterId) {
+    const items = extractLocalMemoryItems(messages, 4);
+    if (items.length === 0) return 0;
+
+    let saved = 0;
+    for (const item of items) {
+        const id = await memoryStore.saveFact(
+            characterId,
+            item.fact,
+            item.importance,
+            item.category
+        );
+        if (id) saved += 1;
+    }
+
+    if (saved > 0) {
+        console.log(`[ContextCompressor] Saved ${saved} local memories for ${characterName}`);
+    }
+    return saved;
+}
+
+/**
+ * Keep only a recent rolling window and a tightly capped extractive reminder.
+ * Unlike the previous whitespace topic collector, this cannot copy entire
+ * Chinese paragraphs into the prompt as a single "keyword".
+ */
+export function compressContext(messages, _personas = []) {
+    if (!Array.isArray(messages) || messages.length <= COMPRESSION_THRESHOLD) {
+        return { compressed: false, messages: messages || [] };
     }
 
     const oldMessages = messages.slice(0, -RECENT_WINDOW);
     const recentMessages = messages.slice(-RECENT_WINDOW);
+    const snippets = oldMessages
+        .filter((message) => message?.senderId === 'user-me')
+        .slice(-MAX_SUMMARY_SNIPPETS)
+        .map((message) => truncateText(message.content, MAX_SUMMARY_SNIPPET_CHARS))
+        .filter(Boolean);
 
-    const participants = new Set();
-    const topics = [];
-
-    oldMessages.forEach((msg) => {
-        if (msg.senderId !== 'user-me') {
-            const persona = personas.find((p) => p.id === msg.senderId);
-            if (persona) participants.add(persona.name);
-        }
-        const words = msg.content.toLowerCase().split(/\s+/);
-        words.forEach((word) => {
-            if (
-                word.length > 5 &&
-                !['about', 'would', 'could', 'should', 'their', 'there', 'these', 'those'].includes(word)
-            ) {
-                if (!topics.includes(word) && topics.length < 5) {
-                    topics.push(word);
-                }
-            }
-        });
-    });
-
-    const summary = `[Earlier conversation summary: ${oldMessages.length} messages between ${Array.from(participants).join(', ') || 'participants'
-        }. Topics discussed: ${topics.join(', ') || 'general chat'}]`;
+    const summary = snippets.length > 0
+        ? `[Earlier user context: ${snippets.join(' | ')}]`
+        : '[Earlier conversation omitted to keep this request compact.]';
 
     return { compressed: true, summary, recentMessages };
 }
 
 /**
- * Async memory extraction — called as a fire-and-forget side-effect when
- * context is compressed. Sends old messages to LLM and asks it to extract
- * key facts/preferences about the user. Saves results to MemoryStore.
- *
- * This function never throws or blocks the main chat pipeline.
- *
- * @param {Array} oldMessages - The messages being compressed away
- * @param {string} characterId - The character whose perspective we extract from
- * @param {string} characterName - Character display name (for the prompt)
+ * Group memory is also local: one IndexedDB write path per participant and no
+ * fan-out to language models.
  */
-export async function extractMemoriesAsync(oldMessages, characterId, characterName) {
-    try {
-        if (!oldMessages || oldMessages.length < 3) return;
+export async function extractGroupMemoriesAsync(messages, _chatId, aiParticipants) {
+    if (!Array.isArray(aiParticipants) || aiParticipants.length === 0) return 0;
+    const recentUserMessages = (messages || [])
+        .filter((message) => message?.senderId === 'user-me')
+        .slice(-4);
 
-        // Rate-limit: skip if we extracted for this character recently
-        const now = Date.now();
-        const lastExtraction = _lastExtractionTime.get(characterId) || 0;
-        if (now - lastExtraction < EXTRACTION_RATE_LIMIT_MS) {
-            console.log(`[ContextCompressor] Skipping extraction for ${characterName} — rate limit (${Math.round((EXTRACTION_RATE_LIMIT_MS - (now - lastExtraction)) / 60000)}min remaining)`);
-            return;
-        }
-        // Mark extraction time immediately to prevent parallel calls
-        _lastExtractionTime.set(characterId, now);
-
-        // Build a minimal text transcript for the LLM to analyse
-        const transcript = oldMessages
-            .map((m) => {
-                const who = m.senderId === 'user-me' ? 'User' : characterName;
-                return `${who}: ${m.content}`;
-            })
-            .join('\n');
-
-        const prompt = [
-            {
-                role: 'system',
-                content:
-                    'Extract only user facts from the transcript. Return JSON array only (no markdown/explanation): [{"fact":string,"importance":1-10,"category":"preference"|"fact"|"event"}]. Max 8 items. If none, return [].',
-            },
-            {
-                role: 'user',
-                content: `Transcript:\n\n${transcript}\n\nExtract user facts.`,
-            },
-        ];
-
-        const raw = await callAI(prompt, {
-            agentId: `memory-extractor-${characterId}`,
-            maxTokens: 500,
-            temperature: 0.2, // Low temperature for factual extraction
-        });
-
-        if (!raw) return;
-
-        // Safely parse JSON — LLMs sometimes wrap in markdown fences
-        let items = [];
-        try {
-            const cleaned = raw.replace(/```json|```/gi, '').trim();
-            items = JSON.parse(cleaned);
-        } catch {
-            // Try extracting JSON array if embedded in explanation text
-            const match = raw.match(/\[[\s\S]*\]/);
-            if (match) items = JSON.parse(match[0]);
-        }
-
-        if (!Array.isArray(items)) return;
-
-        // Save each valid fact to the memory store
-        for (const item of items) {
-            if (typeof item.fact === 'string' && item.fact.trim()) {
-                await memoryStore.saveFact(
-                    characterId,
-                    item.fact,
-                    item.importance ?? 5,
-                    item.category ?? 'fact'
-                );
-            }
-        }
-
-        console.log(`[ContextCompressor] Extracted ${items.length} memories for ${characterName}`);
-    } catch (err) {
-        // Silent failure — memory extraction must never break chat
-        console.warn('[ContextCompressor] extractMemoriesAsync failed silently:', err);
-    }
-}
-
-/**
- * Extract memories from group chat messages for all AI participants.
- * Fires once per group chat per AI character per hour.
- * Only processes group chats (more than 2 participants).
- *
- * @param {Array} messages - Group chat message array
- * @param {string} chatId - Group chat ID (for rate-limit keying)
- * @param {Array} aiParticipants - Array of { id, name } for each AI in the group
- */
-export async function extractGroupMemoriesAsync(messages, chatId, aiParticipants) {
-    if (!messages || messages.length < 5 || !aiParticipants || aiParticipants.length === 0) return;
-
-    // Only process a window of recent-enough messages to avoid noise
-    const relevantMessages = messages.slice(-30);
-    const participantNameMap = new Map(aiParticipants.map(p => [p.id, p.name]));
-
-    for (const ai of aiParticipants) {
-        const rateKey = `${ai.id}:group:${chatId}`;
-        const now = Date.now();
-        const lastExtraction = _lastExtractionTime.get(rateKey) || 0;
-
-        if (now - lastExtraction < EXTRACTION_RATE_LIMIT_MS) continue; // rate-limited
-        _lastExtractionTime.set(rateKey, now);
-
-        // Build transcript from the AI's perspective (it only sees what happened in the group)
-        const transcript = relevantMessages
-            .map((m) => {
-                const who = m.senderId === 'user-me' ? 'User' : (participantNameMap.get(m.senderId) || 'Someone');
-                return `${who}: ${m.content}`;
-            })
-            .join('\n');
-
-        const prompt = [
-            {
-                role: 'system',
-                content:
-                    `Extract user facts from this group chat as observed by ${ai.name}. ` +
-                    `Return JSON array only: [{"fact":string,"importance":1-10,"category":"preference"|"fact"|"event"}]. ` +
-                    `Max 5 items; if none, return [].`,
-            },
-            {
-                role: 'user',
-                content: `Group transcript:\n\n${transcript}\n\nExtract user facts learned by ${ai.name}.`,
-            },
-        ];
-
-        // Fire-and-forget for each participant
-        callAI(prompt, {
-            agentId: `group-memory-extractor-${ai.id}`,
-            maxTokens: 400,
-            temperature: 0.2,
-        }).then(async (raw) => {
-            if (!raw) return;
-            let items = [];
-            try {
-                const cleaned = raw.replace(/```json|```/gi, '').trim();
-                items = JSON.parse(cleaned);
-            } catch {
-                const match = raw.match(/\[[\s\S]*\]/);
-                if (match) items = JSON.parse(match[0]);
-            }
-            if (!Array.isArray(items)) return;
-            for (const item of items) {
-                if (typeof item.fact === 'string' && item.fact.trim()) {
-                    await memoryStore.saveFact(ai.id, item.fact, item.importance ?? 5, item.category ?? 'fact');
-                }
-            }
-            if (items.length > 0) {
-                console.log(`[ContextCompressor] Group memories: ${items.length} facts for ${ai.name} from group chat ${chatId}`);
-            }
-        }).catch(() => { }); // Silent failure
-    }
+    const counts = await Promise.all(
+        aiParticipants.map((ai) => extractMemoriesAsync(recentUserMessages, ai.id, ai.name))
+    );
+    return counts.reduce((sum, count) => sum + Number(count || 0), 0);
 }
