@@ -728,6 +728,12 @@ describe("AIPipeline", () => {
     const mixed = pipeline._detectLatestUserLanguage([
       { senderId: "user-me", content: "你好he" },
     ]);
+    const chineseWithCode = pipeline._detectLatestUserLanguage([
+      { senderId: "user-me", content: "请修复这个函数：function first(xs) { return xs[1]; }" },
+    ]);
+    const englishWithChineseQuote = pipeline._detectLatestUserLanguage([
+      { senderId: "user-me", content: "What does 你好 mean in English?" },
+    ]);
     const none = pipeline._detectLatestUserLanguage([
       { senderId: "ai-1", content: "assistant only" },
     ]);
@@ -736,6 +742,8 @@ describe("AIPipeline", () => {
     expect(english).toBe("en");
     expect(chinese).toBe("zh");
     expect(mixed).toBe("zh");
+    expect(chineseWithCode).toBe("zh");
+    expect(englishWithChineseQuote).toBe("en");
     expect(none).toBeNull();
   });
 

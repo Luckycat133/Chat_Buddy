@@ -117,6 +117,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Real OpenRouter Agent/persona validation** (2026-08-13)
+  - Added an OpenRouter quick-fill preset using `nvidia/nemotron-3-ultra-550b-a55b:free`
+  - Preserved user-authored and model-generated bracket syntax such as `items[1]`, `items[0]`, citations, and tuple labels while continuing to remove explicit internal control tags
+  - Fixed mixed Chinese-plus-code language detection so identifiers no longer force an English system instruction
+  - Disabled reasoning for short OpenRouter title requests so reasoning-first models return a visible topic title within the token budget
+  - Switched MiniMax Moment images to the official durable `base64` response instead of expiring cross-origin URLs, and kept blob workers limited to the Vite development CSP
+  - Verified real Coder and Luna conversations through OpenRouter, then added bracket preservation to the Chrome E2E path
+
 - **Security, data-integrity, CI, and UX remediation** (2026-08-12)
   - Prevented stale hydration from overwriting new messages and made ChatEngine snapshots immutable for React subscribers
   - Recomputed message metadata after deletion, fixed poll memoization and Scholar tool schemas, and refreshed AI clients on config changes
@@ -132,8 +140,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added deterministic test coverage for the recall branch to stop intermittent test failures
   - Hardened async memory extraction to avoid calling `.catch()` on non-Promise return values
 - **Layered coverage gate** (`vitest.config.js`, `vitest.full-coverage.config.js`, `docs/TEST_COVERAGE_ANALYSIS.md`)
-  - Verified 398/398 tests and a 60% hard gate on regression-critical logic
-  - Current gated coverage is 85.09% statements, 77.68% branches, 84.88% functions, and 88.00% lines
+  - Verified 407/407 tests and a 60% hard gate on regression-critical logic
+  - Current gated coverage is 85.04% statements, 77.83% branches, 84.91% functions, and 87.95% lines
   - Kept an honest whole-repository observation command; UI behavior is gated separately by Playwright + Axe
 
 ### Added — UI Accessibility & Interaction Improvements (2026-03-08)

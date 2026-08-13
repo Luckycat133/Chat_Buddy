@@ -193,7 +193,38 @@ describe('ChatEngine', () => {
     expect(engine.chats[0].messages).toHaveLength(1);
     expect(onUserMessage).toHaveBeenCalledWith('chat-1', ['ai-1']);
     expect(mocks.callAI).toHaveBeenCalled();
+    expect(mocks.callAI).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({
+        maxTokens: 32,
+        disableReasoning: true,
+      })
+    );
     expect(mocks.processTurn).toHaveBeenCalled();
+  });
+
+  it('test_when_user_message_contains_brackets_should_preserve_the_original_text', () => {
+    const engine = createEngineWithChats([
+      { id: 'chat-1', name: 'Code Chat', participants: ['user-me', 'ai-1'], messages: [] },
+    ]);
+    const codeMessage = 'function first(xs) { return xs[1]; }';
+
+    engine.sendMessage('chat-1', codeMessage);
+
+    expect(engine.chats[0].messages[0].content).toBe(codeMessage);
+    expect(mocks.cleanMessageContent).not.toHaveBeenCalled();
+  });
+
+  it('test_when_ai_message_is_received_should_apply_control_marker_cleaning', () => {
+    const engine = createEngineWithChats([
+      { id: 'chat-1', name: 'Code Chat', participants: ['user-me', 'ai-1'], messages: [] },
+    ]);
+    mocks.cleanMessageContent.mockReturnValue('const first = xs[0];');
+
+    engine.sendMessage('chat-1', '[SCHEDULE:1] const first = xs[0];', 'ai-1');
+
+    expect(mocks.cleanMessageContent).toHaveBeenCalledWith('[SCHEDULE:1] const first = xs[0];');
+    expect(engine.chats[0].messages[0].content).toBe('const first = xs[0];');
   });
 
   it('test_when_chat_changes_should_replace_array_reference_for_external_store_subscribers', () => {

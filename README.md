@@ -13,7 +13,7 @@
 > key at runtime.
 >
 > **Latest review:** the security, data-integrity, CI, and UI/UX remediation was
-> verified on 2026-08-12 in the [comprehensive review](docs/CODE_REVIEW_REPORT_2026-08-11.md).
+> verified through a real OpenRouter Agent/persona conversation on 2026-08-13 in the [comprehensive review](docs/CODE_REVIEW_REPORT_2026-08-11.md).
 
 
 <div align="center">
@@ -21,8 +21,8 @@
 ![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19+-61DAFB.svg)
-![Tests](https://img.shields.io/badge/tests-398%20passing-success.svg)
-![Core Coverage](https://img.shields.io/badge/core%20lines-88.00%25-success.svg)
+![Tests](https://img.shields.io/badge/tests-407%20passing-success.svg)
+![Core Coverage](https://img.shields.io/badge/core%20lines-87.95%25-success.svg)
 
 **AI Chat Companion**
 
@@ -51,7 +51,7 @@ A modern, responsive AI chat application featuring multiple personalities, anime
 ### 🤖 AI Friend System
 - **13 Unique AI Personas**: 5 original characters + 8 anime characters
 - Each persona has distinct personality traits, speaking styles, and interests
-- Powered by DeepSeek API for intelligent, context-aware responses
+- Works with OpenRouter, DeepSeek, OpenAI, and other OpenAI-compatible APIs
 
 ### 🎌 Anime Characters
 Meet your favorite anime characters:
@@ -134,7 +134,7 @@ npm run dev
 | `VITE_AI_API_KEY` | Yes | Your API key for AI responses |
 | `VITE_AI_MODEL` | Yes | Model name (e.g., `deepseek-chat`, `sonar`) |
 
-> **Supported Providers**: DeepSeek, Perplexity, OpenAI, and other OpenAI-compatible APIs.
+> **Supported Providers**: OpenRouter, DeepSeek, Perplexity, OpenAI, and other OpenAI-compatible APIs. The API settings panel includes an OpenRouter preset for `nvidia/nemotron-3-ultra-550b-a55b:free`.
 
 ---
 

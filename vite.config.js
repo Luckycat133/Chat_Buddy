@@ -8,6 +8,15 @@ const SECURITY_HEADERS = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
 };
 
+// Vite's development client uses a blob worker while reconnecting after HMR.
+// Keep production/preview locked to same-origin workers, and grant blob only to
+// the local development server so a source edit does not create CSP errors.
+const DEVELOPMENT_SECURITY_HEADERS = {
+  ...SECURITY_HEADERS,
+  'Content-Security-Policy': SECURITY_HEADERS['Content-Security-Policy']
+    .replace("worker-src 'self'", "worker-src 'self' blob:"),
+};
+
 export default defineConfig(({ mode }) => ({
   plugins: [
     react({
@@ -82,7 +91,7 @@ export default defineConfig(({ mode }) => ({
     port: 5173,
     strictPort: false,
     host: true,
-    headers: SECURITY_HEADERS,
+    headers: DEVELOPMENT_SECURITY_HEADERS,
     proxy: {
       '/api': {
         target: 'http://localhost:3001',

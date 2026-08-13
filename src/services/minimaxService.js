@@ -240,6 +240,29 @@ export function buildMomentsImagePrompt(postContent, persona, location) {
 }
 
 /**
+ * Normalize MiniMax image output into a durable browser-renderable source.
+ * The official URL response expires after 24 hours, so new requests use
+ * base64 and persist the resulting data URL directly with the moment.
+ */
+export function extractGeneratedImageSource(data) {
+    const base64Images = data?.data?.image_base64;
+    const encoded = Array.isArray(base64Images) ? base64Images[0] : base64Images;
+
+    if (typeof encoded === 'string' && encoded.trim()) {
+        const normalized = encoded.trim();
+        return normalized.startsWith('data:image/')
+            ? normalized
+            : `data:image/jpeg;base64,${normalized}`;
+    }
+
+    // Compatibility fallback for older/self-hosted MiniMax-compatible APIs.
+    const imageUrls = data?.data?.image_urls;
+    return Array.isArray(imageUrls) && typeof imageUrls[0] === 'string'
+        ? imageUrls[0]
+        : null;
+}
+
+/**
  * 为朋友圈帖子生成 AI 配图。
  *
  * @param {string} postContent  - 帖文内容（用于生成 Prompt）
@@ -264,7 +287,9 @@ export async function generateMomentsImage(postContent, persona, location, optio
         model:            IMAGE_MODEL,
         prompt,
         aspect_ratio:     aspectRatio,
-        response_format:  'url',
+        // MiniMax URL responses expire after 24 hours. Base64 avoids a second
+        // cross-origin download and keeps generated Moments durable offline.
+        response_format:  'base64',
         n:                1,
         prompt_optimizer: promptOptimizer,
     };
@@ -278,13 +303,13 @@ export async function generateMomentsImage(postContent, persona, location, optio
         throw new Error(`[MiniMaxService] 图片生成失败: ${baseResp?.status_msg || '未知错误'}`);
     }
 
-    const imageUrls = data?.data?.image_urls;
-    if (!Array.isArray(imageUrls) || imageUrls.length === 0) {
-        throw new Error('[MiniMaxService] 图片生成响应中无图片 URL');
+    const imageUrl = extractGeneratedImageSource(data);
+    if (!imageUrl) {
+        throw new Error('[MiniMaxService] 图片生成响应中无图片数据');
     }
 
     return {
-        imageUrl: imageUrls[0],
+        imageUrl,
         prompt,
         personaId: persona?.id,
     };

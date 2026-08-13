@@ -149,7 +149,7 @@ test.describe('Chat Buddy UX acceptance', () => {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        choices: [{ message: { role: 'assistant', content: 'Message received.' } }],
+        choices: [{ message: { role: 'assistant', content: 'Use items[0].' } }],
       }),
     }));
 
@@ -163,10 +163,10 @@ test.describe('Chat Buddy UX acceptance', () => {
     await expect(page).toHaveURL(/\/chat\//);
 
     const composer = page.getByRole('textbox', { name: 'Type a message...' });
-    await composer.fill('UX acceptance message');
+    await composer.fill('UX acceptance message: items[1]');
     await composer.press('Enter');
-    await expect(page.getByText('UX acceptance message', { exact: true })).toBeVisible();
-    await expect(page.getByText('Message received.', { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText('UX acceptance message: items[1]', { exact: true })).toBeVisible();
+    await expect(page.getByText('Use items[0].', { exact: true })).toBeVisible({ timeout: 10_000 });
   });
 
   test('unknown URLs recover to the application instead of showing a blank page', async ({ page }) => {

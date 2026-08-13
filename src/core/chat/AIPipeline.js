@@ -530,11 +530,13 @@ BEHAVIOR RULES:
 
         const text = latestUserMessage.content;
         const zhCount = (text.match(/[\u4e00-\u9fff]/g) || []).length;
-        const enCount = (text.match(/[A-Za-z]/g) || []).length;
+        // Count English words instead of letters so code identifiers do not
+        // overwhelm an otherwise Chinese request (for example, a JS snippet).
+        const enWordCount = (text.match(/[A-Za-z]+/g) || []).length;
 
-        if (zhCount === 0 && enCount === 0) return null;
-        if (zhCount > 0 && enCount === 0) return 'zh';
-        if (enCount > 0 && zhCount === 0) return 'en';
-        return zhCount >= enCount ? 'zh' : 'en';
+        if (zhCount === 0 && enWordCount === 0) return null;
+        if (zhCount > 0 && enWordCount === 0) return 'zh';
+        if (enWordCount > 0 && zhCount === 0) return 'en';
+        return zhCount >= enWordCount ? 'zh' : 'en';
     }
 }

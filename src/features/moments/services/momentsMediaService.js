@@ -21,46 +21,6 @@ export function buildProxiedUrls(src) {
     ];
 }
 
-function blobToDataUrl(blob) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = () => reject(new Error('Failed to convert image blob to data URL.'));
-        reader.readAsDataURL(blob);
-    });
-}
-
-/**
- * 将远程图片 URL 缓存为 base64 data URL。
- * 增加 8 秒超时，防止长时间挂起导致 UI 卡顿。
- */
-export async function cacheRemoteImageAsDataUrl(src = '') {
-    if (!/^https?:\/\//i.test(src)) return src;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-    try {
-        const response = await fetch(src, {
-            credentials: 'omit',
-            cache: 'force-cache',
-            signal: controller.signal,
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to fetch image: HTTP ${response.status}`);
-        }
-
-        const blob = await response.blob();
-        return await blobToDataUrl(blob);
-    } catch (e) {
-        console.warn('[momentsMediaService] Image caching failed, using original URL:', e?.message);
-        return src;
-    } finally {
-        clearTimeout(timeoutId);
-    }
-}
-
 export function buildMomentImageFallback(post, language = 'zh') {
     const content = String(post?.content || '').trim();
     const location = String(post?.location || '').trim();

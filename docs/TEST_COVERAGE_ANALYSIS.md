@@ -1,6 +1,6 @@
 # Chat Buddy Test Coverage Strategy
 
-> **Last verified**: 2026-08-12
+> **Last verified**: 2026-08-13
 >
 > **Package**: 0.4.1
 >
@@ -14,12 +14,12 @@ deterministic unit regressions.
 
 | Metric | Verified | Gate |
 | --- | ---: | ---: |
-| Statements | 85.09% | 60% |
-| Branches | 77.68% | 60% |
-| Functions | 84.88% | 60% |
-| Lines | 88.00% | 60% |
+| Statements | 85.04% | 60% |
+| Branches | 77.83% | 60% |
+| Functions | 84.91% | 60% |
+| Lines | 87.95% | 60% |
 
-The run completed with 23 test files and 398/398 passing tests.
+The run completed with 24 test files and 407/407 passing tests.
 
 ## Layered quality model
 
@@ -28,8 +28,8 @@ repository uses three explicit layers:
 
 1. `npm run test:coverage` — a hard 60% gate for regression-critical unit logic.
 2. `npm run test:coverage:all` — an observational report over every source file,
-   with no threshold. The latest whole-repository values are 22.46% statements,
-   19.53% branches, 17.57% functions, and 23.34% lines.
+   with no threshold. The latest whole-repository values are 22.57% statements,
+   19.77% branches, 17.68% functions, and 23.45% lines.
 3. `npm run test:e2e -- --project=chromium` — rendered behavior and UX. The
    current suite passes 19/19 tests; the mobile UX project passes 8/8.
 
@@ -37,7 +37,8 @@ This split does not claim that the whole UI has high unit coverage. It keeps the
 critical gate enforceable while Playwright and Axe verify the behavior that
 line instrumentation cannot establish: routing, focus, keyboard use, touch
 targets, responsive layout, reduced motion, accessible names, color contrast,
-and the create-chat/send-message path.
+and the create-chat/send-message path, including preservation of bracket syntax
+such as `items[1]` and `items[0]`.
 
 ## Gated modules
 

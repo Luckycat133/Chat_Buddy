@@ -48,10 +48,13 @@ const COMMON_MODELS = [
   "qwen-turbo",
   "glm-4",
   "moonshot-v1-8k",
+  "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "openrouter/free",
 ];
 
 // Quick-fill provider presets
 const PROVIDER_PRESETS = [
+  { label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1", model: "nvidia/nemotron-3-ultra-550b-a55b:free" },
   { label: "OpenAI", baseUrl: "https://api.openai.com/v1", model: "gpt-4o" },
   { label: "Anthropic", baseUrl: "https://api.anthropic.com/v1", model: "claude-3-5-sonnet-20241022" },
   { label: "Google", baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai", model: "gemini-2.0-flash" },

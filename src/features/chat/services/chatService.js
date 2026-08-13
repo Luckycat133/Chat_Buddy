@@ -188,6 +188,14 @@ function buildCompletionEndpoints(baseURL = '') {
     return endpoints;
 }
 
+function isOpenRouterEndpoint(value = '') {
+    try {
+        return new URL(value).hostname.toLowerCase() === 'openrouter.ai';
+    } catch {
+        return false;
+    }
+}
+
 /**
  * Call the AI API with the given messages history
  * @param {Array} messages - List of message objects {role, content}
@@ -196,6 +204,7 @@ function buildCompletionEndpoints(baseURL = '') {
  * @param {string} options.agentId - Agent ID for logging/tracking
  * @param {number} options.maxTokens - Maximum tokens for response (default: 150, task agents: 500)
  * @param {number} options.temperature - Response temperature (default: 0.8)
+ * @param {boolean} options.disableReasoning - Disable OpenRouter reasoning for short utility requests
  * @returns {Promise<string|null>} - The AI response content or null if failed
  */
 export async function callAI(messages, options = {}) {
@@ -243,6 +252,17 @@ export async function callAI(messages, options = {}) {
 
     if (maxTokens) {
         requestBody.max_tokens = maxTokens;
+    }
+
+    // Reasoning-first models can spend a tiny utility request's entire token
+    // budget thinking and return no visible content. OpenRouter documents this
+    // normalized switch; keep it scoped to the official endpoint so other
+    // OpenAI-compatible providers never receive an unknown request field.
+    if (
+        options.disableReasoning === true &&
+        isOpenRouterEndpoint(config.baseUrl || aiClient.baseURL)
+    ) {
+        requestBody.reasoning = { enabled: false };
     }
 
     if (Array.isArray(options.tools) && options.tools.length > 0) {
@@ -334,14 +354,6 @@ export function cleanMessageContent(content) {
     // Remove SILENCE markers
     cleaned = cleaned.replace(/\[SILENCE\]/gi, '');
 
-    // Remove reference patterns like [1], [2], [R1].
-    cleaned = cleaned.replace(/\[(?:\d+|R\d+)\]/g, '');
-
-    // Remove stray closing brackets (possibly orphaned)
-    cleaned = cleaned.replace(/\]\]/g, ']');
-    cleaned = cleaned.replace(/\]\s*$/g, '');
-    cleaned = cleaned.replace(/^\s*\[?\]/g, '');
-
     // Transform GAME:Poll messages for AI context instead of removing them
     cleaned = cleaned.replace(/\[GAME:Poll:\s*(.+?)\]/gi, (match, question) => {
         return `System: A poll has been created: "${question}". Please vote for an option.`;
@@ -349,11 +361,12 @@ export function cleanMessageContent(content) {
 
     // Note: [POLL:ID] messages are kept as is, handled in context preparation
 
-    // Remove any remaining [...] patterns that look like tool markers
-    // Match patterns like [Something:...] or [snake_case:...]
-    // UPDATED: Allow lowercase keys for tools like [immersive_translate:...]
-    cleaned = cleaned.replace(/\[[a-zA-Z0-9_]+:[^\]]*\]/g, '');
-    cleaned = cleaned.replace(/\[[A-Z]{2,}\]/g, '');
+    // Remove only explicit internal protocol markers. Broad bracket matching is
+    // destructive for JavaScript indices, citations, Markdown, and tuple labels.
+    cleaned = cleaned.replace(
+        /\[(?:TOOL_CALL(?:_NATIVE)?|TOOL_RESULT|TOOL_ERROR|MEMORY_REQUEST):[^\]]*\]/gi,
+        ''
+    );
 
     // Clean up pipe characters ONLY if surrounded by single spaces (MULTI tag remnants)
     // Preserve pipes at line start/end which are table delimiters

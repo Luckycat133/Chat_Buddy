@@ -2,20 +2,20 @@
 
 > **审查日期**：2026-08-11
 >
-> **修复验证日期**：2026-08-12
+> **修复验证日期**：2026-08-13
 >
 > **修复基线**：`remake` / `f50531bb`
 >
-> **当前状态**：原审查中的 P1/P2 项已修复并完成单元、构建、依赖与真实浏览器验收；第三方真实 AI Provider 仍不在本次验证范围内
+> **当前状态**：原审查中的 P1/P2 项已修复，并完成单元、构建、依赖、真实浏览器以及 OpenRouter 免费模型的 Agent/虚拟角色验收
 
-## 0. 2026-08-12 修复验证更新
+## 0. 2026-08-12 至 2026-08-13 修复验证更新
 
 原始审查结论保留在后续章节，便于追溯问题来源。本次修复后的验证结果如下：
 
 | 验证 | 结果 |
 | --- | --- |
-| `TZ=UTC npm run test:coverage` | 23 个文件、398/398 通过；核心逻辑门禁通过：Statements 85.09%、Branches 77.68%、Functions 84.88%、Lines 88.00% |
-| `TZ=UTC npm run test:coverage:all` | 398/398 通过；全仓观测值仍为 Statements 22.46%、Branches 19.53%、Functions 17.57%、Lines 23.34%，不作为单元门禁伪装成已全面覆盖 |
+| `TZ=UTC npm run test:coverage` | 24 个文件、407/407 通过；核心逻辑门禁通过：Statements 85.04%、Branches 77.83%、Functions 84.91%、Lines 87.95% |
+| `TZ=UTC npm run test:coverage:all` | 407/407 通过；全仓观测值为 Statements 22.57%、Branches 19.77%、Functions 17.68%、Lines 23.45%，不作为单元门禁伪装成已全面覆盖 |
 | `npm run lint` | 通过，0 errors、0 warnings |
 | `npm run build` | 通过；已拆分高亮、Markdown、KaTeX、MathJS 与 Mermaid 懒加载产物，无 chunk 警告 |
 | `npm audit --audit-level=low` / `pnpm audit --audit-level low` | 均通过，0 vulnerabilities |
@@ -25,6 +25,23 @@
 | 远端 CI | 提交 `73283719` 的 CI 全部成功：[运行记录](https://github.com/Luckycat133/Chat_Buddy/actions/runs/31614255044) |
 | 远端 CodeQL | JavaScript/TypeScript 与 Python 均成功：[运行记录](https://github.com/Luckycat133/Chat_Buddy/actions/runs/31614255014)；开放告警 0 |
 | Dependabot | 开放告警 0 |
+
+### 2026-08-13 真实 OpenRouter Provider 验收
+
+- 从 `crouter` 已登记的 macOS Keychain 项读取 OpenRouter key，并只比较、不输出地确认它与 Git 忽略的本机 `.env` 一致。浏览器持久配置只保存地址和模型；密钥没有写入 localStorage 或 Git。设置面板密码值可能进入 Playwright 快照/trace，因此相关临时资源已立即删除。
+- 根据 OpenRouter [官方免费模型榜单](https://openrouter.ai/collections/free-models)和[免费变体说明](https://openrouter.ai/docs/guides/routing/model-variants/free)，选择 `nvidia/nemotron-3-ultra-550b-a55b:free`：官方 API 元数据为 1,000,000 token 上下文，输入/输出价格均为 0，并支持 tools、tool choice 与 reasoning 参数。
+- API 直连预检返回 HTTP 200，2,633 ms，实际响应模型与请求模型一致。网页设置中的连接测试也通过，持久配置只保存 `https://openrouter.ai/api/v1` 与模型名。
+- 任务 Agent“代码”真实对话发现用户代码 `xs[1]` 和模型回复 `xs[0]` 被本地控制标签清洗误删。请求/响应取证证明模型原始输出正确；修复后请求体、原始响应和最终页面三层均保留方括号，Agent 给出正确最小 diff。该轮免费容量下自动标题与对话请求的浏览器网络耗时分别为 46,819 ms 和 48,858 ms。
+- 虚拟角色“露娜”真实回复耗时 21,570 ms，返回简体中文并保持温柔、星空意象和简短提问的角色设定；页面 0 console errors。
+- 同时修复“中文说明 + JavaScript 标识符”被误判为英文的问题，并把 `items[1]`/`items[0]` 纳入桌面与移动 Chrome 回归。
+- Nemotron 默认开启推理，原 20-token 自动标题请求曾把预算全部用于 reasoning 并返回空正文。标题请求现仅在官方 OpenRouter endpoint 发送 `reasoning.enabled=false`；真实复测得到 9 个正文 token、0 reasoning token，话题标题正常显示。
+- 干净浏览器终验再次确认 Coder 请求/响应 HTTP 200、模型和供应商分别为 Nemotron 3 Ultra / NVIDIA，页面最终为 0 errors、0 warnings。免费变体容量和延迟会随上游变化，官方也不保证与付费变体相同的可用性。
+
+### 2026-08-13 图片与开发态运行体验
+
+- Vite 热更新重连使用 blob Worker；开发服务器 CSP 仅增加 `worker-src 'self' blob:`，生产预览仍保持 `worker-src 'self'`。
+- 朋友圈原先先取 MiniMax 的 24 小时签名 URL，再由浏览器/公共代理转存，真实运行会产生 CORS、超时或代理 400。现按 MiniMax 官方 API 改请求 `response_format: base64`，直接保存可离线渲染的 data URL，并移除不需要的 `crossorigin` 属性。
+- 真实 `image-01` 请求返回 HTTP 200，请求体确认使用 `base64`；图片在浏览器完成解码，最终 Agent + 图片联合终验控制台为 0 errors、0 warnings。
 
 ### 修复结果
 
@@ -40,7 +57,7 @@
 
 真实浏览器复测还发现通知模块会在启动时请求仓库中不存在的音频文件，开发模式下又会被生产 Service Worker 接管为 `408 Offline`。现已改为按需使用 Web Audio 生成短提示音，并限制 Service Worker 只在生产环境注册；启动控制台回归已纳入 19 项桌面验收。
 
-推送后的 CodeQL 复核进一步暴露了历史正则清洗、头像 URL、图片 API key 持久化及工作流权限问题。当前实现已改为 DOMPurify 解析式清洗、栅格图片 URL 白名单、图片密钥仅内存保存并迁移删除旧值、配置持久化字段白名单和 CI `contents: read` 最小权限；数字猜谜也改用无模偏差的 Web Crypto 随机数，同时删除 222 个误提交的旧覆盖率生成文件。新增回归已计入 398 项单元测试。
+推送后的 CodeQL 复核进一步暴露了历史正则清洗、头像 URL、图片 API key 持久化及工作流权限问题。当前实现已改为 DOMPurify 解析式清洗、栅格图片 URL 白名单、图片密钥仅内存保存并迁移删除旧值、配置持久化字段白名单和 CI `contents: read` 最小权限；数字猜谜也改用无模偏差的 Web Crypto 随机数，同时删除 222 个误提交的旧覆盖率生成文件。当前新增回归已计入 407 项单元测试。
 
 提交 `73283719` 的远端 CodeQL JavaScript/TypeScript 与 Python job 均成功。告警复核后开放数为 0：18 条当前扫描结果属于通用 storage 包装器跨键串流或扫描器未识别 `sanitizeImageURL` 白名单的误报；26 条来自已停用的 default-setup 分析键，其原始问题真实但对应代码已经修复或删除。GitHub 仓库未启用 `mitigated` 分类，因此旧记录按“当前陈旧记录为误报”关闭，并在每条告警注释中保留“原发现真实、现已修复”的说明。
 
@@ -48,8 +65,8 @@
 
 - 系统 Chrome 覆盖 `/`、`/agents`、`/friends`、`/moments`、`/settings`、`/help`，并运行 Axe serious/critical 规则。
 - 在 375、768、1024、1440 px 检查横向溢出与单一 `main` 地标；移动触控目标要求至少 44×44 px。
-- 实际用键盘选择角色、创建聊天、回车发送消息，并以网络 mock 验证 AI 回复完整显示；同时验证弹窗焦点循环、Escape 关闭与焦点恢复、语言元数据、减弱动画和未知路由恢复。
-- 没有调用真实付费 API，因此 Provider 凭据、配额、延迟与线上可用性仍需在受控环境另行验收。
+- 实际用键盘选择角色、创建聊天、回车发送消息；自动回归使用网络 mock，另以真实 OpenRouter 免费模型验证任务 Agent 与虚拟角色。还验证弹窗焦点循环、Escape 关闭与焦点恢复、语言元数据、减弱动画和未知路由恢复。
+- 未调用付费模型或其他第三方 Provider；OpenRouter 免费容量的长期配额、峰值延迟与稳定性仍需持续观察。
 
 ## 1. 原始执行结论（2026-08-11，历史）
 
@@ -190,6 +207,6 @@ UI/UX 验证覆盖 5 个主路由、12 个次级路由、种子聊天工作区�
 
 ## 6. 审查边界
 
-- 未调用真实付费 AI API，也未验证第三方 Provider 的线上可用性。
+- 已验证 OpenRouter 免费模型的真实线上调用；未验证付费模型及其他第三方 Provider。
 - UI 自动化使用本机系统 Chrome；未完成 Firefox、Safari 和真实移动设备矩阵。
 - 本报告记录的是 `a77df02a` 快照。历史审查报告仍保留为历史记录，但不应替代本报告描述当前发布状态。

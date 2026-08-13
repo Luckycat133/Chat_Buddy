@@ -39,6 +39,7 @@ dist-ssr
 test-results/
 .playwright-cli/
 playwright-report/
+output/
 .pytest_cache
 reports/
 test_reports/

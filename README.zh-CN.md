@@ -5,8 +5,8 @@
 ![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19-61DAFB.svg)
-![Tests](https://img.shields.io/badge/tests-398%20passing-success.svg)
-![核心覆盖率](https://img.shields.io/badge/core%20lines-88.00%25-success.svg)
+![Tests](https://img.shields.io/badge/tests-407%20passing-success.svg)
+![核心覆盖率](https://img.shields.io/badge/core%20lines-87.95%25-success.svg)
 
 **AI 聊天伴侣**
 
@@ -25,7 +25,7 @@
 > **API 密钥提示**：浏览器构建中的 `VITE_*_API_KEY` 会进入公开 JavaScript；公开部署应使用
 > 服务端代理，或要求用户在运行时输入自己的密钥。
 >
-> **最新审查**：安全、数据完整性、CI 与 UI/UX 修复已于 2026-08-12 完成验证，详见
+> **最新审查**：安全、数据完整性、CI 与 UI/UX 修复已于 2026-08-13 通过真实 OpenRouter Agent/角色对话验证，详见
 > [综合审查报告](docs/CODE_REVIEW_REPORT_2026-08-11.md)。
 
 ---
@@ -48,7 +48,7 @@
 
 - **13位独特AI角色**：5位原创角色 + 8位二次元角色
 - 每个角色拥有独特的性格、说话风格和兴趣爱好
-- 基于DeepSeek API提供智能上下文感知回复
+- 支持 OpenRouter、DeepSeek、OpenAI 等兼容 OpenAI 的 API
 
 ### 🎌 二次元角色
 
@@ -123,7 +123,7 @@
 | ---------------- | -------------------- |
 | Node.js          | `^20.19.0`、`^22.13.0` 或 `>=24.0.0` |
 | npm              | v7+                  |
-| DeepSeek API Key | 可选，用于AI智能回复 |
+| 兼容 API Key | 可选，用于AI智能回复 |
 
 ### 安装步骤
 
@@ -175,11 +175,11 @@ npm run build
 
 | 变量              | 必需 | 说明                                        |
 | ----------------- | ---- | ------------------------------------------- |
-| `VITE_AI_API_URL` | 是   | API基础URL（如 `https://api.deepseek.com`） |
+| `VITE_AI_API_URL` | 是   | API基础URL（如 `https://openrouter.ai/api/v1`） |
 | `VITE_AI_API_KEY` | 是   | AI回复的API密钥                             |
-| `VITE_AI_MODEL`   | 是   | 模型名称（如 `deepseek-chat`、`sonar`）     |
+| `VITE_AI_MODEL`   | 是   | 模型名称（如 `nvidia/nemotron-3-ultra-550b-a55b:free`） |
 
-> **支持的API提供商**：DeepSeek、Perplexity、OpenAI及其他兼容OpenAI的API。
+> **支持的API提供商**：OpenRouter、DeepSeek、Perplexity、OpenAI及其他兼容OpenAI的API。设置面板已提供 OpenRouter 快速选项。
 
 > **安全说明**：如果你在应用内设置面板中输入凭证，API 密钥只保存在当前浏览器会话中。保存的服务方案只保留地址和模型，不保存密钥。
 
@@ -220,7 +220,7 @@ npm run build
 - 前端：React 19, Vite
 - 样式：TailwindCSS
 - 状态：Clean Architecture (ChatEngine + Context)
-- AI：DeepSeek / Perplexity / OpenAI 兼容 API
+- AI：OpenRouter / DeepSeek / Perplexity / OpenAI 兼容 API
 - 存储：LocalStorage（轻量设置）+ IndexedDB（聊天/文档主数据、媒体与背景资源）
 
 ### 项目结构

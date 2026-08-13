@@ -5,6 +5,7 @@ import { server } from '../../../test/msw/server';
 const mockConfig = {
   apiKey: 'test-api-key',
   model: 'mock-model',
+  baseUrl: 'https://mock.api',
 };
 
 vi.mock('../../../services/api/aiClient', () => {
@@ -34,6 +35,7 @@ describe('chatService.callAI', () => {
   beforeEach(() => {
     mockConfig.apiKey = 'test-api-key';
     mockConfig.model = 'mock-model';
+    mockConfig.baseUrl = 'https://mock.api';
   });
 
   it('test_when_api_key_missing_should_return_null', async () => {
@@ -146,6 +148,41 @@ describe('chatService.callAI', () => {
     expect(capturedBodies[0].model).toBe('custom-model');
     expect(capturedBodies[0].max_tokens).toBe(2048);
     expect(capturedBodies[0].temperature).toBe(0.1);
+  });
+
+  it('test_when_openrouter_utility_request_disables_reasoning_should_send_supported_switch', async () => {
+    const capturedBodies = [];
+    mockConfig.baseUrl = 'https://openrouter.ai/api/v1';
+    server.use(
+      http.post('*/chat/completions', async ({ request }) => {
+        capturedBodies.push(await request.json());
+        return HttpResponse.json({ choices: [{ message: { content: 'Short title' } }] });
+      })
+    );
+
+    await callAI(
+      [{ role: 'user', content: 'name this chat' }],
+      { maxTokens: 32, disableReasoning: true }
+    );
+
+    expect(capturedBodies[0].reasoning).toEqual({ enabled: false });
+  });
+
+  it('test_when_non_openrouter_request_disables_reasoning_should_not_send_provider_specific_field', async () => {
+    const capturedBodies = [];
+    server.use(
+      http.post('*/chat/completions', async ({ request }) => {
+        capturedBodies.push(await request.json());
+        return HttpResponse.json({ choices: [{ message: { content: 'Short title' } }] });
+      })
+    );
+
+    await callAI(
+      [{ role: 'user', content: 'name this chat' }],
+      { maxTokens: 32, disableReasoning: true }
+    );
+
+    expect(capturedBodies[0]).not.toHaveProperty('reasoning');
   });
 
   it('test_when_base_url_requires_v1_path_should_retry_with_v1_chat_completions', async () => {
@@ -470,6 +507,7 @@ hello  world
     // Then
     expect(cleaned).toContain('👍');
     expect(cleaned).toContain('| head | tail |');
+    expect(cleaned).toContain('[1] [R2]');
     expect(cleaned).toContain('A poll has been created');
     expect(cleaned).not.toContain('[MULTI:');
     expect(cleaned).not.toContain('[SCHEDULE:');
@@ -490,7 +528,7 @@ hello  world
     expect(undefinedResult).toBe('');
   });
 
-  it('test_when_input_contains_orphan_brackets_and_mixed_tags_should_still_return_trimmed_text', () => {
+  it('test_when_input_contains_non_control_brackets_should_preserve_them', () => {
     // Given
     const raw = '  ] [ABC] [immersive_translate:anything] useful text  ';
 
@@ -498,7 +536,13 @@ hello  world
     const cleaned = cleanMessageContent(raw);
 
     // Then
-    expect(cleaned).toBe('useful text');
+    expect(cleaned).toBe('] [ABC] [immersive_translate:anything] useful text');
+  });
+
+  it('test_when_message_contains_code_indices_and_tuple_labels_should_preserve_them', () => {
+    const raw = 'const first = xs[0]; type Entry = [key: string, value: number];';
+
+    expect(cleanMessageContent(raw)).toBe(raw);
   });
 });
 

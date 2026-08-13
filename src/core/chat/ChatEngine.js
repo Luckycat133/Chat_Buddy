@@ -433,7 +433,13 @@ export class ChatEngine {
     // =========================================================================
 
     sendMessage(chatId, content, senderId = 'user-me', quotedMessageId = null) {
-        const cleaned = cleanMessageContent(content);
+        // User-authored text is data, not an internal control protocol. Running it
+        // through the AI marker cleaner used to silently delete valid code such as
+        // `items[0]` before it reached the model.
+        const normalized = typeof content === 'string' ? content.trim() : '';
+        const cleaned = senderId === 'user-me'
+            ? normalized
+            : cleanMessageContent(normalized);
         if (!cleaned) return;
 
         const chatIndex = this.chats.findIndex(c => c.id === chatId);
@@ -982,8 +988,12 @@ Title:`;
             { role: 'system', content: 'You generate concise topic titles.' },
             { role: 'user', content: namingPrompt }
         ], {
-            maxTokens: 20,
-            temperature: 0.3
+            maxTokens: 32,
+            temperature: 0.3,
+            // Short titles need visible output, not a reasoning trace. Without
+            // this, reasoning-first OpenRouter models can consume the complete
+            // token budget and leave the topic stuck as "New Topic".
+            disableReasoning: true
         }).then(title => {
             if (title && this.chats.find(c => c.id === chat.id)) {
                 // Clean up quotes just in case

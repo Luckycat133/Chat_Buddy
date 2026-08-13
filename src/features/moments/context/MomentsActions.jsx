@@ -24,7 +24,7 @@ import {
     parseMomentAssistResponse,
     sanitizeMomentText,
 } from '../services/momentsContentService';
-import { cacheRemoteImageAsDataUrl, isRenderableMomentImage } from '../services/momentsMediaService';
+import { isRenderableMomentImage } from '../services/momentsMediaService';
 import { generateMomentsImage, isMiniMaxConfigured } from '../../../services/minimaxService';
 
 const MomentsActionContext = createContext();
@@ -39,17 +39,6 @@ function extractJsonObject(raw) {
     if (fencedMatch?.[1]) return fencedMatch[1].trim();
     const objectMatch = raw.match(/\{[\s\S]*\}/);
     return objectMatch?.[0] || null;
-}
-
-async function persistGeneratedImage(imageUrl) {
-    if (!imageUrl) return imageUrl;
-
-    try {
-        return await cacheRemoteImageAsDataUrl(imageUrl);
-    } catch (e) {
-        console.warn('[MomentsActions] Image caching failed:', e?.message);
-        return imageUrl;
-    }
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -412,8 +401,7 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
 
             if (!imageResult?.imageUrl) return [];
 
-            const persistedImage = await persistGeneratedImage(imageResult.imageUrl);
-            return persistedImage ? [persistedImage] : [];
+            return [imageResult.imageUrl];
         } catch (error) {
             console.warn(`[MomentsAI] Image generation failed, falling back to text-only post: ${error.message}`);
             return [];

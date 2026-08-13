@@ -20,6 +20,7 @@ describe('MomentMediaGrid', () => {
 
         const getImage = () => document.querySelector('img');
         expect(getImage()).not.toBeNull();
+        expect(getImage()).not.toHaveAttribute('crossorigin');
 
         // The service may add or remove proxy candidates; exhaust the chain
         // without coupling this behavior test to an exact candidate count.
