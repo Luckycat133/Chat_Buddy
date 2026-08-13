@@ -33,6 +33,14 @@ async function seedApp(page, language = 'en', mode = 'light') {
       bubbleStyle: 'rounded',
     }));
     localStorage.setItem('chat-buddy-moments', JSON.stringify(moments));
+    // Keep AI-backed acceptance tests independent from a developer's .env and
+    // from CI secrets. The request is intercepted below before any network I/O.
+    localStorage.setItem('chat-buddy:api-config', JSON.stringify({
+      baseUrl: 'https://chat-buddy-e2e.invalid/v1',
+      model: 'chat-buddy-e2e-model',
+      maxRetries: 0,
+    }));
+    sessionStorage.setItem('chat-buddy:session-api-key', 'chat-buddy-e2e-key');
   }, { moments: SEEDED_MOMENTS, lang: language, themeMode: mode });
 }
 
@@ -145,13 +153,19 @@ test.describe('Chat Buddy UX acceptance', () => {
   });
 
   test('creates a chat with the keyboard and sends a message through the real UI', async ({ page }) => {
-    await page.route('**/chat/completions', route => route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        choices: [{ message: { role: 'assistant', content: 'Use items[0].' } }],
-      }),
-    }));
+    let aiRequestCount = 0;
+    let aiRequestBody = null;
+    await page.route('**/chat/completions', async route => {
+      aiRequestCount += 1;
+      aiRequestBody = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          choices: [{ message: { role: 'assistant', content: 'Use items[0].' } }],
+        }),
+      });
+    });
 
     await openReady(page, '/create');
     const luna = page.getByRole('button', { name: 'Select Luna' });
@@ -167,6 +181,9 @@ test.describe('Chat Buddy UX acceptance', () => {
     await composer.press('Enter');
     await expect(page.getByText('UX acceptance message: items[1]', { exact: true })).toBeVisible();
     await expect(page.getByText('Use items[0].', { exact: true })).toBeVisible({ timeout: 10_000 });
+    await page.waitForTimeout(500);
+    expect(aiRequestCount).toBe(1);
+    expect(aiRequestBody?.model).toBe('chat-buddy-e2e-model');
   });
 
   test('unknown URLs recover to the application instead of showing a blank page', async ({ page }) => {
