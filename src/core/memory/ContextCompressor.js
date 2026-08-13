@@ -7,16 +7,22 @@
 
 import { memoryStore } from './MemoryStore';
 
-const COMPRESSION_THRESHOLD = 8;
-const RECENT_WINDOW = 6;
-const MAX_SUMMARY_SNIPPETS = 2;
-const MAX_SUMMARY_SNIPPET_CHARS = 80;
+// Preserve a useful working conversation. Compression applies only after a
+// substantial history has accumulated; the current user message is retained
+// verbatim by AIPipeline's separate 100k-character history budget.
+const COMPRESSION_THRESHOLD = 56;
+const RECENT_WINDOW = 48;
+const MAX_SUMMARY_SNIPPETS = 6;
+const MAX_SUMMARY_SNIPPET_CHARS = 220;
 const MAX_MEMORY_FACT_CHARS = 160;
+const MAX_LOCAL_MEMORY_ITEMS = 8;
 
 const DURABLE_ZH_PATTERN = /(?:我.{0,10}(?:叫|名叫|住在|来自|工作|上班|生活|喜欢|爱|偏好|习惯|通常|每天|每周|工作日|周末|准备|计划|打算|担心|最离不开|睡|过敏)|(?:我家|家里|它|他|她).{0,32}(?:叫|名叫|住|来自|工作|公司|养|喜欢|爱|偏好|习惯|通常|每天|每周|工作日|周末|准备|计划|打算|担心|最离不开|换成|搬|睡|过敏|玩具))/;
 const DURABLE_EN_PATTERN = /\b(?:my\s+\w+|i\s+(?:am|live|work|have|own|like|love|prefer|usually|always|never|plan|intend|want|worry))\b/i;
-const DURABLE_ENTITY_PATTERN = /(?:猫|狗|宠物|孩子|伴侣|家人|cat|dog|pet).{0,24}(?:叫|喜欢|玩具|name|likes?|toy)/i;
+const DURABLE_ENTITY_PATTERN = /(?:(?:猫|狗|宠物|孩子|伴侣|家人|cat|dog|pet).{0,24}(?:叫|喜欢|玩具|name|likes?|toy)|(?:叫|名叫|named).{0,20}(?:猫|狗|宠物|cat|dog|pet))/i;
+const DURABLE_EVENT_PATTERN = /(?:(?:\d{1,2}月\d{1,2}日|今天|明天|后天|下周|下个月|月底|年底).{0,28}(?:从|搬|去|到|出发|开始|结束)|(?:会|将|准备|计划|打算).{0,24}(?:带|搬|去|到|开始|结束)|(?:会带|带着|养(?:了)?|有一只).{0,24}(?:猫|狗|宠物))/u;
 const DO_NOT_REMEMBER_PATTERN = /(?:别记|不要记|别保存|不要保存|do not remember|don't remember|forget this)/i;
+const RECALL_QUERY_PATTERN = /(?:还记得|你记得|记得我的|不要猜.{0,12}(?:告诉|回答)|逐项(?:告诉|回答)|(?:告诉|回答)我.{0,20}(?:名字|时间|日期|偏好)|do you remember|tell me (?:my|what))/i;
 
 function normalizeText(value) {
     return String(value || '')
@@ -35,20 +41,20 @@ function isDurableUserMessage(content) {
         !content
         || content.startsWith('[')
         || DO_NOT_REMEMBER_PATTERN.test(content)
+        || RECALL_QUERY_PATTERN.test(content)
         || /[?？]/u.test(content)
     ) return false;
     return DURABLE_ZH_PATTERN.test(content)
         || DURABLE_EN_PATTERN.test(content)
-        || DURABLE_ENTITY_PATTERN.test(content);
+        || DURABLE_ENTITY_PATTERN.test(content)
+        || DURABLE_EVENT_PATTERN.test(content);
 }
 
-function compactDurableStatement(content) {
-    const segments = content
+function extractDurableSegments(content) {
+    return content
         .split(/(?<=[。！？!?；;])/u)
         .map(segment => segment.trim())
-        .filter(Boolean);
-    const durable = segments.filter(segment => isDurableUserMessage(segment));
-    return durable.join('');
+        .filter(segment => isDurableUserMessage(segment));
 }
 
 function classifyMemory(content) {
@@ -76,7 +82,7 @@ function scoreImportance(content) {
  * Select compact, durable user statements suitable for long-term recall.
  * The original wording is retained to avoid inventing facts locally.
  */
-export function extractLocalMemoryItems(messages = [], maxItems = 4) {
+export function extractLocalMemoryItems(messages = [], maxItems = MAX_LOCAL_MEMORY_ITEMS) {
     if (!Array.isArray(messages) || maxItems <= 0) return [];
 
     const seen = new Set();
@@ -84,17 +90,19 @@ export function extractLocalMemoryItems(messages = [], maxItems = 4) {
     for (const message of messages) {
         if (message?.senderId !== 'user-me') continue;
         const content = normalizeText(message.content);
-        const compact = truncateText(compactDurableStatement(content), MAX_MEMORY_FACT_CHARS);
-        if (!compact) continue;
-        const dedupeKey = compact.toLocaleLowerCase();
-        if (seen.has(dedupeKey)) continue;
-        seen.add(dedupeKey);
+        for (const segment of extractDurableSegments(content)) {
+            const compact = truncateText(segment, MAX_MEMORY_FACT_CHARS);
+            if (!compact) continue;
+            const dedupeKey = compact.toLocaleLowerCase();
+            if (seen.has(dedupeKey)) continue;
+            seen.add(dedupeKey);
 
-        items.push({
-            fact: `用户曾说：“${compact}”`,
-            importance: scoreImportance(compact),
-            category: classifyMemory(compact),
-        });
+            items.push({
+                fact: `用户曾说：“${compact}”`,
+                importance: scoreImportance(compact),
+                category: classifyMemory(compact),
+            });
+        }
     }
 
     return items.slice(-maxItems);
@@ -105,7 +113,7 @@ export function extractLocalMemoryItems(messages = [], maxItems = 4) {
  * so callers do not need a migration and, crucially, no provider is contacted.
  */
 export async function extractMemoriesAsync(messages, characterId, characterName = characterId) {
-    const items = extractLocalMemoryItems(messages, 4);
+    const items = extractLocalMemoryItems(messages, MAX_LOCAL_MEMORY_ITEMS);
     if (items.length === 0) return 0;
 
     let saved = 0;
@@ -126,9 +134,9 @@ export async function extractMemoriesAsync(messages, characterId, characterName 
 }
 
 /**
- * Keep only a recent rolling window and a tightly capped extractive reminder.
- * Unlike the previous whitespace topic collector, this cannot copy entire
- * Chinese paragraphs into the prompt as a single "keyword".
+ * Keep a substantial recent rolling window plus a bounded extractive reminder
+ * for older user turns. Unlike the previous whitespace topic collector, this
+ * cannot copy an unlimited Chinese paragraph into a single "keyword".
  */
 export function compressContext(messages, _personas = []) {
     if (!Array.isArray(messages) || messages.length <= COMPRESSION_THRESHOLD) {

@@ -8,7 +8,7 @@ import { cn } from '../../../utils/cn';
 import {
     Loader2, CheckCircle, XCircle, ChevronDown, ChevronUp,
     Code2, Search, Globe, Calculator, Brain, Database,
-    Languages, FileSearch, Cpu, ArrowRightLeft,
+    Languages, FileSearch, Cpu, ArrowRightLeft, Image as ImageIcon, Palette,
 } from 'lucide-react';
 
 const TOOL_META = {
@@ -26,6 +26,8 @@ const TOOL_META = {
     check_prerequisites:  { icon: Brain,       labelEn: 'Prerequisites',    labelZh: '前置检查' },
     generate_quiz:        { icon: Brain,       labelEn: 'Quiz',             labelZh: '生成测验' },
     track_progress:       { icon: Brain,       labelEn: 'Progress',         labelZh: '进度追踪' },
+    generate_image:       { icon: ImageIcon,   labelEn: 'Image Generation', labelZh: '图片生成' },
+    color_palette:        { icon: Palette,     labelEn: 'Color Palette',    labelZh: '配色方案' },
     delegate_task:        { icon: ArrowRightLeft, labelEn: 'Delegating',    labelZh: '任务委派' },
     MEMORY_REQUEST:       { icon: Brain,       labelEn: 'Memory Request',   labelZh: '记忆请求' },
 };
@@ -33,13 +35,23 @@ const TOOL_META = {
 export default function ToolResultCard({ msg, language }) {
     const [expanded, setExpanded] = useState(false);
 
-    const { toolName, status, inputSummary, outputDetail } = msg;
+    const { toolName, status, inputSummary, outputDetail, durationMs } = msg;
     const meta = TOOL_META[toolName] || { icon: Cpu, labelEn: toolName, labelZh: toolName };
     const Icon = meta.icon;
     const label = language === 'zh' ? meta.labelZh : meta.labelEn;
 
     const isLoading = status === 'loading';
     const isError = status === 'error';
+    const statusLabel = isLoading
+        ? (language === 'zh' ? '运行中' : 'Running')
+        : isError
+            ? (language === 'zh' ? '失败' : 'Failed')
+            : (language === 'zh' ? '完成' : 'Completed');
+    const durationLabel = Number.isFinite(durationMs)
+        ? durationMs < 1000
+            ? `${durationMs}ms`
+            : `${(durationMs / 1000).toFixed(1)}s`
+        : '';
 
     // UI/UX Improvement: Special native-feeling rendering for image generation
     if (toolName === 'generate_image') {
@@ -49,14 +61,14 @@ export default function ToolResultCard({ msg, language }) {
         // Show a friendly loading indicator instead of a developer-style log card
         if (isLoading) {
             return (
-                <div className="flex justify-start mb-3 px-2">
+                <div className="flex justify-start mb-3 px-2" role="status" aria-live="polite">
                     <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] shadow-sm animate-[pulse_2s_infinite]">
                         <div className="flex items-center space-x-1">
                             <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-bounce" style={{ animationDelay: '0ms' }} />
                             <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-bounce" style={{ animationDelay: '150ms' }} />
                             <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-bounce" style={{ animationDelay: '300ms' }} />
                         </div>
-                        <span className="text-xs font-semibold">{language === 'zh' ? '正在相册中挑选照片...' : 'Looking through the photo gallery...'}</span>
+                        <span className="text-xs font-semibold">{language === 'zh' ? '正在生成图片…' : 'Generating image…'}</span>
                     </div>
                 </div>
             );
@@ -64,7 +76,12 @@ export default function ToolResultCard({ msg, language }) {
     }
 
     return (
-        <div className="flex justify-start mb-3 px-2">
+        <div
+            className="flex justify-start mb-3 px-2"
+            role={isError ? 'alert' : 'status'}
+            aria-live="polite"
+            aria-label={`${label}: ${statusLabel}${durationLabel ? `, ${durationLabel}` : ''}`}
+        >
             <div className={cn(
                 'max-w-[80%] min-w-[200px] rounded-2xl overflow-hidden',
                 'glass border transition-all duration-300',
@@ -83,6 +100,12 @@ export default function ToolResultCard({ msg, language }) {
                     )}
                     onClick={() => outputDetail && setExpanded(e => !e)}
                     disabled={!outputDetail}
+                    aria-expanded={outputDetail ? expanded : undefined}
+                    aria-label={outputDetail
+                        ? `${label}: ${statusLabel}. ${expanded
+                            ? (language === 'zh' ? '收起详情' : 'Collapse details')
+                            : (language === 'zh' ? '展开详情' : 'Expand details')}`
+                        : `${label}: ${statusLabel}`}
                 >
                     {/* Status icon */}
                     {isLoading ? (
@@ -100,6 +123,17 @@ export default function ToolResultCard({ msg, language }) {
                         isError ? 'text-red-400' : 'text-[var(--color-text-secondary)]',
                     )}>
                         {label}
+                    </span>
+
+                    <span className={cn(
+                        'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold normal-case tracking-normal',
+                        isLoading
+                            ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                            : isError
+                                ? 'bg-red-400/10 text-red-400'
+                                : 'bg-emerald-400/10 text-emerald-500',
+                    )}>
+                        {statusLabel}{durationLabel ? ` · ${durationLabel}` : ''}
                     </span>
 
                     {/* Input summary — ellipsized */}

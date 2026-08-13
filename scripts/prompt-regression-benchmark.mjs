@@ -82,18 +82,6 @@ function extractDomainPrompt(source, domain, vars) {
     return template.replace(/\$\{(\w+)\}/g, (_all, key) => vars[key] ?? '');
 }
 
-function extractFactCheckPrompt(source) {
-    const match = source.match(/export async function factCheck[\s\S]*?const systemPrompt = `([\s\S]*?)`;/);
-    if (!match) throw new Error('Cannot extract factCheck system prompt');
-    return unescapeTemplate(match[1]);
-}
-
-function extractScholarPrompt(source) {
-    const match = source.match(/export function buildScholarSystemPrompt\(\)\s*\{\s*return `([\s\S]*?)`;/);
-    if (!match) throw new Error('Cannot extract scholar system prompt');
-    return unescapeTemplate(match[1]);
-}
-
 function summarizeRows(rows) {
     const header = [
         'Item'.padEnd(36, ' '),
@@ -123,14 +111,11 @@ function assert(condition, message) {
 function runPromptSizeBenchmark() {
     const taskAgentsPath = 'src/data/taskAgents.js';
     const expertsPath = 'src/data/translationExperts.js';
-    const perplexityPath = 'src/services/perplexityService.js';
 
     const oldTaskSource = readHead(taskAgentsPath);
     const newTaskSource = readCurrent(taskAgentsPath);
     const oldExpertsSource = readHead(expertsPath);
     const newExpertsSource = readCurrent(expertsPath);
-    const oldPerplexitySource = readHead(perplexityPath);
-    const newPerplexitySource = readCurrent(perplexityPath);
 
     const oldTaskPrompts = extractTaskAgentPrompts(oldTaskSource);
     const newTaskPrompts = extractTaskAgentPrompts(newTaskSource);
@@ -162,22 +147,15 @@ function runPromptSizeBenchmark() {
     }
     rows.push({ name: 'translationExpert:TOTAL', before: metrics(expertsOldTotal), after: metrics(expertsNewTotal) });
 
-    const oldFactCheck = extractFactCheckPrompt(oldPerplexitySource);
-    const newFactCheck = extractFactCheckPrompt(newPerplexitySource);
-    rows.push({ name: 'perplexity:factCheckPrompt', before: metrics(oldFactCheck), after: metrics(newFactCheck) });
-
-    const oldScholar = extractScholarPrompt(oldPerplexitySource);
-    const newScholar = extractScholarPrompt(newPerplexitySource);
-    rows.push({ name: 'perplexity:scholarPrompt', before: metrics(oldScholar), after: metrics(newScholar) });
-
     console.log('\n=== Prompt Size Benchmark (HEAD -> Working Tree) ===');
     summarizeRows(rows);
 
-    const beforeTotalTokens = rows.reduce((sum, r) => sum + r.before.estTokens, 0);
-    const afterTotalTokens = rows.reduce((sum, r) => sum + r.after.estTokens, 0);
+    const leafRows = rows.filter(row => !row.name.endsWith(':TOTAL'));
+    const beforeTotalTokens = leafRows.reduce((sum, r) => sum + r.before.estTokens, 0);
+    const afterTotalTokens = leafRows.reduce((sum, r) => sum + r.after.estTokens, 0);
     const tokenDelta = afterTotalTokens - beforeTotalTokens;
-    const charBefore = rows.reduce((sum, r) => sum + r.before.chars, 0);
-    const charAfter = rows.reduce((sum, r) => sum + r.after.chars, 0);
+    const charBefore = leafRows.reduce((sum, r) => sum + r.before.chars, 0);
+    const charAfter = leafRows.reduce((sum, r) => sum + r.after.chars, 0);
     const charDelta = charAfter - charBefore;
 
     console.log('\n=== Aggregate ===');
@@ -190,30 +168,33 @@ function runContractSmokeChecks() {
 
     const taskSource = readCurrent('src/data/taskAgents.js');
     const expertSource = readCurrent('src/data/translationExperts.js');
-    const perplexitySource = readCurrent('src/services/perplexityService.js');
     const pipelineSource = readCurrent('src/core/chat/AIPipeline.js');
 
     const taskPrompts = extractTaskAgentPrompts(taskSource);
     const musePrompt = taskPrompts['agent-muse'] || '';
-    assert(musePrompt.includes('Step 1') && musePrompt.includes('Step 2'), 'Muse prompt must keep two-step translation instructions');
-    assert(musePrompt.includes('immersive_translate'), 'Muse prompt must still mention immersive_translate');
+    assert(musePrompt.includes('当前回复内一次完成'), 'Muse prompt must keep the one-reply translation contract');
+    assert(musePrompt.includes('最终自然译文'), 'Muse prompt must keep the final natural translation contract');
+    assert(taskSource.includes("name: 'immersive_translate'"), 'Muse must still expose immersive_translate');
 
     const techPrompt = extractDomainPrompt(expertSource, 'technical', { targetLang: 'Chinese', sourceLang: 'English', termsPrompt: '' });
     assert(techPrompt.includes('step1') && techPrompt.includes('step2'), 'Translation expert prompt must preserve YAML step1/step2 contract');
     assert(techPrompt.includes('Return YAML only'), 'Translation expert prompt must explicitly demand YAML output');
 
-    const scholarPrompt = extractScholarPrompt(perplexitySource);
-    assert(scholarPrompt.includes('[x]'), 'Scholar prompt must keep citation marker requirement');
+    const scholarPrompt = taskPrompts['agent-scholar'] || '';
+    assert(scholarPrompt.includes('[n]'), 'Scholar prompt must keep citation marker requirement');
     assert(scholarPrompt.includes('📚 来源'), 'Scholar prompt must keep source list section');
 
     assert(pipelineSource.includes('[TOOL_CALL:'), 'AIPipeline prompt must keep tool call tag');
     assert(pipelineSource.includes('[MEMORY_REQUEST:'), 'AIPipeline prompt must keep memory request tag');
-    assert(pipelineSource.includes('CORE INSTRUCTIONS:'), 'AIPipeline must include persona core instructions');
+    assert(pipelineSource.includes('TURN RULES:'), 'AIPipeline must include dynamic per-turn rules');
+    assert(pipelineSource.includes('MAX_LLM_CALLS_PER_TURN = 2'), 'AIPipeline must cap model-directed tool turns at two requests');
+    assert(pipelineSource.includes('MAX_HISTORY_MESSAGES = 48'), 'AIPipeline must preserve the expanded recent-message window');
+    assert(pipelineSource.includes('MAX_HISTORY_CHARS = 100000'), 'AIPipeline must preserve the expanded character window');
 
-    console.log('PASS: Muse keeps two-step translation behavior');
+    console.log('PASS: Muse keeps one-reply translation behavior and the translation tool');
     console.log('PASS: Translation experts keep YAML protocol (step1/step2)');
     console.log('PASS: Scholar keeps citation and source requirements');
-    console.log('PASS: AIPipeline keeps control-tag contract');
+    console.log('PASS: AIPipeline keeps dynamic prompt, context, and request-budget contracts');
 }
 
 try {

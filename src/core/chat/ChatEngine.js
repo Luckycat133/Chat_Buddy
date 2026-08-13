@@ -64,10 +64,13 @@ function _buildToolInputSummary(toolName, args) {
         check_prerequisites: `Checking prerequisites for "${args?.topic || ''}"`,
         generate_quiz: `Generating quiz on "${args?.topic || ''}"`,
         track_progress: `Tracking: ${args?.topic || ''} (${args?.status || ''})`,
+        generate_image: `Generating image: "${args?.prompt || ''}"`,
+        color_palette: `Building ${args?.mood || 'custom'} palette`,
         delegate_task: `Delegating to ${args?.agentId || 'agent'}…`,
         MEMORY_REQUEST: `Memory request → ${args?.target || ''}: "${args?.topic || ''}"`,
     };
-    return labels[toolName] || `Running tool: ${toolName}…`;
+    const summary = labels[toolName] || `Running tool: ${toolName}…`;
+    return summary.length > 140 ? `${summary.slice(0, 137)}…` : summary;
 }
 
 /**
@@ -112,6 +115,7 @@ export class ChatEngine {
             onEditing: this._handleAIEditing.bind(this),
             onRecall: this._handleAIRecall.bind(this),
             onMessage: this._handleAIMessage.bind(this),
+            onStream: this._handleAIStream.bind(this),
             onError: this._handleAIError.bind(this),
             onSchedule: this._handleAISchedule.bind(this),
             onLog: (msg, data) => console.log(`[ChatEngine] ${msg}`, data),
@@ -893,9 +897,87 @@ export class ChatEngine {
         this.save();
     }
 
+    _handleAIStream(chatId, aiId, content) {
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        if (chatIndex === -1) return;
+
+        let cleaned = cleanMessageContent(String(content || '').trim());
+        cleaned = _stripLeadingSpeakerLabels(
+            cleaned,
+            this.personas.find(persona => persona.id === aiId)
+        );
+        if (!cleaned) return;
+
+        const chat = this.chats[chatIndex];
+        const streamIndex = chat.messages.findIndex(
+            message => message.type === 'ai_stream' && message.senderId === aiId
+        );
+        const timestamp = new Date().toISOString();
+        const messages = [...chat.messages];
+        let streamMessage;
+        if (streamIndex >= 0) {
+            streamMessage = {
+                ...messages[streamIndex],
+                content: cleaned,
+                status: 'streaming',
+            };
+            messages[streamIndex] = streamMessage;
+        } else {
+            streamMessage = {
+                id: crypto.randomUUID(),
+                senderId: aiId,
+                type: 'ai_stream',
+                content: cleaned,
+                timestamp,
+                status: 'streaming',
+                readBy: [],
+            };
+            messages.push(streamMessage);
+        }
+
+        this._replaceChatAt(chatIndex, {
+            ...chat,
+            messages,
+            lastMessage: streamMessage,
+            updatedAt: timestamp,
+        });
+        this._notify();
+    }
+
     _handleAIMessage(chatId, content, aiId) {
-        // AI sends message -> Reuse internal logic
-        this.sendMessage(chatId, content, aiId);
+        const chatIndex = this.chats.findIndex(c => c.id === chatId);
+        const chat = chatIndex >= 0 ? this.chats[chatIndex] : null;
+        const streamIndex = chat?.messages.findIndex(
+            message => message.type === 'ai_stream' && message.senderId === aiId
+        ) ?? -1;
+        if (!chat || streamIndex < 0) {
+            this.sendMessage(chatId, content, aiId);
+            return;
+        }
+
+        let cleaned = cleanMessageContent(String(content || '').trim());
+        cleaned = _stripLeadingSpeakerLabels(
+            cleaned,
+            this.personas.find(persona => persona.id === aiId)
+        );
+        if (!cleaned) return;
+
+        const timestamp = new Date().toISOString();
+        const finalizedMessage = {
+            ...chat.messages[streamIndex],
+            content: cleaned,
+            status: 'sent',
+        };
+        delete finalizedMessage.type;
+        const messages = [...chat.messages];
+        messages[streamIndex] = finalizedMessage;
+        this._replaceChatAt(chatIndex, {
+            ...chat,
+            messages,
+            lastMessage: finalizedMessage,
+            updatedAt: timestamp,
+        });
+        this.save();
     }
 
     _handleAIError(chatId, aiId, details = {}) {
@@ -904,10 +986,21 @@ export class ChatEngine {
 
         const statusSuffix = Number.isFinite(details.status) ? `（${details.status}）` : '';
         const isEnglish = details.language === 'en';
-        const content = isEnglish
+        const failureMessages = {
+            response_truncated: isEnglish
+                ? 'The model reached its response limit. The incomplete answer was hidden; you can retry this message.'
+                : '模型回复达到长度上限；为避免展示不完整答案，已将其隐藏。可以重试这条消息。',
+            reasoning_only_response: isEnglish
+                ? 'The service returned internal reasoning without a final answer. It was hidden; you can retry this message.'
+                : '服务只返回了内部推理，没有最终答案；相关内容已隐藏。可以重试这条消息。',
+        };
+        const content = failureMessages[details.code] || (isEnglish
             ? `I couldn't get a reply from the service${statusSuffix ? ` (${details.status})` : ''}. You can retry this message.`
-            : `暂时没能从服务获得回复${statusSuffix}，可以重试这条消息。`;
-        const existingError = this.chats[chatIndex].messages.find(
+            : `暂时没能从服务获得回复${statusSuffix}，可以重试这条消息。`);
+        const messagesWithoutStream = this.chats[chatIndex].messages.filter(
+            message => !(message.type === 'ai_stream' && message.senderId === aiId)
+        );
+        const existingError = messagesWithoutStream.find(
             message => message.type === 'ai_error' &&
                 message.senderId === aiId &&
                 message.retryUserMessageId === details.userMessageId
@@ -929,7 +1022,7 @@ export class ChatEngine {
         const chat = this.chats[chatIndex];
         this._replaceChatAt(chatIndex, {
             ...chat,
-            messages: [...chat.messages, errorMessage],
+            messages: [...messagesWithoutStream, errorMessage],
             lastMessage: errorMessage,
             updatedAt: errorMessage.timestamp,
         });
@@ -982,6 +1075,7 @@ export class ChatEngine {
             status: 'loading',
             inputSummary,
             outputDetail: null,
+            startedAt: new Date().toISOString(),
             timestamp: new Date().toISOString(),
             content: '',
             readBy: [],
@@ -1004,13 +1098,20 @@ export class ChatEngine {
         const msgIndex = chat.messages.findIndex(m => m.id === msgId);
         if (msgIndex === -1) return;
 
-        const raw = error ? error : (result || '');
+        const raw = String(error ? error : (result || ''));
         const outputDetail = raw.length > 500 ? raw.slice(0, 497) + '…' : raw;
+        const completedAt = new Date().toISOString();
+        const startedAt = new Date(chat.messages[msgIndex].startedAt || chat.messages[msgIndex].timestamp).getTime();
+        const durationMs = Number.isFinite(startedAt)
+            ? Math.max(0, new Date(completedAt).getTime() - startedAt)
+            : null;
 
         const updatedMsg = {
             ...chat.messages[msgIndex],
             status: error ? 'error' : 'success',
             outputDetail,
+            completedAt,
+            durationMs,
         };
 
         const updatedMessages = [...chat.messages];

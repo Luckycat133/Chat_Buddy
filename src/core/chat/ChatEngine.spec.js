@@ -317,6 +317,62 @@ describe('ChatEngine', () => {
     expect(engine.chats[0].messages.at(-1).content).toBe('换个话题继续');
   });
 
+  it('test_when_model_only_returns_reasoning_should_show_an_explicit_safe_error', () => {
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        name: 'Luna',
+        participants: ['user-me', 'ai-1'],
+        messages: [{ id: 'user-1', senderId: 'user-me', content: '详细分析', timestamp: '2026-08-13T00:00:00.000Z' }],
+      },
+    ]);
+
+    engine.aiPipeline.callbacks.onError('chat-1', 'ai-1', {
+      code: 'reasoning_only_response',
+      userMessageId: 'user-1',
+      language: 'zh',
+    });
+
+    expect(engine.chats[0].messages.at(-1)).toMatchObject({
+      type: 'ai_error',
+      errorCode: 'reasoning_only_response',
+      content: expect.stringContaining('内部推理'),
+    });
+  });
+
+  it('test_when_ai_streams_should_update_one_ephemeral_message_then_finalize_and_persist_it', () => {
+    const engine = createEngineWithChats([
+      {
+        id: 'chat-1',
+        name: 'Luna',
+        participants: ['user-me', 'ai-1'],
+        messages: [{ id: 'user-1', senderId: 'user-me', content: '请详细回答', timestamp: '2026-08-13T00:00:00.000Z' }],
+      },
+    ]);
+
+    engine.aiPipeline.callbacks.onStream('chat-1', 'ai-1', '第一段');
+    const streamId = engine.chats[0].messages.at(-1).id;
+    engine.aiPipeline.callbacks.onStream('chat-1', 'ai-1', '第一段和第二段');
+
+    expect(engine.chats[0].messages).toHaveLength(2);
+    expect(engine.chats[0].messages.at(-1)).toMatchObject({
+      id: streamId,
+      type: 'ai_stream',
+      status: 'streaming',
+      content: '第一段和第二段',
+    });
+
+    engine.aiPipeline.callbacks.onMessage('chat-1', 'ai-1 最终回答', 'ai-1');
+
+    expect(engine.chats[0].messages).toHaveLength(2);
+    expect(engine.chats[0].messages.at(-1)).toMatchObject({
+      id: streamId,
+      status: 'sent',
+      content: 'ai-1 最终回答',
+    });
+    expect(engine.chats[0].messages.at(-1)).not.toHaveProperty('type');
+  });
+
   it('test_when_chat_changes_should_replace_array_reference_for_external_store_subscribers', () => {
     const engine = createEngineWithChats([
       { id: 'chat-1', name: 'Chat', participants: ['user-me', 'ai-2'], messages: [] },

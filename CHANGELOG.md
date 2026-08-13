@@ -110,10 +110,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Limited ordinary persona, Agent, and group turns to one configured text-model request; group chats now select one eligible responder instead of fanning out to every participant
   - Removed automatic title generation, LLM memory extraction, recall rewrites, proactive images, background Moment generation, recursive model-backed tools, and automatic API retries
   - Moved durable memory capture, titles, Moment templates, quizzes, idiom games, palettes, learning-state tools, and deterministic arithmetic to local code with zero text-model requests
-  - Capped provider context to six recent messages / 5,000 characters and applied smaller per-Agent output budgets; Scholar now uses one Tavily retrieval plus one bounded synthesis
+  - Preserved the latest user input and expanded working context to 48 recent messages / 100,000 characters; raised task-aware output ceilings to 1,600–6,144 tokens
+  - Kept ordinary turns at one model request while restoring a visible two-request native-tool path when the model must infer tool arguments and synthesize the verified result
+  - Rebuilt per-turn prompts from task-relevant sections so persona identity, memory, group context, freshness safeguards, and tool guidance are injected only when applicable
+  - Repaired the prompt regression benchmark against the current Scholar, Muse, and dynamic-turn owners; the measured specialist-prompt budget intentionally rises by about 146 estimated tokens (+11.5%) for stronger Coder/Sensei behavior, while request fan-out remains removed
+  - Added in-place streaming for task-Agent answers without adding requests; throttled UI updates and removed the redundant typing bubble once text is visible
+  - Corrected negated brevity requests such as “不要为了简短而省略” so they receive the long-form budget instead of an 800-token cap
+  - Disabled optional extended reasoning with OpenRouter `reasoning.effort: "none"` and excluded reasoning output after live testing exposed duplicated scratchpad content; normal inference and function calling remain enabled
+  - Strengthened post-tool synthesis so verified formulas and units remain authoritative, including area/circumference/volume distinctions; exact local math facts now replace unusable one-character provider synthesis without a third request
   - Kept image generation and text-to-speech behind explicit user actions, with TTS caching for repeat playback
 - **Fixed OpenRouter free model**
-  - Standardized the default and settings preset on `nvidia/nemotron-3.5-lightning:free`; automatic fallback models remain disabled
+  - Standardized the default and settings preset on `nvidia/nemotron-3-ultra-550b-a55b:free`; automatic fallback models and the random `openrouter/free` router remain disabled
   - Added visible manual retry behavior for provider failures so a failed turn cannot silently spend additional requests
 
 ### Security
@@ -130,7 +137,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **Real OpenRouter Agent/persona and request-budget validation** (2026-08-13)
-  - Validated `nvidia/nemotron-3.5-lightning:free` with concise Chinese, React debugging, cross-topic memory recall, Aurora support, Muse translation, and Scholar synthesis
+  - Validated the fixed Ultra route with one-request cross-topic persona recall, a generated TypeScript React Hook whose four tests passed in a temporary Vitest workspace, and a real two-request native math-tool flow
+  - Rejected Lightning and Super as the final default after executable code-quality checks; candidate comparison is test-only and is not runtime model routing
   - Verified local math and trivia at zero provider requests, group chat at one responder/one model request, explicit Pixel image generation at one MiniMax request, and cached repeat TTS at zero additional requests
   - Updated Scholar's official-source filter for the current OpenRouter free-router documentation URL while retaining one Tavily request
   - Prevented question sentences from being stored as long-term facts and replaced base64 image source text in Agent topic previews with a localized photo label
@@ -143,7 +151,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevented stale hydration from overwriting new messages and made ChatEngine snapshots immutable for React subscribers
   - Recomputed message metadata after deletion, fixed poll memoization and Scholar tool schemas, and refreshed AI clients on config changes
   - Added a real light theme, accessible accent contrast, semantic controls, dialog focus management, 44px touch targets, language metadata, and reduced-motion handling
-  - Added Playwright + Axe acceptance coverage: 19/19 Chromium tests and 8/8 mobile UX tests
+  - Added Playwright + Axe acceptance coverage: 21/21 Chromium tests and 10/10 mobile UX tests
   - Replaced the missing notification audio asset with an on-demand Web Audio tone and prevented production Service Workers from controlling development sessions
   - Replaced regex-only HTML filtering with DOMPurify, allowlisted avatar image sources, removed legacy persisted Moments image keys, and constrained persistent API configuration fields
   - Declared read-only CI workflow permissions and removed 222 generated coverage artifacts from version control
@@ -154,8 +162,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added deterministic test coverage for the recall branch to stop intermittent test failures
   - Hardened async memory extraction to avoid calling `.catch()` on non-Promise return values
 - **Layered coverage gate** (`vitest.config.js`, `vitest.full-coverage.config.js`, `docs/TEST_COVERAGE_ANALYSIS.md`)
-  - Verified 407/407 tests and a 60% hard gate on regression-critical logic
-  - Current gated coverage is 85.04% statements, 77.83% branches, 84.91% functions, and 87.95% lines
+  - Verified 471/471 tests and a 60% hard gate on regression-critical logic
+  - Current gated coverage is 85.66% statements, 76.61% branches, 86.69% functions, and 88.86% lines
+  - Current whole-source observation is 27.61% statements, 25.00% branches, 21.31% functions, and 28.88% lines
   - Kept an honest whole-repository observation command; UI behavior is gated separately by Playwright + Axe
 
 ### Added — UI Accessibility & Interaction Improvements (2026-03-08)

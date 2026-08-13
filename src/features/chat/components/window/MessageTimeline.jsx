@@ -299,6 +299,7 @@ const MessageItem = memo(function MessageItem({
             <div
                 ref={(node) => setMessageRef(msg.id, node)}
                 data-message-id={msg.id}
+                aria-busy={msg.type === 'ai_stream' || undefined}
                 className={cn(
                     "flex mb-2 group/msg rounded-2xl transition-all",
                     isMe ? "justify-end" : "justify-start",
@@ -608,6 +609,12 @@ export default function MessageTimeline({
         };
     }, [focusMessageId, onFocusHandled]);
 
+    const streamingAIIds = new Set(
+        chat.messages
+            .filter(message => message.type === 'ai_stream')
+            .map(message => message.senderId)
+    );
+
     return (
         <div className="flex-1 overflow-y-auto p-3 pb-20 md:pb-4" data-bubble-style={bubbleStyle}>
             {chat.messages.map((msg, index) => {
@@ -667,7 +674,7 @@ export default function MessageTimeline({
                 return ai ? <TypingBubble key={`edit-${aiId}`} persona={ai} isEditing={true} /> : null;
             })}
 
-            {(typingIndicators?.[chat.id] || []).map(aiId => {
+            {(typingIndicators?.[chat.id] || []).filter(aiId => !streamingAIIds.has(aiId)).map(aiId => {
                 const ai = personas.find(p => p.id === aiId);
                 return ai ? <TypingBubble key={`type-${aiId}`} persona={ai} /> : null;
             })}

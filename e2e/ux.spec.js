@@ -186,6 +186,124 @@ test.describe('Chat Buddy UX acceptance', () => {
     expect(aiRequestBody?.model).toBe('chat-buddy-e2e-model');
   });
 
+  test('shows a model-directed tool call and uses one synthesis follow-up', async ({ page }) => {
+    const requestBodies = [];
+    await page.route('**/chat/completions', async route => {
+      const body = route.request().postDataJSON();
+      requestBodies.push(body);
+
+      const isToolSelection = requestBodies.length === 1;
+      const responseBody = isToolSelection
+        ? {
+            choices: [{
+              message: {
+                role: 'assistant',
+                content: null,
+                tool_calls: [{
+                  id: 'call_e2e_math',
+                  type: 'function',
+                  function: {
+                    name: 'execute_math',
+                    arguments: JSON.stringify({ expression: '1200 / 7' }),
+                  },
+                }],
+              },
+              finish_reason: 'tool_calls',
+            }],
+          }
+        : [
+            'data: {"choices":[{"delta":{"content":"The verified quotient is 171.42857142857142 per person."}}]}',
+            'data: {"choices":[{"delta":{"content":" For whole cents, six people pay 171.43 and one pays 171.42."}}]}',
+            'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}',
+            'data: [DONE]',
+            '',
+          ].join('\n\n');
+
+      await route.fulfill({
+        status: 200,
+        contentType: isToolSelection ? 'application/json' : 'text/event-stream',
+        body: isToolSelection ? JSON.stringify(responseBody) : responseBody,
+      });
+    });
+
+    await openReady(page, '/agents');
+    await page.getByRole('button', { name: 'Start chatting with Sensei' }).click();
+    await expect(page).toHaveURL(/\/agents\/agent-sensei$/);
+    await page.getByRole('button', { name: 'New Topic' }).click();
+
+    const composer = page.getByRole('textbox', { name: 'Type a message...' });
+    await composer.fill('I am planning an event budget. Please calculate how 1200 should be split among 7 people, then advise what to do with the remainder.');
+    await composer.press('Enter');
+
+    await expect(page.getByRole('status', { name: /Math: Completed/ })).toBeVisible();
+    await expect(page.getByText(
+      'The verified quotient is 171.42857142857142 per person. For whole cents, six people pay 171.43 and one pays 171.42.',
+      { exact: true },
+    ).last()).toBeVisible();
+    await page.waitForTimeout(500);
+
+    expect(requestBodies).toHaveLength(2);
+    expect(requestBodies[0].tools?.map(tool => tool.function.name)).toEqual(['execute_math']);
+    expect(requestBodies[0].tool_choice).toBe('auto');
+    expect(requestBodies[1].tools).toBeUndefined();
+    expect(requestBodies[1].stream).toBe(true);
+    expect(requestBodies[1].messages.some(message => message.content?.includes('[TOOL_RESULT for execute_math]'))).toBe(true);
+  });
+
+  test('keeps exact local tool facts when provider synthesis is unusable', async ({ page }) => {
+    const requestBodies = [];
+    await page.route('**/chat/completions', async route => {
+      requestBodies.push(route.request().postDataJSON());
+      const isToolSelection = requestBodies.length === 1;
+      const responseBody = isToolSelection
+        ? {
+            choices: [{
+              message: {
+                role: 'assistant',
+                content: null,
+                tool_calls: [{
+                  id: 'call_e2e_circle',
+                  type: 'function',
+                  function: {
+                    name: 'execute_math',
+                    arguments: JSON.stringify({ expression: 'pi * 7.75^2' }),
+                  },
+                }],
+              },
+              finish_reason: 'tool_calls',
+            }],
+          }
+        : [
+            'data: {"choices":[{"delta":{"content":"Z"}}]}',
+            'data: {"choices":[{"delta":{},"finish_reason":"stop"}]}',
+            'data: [DONE]',
+            '',
+          ].join('\n\n');
+
+      await route.fulfill({
+        status: 200,
+        contentType: isToolSelection ? 'application/json' : 'text/event-stream',
+        body: isToolSelection ? JSON.stringify(responseBody) : responseBody,
+      });
+    });
+
+    await openReady(page, '/agents');
+    await page.getByRole('button', { name: 'Start chatting with Sensei' }).click();
+    await page.getByRole('button', { name: 'New Topic' }).click();
+
+    const composer = page.getByRole('textbox', { name: 'Type a message...' });
+    await composer.fill('Calculate pi times seven point seven five squared for the area of a circle with radius 7.75. Use the math tool and keep the full result.');
+    await composer.press('Enter');
+
+    await expect(page.getByRole('status', { name: /Math: Completed/ })).toBeVisible();
+    await expect(page.locator('main')).toContainText('188.69190875623696');
+    await expect(page.locator('main')).toContainText('60.0625 * pi');
+    await expect(page.locator('main')).toContainText('area of a circle with radius 7.75');
+    await expect(page.locator('main')).toContainText('no hidden retry was made');
+    await expect(page.getByText('Z', { exact: true })).toHaveCount(0);
+    expect(requestBodies).toHaveLength(2);
+  });
+
   test('unknown URLs recover to the application instead of showing a blank page', async ({ page }) => {
     await openReady(page, '/this-route-does-not-exist');
     await expect(page).toHaveURL(/\/$/);

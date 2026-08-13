@@ -44,17 +44,39 @@ describe('ContextCompressor request-efficient memory', () => {
         ])).toEqual([]);
     });
 
+    it('does not store a recall command as a new fact when it has no question mark', () => {
+        expect(extractLocalMemoryItems([{
+            senderId: 'user-me',
+            content: '不要猜，请逐项告诉我名字、猫的玩具和工作日回家时间。',
+        }])).toEqual([]);
+    });
+
     it('keeps durable statements but never stores follow-up questions as facts', () => {
         const items = extractLocalMemoryItems([{
             senderId: 'user-me',
             content: '我计划下周第一次做公开演讲。我担心上台忘词。我习惯带绿色钢笔。你还记得我最担心什么吗？',
         }]);
 
-        expect(items).toHaveLength(1);
-        expect(items[0].fact).toContain('公开演讲');
-        expect(items[0].fact).toContain('绿色钢笔');
-        expect(items[0].fact).not.toContain('还记得');
-        expect(items[0].fact).not.toContain('什么吗');
+        expect(items).toHaveLength(3);
+        expect(items.map(item => item.fact).join(' ')).toContain('公开演讲');
+        expect(items.map(item => item.fact).join(' ')).toContain('绿色钢笔');
+        expect(items.map(item => item.fact).join(' ')).not.toContain('还记得');
+        expect(items.map(item => item.fact).join(' ')).not.toContain('什么吗');
+    });
+
+    it('extracts every durable fact from realistic semicolon-separated Chinese', () => {
+        const items = extractLocalMemoryItems([{
+            senderId: 'user-me',
+            content: '这关系到之后的安排：我叫林禾；9月14日从成都搬到苏州；会带一只叫栗子的黑猫；它最离不开黄色羽毛玩具；我工作日早上7点20出门、晚上6点40回家。',
+        }]);
+        const facts = items.map(item => item.fact).join('\n');
+
+        expect(items).toHaveLength(5);
+        expect(facts).toContain('林禾');
+        expect(facts).toContain('成都搬到苏州');
+        expect(facts).toContain('栗子的黑猫');
+        expect(facts).toContain('黄色羽毛玩具');
+        expect(facts).toContain('早上7点20');
     });
 
     it('persists memories through IndexedDB store only', async () => {
@@ -72,8 +94,8 @@ describe('ContextCompressor request-efficient memory', () => {
         );
     });
 
-    it('caps long Chinese context instead of copying full paragraphs into summary', () => {
-        const messages = Array.from({ length: 14 }, (_, index) => ({
+    it('keeps a long recent window and bounds older Chinese context summaries', () => {
+        const messages = Array.from({ length: 70 }, (_, index) => ({
             id: `m-${index}`,
             senderId: index % 2 === 0 ? 'user-me' : 'ai-1',
             content: `第${index}条${'很长的中文内容'.repeat(40)}`,
@@ -82,9 +104,20 @@ describe('ContextCompressor request-efficient memory', () => {
         const result = compressContext(messages);
 
         expect(result.compressed).toBe(true);
-        expect(result.recentMessages).toHaveLength(6);
-        expect(result.summary.length).toBeLessThan(220);
+        expect(result.recentMessages).toHaveLength(48);
+        expect(result.summary.length).toBeLessThan(1500);
         expect(result.summary).toContain('Earlier user context');
+        expect(result.recentMessages.at(-1).content).toContain('第69条');
+    });
+
+    it('does not compress an ordinary 48-message conversation', () => {
+        const messages = Array.from({ length: 48 }, (_, index) => ({
+            id: `m-${index}`,
+            senderId: index % 2 === 0 ? 'user-me' : 'ai-1',
+            content: `message-${index}`,
+        }));
+
+        expect(compressContext(messages)).toEqual({ compressed: false, messages });
     });
 
     it('shares group memories locally with every participant without model fan-out', async () => {

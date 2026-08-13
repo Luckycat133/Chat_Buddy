@@ -35,6 +35,6 @@ describe('MemoryInjector token budget', () => {
 
         expect(block).toContain('豆包');
         expect(block).toContain('厦门');
-        expect(mocks.getRelevantFacts).toHaveBeenCalledWith('ai-1', 4);
+        expect(mocks.getRelevantFacts).toHaveBeenCalledWith('ai-1', 8);
     });
 });

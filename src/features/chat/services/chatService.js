@@ -5,6 +5,9 @@
 
 import { getAIClient, getAIConfiguration } from '../../../services/api/aiClient';
 
+export const TRUNCATED_RESPONSE_MARKER = '[RESPONSE_TRUNCATED]';
+const REASONING_TRACE_PREFIX = /^\s*(?:here(?:'|’)s a thinking process|thinking process:|analysis of (?:the )?(?:user )?(?:input|prompt)|<think>|we need to (?:answer|respond)|let(?:'|’)s analyze)/i;
+
 function toTextContent(value) {
     if (typeof value === 'string') return value;
     if (!value) return '';
@@ -34,7 +37,6 @@ function extractAssistantContent(data) {
         choice?.text,
         choice?.delta?.content,
         data?.output_text,
-        msg?.reasoning_content,
     ];
 
     for (const candidate of candidates) {
@@ -61,6 +63,18 @@ function extractAssistantContent(data) {
     return '';
 }
 
+function isReasoningOnlyContent(data, content) {
+    const message = data?.choices?.[0]?.message;
+    const visible = String(content || '').trim();
+    if (!visible) return false;
+
+    const reasoningCandidates = [message?.reasoning, message?.reasoning_content]
+        .map(value => toTextContent(value).trim())
+        .filter(Boolean);
+    return REASONING_TRACE_PREFIX.test(visible)
+        || reasoningCandidates.some(reasoning => reasoning === visible);
+}
+
 function extractToolCallMarker(data) {
     const choice = data?.choices?.[0];
     const msg = choice?.message;
@@ -85,82 +99,91 @@ function extractDeltaContent(data) {
     return toTextContent(delta.content || delta.text || '');
 }
 
-async function parseSSEStream(response, onDelta, options = {}) {
+function collectStreamingToolCalls(data, collected) {
+    const choice = data?.choices?.[0];
+    const calls = choice?.delta?.tool_calls || choice?.message?.tool_calls;
+    if (!Array.isArray(calls)) return;
+
+    calls.forEach((call, arrayIndex) => {
+        const index = Number.isInteger(call?.index) ? call.index : arrayIndex;
+        const current = collected.get(index) || {
+            id: null,
+            type: 'function',
+            function: { name: '', arguments: '' },
+        };
+        if (call?.id) current.id = call.id;
+        if (call?.type) current.type = call.type;
+        if (call?.function?.name) current.function.name += call.function.name;
+        if (call?.function?.arguments) current.function.arguments += call.function.arguments;
+        collected.set(index, current);
+    });
+}
+
+async function parseSSEStream(response, onDelta) {
     const reader = response.body?.getReader?.();
     if (!reader) return null;
 
     const decoder = new TextDecoder();
     let buffer = '';
     let fullText = '';
-    let nativeToolCalls = null;
-    const timeoutMs = options.timeout || 120000; // 120秒默认超时
-    const abortController = new AbortController();
-    let timedOut = false;
-
-    const timeoutId = setTimeout(() => {
-        timedOut = true;
-        abortController.abort();
-        if (reader.cancel) {
-            reader.cancel(new Error('SSE stream timeout'));
-        }
-    }, timeoutMs);
+    let finishReason = null;
+    let streamError = null;
+    const collectedToolCalls = new Map();
 
     try {
         while (true) {
-            if (timedOut) {
-                console.warn('[SSE] Stream timed out after', timeoutMs, 'ms');
-                break;
-            }
             const { value, done } = await reader.read();
             if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const events = buffer.split(/\r?\n\r?\n/);
-        buffer = events.pop() || '';
+            buffer += decoder.decode(value, { stream: true });
+            const events = buffer.split(/\r?\n\r?\n/);
+            buffer = events.pop() || '';
 
-        for (const event of events) {
-            const dataLines = event
-                .split(/\r?\n/)
-                .filter(line => line.startsWith('data:'))
-                .map(line => line.slice(5).trim());
+            for (const event of events) {
+                const dataLines = event
+                    .split(/\r?\n/)
+                    .filter(line => line.startsWith('data:'))
+                    .map(line => line.slice(5).trim());
 
-            if (dataLines.length === 0) continue;
-            const dataPayload = dataLines.join('\n');
+                if (dataLines.length === 0) continue;
+                const dataPayload = dataLines.join('\n');
+                if (dataPayload === '[DONE]') continue;
 
-            if (dataPayload === '[DONE]') {
-                continue;
-            }
-
-            try {
-                const json = JSON.parse(dataPayload);
-                const delta = extractDeltaContent(json);
-                if (delta) {
-                    fullText += delta;
-                    onDelta?.(delta, fullText, json);
+                try {
+                    const json = JSON.parse(dataPayload);
+                    const choice = json?.choices?.[0];
+                    const delta = extractDeltaContent(json);
+                    if (delta) {
+                        fullText += delta;
+                        onDelta?.(delta, fullText, json);
+                    }
+                    if (choice?.finish_reason) finishReason = choice.finish_reason;
+                    collectStreamingToolCalls(json, collectedToolCalls);
+                } catch {
+                    // Ignore malformed SSE frames from intermediate providers.
                 }
-
-                const marker = extractToolCallMarker(json);
-                if (marker) {
-                    nativeToolCalls = marker;
-                }
-            } catch {
-                // Ignore malformed SSE frames from intermediate providers.
             }
-        }
         }
     } catch (error) {
-        if (!timedOut) {
-            console.warn('[SSE] Stream error:', error);
-        }
-    } finally {
-        clearTimeout(timeoutId);
+        streamError = error;
+        console.warn('[SSE] Stream error:', error);
     }
 
     // Flush remaining bytes from decoder (buffer not needed after stream ends)
     decoder.decode();
+    const toolCalls = [...collectedToolCalls.entries()]
+        .sort(([left], [right]) => left - right)
+        .map(([, call]) => call)
+        .filter(call => call.function.name);
 
-    if (!fullText && nativeToolCalls) return nativeToolCalls;
-    return fullText.trim() || null;
+    return {
+        content: fullText.trim(),
+        toolCallMarker: toolCalls.length
+            ? `[TOOL_CALL_NATIVE:${JSON.stringify(toolCalls)}]`
+            : null,
+        finishReason,
+        streamError,
+    };
 }
 
 async function parseResponseBody(response) {
@@ -210,9 +233,9 @@ function reportCallFailure(options, details) {
  * @param {Object} options - Optional configuration for the API call
  * @param {string} options.systemPrompt - Custom system prompt for specialized agents
  * @param {string} options.agentId - Agent ID for logging/tracking
- * @param {number} options.maxTokens - Maximum tokens for response (default: 150, task agents: 500)
+ * @param {number} options.maxTokens - Caller-selected, task-aware response ceiling
  * @param {number} options.temperature - Response temperature (default: 0.8)
- * @param {boolean} options.disableReasoning - Disable OpenRouter reasoning for short utility requests
+ * @param {boolean} options.disableReasoning - Disable optional OpenRouter extended reasoning
  * @returns {Promise<string|null>} - The AI response content or null if failed
  */
 export async function callAI(messages, options = {}) {
@@ -264,15 +287,20 @@ export async function callAI(messages, options = {}) {
         requestBody.max_tokens = maxTokens;
     }
 
-    // Reasoning-first models can spend a tiny utility request's entire token
-    // budget thinking and return no visible content. OpenRouter documents this
-    // normalized switch; keep it scoped to the official endpoint so other
-    // OpenAI-compatible providers never receive an unknown request field.
+    // The configured OpenRouter model can otherwise spend the whole completion
+    // budget on a duplicated reasoning trace and never produce a final answer.
+    // Keep this provider-specific switch off other compatible endpoints.
     if (
         options.disableReasoning === true &&
         isOpenRouterEndpoint(config.baseUrl || aiClient.baseURL)
     ) {
-        requestBody.reasoning = { enabled: false };
+        requestBody.reasoning = {
+            // `enabled: false` is not honored consistently by every upstream
+            // streaming adapter. OpenRouter documents `effort: "none"` as the
+            // explicit off switch; excluding traces is an additional guard.
+            effort: 'none',
+            exclude: true,
+        };
     }
 
     if (Array.isArray(options.tools) && options.tools.length > 0) {
@@ -315,7 +343,27 @@ export async function callAI(messages, options = {}) {
 
             if (options.stream && response.headers?.get?.('content-type')?.includes('text/event-stream')) {
                 const streamed = await parseSSEStream(response, options.onStreamChunk);
-                if (streamed) return streamed;
+                if (streamed?.toolCallMarker) return streamed.toolCallMarker;
+                if (streamed?.content) {
+                    if (REASONING_TRACE_PREFIX.test(streamed.content)) {
+                        reportCallFailure(options, {
+                            code: 'reasoning_only_response',
+                            finishReason: streamed.finishReason || null,
+                        });
+                        return null;
+                    }
+                    if (streamed.finishReason === 'length' || streamed.streamError) {
+                        return `${TRUNCATED_RESPONSE_MARKER}\n${streamed.content}`;
+                    }
+                    return streamed.content;
+                }
+                if (streamed?.streamError) {
+                    reportCallFailure(options, {
+                        code: 'network_error',
+                        message: streamed.streamError?.message || String(streamed.streamError),
+                    });
+                    return null;
+                }
             }
 
             data = await parseResponseBody(response);
@@ -342,14 +390,27 @@ export async function callAI(messages, options = {}) {
                 return null;
             }
 
-            const content = extractAssistantContent(data);
-            if (content) {
-                return content.trim();
-            }
-
             const toolCallMarker = extractToolCallMarker(data);
             if (toolCallMarker) {
                 return toolCallMarker;
+            }
+
+            const choice = data?.choices?.[0];
+            const content = extractAssistantContent(data);
+            if (content && isReasoningOnlyContent(data, content)) {
+                reportCallFailure(options, {
+                    code: 'reasoning_only_response',
+                    finishReason: choice?.finish_reason || null,
+                });
+                return null;
+            }
+
+            if (content && choice?.finish_reason === 'length') {
+                return `${TRUNCATED_RESPONSE_MARKER}\n${content.trim()}`;
+            }
+
+            if (content) {
+                return content.trim();
             }
 
             // Endpoint is reachable but payload has no usable content.

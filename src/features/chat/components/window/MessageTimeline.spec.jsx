@@ -210,6 +210,27 @@ describe('MessageTimeline', () => {
     expect(screen.queryByTestId('typing-ai-unknown')).not.toBeInTheDocument();
   });
 
+  it('test_when_streaming_message_is_visible_should_hide_the_redundant_typing_bubble', () => {
+    const chat = {
+      id: 'chat-1',
+      participants: ['user-me', 'ai-1'],
+      polls: [],
+      messages: [{
+        id: 'stream-1',
+        senderId: 'ai-1',
+        type: 'ai_stream',
+        status: 'streaming',
+        content: '正在生成的正文',
+        timestamp: '2026-02-23T00:00:00.000Z',
+      }],
+    };
+
+    renderTimeline(chat, { typingIndicators: { 'chat-1': ['ai-1'] } });
+
+    expect(screen.queryByTestId('typing-ai-1')).not.toBeInTheDocument();
+    expect(screen.getByText('正在生成的正文').closest('[data-message-id="stream-1"]')).toHaveAttribute('aria-busy', 'true');
+  });
+
   it('test_when_editing_indicator_is_present_should_render_editing_bubble', () => {
     // Given
     const chat = {

@@ -1,5 +1,9 @@
-import { calculateTypingDelay, getRandomDelay } from '../../features/chat/services/chatService';
-import { callAI } from '../../features/chat/services/chatService';
+import {
+    calculateTypingDelay,
+    getRandomDelay,
+    callAI,
+    TRUNCATED_RESPONSE_MARKER,
+} from '../../features/chat/services/chatService';
 import { executeTool } from '../../features/chat/services/toolService';
 import { compressContext, extractMemoriesAsync } from '../memory/ContextCompressor';
 import { buildMemoryBlock, buildGroupContextBlock } from '../memory/MemoryInjector';
@@ -10,19 +14,24 @@ const log = createLogger('AIPipeline');
 const MAX_READ_DELAY_MS = 250;
 const MAX_THINKING_DELAY_MS = 500;
 const MAX_POST_RESPONSE_TYPING_MS = 1200;
-const MAX_LLM_CALLS_PER_TURN = 1;
-const MAX_HISTORY_MESSAGES = 6;
-const MAX_HISTORY_CHARS = 5000;
-const SOCIAL_OUTPUT_TOKENS = 300;
-const DEFAULT_SPECIALIST_OUTPUT_TOKENS = 600;
+// Ordinary turns still use one request. A second request is reserved for the
+// real function-calling path: choose a tool, execute it, then explain its
+// result. This preserves model capability without reintroducing hidden fan-out.
+const MAX_LLM_CALLS_PER_TURN = 2;
+const MAX_HISTORY_MESSAGES = 48;
+const MAX_HISTORY_CHARS = 100000;
+const SOCIAL_OUTPUT_TOKENS = 1600;
+const DEFAULT_SPECIALIST_OUTPUT_TOKENS = 3000;
 const TASK_OUTPUT_TOKEN_LIMITS = {
-    'agent-coder': 700,
-    'agent-muse': 600,
-    'agent-scholar': 320,
-    'agent-sensei': 400,
-    'agent-aurora': 350,
-    'agent-pixel': 500,
+    'agent-coder': 6144,
+    'agent-muse': 4096,
+    'agent-scholar': 4096,
+    'agent-sensei': 3000,
+    'agent-aurora': 2400,
+    'agent-pixel': 3000,
 };
+const LONG_FORM_SOCIAL_OUTPUT_TOKENS = 3000;
+const LONG_FORM_SPECIALIST_OUTPUT_TOKENS = 6144;
 const MAX_TOOL_RESULT_CHARS = 6000;
 const MODEL_BACKED_TOOL_NAMES = new Set([
     'check_grammar',
@@ -49,6 +58,35 @@ const DIRECT_RESULT_TOOL_NAMES = new Set([
     'track_progress',
     'check_prerequisites',
 ]);
+
+const TOOL_PARAMETER_SCHEMAS = {
+    execute_math: {
+        type: 'object',
+        properties: {
+            expression: {
+                type: 'string',
+                minLength: 1,
+                description: 'A math.js-compatible expression derived from the user request',
+            },
+        },
+        required: ['expression'],
+        additionalProperties: false,
+    },
+    detect_content_domain: {
+        type: 'object',
+        properties: {
+            text: { type: 'string', minLength: 1, description: 'Text whose domain should be classified' },
+        },
+        required: ['text'],
+        additionalProperties: false,
+    },
+};
+
+const LONG_FORM_PATTERN = /(?:详细|完整|深入|展开|逐步|长文|全面|教程|方案|报告|分析|解释清楚|in detail|comprehensive|step.by.step|full|long.form|tutorial|report)/i;
+const BRIEF_PATTERN = /(?:简短|简洁|一句话|只要答案|直接回答|brief|concise|one sentence|just the answer)/i;
+const NEGATED_BRIEF_PATTERN = /(?:(?:不|别|勿|避免|拒绝|无需|无须)[^。！？.!?]{0,16}(?:简短|简洁|一句话|只要答案|直接回答|省略)|(?:do not|don't|without|not)[^.!?]{0,20}(?:brief|concise|omit))/i;
+const CURRENT_INFORMATION_PATTERN = /(?:最新|当前(?:的|版本|数据|规则)|近期(?:的|数据|新闻)|实时|政策|法规|价格|时刻表|新闻|天气|latest|current (?:version|data|rule)|recent (?:data|news)|policy|law|price|schedule|news|weather)/i;
+const LEAKED_REASONING_PREFIX = /^\s*(?:here(?:'|’)s a thinking process|thinking process:|analysis of (?:the )?(?:user )?(?:input|prompt)|<think>|we need to (?:answer|respond)|let(?:'|’)s analyze)/i;
 
 const TOOL_INTENT_PATTERNS = {
     check_grammar: /(?:语法|拼写|校对|检查这段|grammar|proofread|spelling)/i,
@@ -159,6 +197,7 @@ export class AIPipeline {
         }
 
         const relevantTools = ai.tools.filter((tool) => {
+            if (MODEL_BACKED_TOOL_NAMES.has(tool.name)) return false;
             const intentPattern = TOOL_INTENT_PATTERNS[tool.name];
             return intentPattern ? intentPattern.test(latestUserText) : false;
         });
@@ -169,8 +208,7 @@ export class AIPipeline {
             function: {
                 name: tool.name,
                 description: tool.description || `Tool: ${tool.name}`,
-                // Keep permissive schema so OpenAI-compatible providers can still plan calls.
-                parameters: tool.parameters || {
+                parameters: tool.parameters || TOOL_PARAMETER_SCHEMAS[tool.name] || {
                     type: 'object',
                     properties: {},
                     additionalProperties: true
@@ -179,11 +217,27 @@ export class AIPipeline {
         }));
     }
 
-    _requiresReasoning(ai, latestUserText = '', hasTools = false) {
-        if (hasTools) return true;
-        if (ai?.agentType !== 'task-specialist') return false;
-        return latestUserText.length > 400
-            || /(?:分析|调试|根因|架构|审查|证明|推理|为什么|debug|architecture|review|prove|reason)/i.test(latestUserText);
+    _wantsLongForm(latestUserText = '') {
+        return LONG_FORM_PATTERN.test(latestUserText);
+    }
+
+    _wantsBriefResponse(latestUserText = '') {
+        return !this._wantsLongForm(latestUserText)
+            && BRIEF_PATTERN.test(latestUserText)
+            && !NEGATED_BRIEF_PATTERN.test(latestUserText);
+    }
+
+    _resolveOutputTokenLimit(ai, latestUserText = '') {
+        const isSpecialist = ai?.agentType === 'task-specialist';
+        const baseLimit = isSpecialist
+            ? (TASK_OUTPUT_TOKEN_LIMITS[ai.id] || DEFAULT_SPECIALIST_OUTPUT_TOKENS)
+            : SOCIAL_OUTPUT_TOKENS;
+        if (this._wantsBriefResponse(latestUserText)) return Math.min(baseLimit, 1000);
+        if (!this._wantsLongForm(latestUserText) && latestUserText.length < 800) return baseLimit;
+        return Math.max(
+            baseLimit,
+            isSpecialist ? LONG_FORM_SPECIALIST_OUTPUT_TOKENS : LONG_FORM_SOCIAL_OUTPUT_TOKENS
+        );
     }
 
     _planExplicitTool(ai, latestUserText = '') {
@@ -258,6 +312,7 @@ export class AIPipeline {
             });
             this.callbacks.onToolEnd?.(chatId, toolMsgId, output, null);
             turnContext.lastToolOutput = String(output || '');
+            turnContext.lastToolName = plan.name;
             turnContext.preplannedTool = plan.name;
             return {
                 role: 'user',
@@ -276,10 +331,12 @@ export class AIPipeline {
 
     _assertPostModelToolBudget(toolName, turnContext = {}) {
         if ((turnContext.llmCalls || 0) > 0 && MODEL_BACKED_TOOL_NAMES.has(toolName)) {
-            throw new Error(
-                `Tool "${toolName}" would exceed the one-model-request budget. `
+            const error = new Error(
+                `Tool "${toolName}" would launch an additional hidden model workflow. `
                 + 'Complete the task in the current response instead.'
             );
+            error.code = 'model_backed_tool_budget';
+            throw error;
         }
     }
 
@@ -289,13 +346,64 @@ export class AIPipeline {
 
         const result = text.match(/^Result:\s*(.+)$/m)?.[1]?.trim();
         const expression = text.match(/^Expression:\s*(.+)$/m)?.[1]?.trim();
+        const simplified = text.match(/^Simplified:\s*(.+)$/m)?.[1]?.trim();
         if (!result) return text;
         const readableExpression = String(expression || '')
             .replace(/\*/g, '×')
             .replace(/\//g, '÷');
         return language === 'en'
-            ? `The result is ${result}${readableExpression ? ` (${readableExpression})` : ''}.`
-            : `结果是 ${result}${readableExpression ? `（${readableExpression}）` : ''}。`;
+            ? `Tool result: \`${result}\`${simplified ? `; exact form: \`${simplified}\`` : ''}${readableExpression ? ` (${readableExpression})` : ''}.`
+            : `工具计算结果：\`${result}\`${simplified ? `；精确形式：\`${simplified}\`` : ''}${readableExpression ? `（${readableExpression}）` : ''}。`;
+    }
+
+    _containsExactToolFact(text, fact) {
+        const source = String(text || '');
+        const target = String(fact || '');
+        if (!target) return false;
+        if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(target)) {
+            return source.includes(target);
+        }
+
+        let index = source.indexOf(target);
+        while (index !== -1) {
+            const before = source[index - 1] || '';
+            const after = source[index + target.length] || '';
+            if (!/[\d.eE+-]/.test(before) && !/[\d.eE+-]/.test(after)) return true;
+            index = source.indexOf(target, index + target.length);
+        }
+        return false;
+    }
+
+    _ensureAuthoritativeToolFacts(response, turnContext = {}) {
+        const text = String(response || '').trim();
+        if (turnContext.lastToolName !== 'execute_math') return text;
+
+        const toolOutput = String(turnContext.lastToolOutput || '');
+        const result = toolOutput.match(/^Result:\s*(.+)$/m)?.[1]?.trim();
+        const simplified = toolOutput.match(/^Simplified:\s*(.+)$/m)?.[1]?.trim();
+        const expression = toolOutput.match(/^Expression:\s*(.+)$/m)?.[1]?.trim();
+        if (!result) return text;
+
+        const hasResult = this._containsExactToolFact(text, result);
+        const hasSimplified = !simplified || text.includes(simplified);
+        if (hasResult && hasSimplified) return text;
+
+        const authoritativeLine = turnContext.language === 'en'
+            ? `Verified tool result: \`${result}\`${simplified ? `; exact form: \`${simplified}\`` : ''}.`
+            : `已验证工具结果：\`${result}\`${simplified ? `；精确形式：\`${simplified}\`` : ''}。`;
+        const circleRadius = expression?.match(/^pi\s*\*\s*(-?\d+(?:\.\d+)?)\s*\^\s*2$/i)?.[1]
+            || expression?.match(/^(-?\d+(?:\.\d+)?)\s*\^\s*2\s*\*\s*pi$/i)?.[1];
+        const asksForCircleArea = /(?:圆[^\n。！？.!?]{0,24}面积|面积[^\n。！？.!?]{0,24}圆|circle[^\n.!?]{0,24}area|area[^\n.!?]{0,24}circle)/i
+            .test(String(turnContext.latestUserText || ''));
+        const contextualLine = circleRadius && asksForCircleArea
+            ? turnContext.language === 'en'
+                ? `This is the area of a circle with radius \`${circleRadius}\`, expressed in square units.`
+                : `这表示半径为 \`${circleRadius}\` 的圆的面积，单位为相应的平方单位。`
+            : '';
+        const fallback = contextualLine
+            ? `${authoritativeLine}\n\n${contextualLine}`
+            : authoritativeLine;
+        return text.length >= 8 ? `${fallback}\n\n${text}` : fallback;
     }
 
     _parseNativeToolMarker(response) {
@@ -346,7 +454,9 @@ export class AIPipeline {
 
         const chatId = chat.id;
         const visibleMessages = (chat.messages || []).filter(
-            message => !message?.recalled && message?.type !== 'ai_error'
+            message => !message?.recalled
+                && message?.type !== 'ai_error'
+                && message?.type !== 'tool_event'
         );
 
         // 1. Calculate Delays
@@ -411,22 +521,27 @@ export class AIPipeline {
             const groupMessages = context?.recentGroupMessages || [];
             const groupBlock = buildGroupContextBlock(groupMessages, ai.id, personas);
 
-            const systemPrompt = this._generateSystemPrompt(
-                ai,
-                { ...(context || {}), latestUserLanguage },
-                memoryBlock,
-                groupBlock
-            );
-
             const turnContext = {
                 userMessageId: latestUserMessage?.id || null,
                 language: latestUserLanguage,
                 latestUserText: latestUserMessage?.content || '',
                 llmCalls: 0,
                 lastToolOutput: null,
+                lastToolName: null,
                 preplannedTool: null,
             };
             const toolPlan = this._planExplicitTool(ai, turnContext.latestUserText);
+            const systemPrompt = this._generateSystemPrompt(
+                ai,
+                {
+                    ...(context || {}),
+                    latestUserLanguage,
+                    latestUserText: turnContext.latestUserText,
+                    plannedToolName: toolPlan?.name || null,
+                },
+                memoryBlock,
+                groupBlock
+            );
             const preflightToolMessage = toolPlan
                 ? await this._runPreflightTool(chatId, ai, toolPlan, this._personas || [], turnContext)
                 : null;
@@ -461,8 +576,9 @@ export class AIPipeline {
                 return;
             }
 
-            // 5. Exactly one text-model request. Explicit tools are executed
-            // locally first and their bounded result is included in this call.
+            // 5. Explicit tools are executed locally first and their bounded
+            // result is included in one synthesis request. Only an ambiguous
+            // model-selected tool may use a second request for interpretation.
             await this._runReActLoop(
                 chatId,
                 ai,
@@ -494,25 +610,59 @@ export class AIPipeline {
             return;
         }
 
-        // Call LLM
+        // Call LLM. Tool schemas are sent only on the first request, only when
+        // local intent routing found a relevant tool but could not safely build
+        // its arguments. This keeps ordinary prompts clean while retaining real
+        // model-directed function calling for ambiguous requests.
         const requestMessages = [{ role: 'system', content: systemPrompt }, ...initialHistory];
-        // Tool selection is deterministic and happens before this request.
-        // Omitting schemas saves prompt tokens and prevents a second LLM turn.
-        const nativeTools = null;
+        const nativeTools = depth === 0
+            && !turnContext.preplannedTool
+            && !turnContext.lastToolOutput
+            ? this._buildNativeToolsForAI(ai, turnContext.latestUserText)
+            : null;
+        const maxTokens = this._resolveOutputTokenLimit(ai, turnContext.latestUserText);
+        // Stream every answer-only request so free-provider latency yields
+        // visible progress for personas as well as task agents. Tool-selection
+        // requests stay buffered because fragmented function arguments must be
+        // reassembled before any local execution begins.
+        const shouldStream = !nativeTools;
         let callFailure = null;
         turnContext.llmCalls = (turnContext.llmCalls || 0) + 1;
+        this.log('[AIPipeline] Provider request plan', {
+            agentId: ai.id,
+            requestNumber: turnContext.llmCalls,
+            systemChars: systemPrompt.length,
+            historyMessages: initialHistory.length,
+            historyChars: initialHistory.reduce((sum, message) => sum + String(message?.content || '').length, 0),
+            maxOutputTokens: maxTokens,
+            tools: nativeTools?.map(tool => tool.function.name) || [],
+        });
         const response = await callAI(requestMessages, {
             agentId: ai.id,
-            maxTokens: ai.agentType === 'task-specialist'
-                ? (TASK_OUTPUT_TOKEN_LIMITS[ai.id] || DEFAULT_SPECIALIST_OUTPUT_TOKENS)
-                : SOCIAL_OUTPUT_TOKENS,
+            maxTokens,
+            temperature: ai?.agentType === 'task-specialist' ? 0.4 : 0.8,
             tools: nativeTools || undefined,
             toolChoice: nativeTools ? 'auto' : undefined,
-            disableReasoning: !this._requiresReasoning(
-                ai,
-                turnContext.latestUserText,
-                Boolean(nativeTools)
-            ),
+            // Nemotron's optional extended-reasoning mode can duplicate its
+            // scratchpad into visible content and consume the completion
+            // budget. Normal inference remains enabled; only that extra mode
+            // is disabled so every request yields a final answer/tool call.
+            disableReasoning: true,
+            stream: shouldStream,
+            onStreamChunk: shouldStream
+                ? (_delta, fullText) => {
+                    if (LEAKED_REASONING_PREFIX.test(fullText)) return;
+                    const now = Date.now();
+                    const lastUpdateAt = turnContext.lastStreamUpdateAt || 0;
+                    if (now - lastUpdateAt < 100 && fullText.length - (turnContext.lastStreamChars || 0) < 160) {
+                        return;
+                    }
+                    turnContext.lastStreamUpdateAt = now;
+                    turnContext.lastStreamChars = fullText.length;
+                    turnContext.streamed = true;
+                    this.callbacks.onStream?.(chatId, ai.id, fullText);
+                }
+                : undefined,
             onError: details => { callFailure = details; },
         });
 
@@ -541,6 +691,7 @@ export class AIPipeline {
             );
         } else if (nativeToolCalls && nativeToolCalls.length > 0) {
             const toolHistory = [];
+            let nativeToolError = null;
 
             for (const toolCall of nativeToolCalls) {
                 this.log(`[Native Tool Call] ${toolCall.name}`, toolCall.args);
@@ -558,14 +709,34 @@ export class AIPipeline {
                     });
                     this.callbacks.onToolEnd?.(chatId, toolMsgId, toolOutput, null);
                     turnContext.lastToolOutput = toolOutput;
-                    toolHistory.push({ role: 'user', content: `[TOOL_RESULT for ${toolCall.name}]\n${toolOutput}\n\n[Please continue based on this result]` });
+                    turnContext.lastToolName = toolCall.name;
+                    toolHistory.push({
+                        role: 'user',
+                        content: `[TOOL_RESULT for ${toolCall.name}]\n${String(toolOutput || '').slice(0, MAX_TOOL_RESULT_CHARS)}\n\n`
+                            + 'Treat the expression and result as authoritative. Quote the full value after `Result:` at least once, without rounding or changing digits; if `Simplified:` is present, preserve that exact symbolic form too. '
+                            + 'A rounded approximation may appear only after the exact value. Preserve the exact operation and any units; do not relabel it as a different formula. '
+                            + 'For geometry, explicitly distinguish area, circumference, and volume. If the real-world meaning is ambiguous, state only the verified arithmetic result. '
+                            + 'Answer the user using this result. Do not call another tool.',
+                    });
                 } catch (error) {
                     const errorMessage = error?.message || String(error);
                     this.log('[Native Tool Error]', error);
                     this.callbacks.onToolEnd?.(chatId, toolMsgId, null, errorMessage);
                     turnContext.lastToolOutput = `工具执行失败：${errorMessage}`;
+                    nativeToolError = turnContext.lastToolOutput;
                     toolHistory.push({ role: 'user', content: `[TOOL_ERROR]: ${errorMessage}` });
                 }
+            }
+
+            if (nativeToolError) {
+                await this._handleFinalResponse(
+                    chatId,
+                    ai,
+                    nativeToolError,
+                    initialHistory,
+                    turnContext
+                );
+                return;
             }
 
             const newHistory = [...initialHistory, ...toolHistory];
@@ -589,15 +760,11 @@ export class AIPipeline {
                 // T13: Emit tool end (success)
                 this.callbacks.onToolEnd?.(chatId, toolMsgId, toolOutput, null);
                 turnContext.lastToolOutput = toolOutput;
+                turnContext.lastToolName = toolName;
 
-                // Recursive Call
-                const newHistory = [
-                    ...initialHistory,
-                    { role: 'assistant', content: response },
-                    { role: 'user', content: `[TOOL_RESULT for ${toolName}]\n${toolOutput}\n\n[Please continue based on this result]` }
-                ];
-
-                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas, turnContext);
+                // Text markers are a legacy compatibility path. Native tool
+                // calls above own the two-request choose/execute/explain flow.
+                await this._handleFinalResponse(chatId, ai, toolOutput, initialHistory, turnContext);
 
             } catch (error) {
                 this.log('[Tool Error]', error);
@@ -605,12 +772,13 @@ export class AIPipeline {
                 this.callbacks.onToolEnd?.(chatId, toolMsgId, null, error.message);
                 turnContext.lastToolOutput = `工具执行失败：${error.message}`;
 
-                const newHistory = [
-                    ...initialHistory,
-                    { role: 'assistant', content: response },
-                    { role: 'user', content: `[TOOL_ERROR]: ${error.message}` }
-                ];
-                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas, turnContext);
+                await this._handleFinalResponse(
+                    chatId,
+                    ai,
+                    turnContext.lastToolOutput,
+                    initialHistory,
+                    turnContext
+                );
             }
 
         } else if (memReqMatch) {
@@ -623,21 +791,17 @@ export class AIPipeline {
                 assertToolAuthorized(ai, 'MEMORY_REQUEST');
                 const toolOutput = await executeTool('MEMORY_REQUEST', { target: targetName, topic }, { personas, requesterId: ai.id });
                 turnContext.lastToolOutput = toolOutput;
-                const newHistory = [
-                    ...initialHistory,
-                    { role: 'assistant', content: response },
-                    { role: 'user', content: `[TOOL_RESULT for MEMORY_REQUEST from ${targetName}]\n${toolOutput}\n\n[Please continue based on this result]` }
-                ];
-                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas, turnContext);
+                await this._handleFinalResponse(chatId, ai, toolOutput, initialHistory, turnContext);
             } catch (error) {
                 this.log('[Memory Request Error]', error);
                 turnContext.lastToolOutput = `记忆请求失败：${error.message}`;
-                const newHistory = [
-                    ...initialHistory,
-                    { role: 'assistant', content: response },
-                    { role: 'user', content: `[TOOL_ERROR]: Memory exchange failed — ${error.message}` }
-                ];
-                await this._runReActLoop(chatId, ai, systemPrompt, newHistory, depth + 1, personas, turnContext);
+                await this._handleFinalResponse(
+                    chatId,
+                    ai,
+                    turnContext.lastToolOutput,
+                    initialHistory,
+                    turnContext
+                );
             }
 
         } else {
@@ -652,15 +816,50 @@ export class AIPipeline {
             return;
         }
 
-        if (response.includes('[SILENCE]')) {
+        let displayResponse = String(response);
+        const wasTruncated = displayResponse.startsWith(`${TRUNCATED_RESPONSE_MARKER}\n`);
+        const rawToolResult = String(_turnContext.lastToolOutput || '').match(/^Result:\s*(.+)$/m)?.[1]?.trim();
+        const incompleteToolSynthesis = !wasTruncated
+            && _turnContext.lastToolName === 'execute_math'
+            && rawToolResult
+            && !this._containsExactToolFact(displayResponse, rawToolResult)
+            && displayResponse.trim().length < 8;
+        if (wasTruncated) {
+            const partial = displayResponse.slice(TRUNCATED_RESPONSE_MARKER.length).trim();
+            const hasVerifiedToolResult = _turnContext.lastToolName === 'execute_math'
+                && /^Result:\s*.+$/m.test(String(_turnContext.lastToolOutput || ''));
+            // A one- or two-character fragment such as "计" is not useful prose.
+            // Keep the verified local result and be explicit that synthesis failed,
+            // without spending a third provider request on a hidden retry.
+            const usablePartial = hasVerifiedToolResult && partial.length < 8 ? '' : partial;
+            displayResponse = this._ensureAuthoritativeToolFacts(usablePartial, _turnContext);
+            const notice = _turnContext.language === 'en'
+                ? hasVerifiedToolResult && !usablePartial
+                    ? '> The verified local tool result is preserved above. The provider did not complete its explanation; no hidden retry was made.'
+                    : '> The provider reached its response limit. The completed portion above is preserved; no hidden retry was made.'
+                : hasVerifiedToolResult && !usablePartial
+                    ? '> 上方已保留本地工具验证结果。上游模型未完成说明；系统没有隐藏重试。'
+                    : '> 上游模型达到回复长度上限。上方已生成内容予以保留；系统没有隐藏重试。';
+            displayResponse = `${displayResponse}\n\n${notice}`;
+        } else {
+            displayResponse = this._ensureAuthoritativeToolFacts(displayResponse, _turnContext);
+            if (incompleteToolSynthesis) {
+                const notice = _turnContext.language === 'en'
+                    ? '> The provider did not complete its explanation. The verified local result is shown instead; no hidden retry was made.'
+                    : '> 上游模型未完成说明。系统已改用上方本地验证结果，且没有隐藏重试。';
+                displayResponse = `${displayResponse}\n\n${notice}`;
+            }
+        }
+
+        if (displayResponse.includes('[SILENCE]')) {
             this.callbacks.onTyping?.(chatId, ai.id, false);
             return;
         }
 
         // Parse SCHEDULE first so control tags always take effect even when
         // optional conversational polish features (like recall simulation) run.
-        const scheduleMatch = response.match(/\[SCHEDULE:(\d+)\]/);
-        let cleanResponse = response;
+        const scheduleMatch = displayResponse.match(/\[SCHEDULE:(\d+)\]/);
+        let cleanResponse = displayResponse;
         if (scheduleMatch) {
             const minutes = parseInt(scheduleMatch[1], 10);
             cleanResponse = cleanResponse.replace(scheduleMatch[0], '').trim();
@@ -690,7 +889,11 @@ export class AIPipeline {
             }
         } else {
             // Standard single message
-            await this._simulateTypingAndSend(chatId, ai, cleanResponse);
+            if (_turnContext.streamed) {
+                this.callbacks.onMessage?.(chatId, cleanResponse, ai.id);
+            } else {
+                await this._simulateTypingAndSend(chatId, ai, cleanResponse);
+            }
         }
 
         // Done. Media APIs are only reached by an explicit user action/tool.
@@ -717,13 +920,25 @@ export class AIPipeline {
     // --- Helpers Copied/Refactored from Context ---
     // In a future step, these could be extracted to a pure utility class
 
+    _compactHistoryContent(content) {
+        const text = String(content || '');
+        if (text.startsWith('[IMG:')) return '[Image shared in chat]';
+        if (text.startsWith('[STICKER:')) return '[Sticker shared in chat]';
+        if (text.startsWith('[GIFT:')) return '[Gift shared in chat]';
+        if (text.startsWith('[RED_PACKET:')) return '[Red packet shared in chat]';
+        return text;
+    }
+
     _prepareHistory(messages, personas, compressed, summary, polls, includeSpeakerNames = false) {
         const personaNameMap = new Map(personas.map(p => [p.id, p.name]));
         const selectedMessages = [];
-        let remainingChars = MAX_HISTORY_CHARS;
+        const prefixReserve = compressed && summary
+            ? String(summary).length + 2
+            : '[Previous chat context]'.length;
+        let remainingChars = Math.max(1, MAX_HISTORY_CHARS - prefixReserve);
         for (const message of messages.slice(-MAX_HISTORY_MESSAGES).reverse()) {
             if (remainingChars <= 0) break;
-            const original = String(message?.content || '');
+            const original = this._compactHistoryContent(message?.content);
             let content = original;
             if (content.length > remainingChars) {
                 const headLength = Math.max(1, Math.floor((remainingChars - 1) * 0.65));
@@ -765,18 +980,27 @@ export class AIPipeline {
             }
         }
 
-        if (history.length > 0 && history[0].role === 'assistant') {
-            history.unshift({ role: 'user', content: compressed ? summary : '[Previous chat context]' });
+        if (compressed && summary) {
+            if (history.length === 0) {
+                history.push({ role: 'user', content: summary });
+            } else if (history[0].role === 'user') {
+                history[0] = {
+                    ...history[0],
+                    content: `${summary}\n\n${history[0].content}`,
+                };
+            } else {
+                history.unshift({ role: 'user', content: summary });
+            }
+        } else if (history.length > 0 && history[0].role === 'assistant') {
+            history.unshift({ role: 'user', content: '[Previous chat context]' });
         }
 
         return history;
     }
 
     _generateSystemPrompt(ai, context = null, memoryBlock = '', groupBlock = '') {
-        const base = ai.systemPrompt
-            ? `You are ${ai.name}.`
-            : `You are ${ai.name}.\nPersonality: ${ai.personality}\nStyle: ${ai.style}`;
-        const personaRules = ai.systemPrompt ? `\nCORE INSTRUCTIONS:\n${ai.systemPrompt}\n` : '';
+        const identity = ai.systemPrompt?.trim()
+            || `You are ${ai.name}. Personality: ${ai.personality || 'helpful'}. Style: ${ai.style || 'natural'}.`;
         const relationshipByLevel = {
             1: 'acquaintance',
             2: 'friend',
@@ -790,21 +1014,38 @@ export class AIPipeline {
         const mood = context?.mood?.promptHint;
         const moodHint = mood && !isTaskSpecialist ? `\nCURRENT MOOD: ${mood}` : '';
         const latestUserLanguage = context?.latestUserLanguage;
+        const latestUserText = context?.latestUserText || '';
         const outputLanguage = latestUserLanguage === 'en'
             ? 'English'
             : latestUserLanguage === 'zh'
                 ? 'Simplified Chinese'
                 : context?.preferredLanguage === 'en' ? 'English' : 'Simplified Chinese';
-        const groupRule = groupBlock
-            ? '\nIn a group, reply only when relevant; output [SILENCE] when you should not answer.'
-            : '';
-        const behaviorRules = `
-Reply in ${outputLanguage}. Stay in character. Be concise in casual chat.
-HIGHEST PRIORITY: for a concrete question, the first sentence must give a specific answer or action. Never answer with metaphors alone; character flavor may follow.
-Default to the shortest complete answer. Do not repeat the question or add optional alternatives unless the user asks for detail.
-Never invent current travel rules, laws, medical guidance, prices, schedules, or product policies. Without precomputed search evidence, keep advice general and tell the user which official source to verify.
-Never prefix the answer with your name or a speaker label.${groupRule}`;
-        return `${base}${personaRules}${relationshipHint}${moodHint}${memoryBlock}${groupBlock}${behaviorRules}`;
+        const responseRules = [
+            `Reply in ${outputLanguage} and stay in character.`,
+            'For a concrete question, lead with the answer or action; then provide the reasoning, examples, code, or steps needed to complete the task.',
+            this._wantsLongForm(latestUserText)
+                ? 'The user requested depth; cover every requested deliverable completely, but do not restate the prompt or pad the answer after the requirements are satisfied.'
+                : this._wantsBriefResponse(latestUserText)
+                    ? 'The user requested brevity; answer directly without optional expansion.'
+                    : 'Match the depth and format to the task; keep casual chat natural, but do not omit useful substance.',
+            'Do not repeat the question or prefix the answer with your name.',
+            'Return only the final user-facing response; never expose a scratchpad, chain-of-thought, or an analysis of the prompt.',
+        ];
+        if (CURRENT_INFORMATION_PATTERN.test(latestUserText) && !context?.plannedToolName) {
+            responseRules.push('For time-sensitive facts without retrieved evidence, state what cannot be verified and point to the relevant official source; do not invent current details.');
+        }
+        if (groupBlock) {
+            responseRules.push('In a group, reply only when relevant; output [SILENCE] when you should not answer.');
+        }
+
+        return [
+            identity,
+            relationshipHint.trim(),
+            moodHint.trim(),
+            memoryBlock.trim(),
+            groupBlock.trim(),
+            `TURN RULES:\n- ${responseRules.join('\n- ')}`,
+        ].filter(Boolean).join('\n\n');
     }
 
     _detectLatestUserLanguage(messages = []) {

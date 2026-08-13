@@ -14,12 +14,12 @@ deterministic unit regressions.
 
 | Metric | Verified | Gate |
 | --- | ---: | ---: |
-| Statements | 85.04% | 60% |
-| Branches | 77.83% | 60% |
-| Functions | 84.91% | 60% |
-| Lines | 87.95% | 60% |
+| Statements | 85.66% | 60% |
+| Branches | 76.61% | 60% |
+| Functions | 86.69% | 60% |
+| Lines | 88.86% | 60% |
 
-The run completed with 24 test files and 407/407 passing tests.
+The run completed with 32 test files and 471/471 passing tests.
 
 ## Layered quality model
 
@@ -28,17 +28,18 @@ repository uses three explicit layers:
 
 1. `npm run test:coverage` — a hard 60% gate for regression-critical unit logic.
 2. `npm run test:coverage:all` — an observational report over every source file,
-   with no threshold. The latest whole-repository values are 22.57% statements,
-   19.77% branches, 17.68% functions, and 23.45% lines.
+   with no threshold. The latest whole-repository values are 27.61% statements,
+   25.00% branches, 21.31% functions, and 28.88% lines.
 3. `npm run test:e2e -- --project=chromium` — rendered behavior and UX. The
-   current suite passes 19/19 tests; the mobile UX project passes 8/8.
+   current suite passes 21/21 tests; the mobile UX project passes 10/10.
 
 This split does not claim that the whole UI has high unit coverage. It keeps the
 critical gate enforceable while Playwright and Axe verify the behavior that
 line instrumentation cannot establish: routing, focus, keyboard use, touch
 targets, responsive layout, reduced motion, accessible names, color contrast,
-and the create-chat/send-message path, including preservation of bracket syntax
-such as `items[1]` and `items[0]`.
+and the create-chat/send-message path, including preservation of bracket syntax,
+the two-request native-tool budget, and exact local-result fallback when provider
+synthesis is unusable.
 
 ## Gated modules
 

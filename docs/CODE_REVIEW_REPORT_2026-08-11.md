@@ -14,15 +14,15 @@
 
 | 验证 | 结果 |
 | --- | --- |
-| `npm test`（请求预算修复后的当前套件） | 31 个文件、443/443 通过 |
-| `TZ=UTC npm run test:coverage` | 24 个文件、407/407 通过；核心逻辑门禁通过：Statements 85.04%、Branches 77.83%、Functions 84.91%、Lines 87.95% |
-| `TZ=UTC npm run test:coverage:all` | 407/407 通过；全仓观测值为 Statements 22.57%、Branches 19.77%、Functions 17.68%、Lines 23.45%，不作为单元门禁伪装成已全面覆盖 |
+| `npm test`（请求预算修复后的当前套件） | 32 个文件、471/471 通过 |
+| `TZ=UTC npm run test:coverage` | 32 个文件、471/471 通过；核心逻辑门禁通过：Statements 85.66%、Branches 76.61%、Functions 86.69%、Lines 88.86% |
+| `TZ=UTC npm run test:coverage:all` | 471/471 通过；全仓观测值为 Statements 27.61%、Branches 25.00%、Functions 21.31%、Lines 28.88%，不作为单元门禁伪装成已全面覆盖 |
 | `npm run lint` | 通过，0 errors、0 warnings |
 | `npm run build` | 通过；已拆分高亮、Markdown、KaTeX、MathJS 与 Mermaid 懒加载产物，无 chunk 警告 |
 | `npm audit --audit-level=low` / `pnpm audit --audit-level low` | 均通过，0 vulnerabilities |
 | 生产预览 + 系统 Chrome | CSP、DENY、nosniff 与 Referrer-Policy 响应头生效；Service Worker 激活并接管刷新页面；0 console errors |
-| `npm run test:e2e -- --project=chromium` | 19/19 通过 |
-| `npx playwright test e2e/ux.spec.js --project=mobile-chrome` | 8/8 通过 |
+| `npm run test:e2e -- --project=chromium` | 21/21 通过 |
+| `npx playwright test e2e/ux.spec.js --project=mobile-chrome` | 10/10 通过 |
 | 远端 CI | 提交 `73283719` 的 CI 全部成功：[运行记录](https://github.com/Luckycat133/Chat_Buddy/actions/runs/31614255044) |
 | 远端 CodeQL | JavaScript/TypeScript 与 Python 均成功：[运行记录](https://github.com/Luckycat133/Chat_Buddy/actions/runs/31614255014)；开放告警 0 |
 | Dependabot | 开放告警 0 |
@@ -33,34 +33,41 @@
 
 | 用户动作 | 当前动态请求预算 | 真实浏览器结果 |
 | --- | ---: | --- |
-| 普通角色 / Agent 回复 | 1 次固定 OpenRouter 模型 | Aurora、Muse 均为 1 次；无 fallback、无自动重试 |
+| 普通角色 / Agent 回复 | 1 次固定 OpenRouter 模型 | 露娜跨话题一次流式请求完整回忆 7 类事实；Coder 一次请求生成的 TypeScript Hook 在临时工程中 4/4 测试通过；无 fallback、无自动重试 |
+| 需要模型判断参数的工具 | 2 次固定模型 + 1 次工具 | 首轮只发送匹配的工具 schema，工具结果可见，第二轮不再发送 schema 并负责解释结果 |
 | 群聊用户消息 | 1 位角色、1 次模型 | 两位角色群聊只选择麦克斯回复，没有并发 fan-out |
-| 长期记忆、标题、朋友圈后台内容 | 0 次模型 | 记忆由 IndexedDB 本地提取；跨话题准确回忆“下周演讲、担心忘词、绿色钢笔”；朋友圈空闲 10 秒无动态请求 |
-| 数学、知识竞答、成语、配色、学习状态 | 0 次模型 | 自然语言库存题本地得到 66；科学竞答启动和答题均无动态请求 |
+| 长期记忆、标题、朋友圈后台内容 | 0 次模型 | 记忆由 IndexedDB 本地按分句提取，最多注入 8 条；清空话题后仍准确回忆姓名、搬家日期/地点、黑猫、玩具和作息；朋友圈空闲 10 秒无动态请求 |
+| 参数明确的数学、知识竞答、成语、配色、学习状态 | 0 次模型 | 自然语言库存题本地得到 66；科学竞答启动和答题均无动态请求 |
 | Scholar 明确联网 | 1 次 Tavily + 1 次模型 | 两个请求各一次，展示两条当前 OpenRouter 官方文档链接 |
 | Pixel 明确生成图片 | 1 次 MiniMax，0 次 OpenRouter | 橘猫抱蓝色小鱼插画生成成功；会话摘要显示“[照片]”而非 base64 源码 |
 | 用户点击朗读 | 首次 1 次 MiniMax TTS，重复 0 次 | 第二次播放命中缓存 |
 
-最终默认模型固定为 [`nvidia/nemotron-3.5-lightning:free`](https://openrouter.ai/nvidia/nemotron-3.5-lightning:free)，不使用会随机选择模型的 `openrouter/free` 路由器。OpenRouter 当前公开元数据标示其输入/输出价格为 0、上下文上限 1,000,000，并支持 tools、tool choice 与 reasoning 参数。定向验证中，中文规划为 87 input + 108 output token，React 闭包修复为 121 + 167 token，均正常 `stop`；应用内 Aurora 记忆和 Muse 翻译也连续成功。
+最终默认模型固定为 [`nvidia/nemotron-3-ultra-550b-a55b:free`](https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b:free)，不使用会随机切换的 `openrouter/free` 路由器，也不设自动备用模型。OpenRouter 的[免费模型榜单](https://openrouter.ai/collections/free-models)和[编程模型榜单](https://openrouter.ai/collections/programming)将 Ultra 列为免费长上下文/工具模型和主要编程模型；当前公开元数据为 1,000,000 context、65,536 max completion、输入/输出价格为 0，支持 tools、tool choice 和 reasoning 参数。请求显式使用 `reasoning: { effort: "none", exclude: true }`：关闭的是可选扩展思考 token，不是模型正常回答或函数调用能力。
 
-候选淘汰有实际依据：Nemotron 3 Ultra 曾消耗 645 token 却以 `length` 结束且页面只得到一个汉字；Gemma 4 31B 首轮为 100 token 的正确回复，但下一次应用请求返回 429；Ling 3.0 Tiny 返回 502；Nemotron 3 Super 在 180-token 上限仍被截断。因此没有把“单次 HTTP 200”当成默认模型可用证据，也没有配置自动备用模型掩盖失败。免费上游容量仍可能变化，失败会在 UI 中显示并由用户手动重试。
+最终选择不依赖单次 HTTP 200。Ultra 在相同配置下可一次流式请求逐项回忆全部人物事实；Coder 生成的 `useDebouncedValue<T>` 与 Vitest/RTL 用例被抽到临时 TypeScript 测试工程后 4/4 通过。Lightning 虽然较快，但真实 Coder 回答混用 Jest/Vitest API、使用不存在的 `screen.unmount()`，并错误声称 `fetch` 会对 HTTP 404 reject；Super 的事实回忆花费约 22 秒，代码回答约 35 秒，仍含浏览器项目不稳定的 `NodeJS.Timeout` 和无效 `expect(true)` 清理测试；North Mini Code 的社交回忆正确但代码测试时序错误，Laguna S 2.1 首请求返回 429。这些请求是一次性候选验收，不是产品运行时的多模型路由。
 
-上下文现最多保留 6 条近期消息 / 5,000 字符，并按 Agent 设置更小的输出上限。提问句不会再被保存为长期事实；本地记忆只保存耐久陈述句。Scholar 的证据摘要优先保留最相关句子，并更新为当前官方免费路由文档路径：
+上下文现完整保留当前用户输入，并最多携带 48 条近期消息 / 100,000 字符；输出上限按任务设为 1,600–6,144 tokens。超过 56 条消息后才进行本地抽取式压缩，旧上下文摘要不会覆盖近期原文；图片 base64 等传输载荷会替换为语义标记，不挤占文本上下文。长期记忆会将分号分隔的耐久事实分别保存，按相关性最多注入 8 条，召回指令本身不会被误存为新事实。每轮系统提示按当前任务动态组装：角色身份只出现一次，时效性约束与工具规则仅在相关问题中注入；否定式要求“不要为了简短而省略”不再误触发短答。Scholar 的证据摘要优先保留最相关句子，并更新为当前官方免费路由文档路径。
+
+`npm run prompt:bench` 已按当前 Scholar、Muse 与动态 turn 的实际所有者修复，并验证长上下文、两次工具请求上限和翻译协议没有回退。HEAD 到当前工作树的专业角色与翻译提示词合计从约 1,275 增至 1,421 estimated tokens（+146，+11.5%）；增加集中在更严格的 Coder/Sensei 可执行性要求。这里不追求压缩用户能力，节省量来自移除 fan-out、后台模型工作流、隐藏重试和不相关的逐轮提示段落。
+
+真实长答验收先暴露了两次不可接受的中间状态：否定式“不要简短”曾被错误判为短答，令复杂 Coder 请求只有 800-token 上限；修正预算后，Nemotron 的可选扩展推理仍会把内部草稿写入 `content`/`reasoning` 并以 `length` 结束。当前显式使用 `effort: "none"` + `exclude: true`，服务层也拒绝展示 reasoning-only 内容。任务 Agent 与角色回答都会在单请求中流式更新同一条临时消息，并做 100ms/160 字符节流；最终消息原位落盘，不增加请求。
+
+真实模型工具复测使用自然语言圆面积问题：首轮仅携带 `execute_math` schema，模型分别生成 `pi * 9.5^2`、`pi * 8.25^2` 和 `pi * 7.75^2`；本地计算为 11–21ms，UI 显示可访问的“数学计算：完成”状态与耗时；第二轮不携带工具 schema，总预算严格为 2 次。真实免费上游有一次四舍五入为 `283.53`，另一次等待较长后只回一个汉字；这些中间失败促成确定性结果保护。最终实现直接从已验证本地工具结果补全 `188.69190875623696` 和 `60.0625 * pi`，丢弃无意义的单字片段，并明示上游说明不完整；Chromium 与移动 Chrome E2E 均验证了该页面路径，且不会发第三次请求。
 
 - https://openrouter.ai/docs/guides/routing/routers/free-router
 - https://openrouter.ai/docs/guides/routing/model-variants/free
 
 ### 2026-08-13 早期 OpenRouter Provider 验收（历史记录）
 
-> 以下为同日较早阶段的验收记录；其中 Nemotron 3 Ultra 的默认模型结论已被上方后续复验替代，其余方括号、语言检测、图片和安全修复证据仍有效。
+> 以下为同日较早阶段的验收记录；模型可用性判断曾随缺陷暴露而变化，最终结论以上方固定 Ultra + `effort: "none"` 的复验为准，其余方括号、语言检测、图片和安全修复证据仍有效。
 
 - 从 `crouter` 已登记的 macOS Keychain 项读取 OpenRouter key，并只比较、不输出地确认它与 Git 忽略的本机 `.env` 一致。浏览器持久配置只保存地址和模型；密钥没有写入 localStorage 或 Git。设置面板密码值可能进入 Playwright 快照/trace，因此相关临时资源已立即删除。
-- 当时根据 OpenRouter [官方免费模型榜单](https://openrouter.ai/collections/free-models)和[免费变体说明](https://openrouter.ai/docs/guides/routing/model-variants/free)暂选 `nvidia/nemotron-3-ultra-550b-a55b:free`；后续真实群聊暴露空白 token / 截断问题，现已替换。
+- 当时根据 OpenRouter [官方免费模型榜单](https://openrouter.ai/collections/free-models)和[免费变体说明](https://openrouter.ai/docs/guides/routing/model-variants/free)暂选 `nvidia/nemotron-3-ultra-550b-a55b:free`；后续暴露的空白 token / 截断问题已定位到可选扩展推理及不可靠的工具整合输出，当前通过 `effort: "none"`、reasoning 排除和本地工具结果保护修复，模型保持固定为 Ultra。
 - API 直连预检返回 HTTP 200，2,633 ms，实际响应模型与请求模型一致。网页设置中的连接测试也通过，持久配置只保存 `https://openrouter.ai/api/v1` 与模型名。
 - 任务 Agent“代码”真实对话发现用户代码 `xs[1]` 和模型回复 `xs[0]` 被本地控制标签清洗误删。请求/响应取证证明模型原始输出正确；修复后请求体、原始响应和最终页面三层均保留方括号，Agent 给出正确最小 diff。该轮免费容量下自动标题与对话请求的浏览器网络耗时分别为 46,819 ms 和 48,858 ms。
 - 虚拟角色“露娜”真实回复耗时 21,570 ms，返回简体中文并保持温柔、星空意象和简短提问的角色设定；页面 0 console errors。
 - 同时修复“中文说明 + JavaScript 标识符”被误判为英文的问题，并把 `items[1]`/`items[0]` 纳入桌面与移动 Chrome 回归。
-- Nemotron 默认开启推理，原 20-token 自动标题请求曾把预算全部用于 reasoning 并返回空正文。标题请求现仅在官方 OpenRouter endpoint 发送 `reasoning.enabled=false`；真实复测得到 9 个正文 token、0 reasoning token，话题标题正常显示。
+- Nemotron 默认可启用扩展推理，原 20-token 自动标题请求曾把预算全部用于 reasoning 并返回空正文。自动模型标题现已删除，普通请求统一发送 `reasoning.effort="none"` 且 `exclude=true`；真实复测为 0 reasoning token，话题标题改由本地生成。
 - 干净浏览器终验再次确认 Coder 请求/响应 HTTP 200、模型和供应商分别为 Nemotron 3 Ultra / NVIDIA，页面最终为 0 errors、0 warnings。免费变体容量和延迟会随上游变化，官方也不保证与付费变体相同的可用性。
 
 ### 2026-08-13 图片与开发态运行体验
@@ -81,9 +88,9 @@
 | UI-01 至 UI-04 | 已修复 | 真浅色主题、可访问强调色、原生按钮语义、Dialog 焦点陷阱/Escape/焦点恢复、可访问名称及 44px 触控目标 |
 | 其余 P2 | 已修复 | poll memo、消息元数据、Scholar JSON Schema、依赖、CSP/安全头、Service Worker、版本、语言、减弱动画和嵌套 main 均已处理 |
 
-真实浏览器复测还发现通知模块会在启动时请求仓库中不存在的音频文件，开发模式下又会被生产 Service Worker 接管为 `408 Offline`。现已改为按需使用 Web Audio 生成短提示音，并限制 Service Worker 只在生产环境注册；启动控制台回归已纳入 19 项桌面验收。
+真实浏览器复测还发现通知模块会在启动时请求仓库中不存在的音频文件，开发模式下又会被生产 Service Worker 接管为 `408 Offline`。现已改为按需使用 Web Audio 生成短提示音，并限制 Service Worker 只在生产环境注册；启动控制台回归已纳入 21 项桌面验收。
 
-推送后的 CodeQL 复核进一步暴露了历史正则清洗、头像 URL、图片 API key 持久化及工作流权限问题。当前实现已改为 DOMPurify 解析式清洗、栅格图片 URL 白名单、图片密钥仅内存保存并迁移删除旧值、配置持久化字段白名单和 CI `contents: read` 最小权限；数字猜谜也改用无模偏差的 Web Crypto 随机数，同时删除 222 个误提交的旧覆盖率生成文件。当前新增回归已计入 407 项单元测试。
+推送后的 CodeQL 复核进一步暴露了历史正则清洗、头像 URL、图片 API key 持久化及工作流权限问题。当前实现已改为 DOMPurify 解析式清洗、栅格图片 URL 白名单、图片密钥仅内存保存并迁移删除旧值、配置持久化字段白名单和 CI `contents: read` 最小权限；数字猜谜也改用无模偏差的 Web Crypto 随机数，同时删除 222 个误提交的旧覆盖率生成文件。当前回归套件已扩展至 471 项单元测试。
 
 提交 `73283719` 的远端 CodeQL JavaScript/TypeScript 与 Python job 均成功。告警复核后开放数为 0：18 条当前扫描结果属于通用 storage 包装器跨键串流或扫描器未识别 `sanitizeImageURL` 白名单的误报；26 条来自已停用的 default-setup 分析键，其原始问题真实但对应代码已经修复或删除。GitHub 仓库未启用 `mitigated` 分类，因此旧记录按“当前陈旧记录为误报”关闭，并在每条告警注释中保留“原发现真实、现已修复”的说明。
 

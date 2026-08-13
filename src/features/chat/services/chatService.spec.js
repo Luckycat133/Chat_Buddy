@@ -192,7 +192,7 @@ describe('chatService.callAI', () => {
       { maxTokens: 32, disableReasoning: true }
     );
 
-    expect(capturedBodies[0].reasoning).toEqual({ enabled: false });
+    expect(capturedBodies[0].reasoning).toEqual({ effort: 'none', exclude: true });
   });
 
   it('test_when_non_openrouter_request_disables_reasoning_should_not_send_provider_specific_field', async () => {
@@ -330,6 +330,75 @@ describe('chatService.callAI', () => {
     expect(result).toContain('"execute_math"');
   });
 
+  it('test_when_tool_call_also_contains_reasoning_text_should_prioritize_the_tool_call', async () => {
+    server.use(
+      http.post('*/chat/completions', () =>
+        HttpResponse.json({
+          choices: [{
+            finish_reason: 'tool_calls',
+            message: {
+              content: 'I should calculate this first.',
+              reasoning: 'I should calculate this first.',
+              tool_calls: [{
+                id: 'call_2',
+                type: 'function',
+                function: { name: 'execute_math', arguments: '{"expression":"pi*12^2"}' },
+              }],
+            },
+          }],
+        })
+      )
+    );
+
+    const result = await callAI([{ role: 'user', content: 'calculate this' }]);
+
+    expect(result).toContain('[TOOL_CALL_NATIVE:');
+    expect(result).toContain('execute_math');
+    expect(result).not.toContain('I should calculate');
+  });
+
+  it('test_when_provider_duplicates_reasoning_as_content_should_not_expose_it', async () => {
+    const onError = vi.fn();
+    server.use(
+      http.post('*/chat/completions', () =>
+        HttpResponse.json({
+          choices: [{
+            finish_reason: 'length',
+            message: {
+              content: "Here's a thinking process: private scratchpad",
+              reasoning: "Here's a thinking process: private scratchpad",
+            },
+          }],
+        })
+      )
+    );
+
+    const result = await callAI([{ role: 'user', content: 'solve this' }], { onError });
+
+    expect(result).toBeNull();
+    expect(onError).toHaveBeenCalledWith({
+      code: 'reasoning_only_response',
+      finishReason: 'length',
+    });
+  });
+
+  it('test_when_final_answer_hits_the_length_limit_should_preserve_it_with_a_marker', async () => {
+    server.use(
+      http.post('*/chat/completions', () =>
+        HttpResponse.json({
+          choices: [{
+            finish_reason: 'length',
+            message: { content: 'A useful but incomplete final answer' },
+          }],
+        })
+      )
+    );
+
+    const result = await callAI([{ role: 'user', content: 'solve this' }]);
+
+    expect(result).toBe('[RESPONSE_TRUNCATED]\nA useful but incomplete final answer');
+  });
+
   it('test_when_response_contains_legacy_function_call_should_return_native_tool_marker', async () => {
     // Given
     server.use(
@@ -452,6 +521,82 @@ describe('chatService.callAI', () => {
 
     // Then
     expect(result).toBe('still works');
+    fetchSpy.mockRestore();
+  });
+
+  it('test_when_streaming_answer_hits_length_should_preserve_partial_content', async () => {
+    const frames = [
+      'data: {"choices":[{"delta":{"content":"Useful partial"}}]}\n\n',
+      'data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n\n',
+      'data: [DONE]\n\n',
+    ];
+    const stream = new ReadableStream({
+      start(controller) {
+        frames.forEach((frame) => controller.enqueue(new TextEncoder().encode(frame)));
+        controller.close();
+      },
+    });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
+
+    const result = await callAI([{ role: 'user', content: 'stream long answer' }], { stream: true });
+
+    expect(result).toBe('[RESPONSE_TRUNCATED]\nUseful partial');
+    fetchSpy.mockRestore();
+  });
+
+  it('test_when_streaming_content_is_a_reasoning_trace_should_hide_it', async () => {
+    const onError = vi.fn();
+    const frames = [
+      'data: {"choices":[{"delta":{"content":"Here\\u0027s a thinking process: private"}}]}\n\n',
+      'data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n\n',
+      'data: [DONE]\n\n',
+    ];
+    const stream = new ReadableStream({
+      start(controller) {
+        frames.forEach((frame) => controller.enqueue(new TextEncoder().encode(frame)));
+        controller.close();
+      },
+    });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
+
+    const result = await callAI(
+      [{ role: 'user', content: 'stream safely' }],
+      { stream: true, onError }
+    );
+
+    expect(result).toBeNull();
+    expect(onError).toHaveBeenCalledWith({
+      code: 'reasoning_only_response',
+      finishReason: 'length',
+    });
+    fetchSpy.mockRestore();
+  });
+
+  it('test_when_streaming_tool_arguments_arrive_in_fragments_should_reassemble_one_call', async () => {
+    const frames = [
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_3","type":"function","function":{"name":"execute_math","arguments":"{\\"expression\\":\\"pi*"}}]}}]}\n\n',
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"12^2\\"}"}}]},"finish_reason":"tool_calls"}]}\n\n',
+      'data: [DONE]\n\n',
+    ];
+    const stream = new ReadableStream({
+      start(controller) {
+        frames.forEach((frame) => controller.enqueue(new TextEncoder().encode(frame)));
+        controller.close();
+      },
+    });
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
+
+    const result = await callAI([{ role: 'user', content: 'use math' }], { stream: true });
+
+    expect(result).toContain('[TOOL_CALL_NATIVE:');
+    expect(result).toContain('execute_math');
+    expect(result).toContain('pi*12^2');
     fetchSpy.mockRestore();
   });
 

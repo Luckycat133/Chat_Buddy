@@ -21,8 +21,8 @@
 ![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19+-61DAFB.svg)
-![Tests](https://img.shields.io/badge/tests-407%20passing-success.svg)
-![Core Coverage](https://img.shields.io/badge/core%20lines-87.95%25-success.svg)
+![Tests](https://img.shields.io/badge/tests-471%20passing-success.svg)
+![Core Coverage](https://img.shields.io/badge/core%20lines-88.86%25-success.svg)
 
 **AI Chat Companion**
 
@@ -132,7 +132,7 @@ npm run dev
 |----------|----------|-------------|
 | `VITE_AI_API_URL` | Yes | API Base URL (e.g., `https://api.deepseek.com`) |
 | `VITE_AI_API_KEY` | Yes | Your API key for AI responses |
-| `VITE_AI_MODEL` | Yes | Model name (default: `nvidia/nemotron-3.5-lightning:free`) |
+| `VITE_AI_MODEL` | Yes | Model name (default: `nvidia/nemotron-3-ultra-550b-a55b:free`) |
 
 > **Provider setup**: the default preset uses OpenRouter with one fixed free model. Other OpenAI-compatible endpoints can be configured manually. Runtime keys entered in Settings live in `sessionStorage` only; build-time `VITE_*` secrets are still embedded in the client bundle, so production deployments should use a server-side proxy.
 
@@ -156,11 +156,16 @@ npm run dev
 
 ### Request Budget
 
-- A normal persona or Agent reply uses at most one request to the configured text model. There are no automatic model fallbacks or hidden retries.
-- Conversation titles, long-term memory capture, Moments background activity, quizzes, idiom games, palettes, and deterministic math run locally with zero model requests.
+- A normal persona or Agent reply uses one request to the configured text model. There are no automatic model fallbacks or hidden retries.
+- Explicit tools are precomputed when their arguments are unambiguous. If the model must infer tool arguments, the visible function-calling flow may use two text-model requests: choose the tool, then explain the verified result.
+- Conversation titles, durable-memory capture, Moments background activity, quizzes, idiom games, palettes, and deterministic math run locally with zero model requests. Up to eight independently extracted durable facts are injected when relevant instead of replaying an extra model-generated summary.
 - An explicit Scholar search uses one Tavily retrieval plus one text-model synthesis. Explicit image generation uses one MiniMax image request and no text-model request.
 - Text-to-speech runs only after the user clicks Read Aloud; the generated audio is cached for repeat playback.
 - Provider errors remain visible with a manual Retry action instead of spending another request automatically.
+- Request efficiency never comes from discarding the user's task: the latest input is preserved, up to 48 recent messages / 100,000 characters are available, and output ceilings range from 1,600 to 6,144 tokens according to the task.
+- `npm run prompt:bench` guards those capability contracts. The current specialist prompts intentionally use about 146 more estimated tokens (+11.5%) for stronger Coder/Sensei instructions; savings come from request fan-out and irrelevant per-turn sections, not from weakening the answer.
+- Task Agents and personas stream answers into one in-place message. Requests to the fixed Nemotron model use OpenRouter `reasoning.effort: "none"` with reasoning excluded because live validation showed optional extended reasoning could consume the completion budget; normal inference and function calling remain enabled.
+- If an upstream response reaches its length limit, the completed text stays visible with an explicit truncation notice. For math tools, the exact local result and symbolic form remain authoritative even when provider synthesis is unusable. The app never spends a hidden retry.
 
 ### Settings
 

@@ -13,11 +13,11 @@ import { resetAIClient } from '../services/api/aiClient';
 
 const MODEL_PRESETS = [
     {
-        id: 'nvidia/nemotron-3.5-lightning:free',
-        name: 'Nemotron 3.5 Lightning',
+        id: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+        name: 'Nemotron 3 Ultra',
         provider: 'OpenRouter',
-        desc: 'Fixed free default for responsive chat and agent tasks',
-        desc_zh: '固定免费默认模型，适合快速对话与智能体任务',
+        desc: 'Fixed free default for capable chat, coding, and tool use',
+        desc_zh: '固定免费默认模型，兼顾对话、编程与工具调用能力',
         badge: 'Recommended',
         badge_zh: '推荐',
         color: 'from-emerald-400 to-cyan-500',
@@ -63,13 +63,13 @@ export default function ModelSwitcherPanel({ onClose }) {
     const { t, language } = useLanguage();
     const [currentModel, setCurrentModel] = useState(() => {
         const cfg = getApiConfig();
-        const model = cfg.model || import.meta.env?.VITE_AI_MODEL || 'nvidia/nemotron-3.5-lightning:free';
+        const model = cfg.model || import.meta.env?.VITE_AI_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b:free';
         const preset = MODEL_PRESETS.find(m => m.id === model);
         return preset ? model : 'custom';
     });
     const [customModel, setCustomModel] = useState(() => {
         const cfg = getApiConfig();
-        const model = cfg.model || import.meta.env?.VITE_AI_MODEL || 'nvidia/nemotron-3.5-lightning:free';
+        const model = cfg.model || import.meta.env?.VITE_AI_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b:free';
         const preset = MODEL_PRESETS.find(m => m.id === model);
         return preset ? '' : model;
     });

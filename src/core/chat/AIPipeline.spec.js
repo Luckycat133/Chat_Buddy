@@ -18,6 +18,7 @@ vi.mock("../../features/chat/services/chatService", () => ({
   callAI: mocks.callAI,
   calculateTypingDelay: mocks.calculateTypingDelay,
   getRandomDelay: mocks.getRandomDelay,
+  TRUNCATED_RESPONSE_MARKER: "[RESPONSE_TRUNCATED]",
 }));
 
 vi.mock("../../features/chat/services/toolService", () => ({
@@ -50,6 +51,7 @@ function createPipeline(options = {}) {
     onTyping: vi.fn(),
     onEditing: vi.fn(),
     onMessage: vi.fn(),
+    onStream: vi.fn(),
     onSchedule: vi.fn(),
     onLog: vi.fn(),
     onRecall: vi.fn(),
@@ -161,11 +163,34 @@ describe("AIPipeline", () => {
     expect(mocks.executeTool).not.toHaveBeenCalled();
     expect(mocks.callAI).toHaveBeenCalledTimes(1);
     expect(mocks.callAI.mock.calls[0][1]).toEqual(expect.objectContaining({
-      maxTokens: 600,
+      maxTokens: 3000,
+      temperature: 0.4,
+      stream: true,
       tools: undefined,
       toolChoice: undefined,
       disableReasoning: true,
     }));
+  });
+
+  it("test_when_social_persona_replies_should_stream_without_adding_a_request", async () => {
+    const { pipeline, callbacks } = createPipeline();
+    const socialPersona = {
+      ...personas[0],
+      agentType: "social-companion",
+      toolsEnabled: false,
+      tools: [],
+    };
+    mocks.callAI.mockImplementationOnce((_messages, options) => {
+      options.onStreamChunk?.("先说", "先说结论");
+      return Promise.resolve("先说结论");
+    });
+
+    await pipeline.processTurn(baseChat, [socialPersona], { id: "ai-1" });
+
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
+    expect(mocks.callAI.mock.calls[0][1].stream).toBe(true);
+    expect(callbacks.onStream).toHaveBeenCalledWith("chat-1", "ai-1", "先说结论");
+    expect(callbacks.onMessage).toHaveBeenCalledWith("chat-1", "先说结论", "ai-1");
   });
 
   it("test_when_explicit_math_request_should_answer_locally_without_an_llm_call", async () => {
@@ -186,7 +211,27 @@ describe("AIPipeline", () => {
     expect(mocks.callAI).not.toHaveBeenCalled();
     expect(callbacks.onMessage).toHaveBeenCalledWith(
       "chat-1",
-      "结果是 66（3 × 27 - 15）。",
+      "工具计算结果：`66`（3 × 27 - 15）。",
+      "ai-1",
+    );
+  });
+
+  it("test_when_direct_math_has_a_symbolic_form_should_preserve_it_without_an_llm_call", async () => {
+    const { pipeline, callbacks } = createPipeline();
+    const chat = {
+      ...baseChat,
+      messages: [{ ...baseChat.messages[0], content: "请计算 2 * 3" }],
+    };
+    mocks.executeTool.mockResolvedValueOnce(
+      "[Math Result]\nExpression: 2 * 3\nResult: 6\nSimplified: 2 * 3",
+    );
+
+    await pipeline.processTurn(chat, personas, { id: "ai-1" });
+
+    expect(mocks.callAI).not.toHaveBeenCalled();
+    expect(callbacks.onMessage).toHaveBeenCalledWith(
+      "chat-1",
+      "工具计算结果：`6`；精确形式：`2 * 3`（2 × 3）。",
       "ai-1",
     );
   });
@@ -309,7 +354,7 @@ describe("AIPipeline", () => {
     expect(mocks.callAI).toHaveBeenCalledTimes(1);
     expect(callbacks.onMessage).toHaveBeenCalledWith(
       "chat-1",
-      expect.stringContaining("one-model-request budget"),
+      expect.stringContaining("additional hidden model workflow"),
       "ai-1",
     );
   });
@@ -351,7 +396,7 @@ describe("AIPipeline", () => {
     expect(mocks.executeTool).not.toHaveBeenCalled();
   });
 
-  it("test_when_native_tool_response_contains_multiple_calls_should_execute_each_call", async () => {
+  it("test_when_native_tool_response_contains_multiple_calls_should_execute_then_synthesize_once", async () => {
     // Given
     const { pipeline, callbacks } = createPipeline();
     const nativePayload = JSON.stringify([
@@ -371,10 +416,15 @@ describe("AIPipeline", () => {
     mocks.executeTool
       .mockResolvedValueOnce("2")
       .mockResolvedValueOnce("4");
-    mocks.callAI.mockResolvedValueOnce(`[TOOL_CALL_NATIVE:${nativePayload}]`);
+    mocks.callAI
+      .mockResolvedValueOnce(`[TOOL_CALL_NATIVE:${nativePayload}]`)
+      .mockResolvedValueOnce("The verified results are 2 and 4.");
 
     // When
-    await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
+    await pipeline.processTurn({
+      ...baseChat,
+      messages: [{ ...baseChat.messages[0], content: "帮我计算这两个表达式的结果" }],
+    }, personas, { id: "ai-1" });
 
     // Then
     expect(mocks.executeTool).toHaveBeenNthCalledWith(
@@ -391,10 +441,16 @@ describe("AIPipeline", () => {
     );
     expect(callbacks.onMessage).toHaveBeenCalledWith(
       "chat-1",
-      "4",
+      "The verified results are 2 and 4.",
       "ai-1",
     );
-    expect(mocks.callAI).toHaveBeenCalledTimes(1);
+    expect(mocks.callAI).toHaveBeenCalledTimes(2);
+    expect(mocks.callAI.mock.calls[0][1].tools).toHaveLength(1);
+    expect(mocks.callAI.mock.calls[1][1].tools).toBeUndefined();
+    expect(mocks.callAI.mock.calls[1][0].at(-1).content)
+      .toContain("distinguish area, circumference, and volume");
+    expect(mocks.callAI.mock.calls[1][0].at(-1).content)
+      .toContain("Quote the full value after `Result:`");
     expect(callbacks.onToolStart).toHaveBeenNthCalledWith(
       1,
       "chat-1",
@@ -714,12 +770,193 @@ describe("AIPipeline", () => {
     expect(history[1].content).toContain("Poll created");
   });
 
+  it("test_when_recent_history_is_large_should_preserve_the_latest_user_message_verbatim", () => {
+    const { pipeline } = createPipeline();
+    const latest = "用户当前输入".repeat(5000);
+    const messages = [
+      ...Array.from({ length: 48 }, (_, index) => ({
+        id: `old-${index}`,
+        senderId: index % 2 === 0 ? "user-me" : "ai-1",
+        content: `older-${index}-${"x".repeat(2000)}`,
+      })),
+      { id: "latest", senderId: "user-me", content: latest },
+    ];
+
+    const history = pipeline._prepareHistory(messages, personas, false, "", []);
+
+    expect(history.at(-1)).toEqual({ role: "user", content: latest });
+    expect(history.reduce((sum, message) => sum + message.content.length, 0)).toBeLessThanOrEqual(100000);
+  });
+
+  it("test_when_history_contains_media_should_replace_transport_payloads_with_semantic_markers", () => {
+    const { pipeline } = createPipeline();
+    const history = pipeline._prepareHistory([
+      { senderId: "user-me", content: `[IMG:data:image/png;base64,${"A".repeat(10000)}]` },
+      { senderId: "ai-1", content: "I can see that an image was shared." },
+    ], personas, false, "", []);
+
+    expect(history[0].content).toBe("[Image shared in chat]");
+    expect(history[0].content).not.toContain("base64");
+  });
+
+  it("test_when_context_is_compressed_should_include_summary_even_if_recent_history_starts_with_user", () => {
+    const { pipeline } = createPipeline();
+    const history = pipeline._prepareHistory([
+      { senderId: "user-me", content: "recent question" },
+      { senderId: "ai-1", content: "recent answer" },
+    ], personas, true, "[Earlier user context: durable preference]", []);
+
+    expect(history[0].role).toBe("user");
+    expect(history[0].content).toContain("Earlier user context");
+    expect(history[0].content).toContain("recent question");
+  });
+
   it("test_when_building_persona_prompt_should_prioritize_a_direct_answer_for_concrete_requests", () => {
     const { pipeline } = createPipeline();
 
     const prompt = pipeline._generateSystemPrompt(personas[0]);
 
-    expect(prompt).toContain('the first sentence must give a specific answer or action');
+    expect(prompt).toContain('lead with the answer or action');
+  });
+
+  it("test_when_user_requests_depth_should_not_apply_an_arbitrary_short_answer_rule", () => {
+    const { pipeline } = createPipeline();
+    const prompt = pipeline._generateSystemPrompt({
+      id: "agent-coder",
+      name: "Coder",
+      agentType: "task-specialist",
+      systemPrompt: "你是 Coder，负责完整解决编程问题。",
+    }, {
+      latestUserLanguage: "zh",
+      latestUserText: "请详细分析根因并给出完整实现和验证步骤",
+    });
+
+    expect(prompt).toContain("完整");
+    expect(prompt).toContain("cover every requested deliverable completely");
+    expect(prompt).not.toContain("shortest complete answer");
+    expect(prompt.match(/你是 Coder/g)).toHaveLength(1);
+    expect(prompt).toContain("never expose a scratchpad");
+    expect(pipeline._resolveOutputTokenLimit({ agentType: "social-companion" }, "请详细展开")).toBe(3000);
+    expect(pipeline._resolveOutputTokenLimit({ id: "agent-coder", agentType: "task-specialist" }, "完整实现")).toBe(6144);
+  });
+
+  it("test_when_brevity_word_is_negated_should_keep_the_long_form_budget", () => {
+    const { pipeline } = createPipeline();
+    const request = "请完整回答，不要为了简短而省略实现细节";
+    const prompt = pipeline._generateSystemPrompt({
+      id: "agent-coder",
+      name: "Coder",
+      agentType: "task-specialist",
+      systemPrompt: "你是 Coder。",
+    }, { latestUserLanguage: "zh", latestUserText: request });
+
+    expect(pipeline._resolveOutputTokenLimit(
+      { id: "agent-coder", agentType: "task-specialist" },
+      request,
+    )).toBe(6144);
+    expect(prompt).toContain("requested depth");
+    expect(prompt).not.toContain("requested brevity");
+  });
+
+  it("test_when_specialist_streams_should_update_one_message_and_finalize_without_an_extra_request", async () => {
+    const { pipeline, callbacks } = createPipeline();
+    mocks.callAI.mockImplementationOnce((_messages, options) => {
+      options.onStreamChunk?.("完整", "完整回答");
+      return Promise.resolve("完整回答");
+    });
+
+    await pipeline.processTurn(baseChat, personas, { id: "ai-1" });
+
+    expect(mocks.callAI).toHaveBeenCalledTimes(1);
+    expect(callbacks.onStream).toHaveBeenCalledWith("chat-1", "ai-1", "完整回答");
+    expect(callbacks.onMessage).toHaveBeenCalledWith("chat-1", "完整回答", "ai-1");
+  });
+
+  it("test_when_provider_truncates_should_preserve_partial_answer_with_an_honest_notice", async () => {
+    const { pipeline, callbacks } = createPipeline();
+    mocks.callAI.mockResolvedValueOnce("[RESPONSE_TRUNCATED]\n已完成的正文");
+    const chat = {
+      ...baseChat,
+      messages: [{ ...baseChat.messages[0], content: "请详细回答" }],
+    };
+
+    await pipeline.processTurn(chat, personas, { id: "ai-1" });
+
+    expect(callbacks.onMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.stringMatching(/已完成的正文[\s\S]*达到回复长度上限[\s\S]*没有隐藏重试/),
+      "ai-1",
+    );
+  });
+
+  it("test_when_tool_synthesis_truncates_immediately_should_keep_exact_local_result_without_retry", async () => {
+    const { pipeline, callbacks } = createPipeline();
+    const nativePayload = JSON.stringify({
+      function: {
+        name: "execute_math",
+        arguments: JSON.stringify({ expression: "pi * 8.25^2" }),
+      },
+    });
+    mocks.executeTool.mockResolvedValueOnce(
+      "[Math Result]\nExpression: pi * 8.25^2\nResult: 213.82464914076954\nSimplified: 68.0625 * pi",
+    );
+    mocks.callAI
+      .mockResolvedValueOnce(`[TOOL_CALL_NATIVE:${nativePayload}]`)
+      .mockResolvedValueOnce("[RESPONSE_TRUNCATED]\n计");
+    const chat = {
+      ...baseChat,
+      messages: [{ ...baseChat.messages[0], content: "我在计算圆的面积：圆周率乘以八点二五的平方是多少？" }],
+    };
+
+    await pipeline.processTurn(chat, personas, { id: "ai-1" });
+
+    expect(mocks.callAI).toHaveBeenCalledTimes(2);
+    expect(callbacks.onMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.stringMatching(/213\.82464914076954[\s\S]*68\.0625 \* pi[\s\S]*半径为 `8\.25`[\s\S]*没有隐藏重试/),
+      "ai-1",
+    );
+    expect(callbacks.onMessage.mock.calls.at(-1)[1]).not.toMatch(/\n\n计\n/);
+  });
+
+  it("test_when_tool_synthesis_stops_after_one_character_should_replace_it_with_verified_context", async () => {
+    const { pipeline, callbacks } = createPipeline();
+
+    await pipeline._handleFinalResponse("chat-1", personas[0], "工", [], {
+      language: "zh",
+      latestUserText: "请计算半径 7.75 的圆形地毯面积",
+      lastToolName: "execute_math",
+      lastToolOutput: "[Math Result]\nExpression: pi * 7.75^2\nResult: 188.69190875623696\nSimplified: 60.0625 * pi",
+    });
+
+    expect(callbacks.onMessage).toHaveBeenCalledWith(
+      "chat-1",
+      expect.stringMatching(/188\.69190875623696[\s\S]*60\.0625 \* pi[\s\S]*半径为 `7\.75`[\s\S]*没有隐藏重试/),
+      "ai-1",
+    );
+    expect(callbacks.onMessage.mock.calls.at(-1)[1]).not.toContain("\n\n工");
+  });
+
+  it("test_when_tool_result_is_only_a_prefix_of_model_number_should_restore_the_exact_value", () => {
+    const { pipeline } = createPipeline();
+
+    const response = pipeline._ensureAuthoritativeToolFacts("The rounded result is 10.", {
+      language: "en",
+      lastToolName: "execute_math",
+      lastToolOutput: "[Math Result]\nExpression: 1\nResult: 1",
+    });
+
+    expect(response).toMatch(/^Verified tool result: `1`\./);
+    expect(response).toContain("The rounded result is 10.");
+  });
+
+  it("test_when_current_information_is_not_requested_should_omit_unrelated_freshness_rules", () => {
+    const { pipeline } = createPipeline();
+    const casual = pipeline._generateSystemPrompt(personas[0], { latestUserText: "我今天有点累" });
+    const current = pipeline._generateSystemPrompt(personas[0], { latestUserText: "今天最新价格是多少" });
+
+    expect(casual).not.toContain("time-sensitive facts");
+    expect(current).toContain("time-sensitive facts");
   });
 
   it("test_when_generate_system_prompt_uses_context_should_emit_relationship_and_mood_without_tool_manifest", () => {
@@ -801,7 +1038,7 @@ describe("AIPipeline", () => {
 
     // Then
     expect(prompt).toContain("You are Edge");
-    expect(prompt).toContain("Be concise in casual chat");
+    expect(prompt).toContain("keep casual chat natural, but do not omit useful substance");
     expect(prompt.includes("RELATIONSHIP:")).toBe(false);
     expect(prompt.includes("CURRENT MOOD:")).toBe(false);
   });
@@ -851,8 +1088,15 @@ describe("AIPipeline", () => {
           description: "Tool: execute_math",
           parameters: {
             type: "object",
-            properties: {},
-            additionalProperties: true,
+            properties: {
+              expression: {
+                type: "string",
+                minLength: 1,
+                description: "A math.js-compatible expression derived from the user request",
+              },
+            },
+            required: ["expression"],
+            additionalProperties: false,
           },
         },
       },

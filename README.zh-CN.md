@@ -5,8 +5,8 @@
 ![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![React](https://img.shields.io/badge/React-19-61DAFB.svg)
-![Tests](https://img.shields.io/badge/tests-407%20passing-success.svg)
-![核心覆盖率](https://img.shields.io/badge/core%20lines-87.95%25-success.svg)
+![Tests](https://img.shields.io/badge/tests-471%20passing-success.svg)
+![核心覆盖率](https://img.shields.io/badge/core%20lines-88.86%25-success.svg)
 
 **AI 聊天伴侣**
 
@@ -177,7 +177,7 @@ npm run build
 | ----------------- | ---- | ------------------------------------------- |
 | `VITE_AI_API_URL` | 是   | API基础URL（如 `https://openrouter.ai/api/v1`） |
 | `VITE_AI_API_KEY` | 是   | AI回复的API密钥                             |
-| `VITE_AI_MODEL`   | 是   | 模型名称（默认 `nvidia/nemotron-3.5-lightning:free`） |
+| `VITE_AI_MODEL`   | 是   | 模型名称（默认 `nvidia/nemotron-3-ultra-550b-a55b:free`） |
 
 > **Provider 配置**：默认快速选项为 OpenRouter，并固定使用一个免费模型；也可手动填写其他兼容 OpenAI 的端点。设置页输入的运行时密钥只存在 `sessionStorage`；构建期 `VITE_*` 变量仍会进入前端产物，生产环境应改用服务端代理。
 
@@ -203,11 +203,16 @@ npm run build
 
 ### 请求预算
 
-- 普通虚拟角色或 Agent 回复最多调用一次当前文本模型；不自动切换模型，也不做隐藏重试。
-- 会话标题、长期记忆提取、朋友圈后台内容、知识竞答、成语游戏、配色和确定性数学均在本地完成，模型请求为 0。
+- 普通虚拟角色或 Agent 回复调用 1 次当前文本模型；不自动切换模型，也不做隐藏重试。
+- 工具参数明确时由本地预执行；确实需要模型判断参数时，会显示“模型选择工具 → 执行 → 解释结果”的工具流程，并允许 2 次文本模型请求。
+- 会话标题、长期记忆提取、朋友圈后台内容、知识竞答、成语游戏、配色和确定性数学均在本地完成，模型请求为 0；最多按需注入 8 条独立耐久事实，不再额外调用模型生成记忆摘要。
 - 明确要求学者联网时使用 1 次 Tavily 检索 + 1 次文本模型综合；明确生成图片时只调用 1 次 MiniMax 图片接口，不调用文本模型。
 - 朗读只在用户点击后调用，音频生成后会缓存，重复播放不再请求。
 - Provider 失败会显示可见错误和手动“重试”，不会在后台继续花请求。
+- 请求优化不会牺牲用户任务：当前输入完整保留，可使用最多 48 条近期消息 / 100,000 字符；输出上限按任务设为 1,600–6,144 tokens。
+- `npm run prompt:bench` 会守住这些能力契约。当前专业角色提示词为了强化 Coder/Sensei 指令，估算 token 有意增加约 146（+11.5%）；节省来自移除请求 fan-out 和每轮无关段落，而不是削弱回答。
+- Agent 与虚拟角色都会流式更新同一条消息。固定 Nemotron 请求使用 OpenRouter `reasoning.effort: "none"` 并排除 reasoning；这是因为真实验收发现可选扩展推理可能耗尽回复预算，正常推理能力与函数调用仍保留。
+- 上游回复若达到长度上限，已生成正文仍会保留并显示明确提示；数学工具的本地完整数值和符号形式始终优先，即使上游说明不可用也不会丢失。应用不会为此隐藏重试。
 
 ### 设置
 

@@ -8,8 +8,8 @@
 import { memoryStore } from './MemoryStore';
 
 // Max facts to inject per turn to stay within token budget
-const MAX_FACTS_TO_INJECT = 4;
-const MAX_FACT_CHARS = 120;
+const MAX_FACTS_TO_INJECT = 8;
+const MAX_FACT_CHARS = 180;
 
 function truncateFact(fact) {
     const chars = Array.from(String(fact || '').trim());
