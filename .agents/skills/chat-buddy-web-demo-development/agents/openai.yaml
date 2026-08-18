@@ -1,0 +1,5 @@
+interface:
+  display_name: "Chat Buddy Web Demo"
+  short_description: "Build the cloud-first Web client and shared companion runtime for Chat Buddy's human/AI social demo."
+policy:
+  allow_implicit_invocation: true
