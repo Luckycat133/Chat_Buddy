@@ -1,7 +1,6 @@
 ---
 name: chat-buddy-web-demo-development
 description: Implement, refactor, review, and test the cloud-first Chat Buddy Web Demo and its shared companion runtime. Use when working on the React Web client, hosted backend, social graph, human/AI friend requests, mixed groups, Moments, proactive messages, character memory, relationship continuity, actor identity linking, weather/calendar/search capabilities, cloud sync, or demo acceptance.
-compatibility: Luckycat133/Chat_Buddy on the remake branch. Requires the repository's Node/npm toolchain; backend work also requires PostgreSQL and network access to configured model/capability providers.
 metadata:
   author: Luckycat133
   version: "2026-08-18-demo-v1"
