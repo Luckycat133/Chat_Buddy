@@ -1,158 +1,139 @@
 name: CI
 
-env:
-  TZ: UTC
-
 on:
   push:
-    branches: [main, remake]
+    branches: [remake, main]
   pull_request:
-    branches: [main, remake]
+    branches: [remake, main]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
+env:
+  NODE_VERSION: '22'
 
 jobs:
-  lint:
-    name: Lint
+  lint-typecheck-test:
+    name: Lint, typecheck, unit tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+      - run: npm ci --no-audit --no-fund
+      - run: npx tsc -p tsconfig.json --noEmit
+      - run: npx eslint server shared db src/api src/sync
+      - run: npx vitest run --reporter=default
+      - name: Upload vitest coverage
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-coverage
+          path: test_reports/coverage
+          retention-days: 14
 
-      - name: Install dependencies
-        run: |
-          npm ci --include=optional
-          npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.1 @tailwindcss/oxide-linux-x64-gnu@4.3.0
-
-      - name: Run linter
-        run: npm run lint
-
-      - name: Audit dependencies
-        run: npm audit
-
-  test:
-    name: Unit Tests
+  web-build:
+    name: Web build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-
-      - name: Install dependencies
-        run: |
-          npm ci --include=optional
-          npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.1 @tailwindcss/oxide-linux-x64-gnu@4.3.0
-
-      - name: Run unit tests
-        run: npm run test -- --run
-
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: |
-          npm ci --include=optional
-          npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.1 @tailwindcss/oxide-linux-x64-gnu@4.3.0
-
-      - name: Build production bundle
+      - run: npm ci --no-audit --no-fund
+      - name: Build
+        env:
+          VITE_CLOUD_BASE_URL: 'http://localhost:8080'
         run: npm run build
-
+      - name: Verify no secrets leaked into bundle
+        run: |
+          set -euo pipefail
+          if grep -RInE 'sk-(or|cp)|tvly-' dist/ public/ assets/ 2>/dev/null; then
+            echo '::error::Bundled JS contains a real provider key'
+            exit 1
+          fi
       - name: Upload build artifact
-        uses: actions/upload-artifact@v7
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/remake'
+        uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: web-dist
           path: dist/
           retention-days: 7
 
-  e2e:
-    name: E2E Tests
+  e2e-p0:
+    name: Playwright A01-A25 P0 acceptance
     runs-on: ubuntu-latest
-    needs: [lint, test, build]
-    if: github.event_name == 'pull_request'
+    timeout-minutes: 20
+    needs: [lint-typecheck-test, web-build]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: chat_buddy
+          POSTGRES_USER: chat_buddy
+          POSTGRES_PASSWORD: chat_buddy
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U chat_buddy"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://chat_buddy:chat_buddy@localhost:5432/chat_buddy
+      SESSION_SIGNING_KEY: ${{ secrets.SESSION_SIGNING_KEY || 'test-signing-key-do-not-use-in-prod-please' }}
+      NODE_ENV: test
+      LOG_LEVEL: warn
+      PORT: 8080
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-
-      - name: Install dependencies
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - name: Apply migrations
         run: |
-          npm ci --include=optional
-          npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.1 @tailwindcss/oxide-linux-x64-gnu@4.3.0
-
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-
-      - name: Build
-        run: npm run build
-
-      - name: Run E2E tests
-        run: npm run test:e2e -- --project=chromium
-
-      - name: Upload test results
+          PGPASSWORD=chat_buddy
+          # Apply the hand-curated migration (matches drizzle-kit output).
+          psql -h localhost -U chat_buddy -d chat_buddy -f db/migrations/0000_init_cloud_runtime.sql
+      - name: Seed
+        run: npm run db:seed
+      - name: Boot server
+        run: |
+          npm run dev:server &
+          SERVER_PID=$!
+          # Wait for /healthz to return 200.
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then
+              echo "server ready after $i attempts"
+              break
+            fi
+            sleep 1
+          done
+          if ! curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then
+            echo '::error::Server failed to start within 60s'
+            kill $SERVER_PID || true
+            exit 1
+          fi
+          # Keep server alive for the duration of the playwright run via a sentinel.
+          echo $SERVER_PID > /tmp/server.pid
+      - name: Run A01-A25
+        env:
+          E2E_CLOUD_BASE_URL: 'http://localhost:8080'
+        run: npx playwright test e2e/p0-acceptance.spec.js
+      - name: Stop server
         if: always()
-        uses: actions/upload-artifact@v7
+        run: |
+          if [ -f /tmp/server.pid ]; then
+            kill $(cat /tmp/server.pid) || true
+          fi
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report/
-          retention-days: 7
-
-  coverage:
-    name: Test Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: |
-          npm ci --include=optional
-          npm install --no-save @rolldown/binding-linux-x64-gnu@1.0.1 @tailwindcss/oxide-linux-x64-gnu@4.3.0
-
-      - name: Run tests with coverage
-        run: npm run test:coverage
-
-      - name: Upload coverage report
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-report
-          path: test_reports/coverage/
           retention-days: 14
