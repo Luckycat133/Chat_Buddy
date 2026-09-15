@@ -122,6 +122,11 @@ jobs:
           fi
           # Keep server alive for the duration of the playwright run via a sentinel.
           echo $SERVER_PID > /tmp/server.pid
+      - name: Build web app for preview server
+        # playwright.config webServer runs `npm run preview` (vite preview on
+        # 4173) which needs dist/ — without this build it times out waiting
+        # (120s) and the whole e2e-p0 job dies before any test runs.
+        run: npm run build
       - name: Run A01-A25
         env:
           E2E_CLOUD_BASE_URL: 'http://localhost:8080'
