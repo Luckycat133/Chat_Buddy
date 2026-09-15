@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+    "jsx": "preserve",
+    "types": ["node", "vite/client"]
+  },
+  "include": [
+    "shared/**/*.ts",
+    "server/**/*.ts",
+    "db/**/*.ts",
+    "src/api/**/*.ts",
+    "src/api/**/*.tsx",
+    "src/sync/**/*.ts",
+    "src/features/auth/**/*.ts",
+    "src/features/contacts/**/*.ts",
+    "src/features/chat/**/*.ts",
+    "src/features/moments/**/*.ts",
+    "src/features/settings/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "coverage", "playwright-report"]
+}

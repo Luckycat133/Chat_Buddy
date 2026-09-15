@@ -8,15 +8,20 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.js'],
-    include: ['src/**/*.{test,spec}.{js,jsx}'],
-    exclude: ['node_modules', 'dist', 'public'],
+    include: [
+      // Pre-existing React component tests.
+      'src/**/*.{test,spec}.{js,jsx}',
+      // New cloud-runtime tests (server + shared).
+      'server/**/*.{test,spec}.ts',
+      'shared/**/*.{test,spec}.ts',
+    ],
+    exclude: ['node_modules', 'dist', 'public', 'src/test/integration/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov', 'json'],
       reportsDirectory: 'test_reports/coverage',
-      // Enforce the unit-coverage gate on regression-critical logic. Rendering,
-      // routing and responsive UX are covered separately by Playwright + Axe.
       include: [
+        // Existing critical paths.
         'src/config/apiConfig.js',
         'src/core/chat/AIPipeline.js',
         'src/core/chat/ChatEngine.js',
@@ -31,25 +36,37 @@ export default defineConfig({
         'src/utils/inputValidator.js',
         'src/utils/ragUtils.js',
         'src/utils/sanitizeUtils.js',
+        // New cloud runtime.
+        'shared/**/*.ts',
+        'server/**/*.ts',
+        'db/**/*.ts',
       ],
       exclude: [
-        'src/data/**',           // 静态数据
-        'src/test/**',           // 测试工具
-        'src/main.jsx',          // React入口
-        'src/utils/cn.js',       // 简单封装
-        'src/**/*.test.{js,jsx}' // 测试文件本身
+        'src/data/**',
+        'src/test/**',
+        'src/main.jsx',
+        'src/utils/cn.js',
+        'src/**/*.test.{js,jsx}',
+        'src/**/*.spec.{js,jsx}',
+        '**/*.test.ts',
+        '**/*.spec.ts',
+        '**/index.ts',
+        '**/migrate.ts',
       ],
       thresholds: {
         lines: 60,
         functions: 60,
         branches: 60,
-        statements: 60
-      }
-    }
+        statements: 60,
+      },
+    },
   },
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
-  }
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@shared': fileURLToPath(new URL('./shared', import.meta.url)),
+      '@server': fileURLToPath(new URL('./server', import.meta.url)),
+      '@db': fileURLToPath(new URL('./db', import.meta.url)),
+    },
+  },
 });

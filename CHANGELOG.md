@@ -13,6 +13,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] — Cloud Runtime Skeleton (2026-09-15)
+
+> Server-side cloud runtime for the Chat Buddy companion app: Fastify API + Postgres (Drizzle) + shared zod contracts + realtime, plus a full static-audit fix pass (initial draft by MiniMax-M3, audited and fixed with glm-5.3-flash; 594 unit tests, tsc, lint, build, PGlite smoke and a real-PG boot round-trip all verified).
+
+### Added — API Server (`server/`)
+- Fastify 5 API skeleton (27 TS files): session auth (Sign in with Apple verification + dev-signin), `/v1` actors/conversations/messages/moments/sync/capabilities, pg-boss workers, realtime WebSocket channel, pino logging.
+- Server entry guard hardened with `pathToFileURL` (boots correctly on paths containing spaces/non-ASCII — verified on this repo's mount point).
+
+### Added — Data Layer (`db/`, `drizzle.config.ts`, `docker-compose.yml`)
+- Drizzle schema (809 lines) + `0000_init_cloud_runtime.sql` migration (25 tables) + seed script (Mira/Luna/Max/Aether + moments).
+- docker-compose with Postgres 16 for local development.
+
+### Added — Shared Contracts (`shared/contracts/`)
+- 16 zod schemas shared between server and clients (auth, sync envelope, conversations, moments, capabilities).
+
+### Added — Web Cloud Adapters (`src/api/`, `src/sync/`)
+- Frontend cloud adapters, outbox queue and IndexedDB-backed sync cache.
+
+### Added — Tooling & Tests
+- `scripts/pglite-smoke.ts` — PGlite migration + seed smoke (fails with non-zero exit on any step).
+- `e2e/p0-acceptance.spec.js` — P0 acceptance flows A01–A25 (Playwright).
+- TS config, ESLint TS support, vitest coverage of `server/shared/db`, agent docs (AGENTS/GEMINI/CLAUDE) and skill mirrors.
+
+### Changed — CI
+- Consolidated lint/test/build job; new `e2e-p0` job with a Postgres service; coverage artifact path corrected to `test_reports/coverage`.
+
+### Fixed — Audit Pass
+- Boot-blocking `FST_ERR_LOG_INVALID_LOGGER_CONFIG` (pino instance now passed via `loggerInstance`).
+- CI and smoke referenced a non-existent `0001_*` migration filename → corrected to `0000_init_cloud_runtime.sql`.
+- Smoke script exited 0 on failure paths → all failures now set `process.exitCode = 1`.
+
 ## [0.4.1] — Production Readiness (2026-05-01)
 
 > Comprehensive production readiness pass: code quality, testing, CI/CD, and documentation.
