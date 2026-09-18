@@ -303,7 +303,7 @@ CREATE TABLE IF NOT EXISTS "tool_executions" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"requesting_actor_id" uuid NOT NULL,
 	"target_human_actor_id" uuid,
-	"conversation_id" uuid NOT NULL,
+	"conversation_id" uuid,
 	"tool_name" text NOT NULL,
 	"arguments" jsonb NOT NULL,
 	"permission_state" "tool_execution_status" DEFAULT 'requested' NOT NULL,

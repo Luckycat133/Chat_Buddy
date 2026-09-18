@@ -739,9 +739,9 @@ export const toolExecutions = pgTable(
       () => actors.id,
       { onDelete: 'set null' },
     ),
-    conversationId: uuid('conversation_id')
-      .notNull()
-      .references(() => conversations.id, { onDelete: 'cascade' }),
+    conversationId: uuid('conversation_id').references(() => conversations.id, {
+      onDelete: 'cascade',
+    }),
     toolName: text('tool_name').notNull(),
     arguments: jsonb('arguments').notNull(),
     permissionState: toolExecutionStatusEnum('permission_state')

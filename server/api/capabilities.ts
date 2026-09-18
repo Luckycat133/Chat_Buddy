@@ -43,7 +43,7 @@ export function registerCapabilityRoutes(app: FastifyInstance): void {
         id,
         requestingActorId: actorId,
         targetHumanActorId: actorId,
-        conversationId: '00000000-0000-0000-0000-000000000000',
+        conversationId: null, // capability calls may run outside any conversation
         toolName: 'weather',
         arguments: { city: body.city },
         permissionState: ToolExecutionStatus.Confirmed,
@@ -86,7 +86,7 @@ export function registerCapabilityRoutes(app: FastifyInstance): void {
         id,
         requestingActorId: actorId,
         targetHumanActorId: actorId,
-        conversationId: '00000000-0000-0000-0000-000000000000',
+        conversationId: null, // capability calls may run outside any conversation
         toolName: 'light_search',
         arguments: { query: body.query },
         permissionState: ToolExecutionStatus.Confirmed,
@@ -136,7 +136,7 @@ export function registerCapabilityRoutes(app: FastifyInstance): void {
         id,
         requestingActorId: actorId,
         targetHumanActorId: actorId,
-        conversationId: '00000000-0000-0000-0000-000000000000',
+        conversationId: null, // capability calls may run outside any conversation
         toolName: `calendar.${body.operation}`,
         arguments: body,
         permissionState:
