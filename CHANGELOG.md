@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased] — Cloud Session Management and Daily Tools (2026-09-25)
 
 ### Added
+- **Cloud media tools**: `CloudClient` now exposes typed message, image-generation, and TTS operations; cloud chat surfaces use the configured providers and report unavailable providers explicitly.
+
+### Changed
+- **Dependency maintenance**: updated Drizzle ORM/Kit and Vitest patch versions, added the explicit Testing Library DOM peer, and reduced the dependency audit to 0 high / 4 moderate findings without unsafe downgrades.
+
+### Added
 - **Device and session management**: authenticated users can list active sessions, inspect device and activity metadata, and revoke another session from the Settings page.
 - **Chat search**: the chat list now filters locally cached conversations and friends by name, display name, and friend note without a new backend request.
 - **Today’s calendar**: Settings can display today’s calendar events when the calendar capability is connected; disconnected users receive setup guidance.

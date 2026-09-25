@@ -12,11 +12,13 @@ import { LanguageProvider } from '../../context/LanguageContext';
 const cloudMocks = vi.hoisted(() => ({
   getCloud: vi.fn(),
   loadTokens: vi.fn(() => ({ actorId: 'actor-me' })),
+  cloudEnabled: vi.fn(() => true),
 }));
 
 vi.mock('../../api/cloud-adapter', () => ({
   getCloud: cloudMocks.getCloud,
   loadTokens: cloudMocks.loadTokens,
+  cloudEnabled: cloudMocks.cloudEnabled,
 }));
 
 function createMockCloud(overrides = {}) {
@@ -46,6 +48,7 @@ describe('CloudChatWindow', () => {
     sessionStorage.clear();
     cloudMocks.getCloud.mockReset();
     cloudMocks.loadTokens.mockReturnValue({ actorId: 'actor-me' });
+    cloudMocks.cloudEnabled.mockReturnValue(true);
   });
 
   it('test_when_messages_load_should_render_timeline_bubbles', async () => {
@@ -76,6 +79,7 @@ describe('CloudChatWindow', () => {
 
     await waitFor(() => expect(screen.getByTestId('cloud-message-timeline')).toBeInTheDocument());
     expect(screen.getByText('Hello from cloud')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '朗读' })).toBeInTheDocument();
   });
 
   it('test_when_load_fails_should_show_alert_with_retry_button', async () => {

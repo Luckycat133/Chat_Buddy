@@ -7,8 +7,10 @@
 import { z } from 'zod';
 import {
   ApiErrorSchema,
+  MessageSchema,
   SyncEnvelopeSchema,
   type ApiError,
+  type Message,
   type SyncEnvelope,
 } from '../../shared/contracts/index.js';
 import type {
@@ -43,6 +45,21 @@ const HealthSchema = z.object({ ok: z.boolean() });
 const ReadySchema = z.object({
   ok: z.boolean(),
   reason: z.string().optional(),
+});
+const MessageListSchema = z.object({ items: z.array(MessageSchema) });
+const SendMessageResultSchema = z.object({
+  id: z.string().uuid(),
+  sequence: z.number().int().min(0),
+});
+const ImageGenerationResultSchema = z.object({
+  images: z.array(z.string().min(1)).min(1),
+  model: z.string().min(1),
+});
+const SpeechSynthesisResultSchema = z.object({
+  audioBase64: z.string().min(1),
+  format: z.string().min(1),
+  model: z.string().min(1),
+  durationMs: z.number().int().nonnegative().optional(),
 });
 
 export interface CloudClientOptions {
@@ -103,6 +120,66 @@ export class CloudClient {
       `/v1/sync${qs}`,
       { method: 'GET' },
       SyncEnvelopeSchema,
+    );
+  }
+
+  async getMessages(
+    conversationId: string,
+    options: { cursor?: number; limit?: number } = {},
+  ): Promise<{ items: Message[] }> {
+    const params = new URLSearchParams();
+    if (options.cursor !== undefined) {
+      params.set('cursor', String(options.cursor));
+    }
+    if (options.limit !== undefined) params.set('limit', String(options.limit));
+    const suffix = params.size > 0 ? `?${params.toString()}` : '';
+    return this.request(
+      `/v1/conversations/${encodeURIComponent(conversationId)}/messages${suffix}`,
+      { method: 'GET' },
+      MessageListSchema,
+    );
+  }
+
+  async sendMessage(
+    conversationId: string,
+    body: {
+      clientIdempotencyKey: string;
+      kind: 'text' | 'image' | 'system' | 'invitation' | 'action_result';
+      content: string;
+      replyToMessageId?: string;
+    },
+  ): Promise<{ id: string; sequence: number }> {
+    return this.request(
+      `/v1/conversations/${encodeURIComponent(conversationId)}/messages`,
+      { method: 'POST', body },
+      SendMessageResultSchema,
+    );
+  }
+
+  async generateImage(input: {
+    prompt: string;
+    aspectRatio?: '1:1' | '4:3' | '3:4' | '16:9' | '9:16';
+  }): Promise<{ images: string[]; model: string }> {
+    return this.request(
+      '/v1/capabilities/media/image',
+      { method: 'POST', body: input },
+      ImageGenerationResultSchema,
+    );
+  }
+
+  async synthesizeSpeech(input: {
+    text: string;
+    voiceId?: string;
+  }): Promise<{
+    audioBase64: string;
+    format: string;
+    model: string;
+    durationMs?: number;
+  }> {
+    return this.request(
+      '/v1/capabilities/media/tts',
+      { method: 'POST', body: input },
+      SpeechSynthesisResultSchema,
     );
   }
 

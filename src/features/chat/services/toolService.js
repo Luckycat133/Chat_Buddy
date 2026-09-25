@@ -24,6 +24,7 @@ import { evaluate, derivative, simplify } from 'mathjs/number';
 import { translateWithReflection, detectDomain } from '../../../services/ai/translationService';
 import { getCombinedGlossary } from '../../../data/glossary';
 import { generateMomentsImage, isMiniMaxConfigured } from '../../../services/minimaxService';
+import { cloudEnabled, getCloud } from '../../../api/cloud-adapter';
 
 // Import Tavily real-time web search service
 import {
@@ -452,6 +453,20 @@ ${result}`;
 async function executeGenerateImage(args) {
     const { prompt } = args;
     if (!prompt) return "[Image Generation Error] No prompt provided";
+
+    if (cloudEnabled()) {
+        try {
+            const result = await getCloud().generateImage({
+                prompt,
+                ...(args.aspectRatio ? { aspectRatio: args.aspectRatio } : {}),
+            });
+            const image = result.images?.[0];
+            if (!image) throw new Error('Cloud image provider returned no image');
+            return `[IMG:${image}]`;
+        } catch (err) {
+            return `[Image Generation Error] ${err?.message || String(err)}`;
+        }
+    }
 
     // Image generation is an explicit media request and uses the dedicated
     // MiniMax image provider, never the configured text model.

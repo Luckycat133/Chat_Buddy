@@ -16,6 +16,8 @@ export default defineConfig({
     include: [
       // Pre-existing React component tests.
       'src/**/*.{test,spec}.{js,jsx}',
+      // Typed browser cloud-client tests.
+      'src/**/*.{test,spec}.ts',
       // New cloud-runtime tests (server + shared).
       'server/**/*.{test,spec}.ts',
       'shared/**/*.{test,spec}.ts',

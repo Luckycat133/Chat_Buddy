@@ -12,6 +12,18 @@ import {
   shiftOutOfQuietHours,
 } from '../workers/quiet-hours.js';
 
+interface PgErrorShape {
+  code?: string;
+  cause?: unknown;
+}
+
+/** Drizzle wraps driver failures; walk the cause chain to reach PG 23505. */
+function isUniqueViolation(err: unknown, depth = 0): boolean {
+  if (depth > 5 || !err || typeof err !== 'object') return false;
+  const current = err as PgErrorShape;
+  return current.code === '23505' || isUniqueViolation(current.cause, depth + 1);
+}
+
 /**
  * Proactive intent endpoints per WEB_IMPLEMENTATION §15 and
  * DOMAIN_ARCHITECTURE §4.21.
@@ -94,8 +106,7 @@ export function registerProactiveRoutes(app: FastifyInstance): void {
         });
       } catch (err) {
         // Dedupe conflict: another request with the same dedupe key exists.
-        const code = (err as { code?: string }).code;
-        if (code === '23505') {
+        if (isUniqueViolation(err)) {
           const [existing] = await db
             .select()
             .from(proactiveIntents)

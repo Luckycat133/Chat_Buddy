@@ -15,6 +15,9 @@ const mocks = vi.hoisted(() => ({
     isTavilyConfigured: vi.fn(() => false),
     generateMomentsImage: vi.fn(),
     isMiniMaxConfigured: vi.fn(() => false),
+    cloudEnabled: vi.fn(() => false),
+    getCloud: vi.fn(),
+    generateCloudImage: vi.fn(),
     translateWithReflection: vi.fn(),
     detectDomain: vi.fn(() => 'general'),
     getCombinedGlossary: vi.fn(() => []),
@@ -87,6 +90,11 @@ vi.mock('../../../services/minimaxService', () => ({
     isMiniMaxConfigured: mocks.isMiniMaxConfigured,
 }));
 
+vi.mock('../../../api/cloud-adapter', () => ({
+    cloudEnabled: mocks.cloudEnabled,
+    getCloud: mocks.getCloud,
+}));
+
 vi.mock('../../../services/tavilyService', () => ({
     tavilySearch: mocks.tavilySearch,
     tavilyNewsSearch: mocks.tavilyNewsSearch,
@@ -113,6 +121,8 @@ beforeEach(() => {
     mocks.assertToolAuthorized.mockReturnValue(undefined);
     mocks.isTavilyConfigured.mockReturnValue(false);
     mocks.isMiniMaxConfigured.mockReturnValue(false);
+    mocks.cloudEnabled.mockReturnValue(false);
+    mocks.getCloud.mockReset();
     mocks.detectDomain.mockReturnValue('general');
     mocks.getCombinedGlossary.mockReturnValue([]);
     mocks.formatTavilyResults.mockImplementation((response) => response);
@@ -518,6 +528,38 @@ describe('delegate_task tool', () => {
 });
 
 describe('generate_image tool', () => {
+    it('uses the authenticated cloud capability in cloud mode', async () => {
+        mocks.cloudEnabled.mockReturnValue(true);
+        mocks.generateCloudImage.mockResolvedValue({
+            images: ['data:image/png;base64,generated'],
+            model: 'image-01',
+        });
+        mocks.getCloud.mockReturnValue({ generateImage: mocks.generateCloudImage });
+
+        const result = await executeTool('generate_image', {
+            prompt: 'a cat',
+            aspectRatio: '4:3',
+        });
+
+        expect(result).toBe('[IMG:data:image/png;base64,generated]');
+        expect(mocks.generateCloudImage).toHaveBeenCalledWith({
+            prompt: 'a cat',
+            aspectRatio: '4:3',
+        });
+        expect(mocks.isMiniMaxConfigured).not.toHaveBeenCalled();
+    });
+
+    it('surfaces a truthful cloud provider error without local fallback', async () => {
+        mocks.cloudEnabled.mockReturnValue(true);
+        mocks.generateCloudImage.mockRejectedValue(new Error('MEDIA_NOT_CONFIGURED'));
+        mocks.getCloud.mockReturnValue({ generateImage: mocks.generateCloudImage });
+
+        const result = await executeTool('generate_image', { prompt: 'a cat' });
+
+        expect(result).toContain('MEDIA_NOT_CONFIGURED');
+        expect(mocks.generateMomentsImage).not.toHaveBeenCalled();
+    });
+
     it('returns a clear error when no image provider is configured', async () => {
         mocks.isMiniMaxConfigured.mockReturnValue(false);
 

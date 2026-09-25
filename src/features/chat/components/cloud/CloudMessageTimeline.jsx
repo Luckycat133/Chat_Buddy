@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import { cn } from '../../../../utils/cn';
 import { useLanguage } from '../../../../context/LanguageContext';
 import { formatTimeSeparator, shouldShowTimeSeparator } from '../../../../utils/formatTime';
+import TTSButton from '../TTSButton';
 
 function CloudMessageBubble({ message, isMe, senderName, onRetry }) {
   const { t } = useLanguage();
@@ -62,6 +63,11 @@ function CloudMessageBubble({ message, isMe, senderName, onRetry }) {
           >
             <p className="whitespace-pre-wrap break-words text-[16px] leading-relaxed">{message.content}</p>
           </div>
+          {!isMe && message.kind === 'text' && (
+            <div className="mt-1 flex justify-start">
+              <TTSButton text={message.content} personaId={message.senderActorId} />
+            </div>
+          )}
         </div>
       </div>
     </div>
