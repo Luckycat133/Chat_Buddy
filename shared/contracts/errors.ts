@@ -32,6 +32,8 @@ export const ApiErrorCodes = {
   ProactiveExpired: 'PROACTIVE_EXPIRED',
   ModelFailure: 'MODEL_FAILURE',
   ToolFailure: 'TOOL_FAILURE',
+  MediaNotConfigured: 'MEDIA_NOT_CONFIGURED',
+  MediaFailure: 'MEDIA_FAILURE',
   Internal: 'INTERNAL',
 } as const;
 export type ApiErrorCode = (typeof ApiErrorCodes)[keyof typeof ApiErrorCodes];

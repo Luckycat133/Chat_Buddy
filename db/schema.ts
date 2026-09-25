@@ -7,6 +7,7 @@
  */
 import {
   boolean,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -170,6 +171,7 @@ export const sessions = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: 'cascade' }),
     refreshTokenHash: text('refresh_token_hash').notNull(),
+    accessTokenHash: text('access_token_hash'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
@@ -178,6 +180,9 @@ export const sessions = pgTable(
   },
   (table) => ({
     accountIdx: index('sessions_account_idx').on(table.accountId),
+    accessTokenIdx: index('sessions_access_token_idx').on(
+      table.accessTokenHash,
+    ),
   }),
 );
 
@@ -458,6 +463,7 @@ export const conversations = pgTable('conversations', {
     .notNull()
     .references(() => actors.id, { onDelete: 'restrict' }),
   status: text('status').notNull().default('active'),
+  importKey: text('import_key'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -595,6 +601,7 @@ export const moments = pgTable(
     mediaAssets: jsonb('media_assets').notNull().default([]),
     audiencePolicy: jsonb('audience_policy').notNull(),
     sourceEventId: uuid('source_event_id'),
+    importKey: text('import_key'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -619,12 +626,18 @@ export const momentInteractions = pgTable(
     type: text('type').notNull(),
     content: text('content'),
     parentInteractionId: uuid('parent_interaction_id'),
+    clientIdempotencyKey: text('client_idempotency_key'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (table) => ({
     momentIdx: index('moment_interactions_moment_idx').on(table.momentId),
+    clientKeyIdx: uniqueIndex('moment_interactions_client_key_idx').on(
+      table.momentId,
+      table.actorId,
+      table.clientIdempotencyKey,
+    ),
   }),
 );
 
@@ -654,6 +667,7 @@ export const memoryItems = pgTable(
     visibilityPolicy: jsonb('visibility_policy').notNull().default({}),
     sharePolicy: jsonb('share_policy').notNull().default({}),
     relevanceTags: jsonb('relevance_tags').notNull().default([]),
+    importKey: text('import_key'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -725,6 +739,120 @@ export const proactiveIntents = pgTable(
       table.status,
       table.notBefore,
     ),
+  }),
+);
+
+/* -------------------------------------------------------------------------- */
+/*                    P1: friend capabilities state (§19)                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Per-actor capability consent and defaults. Weather stores only the
+ * selected city or coarse (0.1°) approximate location; calendar records
+ * the connected provider so only a provider response can mark completion.
+ */
+export const actorCapabilitySettings = pgTable('actor_capability_settings', {
+  actorId: uuid('actor_id')
+    .primaryKey()
+    .references(() => actors.id, { onDelete: 'cascade' }),
+  weatherCity: text('weather_city'),
+  weatherConsentAt: timestamp('weather_consent_at', { withTimezone: true }),
+  weatherLocationLat: doublePrecision('weather_location_lat'),
+  weatherLocationLon: doublePrecision('weather_location_lon'),
+  calendarProvider: text('calendar_provider'),
+  calendarConnectedAt: timestamp('calendar_connected_at', {
+    withTimezone: true,
+  }),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/** User-submitted report against an actor (§P1 safety). */
+export const actorReports = pgTable(
+  'actor_reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    socialGraphId: uuid('social_graph_id')
+      .notNull()
+      .references(() => socialGraphs.id, { onDelete: 'cascade' }),
+    reporterActorId: uuid('reporter_actor_id')
+      .notNull()
+      .references(() => actors.id, { onDelete: 'cascade' }),
+    reportedActorId: uuid('reported_actor_id')
+      .notNull()
+      .references(() => actors.id, { onDelete: 'cascade' }),
+    reason: text('reason').notNull(),
+    details: text('details'),
+    status: text('status').notNull().default('open'),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    graphIdx: index('actor_reports_graph_idx').on(table.socialGraphId),
+    reporterIdx: index('actor_reports_reporter_idx').on(
+      table.reporterActorId,
+    ),
+    reportedIdx: index('actor_reports_reported_idx').on(
+      table.reportedActorId,
+    ),
+  }),
+);
+
+/** Contact invite links for human friends (§P1). */
+export const contactInvites = pgTable(
+  'contact_invites',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    socialGraphId: uuid('social_graph_id')
+      .notNull()
+      .references(() => socialGraphs.id, { onDelete: 'cascade' }),
+    code: text('code').notNull(),
+    createdByActorId: uuid('created_by_actor_id')
+      .notNull()
+      .references(() => actors.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('pending'),
+    acceptedByActorId: uuid('accepted_by_actor_id').references(
+      () => actors.id,
+      { onDelete: 'set null' },
+    ),
+    relationshipId: uuid('relationship_id').references(
+      () => relationships.id,
+      { onDelete: 'set null' },
+    ),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    codeIdx: uniqueIndex('contact_invites_code_idx').on(table.code),
+    graphIdx: index('contact_invites_graph_idx').on(table.socialGraphId),
+  }),
+);
+
+/** Push delivery audit rows for proactive intents (§P1). */
+export const pushDeliveryAttempts = pgTable(
+  'push_delivery_attempts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    intentId: uuid('intent_id').references(() => proactiveIntents.id, {
+      onDelete: 'set null',
+    }),
+    actorId: uuid('actor_id')
+      .notNull()
+      .references(() => actors.id, { onDelete: 'cascade' }),
+    channel: text('channel').notNull(),
+    ok: boolean('ok').notNull(),
+    detail: text('detail').notNull(),
+    attemptedAt: timestamp('attempted_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    intentIdx: index('push_delivery_attempts_intent_idx').on(table.intentId),
+    actorIdx: index('push_delivery_attempts_actor_idx').on(table.actorId),
   }),
 );
 

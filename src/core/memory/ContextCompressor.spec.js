@@ -2,12 +2,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
     saveFact: vi.fn(),
+    getFactsByCharacter: vi.fn(),
+    callAI: vi.fn(),
 }));
 
 vi.mock('./MemoryStore', () => ({
     memoryStore: {
         saveFact: mocks.saveFact,
+        getFactsByCharacter: mocks.getFactsByCharacter,
     },
+}));
+
+vi.mock('../../features/chat/services/chatService', () => ({
+    callAI: mocks.callAI,
 }));
 
 import {
@@ -21,6 +28,12 @@ describe('ContextCompressor request-efficient memory', () => {
     beforeEach(() => {
         mocks.saveFact.mockReset();
         mocks.saveFact.mockResolvedValue('memory-id');
+        mocks.getFactsByCharacter.mockReset();
+        mocks.getFactsByCharacter.mockResolvedValue([]);
+        mocks.callAI.mockReset();
+        // Default: the AI path is unavailable, so every legacy assertion
+        // below exercises the deterministic regex fallback.
+        mocks.callAI.mockResolvedValue(null);
     });
 
     it('extracts durable natural user statements locally and skips ordinary small talk', () => {
@@ -130,5 +143,122 @@ describe('ContextCompressor request-efficient memory', () => {
         expect(count).toBe(2);
         expect(mocks.saveFact).toHaveBeenCalledTimes(2);
         expect(mocks.saveFact.mock.calls.map((call) => call[0])).toEqual(['ai-1', 'ai-2']);
+    });
+});
+
+describe('ContextCompressor optional AI extraction path', () => {
+    beforeEach(() => {
+        mocks.saveFact.mockReset();
+        mocks.saveFact.mockResolvedValue('memory-id');
+        mocks.getFactsByCharacter.mockReset();
+        mocks.getFactsByCharacter.mockResolvedValue([]);
+        mocks.callAI.mockReset();
+    });
+
+    it('skips both extraction paths for pure greetings (no provider call)', async () => {
+        const count = await extractMemoriesAsync(
+            [{ senderId: 'user-me', content: '你好呀！' }],
+            'ai-1',
+            'Luna',
+        );
+
+        expect(count).toBe(0);
+        expect(mocks.callAI).not.toHaveBeenCalled();
+        expect(mocks.saveFact).not.toHaveBeenCalled();
+    });
+
+    it('stores well-formed AI facts without falling back to the regex path', async () => {
+        mocks.callAI.mockResolvedValue(JSON.stringify({
+            facts: [
+                { fact: '用户住在厦门', importance: 7, category: 'fact' },
+                { fact: '用户养了一只叫豆包的橘猫', importance: 8, category: 'fact' },
+                { fact: '', importance: 5 },
+                { fact: '重复事实', importance: 3 },
+                { fact: '重复事实', importance: 3 },
+            ],
+        }));
+
+        const count = await extractMemoriesAsync(
+            [{ senderId: 'user-me', content: '我最近搬到了厦门，养了只猫。' }],
+            'ai-1',
+            'Luna',
+        );
+
+        // Empty and duplicate AI facts are dropped, but the regex path is
+        // not consulted: a well-formed AI answer is authoritative.
+        expect(count).toBe(3);
+        expect(mocks.callAI).toHaveBeenCalledTimes(1);
+        expect(mocks.saveFact).toHaveBeenCalledTimes(3);
+        expect(mocks.saveFact).toHaveBeenCalledWith('ai-1', '用户住在厦门', 7, 'fact');
+    });
+
+    it('hands existing memories to the model so it avoids duplicates', async () => {
+        mocks.getFactsByCharacter.mockResolvedValue([
+            { fact: '用户住在厦门', importance: 7, category: 'fact' },
+        ]);
+        mocks.callAI.mockResolvedValue(JSON.stringify({ facts: [] }));
+
+        await extractMemoriesAsync(
+            [{ senderId: 'user-me', content: '我平时喜欢在周末爬山。' }],
+            'ai-1',
+            'Luna',
+        );
+
+        const prompt = mocks.callAI.mock.calls[0][0][0].content;
+        expect(prompt).toContain('用户住在厦门');
+        expect(prompt).toContain('我平时喜欢在周末爬山。');
+    });
+
+    it('silently falls back to the regex path when the AI answer is garbage', async () => {
+        mocks.callAI.mockResolvedValue('这不是JSON');
+
+        const count = await extractMemoriesAsync(
+            [{ senderId: 'user-me', content: '我月底准备从杭州搬去厦门，带着叫豆包的橘猫。' }],
+            'ai-1',
+            'Luna',
+        );
+
+        expect(count).toBe(1);
+        expect(mocks.saveFact).toHaveBeenCalledWith(
+            'ai-1',
+            expect.stringContaining('豆包'),
+            expect.any(Number),
+            'event',
+        );
+    });
+
+    it('silently falls back to the regex path when the provider call throws', async () => {
+        mocks.callAI.mockRejectedValue(new Error('gateway timeout'));
+
+        const count = await extractMemoriesAsync(
+            [{ senderId: 'user-me', content: '我最喜欢安静的女声民谣。' }],
+            'ai-1',
+            'Luna',
+        );
+
+        expect(count).toBe(1);
+        expect(mocks.saveFact).toHaveBeenCalledWith(
+            'ai-1',
+            expect.stringContaining('安静'),
+            expect.any(Number),
+            'preference',
+        );
+    });
+
+    it('resolves items once per group turn and shares them with every participant', async () => {
+        mocks.callAI.mockResolvedValue(JSON.stringify({
+            facts: [{ fact: '用户的项目叫 Chat_Buddy', importance: 6, category: 'fact' }],
+        }));
+
+        const count = await extractGroupMemoriesAsync(
+            [{ senderId: 'user-me', content: '我们的项目最近上线了。' }],
+            'group-1',
+            [{ id: 'ai-1', name: 'Luna' }, { id: 'ai-2', name: 'Max' }],
+        );
+
+        // One provider call for the whole group turn, two save paths.
+        expect(mocks.callAI).toHaveBeenCalledTimes(1);
+        expect(mocks.saveFact.mock.calls.map((call) => call[0])).toEqual(['ai-1', 'ai-2']);
+        expect(count).toBe(2);
     });
 });

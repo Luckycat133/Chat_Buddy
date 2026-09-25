@@ -2730,7 +2730,7 @@ select:focus-visible,
 .composer-input-wrap {
   flex: 1;
   position: relative;
-  min-height: 48px;
+  min-height: 64px;
   display: flex;
   align-items: flex-end;
   background: rgba(255, 255, 255, 0.5);

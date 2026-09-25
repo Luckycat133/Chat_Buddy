@@ -27,6 +27,8 @@ import { registerOnboardingRoutes } from './api/onboarding.js';
 import { registerAuthRoutes } from './api/auth.js';
 import { registerHiddenAiRoutes } from './api/hidden-ai.js';
 import { registerWorldEventRoutes } from './api/world-events.js';
+import { registerSocialRoutes } from './api/social.js';
+import { registerAiRoutes } from './api/ai.js';
 import { registerRealtimeGateway } from './realtime/gateway.js';
 
 declare module 'fastify' {
@@ -121,6 +123,35 @@ export async function buildServer(options: ServerOptions): Promise<FastifyInstan
       reply.code(err.status).send(err.toEnvelope());
       return;
     }
+    // H1 fix: Fastify's native content-type parser failures (malformed JSON,
+    // empty body with CT=json, missing/unsupported content type) arrive as
+    // FastifyErrors carrying a 4xx statusCode. Previously they fell through
+    // to the 500 INTERNAL branch. Pass any error with a 4xx statusCode
+    // through with its status and a safe message instead of wrapping it as
+    // an INTERNAL server error.
+    const statusCode = (err as { statusCode?: unknown }).statusCode;
+    if (
+      typeof statusCode === 'number' &&
+      Number.isInteger(statusCode) &&
+      statusCode >= 400 &&
+      statusCode < 500
+    ) {
+      const errMessage = (err as { message?: unknown }).message;
+      const message = (
+        typeof errMessage === 'string' && errMessage.length > 0
+          ? errMessage
+          : 'Invalid request'
+      ).slice(0, 300);
+      request.log.warn({ err, requestId }, 'client error');
+      reply.code(statusCode).send({
+        error: {
+          code: ApiErrorCodes.ValidationFailed,
+          message,
+          request_id: requestId,
+        },
+      });
+      return;
+    }
     request.log.error({ err, requestId }, 'unhandled error');
     reply.code(500).send({
       error: {
@@ -156,6 +187,8 @@ registerMomentRoutes(app);
 registerAccountRoutes(app);
 registerCapabilityRoutes(app);
 registerHiddenAiRoutes(app);
+registerSocialRoutes(app);
+registerAiRoutes(app);
 registerWorldEventRoutes(app);
 registerRealtimeGateway(app);
 

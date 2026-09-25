@@ -10,6 +10,7 @@ import {
 } from '../../db/schema.js';
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
+import { actorGraphId } from '../services/graph.js';
 import { newId } from '../../shared/contracts/ids.js';
 import { InvitationStatus } from '../../shared/contracts/enums.js';
 
@@ -112,9 +113,10 @@ export function registerGroupInvitationRoutes(app: FastifyInstance): void {
           .limit(1);
         void conv;
 
+        const eventGraphId = await actorGraphId(db, actorId);
         await tx.insert(worldEvents).values({
           id: newId<string>(),
-          socialGraphId: '00000000-0000-0000-0000-000000000001',
+          socialGraphId: eventGraphId,
           type: 'group_invitation_decided',
           actorId,
           subjectActorIds: [inv.inviterActorId, actorId],

@@ -8,6 +8,7 @@ import {
   relationships,
   worldEvents,
 } from '../../db/schema.js';
+import { actorGraphId } from '../services/graph.js';
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 import { newId } from '../../shared/contracts/ids.js';
@@ -47,6 +48,33 @@ export function registerFriendRequestRoutes(app: FastifyInstance): void {
         );
       }
 
+      // A blocked relationship refuses contact in either direction.
+      const [blockedRel] = await db
+        .select({ id: relationships.id })
+        .from(relationships)
+        .where(
+          and(
+            or(
+              and(
+                eq(relationships.actorAId, senderId),
+                eq(relationships.actorBId, body.recipientActorId),
+              ),
+              and(
+                eq(relationships.actorAId, body.recipientActorId),
+                eq(relationships.actorBId, senderId),
+              ),
+            ),
+            eq(relationships.state, 'blocked'),
+          ),
+        )
+        .limit(1);
+      if (blockedRel) {
+        throw new ApiError(
+          ApiErrorCodes.ActorBlocked,
+          'A blocked relationship prevents contact',
+        );
+      }
+
       // Reject if a non-terminal request already exists in either direction.
       const existing = await db
         .select({ id: friendRequests.id })
@@ -78,6 +106,7 @@ export function registerFriendRequestRoutes(app: FastifyInstance): void {
       }
 
       const id = newId<string>();
+      const graphId = await actorGraphId(db, senderId);
       await db.transaction(async (tx) => {
         await tx.insert(friendRequests).values({
           id,
@@ -89,7 +118,7 @@ export function registerFriendRequestRoutes(app: FastifyInstance): void {
         });
         await tx.insert(worldEvents).values({
           id: newId<string>(),
-          socialGraphId: '00000000-0000-0000-0000-000000000001',
+          socialGraphId: graphId,
           type: 'friendship_requested',
           actorId: senderId,
           subjectActorIds: [body.recipientActorId],
@@ -154,6 +183,7 @@ export function registerFriendRequestRoutes(app: FastifyInstance): void {
       }
 
       const decidedAt = new Date();
+      const graphId = await actorGraphId(db, actorId);
       await db.transaction(async (tx) => {
         await tx
           .update(friendRequests)
@@ -183,7 +213,7 @@ export function registerFriendRequestRoutes(app: FastifyInstance): void {
           if (!existingRel) {
             await tx.insert(relationships).values({
               id: newId<string>(),
-              socialGraphId: '00000000-0000-0000-0000-000000000001',
+              socialGraphId: graphId,
               actorAId: a!,
               actorBId: b!,
               state: 'accepted',
@@ -195,7 +225,7 @@ export function registerFriendRequestRoutes(app: FastifyInstance): void {
         if (eventType) {
           await tx.insert(worldEvents).values({
             id: newId<string>(),
-            socialGraphId: '00000000-0000-0000-0000-000000000001',
+            socialGraphId: graphId,
             type: eventType,
             actorId,
             subjectActorIds: [

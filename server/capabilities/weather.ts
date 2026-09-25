@@ -15,19 +15,36 @@ export interface WeatherResult {
 }
 
 interface RawWeatherProvider {
-  city: string;
+  city?: string;
   temperatureC: number;
   condition: string;
   observedAt: string;
 }
 
-export async function fetchWeather(city: string): Promise<WeatherResult> {
+export interface WeatherQuery {
+  /** Selected city name (stored as the actor default). */
+  city?: string;
+  /** Coarse browser approximate location after a user gesture (§19). */
+  location?: { lat: number; lon: number };
+}
+
+export async function fetchWeather(query: WeatherQuery): Promise<WeatherResult> {
   const env = serverEnv();
   if (!env.WEATHER_PROVIDER_URL || !env.WEATHER_PROVIDER_KEY) {
     throw new Error('weather provider not configured');
   }
-  const url = new URL('/v1/weather', env.WEATHER_PROVIDER_URL);
-  url.searchParams.set('city', city);
+  const weatherBase = env.WEATHER_PROVIDER_URL!.endsWith('/')
+    ? env.WEATHER_PROVIDER_URL
+    : `${env.WEATHER_PROVIDER_URL}/`;
+  const url = new URL('v1/weather', weatherBase);
+  if (query.city) {
+    url.searchParams.set('city', query.city);
+  }
+  if (query.location) {
+    // Coarse precision only: one decimal (~11 km) per §10 data minimization.
+    url.searchParams.set('lat', query.location.lat.toFixed(1));
+    url.searchParams.set('lon', query.location.lon.toFixed(1));
+  }
   const res = await fetch(url, {
     headers: {
       authorization: `Bearer ${env.WEATHER_PROVIDER_KEY}`,
@@ -39,8 +56,14 @@ export async function fetchWeather(city: string): Promise<WeatherResult> {
     throw new Error(`weather provider returned ${res.status}`);
   }
   const raw = (await res.json()) as RawWeatherProvider;
+  const city =
+    raw.city ??
+    query.city ??
+    (query.location
+      ? `${query.location.lat.toFixed(1)},${query.location.lon.toFixed(1)}`
+      : '');
   return {
-    city: raw.city,
+    city,
     temperatureC: raw.temperatureC,
     condition: raw.condition,
     observedAt: raw.observedAt,

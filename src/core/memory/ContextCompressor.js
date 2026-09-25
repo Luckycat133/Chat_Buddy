@@ -6,6 +6,7 @@
  */
 
 import { memoryStore } from './MemoryStore';
+import { callAI } from '../../features/chat/services/chatService';
 
 // Preserve a useful working conversation. Compression applies only after a
 // substantial history has accumulated; the current user message is retained
@@ -23,6 +24,28 @@ const DURABLE_ENTITY_PATTERN = /(?:(?:猫|狗|宠物|孩子|伴侣|家人|cat|do
 const DURABLE_EVENT_PATTERN = /(?:(?:\d{1,2}月\d{1,2}日|今天|明天|后天|下周|下个月|月底|年底).{0,28}(?:从|搬|去|到|出发|开始|结束)|(?:会|将|准备|计划|打算).{0,24}(?:带|搬|去|到|开始|结束)|(?:会带|带着|养(?:了)?|有一只).{0,24}(?:猫|狗|宠物))/u;
 const DO_NOT_REMEMBER_PATTERN = /(?:别记|不要记|别保存|不要保存|do not remember|don't remember|forget this)/i;
 const RECALL_QUERY_PATTERN = /(?:还记得|你记得|记得我的|不要猜.{0,12}(?:告诉|回答)|逐项(?:告诉|回答)|(?:告诉|回答)我.{0,20}(?:名字|时间|日期|偏好)|do you remember|tell me (?:my|what))/i;
+
+// Pure greetings/pleasantries never carry durable facts. Running the AI
+// extraction for them would spend an extra provider call for nothing, so
+// they skip both the AI path and the regex fallback entirely.
+const TRIVIAL_SMALL_TALK_PATTERN = /^(?:嗨+|哈喽+|嘿+|你好[呀啊吖]?|您好[呀啊吖]?|早上好|中午好|下午好|晚上好|早安|晚安|在吗|在么| hi+|hello+|hey+|yo+|hiya|howdy|good\s*(?:morning|afternoon|evening))\s*[!！。．.~～?？]*$/i;
+
+/**
+ * AI extraction is an optional enhancement over the deterministic regex
+ * path: when the configured gateway is unreachable or answers garbage,
+ * extraction silently falls back to `extractLocalMemoryItems`.
+ */
+const AI_MEMORY_EXTRACTION_ENABLED = true;
+const AI_MEMORY_FACT_CHARS = 160;
+const AI_MEMORY_MAX_FACTS = 8;
+const AI_MEMORY_CATEGORIES = new Set(['fact', 'preference', 'event']);
+
+const AI_MEMORY_SYSTEM_PROMPT = [
+    'You extract durable, long-term-user facts from one chat message. Reply with JSON only:',
+    '{"facts":[{"fact":"...","importance":5,"category":"fact|preference|event"}]}',
+    'Rules: keep the user\'s original wording inside fact; only durable facts (identity, family, pets, preferences, plans, recurring habits);',
+    'no transient tasks, no questions, no small talk; importance 1-9; return {"facts":[]} when nothing qualifies. Never invent facts.',
+].join(' ');
 
 function normalizeText(value) {
     return String(value || '')
@@ -109,12 +132,120 @@ export function extractLocalMemoryItems(messages = [], maxItems = MAX_LOCAL_MEMO
 }
 
 /**
- * Persist user memories in IndexedDB only. Kept under the old async API name
- * so callers do not need a migration and, crucially, no provider is contacted.
+ * True when the message is pure greeting/pleasantries: nothing durable
+ * can be learned, so both extraction paths are skipped and — crucially —
+ * no extra provider request is spent.
  */
-export async function extractMemoriesAsync(messages, characterId, characterName = characterId) {
-    const items = extractLocalMemoryItems(messages, MAX_LOCAL_MEMORY_ITEMS);
-    if (items.length === 0) return 0;
+export function isTrivialSmallTalk(content) {
+    const normalized = normalizeText(content);
+    if (!normalized || normalized.length > 24) return false;
+    return TRIVIAL_SMALL_TALK_PATTERN.test(normalized);
+}
+
+function parseAiMemoryFacts(raw) {
+    if (typeof raw !== 'string' || !raw.trim()) return null;
+    const fenced = raw.trim().match(/```(?:json)?\s*([\s\S]*?)```/);
+    const candidate = (fenced ? fenced[1] : raw).trim();
+    let parsed;
+    try {
+        parsed = JSON.parse(candidate);
+    } catch (err) {
+        return null;
+    }
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.facts)) {
+        return null;
+    }
+    const items = [];
+    const seen = new Set();
+    for (const entry of parsed.facts) {
+        if (!entry || typeof entry !== 'object') continue;
+        const fact = truncateText(String(entry.fact || ''), AI_MEMORY_FACT_CHARS);
+        if (!fact) continue;
+        const key = fact.toLocaleLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const importance = Number.isFinite(Number(entry.importance))
+            ? Math.min(9, Math.max(1, Math.round(Number(entry.importance))))
+            : 5;
+        const category = AI_MEMORY_CATEGORIES.has(entry.category)
+            ? entry.category
+            : 'fact';
+        items.push({ fact, importance, category });
+    }
+    return items;
+}
+
+/**
+ * Optional AI extraction path: hand the latest user message plus the
+ * memories already stored to the model gateway (the server's free
+ * nemotron route via the same proxy the chat itself uses) and accept
+ * well-formed new-fact JSON. Any failure — missing key, timeout, garbage
+ * shape — resolves to null so the caller silently falls back to the
+ * deterministic regex path.
+ */
+async function extractMemoryItemsViaAi(latestText, characterId) {
+    const existing = await memoryStore.getFactsByCharacter(characterId);
+    const existingBlock = (existing || [])
+        .slice(0, 20)
+        .map((memory) => `- ${memory.fact}`)
+        .join('\n') || '(none yet)';
+    const prompt = [
+        'Existing memories about this user (do not repeat them):',
+        existingBlock,
+        '',
+        'Latest user message:',
+        latestText,
+    ].join('\n');
+
+    const raw = await callAI(
+        [{ role: 'user', content: prompt }],
+        {
+            systemPrompt: AI_MEMORY_SYSTEM_PROMPT,
+            maxTokens: 400,
+            temperature: 0.1,
+            disableReasoning: true,
+            agentId: 'memory-extraction',
+        },
+    );
+    if (!raw) return null;
+    return parseAiMemoryFacts(raw);
+}
+
+/**
+ * Resolve the memory items for one turn: AI extraction first (when
+ * enabled and the message could carry facts), deterministic regex
+ * extraction as the silent fallback.
+ */
+async function resolveMemoryItems(messages, characterId) {
+    const latestUserMessage = [...(Array.isArray(messages) ? messages : [])]
+        .reverse()
+        .find((message) => message?.senderId === 'user-me');
+    const latestText = normalizeText(latestUserMessage?.content);
+    if (!latestText) return [];
+    if (
+        isTrivialSmallTalk(latestText)
+        || DO_NOT_REMEMBER_PATTERN.test(latestText)
+    ) {
+        return [];
+    }
+
+    if (AI_MEMORY_EXTRACTION_ENABLED) {
+        try {
+            const aiItems = await extractMemoryItemsViaAi(latestText, characterId);
+            // A well-formed AI answer is authoritative — even when it
+            // reports no durable facts. Only a failure (null) falls back.
+            if (aiItems !== null) return aiItems.slice(-MAX_LOCAL_MEMORY_ITEMS);
+        } catch (err) {
+            // Silent fallback: extraction must never break the chat turn.
+        }
+    }
+
+    return extractLocalMemoryItems(messages, MAX_LOCAL_MEMORY_ITEMS);
+}
+
+/** Persist resolved items into one character's local memory store. */
+async function captureMemoryItems(items, characterId, characterName = characterId) {
+    if (!Array.isArray(items) || items.length === 0) return 0;
 
     let saved = 0;
     for (const item of items) {
@@ -131,6 +262,17 @@ export async function extractMemoriesAsync(messages, characterId, characterName 
         console.log(`[ContextCompressor] Saved ${saved} local memories for ${characterName}`);
     }
     return saved;
+}
+
+/**
+ * Persist user memories in IndexedDB only. Kept under the historical
+ * async API name so callers do not need a migration. The optional AI
+ * extraction path (one bounded provider call) runs first; the original
+ * deterministic regex extraction remains the silent fallback.
+ */
+export async function extractMemoriesAsync(messages, characterId, characterName = characterId) {
+    const items = await resolveMemoryItems(messages, characterId);
+    return captureMemoryItems(items, characterId, characterName);
 }
 
 /**
@@ -159,17 +301,23 @@ export function compressContext(messages, _personas = []) {
 }
 
 /**
- * Group memory is also local: one IndexedDB write path per participant and no
- * fan-out to language models.
+ * Group memory is also local: one IndexedDB write path per participant.
+ * Extraction (AI or regex) runs at most once per turn and the resolved
+ * items are shared by every participant, so a group turn never fans out
+ * to one provider call per character.
  */
 export async function extractGroupMemoriesAsync(messages, _chatId, aiParticipants) {
     if (!Array.isArray(aiParticipants) || aiParticipants.length === 0) return 0;
     const recentUserMessages = (messages || [])
         .filter((message) => message?.senderId === 'user-me')
         .slice(-4);
+    if (recentUserMessages.length === 0) return 0;
+
+    const items = await resolveMemoryItems(recentUserMessages, aiParticipants[0].id);
+    if (items.length === 0) return 0;
 
     const counts = await Promise.all(
-        aiParticipants.map((ai) => extractMemoriesAsync(recentUserMessages, ai.id, ai.name))
+        aiParticipants.map((ai) => captureMemoryItems(items, ai.id, ai.name))
     );
     return counts.reduce((sum, count) => sum + Number(count || 0), 0);
 }

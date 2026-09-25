@@ -2,11 +2,15 @@ import type { FastifyInstance } from 'fastify';
 import { and, asc, eq, gt, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
-import { proactiveIntents } from '../../db/schema.js';
+import { actors, proactiveIntents, worldEvents } from '../../db/schema.js';
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 import { newId } from '../../shared/contracts/ids.js';
 import { ProactiveStatus } from '../../shared/contracts/enums.js';
+import {
+  parseQuietHoursPolicy,
+  shiftOutOfQuietHours,
+} from '../workers/quiet-hours.js';
 
 /**
  * Proactive intent endpoints per WEB_IMPLEMENTATION §15 and
@@ -16,8 +20,13 @@ import { ProactiveStatus } from '../../shared/contracts/enums.js';
  *   - A durable `ProactiveIntent` is created with not-before and
  *     expiration times; the model alone cannot remember to wake later.
  *   - Dedupe key + (source, target) is unique so retries don't double-post.
+ *   - Creation shifts `notBefore` out of the configured quiet-hours window
+ *     (user-local basis when a valid IANA zone is supplied) so an intent
+ *     is never born already due inside the user's quiet time.
  *   - The worker (`server/workers/proactive.ts`) claims, validates, and
  *     sends. Status transitions are server-authoritative.
+ *   - The inspector exposes reason/schedule/status to participants and
+ *     never the privateContext.
  */
 export function registerProactiveRoutes(app: FastifyInstance): void {
   app.post(
@@ -52,6 +61,20 @@ export function registerProactiveRoutes(app: FastifyInstance): void {
           'expiresAt must be after notBefore',
         );
       }
+      const quietPolicy = parseQuietHoursPolicy(body.quietHoursPolicy);
+      const effectiveNotBefore = shiftOutOfQuietHours(
+        new Date(body.notBefore),
+        quietPolicy,
+      );
+      // The event projection carries the source actor's social graph.
+      const [sourceActor] = await db
+        .select({ socialGraphId: actors.socialGraphId })
+        .from(actors)
+        .where(eq(actors.id, actorId))
+        .limit(1);
+      if (!sourceActor) {
+        throw new ApiError(ApiErrorCodes.NotFound, 'Actor not found');
+      }
       const id = newId<string>();
       try {
         await db.insert(proactiveIntents).values({
@@ -61,7 +84,7 @@ export function registerProactiveRoutes(app: FastifyInstance): void {
           sourceEventId: body.sourceEventId,
           reason: body.reason,
           desiredEffect: body.desiredEffect,
-          notBefore: new Date(body.notBefore),
+          notBefore: effectiveNotBefore,
           expiresAt: new Date(body.expiresAt),
           priority: body.priority,
           dedupeKey: body.dedupeKey,
@@ -89,8 +112,62 @@ export function registerProactiveRoutes(app: FastifyInstance): void {
         }
         throw err;
       }
+      // Durable event projection so social-graph consumers can observe
+      // the intent's creation (never carries the privateContext).
+      await db.insert(worldEvents).values({
+        id: newId<string>(),
+        socialGraphId: sourceActor.socialGraphId,
+        type: 'proactive_intent_created',
+        actorId,
+        subjectActorIds: [body.targetActorId],
+        payload: { intentId: id, dedupeKey: body.dedupeKey },
+        visibilityPolicy: {},
+        idempotencyKey: `proactive_intent_created:${id}`,
+      });
       reply.code(201);
       return { id, deduped: false };
+    },
+  );
+
+  /** Inspector: participants see schedule/status, never privateContext. */
+  app.get(
+    '/v1/proactive-intents/:id',
+    { preHandler: requireAuth },
+    async (request) => {
+      const params = z
+        .object({ id: z.string().uuid() })
+        .parse(request.params);
+      const db = request.server.db as Database;
+      const actorId = request.requestContext.actorId;
+      if (!actorId) {
+        throw new ApiError(ApiErrorCodes.Forbidden, 'No actor bound to session');
+      }
+      const [intent] = await db
+        .select()
+        .from(proactiveIntents)
+        .where(eq(proactiveIntents.id, params.id))
+        .limit(1);
+      if (!intent) {
+        throw new ApiError(ApiErrorCodes.NotFound, 'Intent not found');
+      }
+      if (
+        intent.sourceActorId !== actorId &&
+        intent.targetActorId !== actorId
+      ) {
+        throw new ApiError(
+          ApiErrorCodes.Forbidden,
+          'Only source or target may inspect the intent',
+        );
+      }
+      return {
+        id: intent.id,
+        status: intent.status,
+        reason: intent.reason,
+        desiredEffect: intent.desiredEffect,
+        notBefore: intent.notBefore.toISOString(),
+        expiresAt: intent.expiresAt.toISOString(),
+        createdAt: intent.createdAt.toISOString(),
+      };
     },
   );
 

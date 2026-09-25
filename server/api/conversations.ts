@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq, inArray, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne, or } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
 import {
@@ -63,10 +63,7 @@ export function registerConversationRoutes(app: FastifyInstance): void {
               ConversationMemberStatus.Invited,
             ]),
             // Hidden AI conversations are not enumerable by humans.
-            or(
-              isNull(conversationMembers.actorId),
-              // The join ensures only human-visible conversations surface.
-            )!,
+            ne(conversations.type, 'hidden_ai_direct'),
           ),
         )
         .orderBy(desc(conversations.createdAt))

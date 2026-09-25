@@ -31,10 +31,25 @@ const ServerEnvSchema = z.object({
   MAGIC_LINK_FROM: z.string().email().optional(),
   MODEL_GATEWAY_URL: z.string().url().optional(),
   MODEL_GATEWAY_KEY: z.string().optional(),
+  MODEL_GATEWAY_MODEL: z.string().optional(),
+  MODEL_GATEWAY_JSON_MODE: z
+    .union([z.literal('true'), z.literal('false')])
+    .default('true')
+    .transform((v) => v === 'true'),
+  /** Audit-role token for administrative endpoints (e.g. hidden AI
+   *  audit). Unset = administrative surface hard-disabled. */
+  SERVER_AUDIT_TOKEN: z.string().min(32).optional(),
   SEARCH_PROVIDER_URL: z.string().url().optional(),
   SEARCH_PROVIDER_KEY: z.string().optional(),
   WEATHER_PROVIDER_URL: z.string().url().optional(),
   WEATHER_PROVIDER_KEY: z.string().optional(),
+  IMAGE_PROVIDER_URL: z.string().url().optional(),
+  IMAGE_PROVIDER_KEY: z.string().optional(),
+  IMAGE_PROVIDER_MODEL: z.string().optional(),
+  TTS_PROVIDER_URL: z.string().url().optional(),
+  TTS_PROVIDER_KEY: z.string().optional(),
+  TTS_PROVIDER_MODEL: z.string().optional(),
+  TTS_PROVIDER_VOICE: z.string().optional(),
   APNS_KEY_ID: z.string().optional(),
   APNS_TEAM_ID: z.string().optional(),
   APNS_KEY_PATH: z.string().optional(),

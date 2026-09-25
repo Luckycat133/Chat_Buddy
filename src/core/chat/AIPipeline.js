@@ -888,8 +888,40 @@ export class AIPipeline {
                 await this._simulateTypingAndSend(chatId, ai, cleanResponse);
             }
         } else {
-            // Standard single message
-            if (_turnContext.streamed) {
+            // Split a plain multi-thought reply into separate bubbles like
+            // real texting; system notices ("> " blockquote) stay one message.
+            const hasSystemNotice = /^\s*> /m.test(cleanResponse);
+            const segments = hasSystemNotice ? [] : cleanResponse
+                .split(/\n\s*\n/)
+                .map(s => s.trim())
+                .filter(Boolean);
+            let parts = segments.length > 1 ? segments : null;
+            if (!parts && !hasSystemNotice && cleanResponse.length > 44) {
+                const sentences = cleanResponse.match(/[^。！？!?～…\.]+[。！？!?～…\.]+\s*|[^。！？!?～…\.]+$/g) || [];
+                if (sentences.length >= 2) {
+                    parts = [];
+                    let current = '';
+                    for (const sentence of sentences) {
+                        if (current && (current + sentence).length > 44) {
+                            parts.push(current.trim());
+                            current = sentence;
+                        } else {
+                            current += sentence;
+                        }
+                    }
+                    if (current.trim()) parts.push(current.trim());
+                    parts = parts.slice(0, 3);
+                }
+            }
+            if (parts && parts.length > 1) {
+                for (let i = 0; i < parts.length; i++) {
+                    if (i > 0) {
+                        this.callbacks.onTyping?.(chatId, ai.id, true);
+                        await this._wait(800 + this._random() * 1000);
+                    }
+                    await this._simulateTypingAndSend(chatId, ai, parts[i]);
+                }
+            } else if (_turnContext.streamed) {
                 this.callbacks.onMessage?.(chatId, cleanResponse, ai.id);
             } else {
                 await this._simulateTypingAndSend(chatId, ai, cleanResponse);
@@ -1030,6 +1062,8 @@ export class AIPipeline {
                     : 'Match the depth and format to the task; keep casual chat natural, but do not omit useful substance.',
             'Do not repeat the question or prefix the answer with your name.',
             'Return only the final user-facing response; never expose a scratchpad, chain-of-thought, or an analysis of the prompt.',
+            'If you have two or three distinct thoughts, split them into separate short messages with a blank line between them — never one long packed paragraph.',
+            'Use emoji the way real people do in casual texting: rarely, and only where it carries actual feeling or meaning.',
         ];
         if (CURRENT_INFORMATION_PATTERN.test(latestUserText) && !context?.plannedToolName) {
             responseRules.push('For time-sensitive facts without retrieved evidence, state what cannot be verified and point to the relevant official source; do not invent current details.');

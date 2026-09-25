@@ -72,6 +72,10 @@ function defaultStatusForCode(code: ApiErrorCode): number {
       return 429;
     case ApiErrorCodes.ModelFailure:
     case ApiErrorCodes.ToolFailure:
+    case ApiErrorCodes.MediaFailure:
+      return 502;
+    case ApiErrorCodes.MediaNotConfigured:
+      return 503;
     case ApiErrorCodes.Internal:
       return 502;
     default:

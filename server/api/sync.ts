@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
+import { z } from 'zod';
 import type { Database } from '../../db/index.js';
 import { worldEvents, syncCursor } from '../../db/schema.js';
 import { requireAuth } from '../auth/middleware.js';
@@ -32,21 +33,45 @@ export function registerSyncRoutes(app: FastifyInstance): void {
         );
       }
 
-      const queryCursor = String(
-        (request.query as { cursor?: string } | undefined)?.cursor ?? '',
-      );
+      // H4: query params are validated (aligned with the moments routes):
+      // garbage cursors and out-of-range limits must fail with 422 instead
+      // of silently producing a broken predicate or a 500 deep in the DB
+      // layer.
+      const query = z
+        .object({
+          cursor: z
+            .string()
+            .max(512)
+            .regex(/^[A-Za-z0-9_-]+$/, 'cursor must be base64url')
+            .optional(),
+          limit: z.coerce.number().int().min(1).max(500).default(500),
+        })
+        .parse(request.query ?? {});
+      const queryCursorState = query.cursor ? decodeCursor(query.cursor) : null;
+      if (query.cursor && !queryCursorState) {
+        throw new ApiError(
+          ApiErrorCodes.ValidationFailed,
+          'cursor is not a valid sync cursor',
+        );
+      }
+
       const rows = await db
         .select({ cursor: syncCursor.cursor })
         .from(syncCursor)
         .where(eq(syncCursor.accountId, accountId))
         .limit(1);
       const last = rows[0];
-      const since = decodeCursor(queryCursor) ?? decodeCursor(last?.cursor);
+      const since = queryCursorState ?? decodeCursor(last?.cursor);
 
+      // C1 fix: bind the cursor as an ISO-8601 string with an explicit
+      // ::timestamptz cast. Handing a JS `Date` instance to the raw sql
+      // template bypasses Drizzle's column mappers, and the resulting
+      // driver bind failure poisons the connection-level prepared
+      // statement cache — the first /v1/sync call succeeds but every
+      // later one on that connection fails. String + cast never hits
+      // that path and keeps the comparison server-side.
       const baseWhere = since
-        ? sql`(${worldEvents.occurredAt}, ${worldEvents.id}) > (${new Date(
-            since.occurredAt,
-          )}, ${since.eventId}::uuid)`
+        ? sql`(${worldEvents.occurredAt}, ${worldEvents.id}) > (${since.occurredAt}::timestamptz, ${since.eventId}::uuid)`
         : sql`TRUE`;
 
       const events = await db
@@ -68,7 +93,7 @@ export function registerSyncRoutes(app: FastifyInstance): void {
           and(eq(worldEvents.socialGraphId, graphId), baseWhere),
         )
         .orderBy(worldEvents.occurredAt, worldEvents.id)
-        .limit(500);
+        .limit(query.limit);
 
       const upserts = events.map((e) => ({
         table: 'world_events',
@@ -108,7 +133,7 @@ export function registerSyncRoutes(app: FastifyInstance): void {
         upserts,
         tombstones,
         serverTime: new Date().toISOString(),
-        hasMore: events.length === 500,
+        hasMore: events.length === query.limit,
       };
     },
   );
@@ -134,9 +159,12 @@ function decodeCursor(raw: string | undefined): CursorState | null {
   try {
     const decoded = Buffer.from(raw, 'base64url').toString('utf8');
     const parsed = JSON.parse(decoded) as CursorState;
+    // Accept any UUID-shaped event id, including the nil-UUID sentinel
+    // emitted for empty deltas. (The stricter v7-shaped check rejected the
+    // server's own sentinel cursor, silently resetting the sync position.)
     if (
       typeof parsed.eventId !== 'string' ||
-      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-7][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
         parsed.eventId,
       )
     ) {

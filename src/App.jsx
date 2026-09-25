@@ -4,6 +4,7 @@ import AppProviders from './providers/AppProviders';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import ChatWindow from './features/chat/ChatWindow';
+import CloudChatWindow from './features/chat/CloudChatWindow';
 
 const ChatList = lazy(() => import('./features/chat/ChatList'));
 const CreateChat = lazy(() => import('./features/chat/CreateChat'));
@@ -36,9 +37,12 @@ export default function App() {
           <Suspense fallback={<RouteLoadingFallback />}>
             <Routes>
               <Route path="/" element={<Layout />}>
-                <Route index element={<ChatList />} />
+                {/* DEMO_EXPERIENCE.md §3: Chats is the default landing destination. */}
+                <Route index element={<Navigate to="/chats" replace />} />
+                <Route path="chats" element={<ChatList />} />
+                <Route path="chats/:conversationId" element={<CloudChatWindow />} />
                 <Route path="dashboard" element={<Dashboard />} />
-                <Route path="chat" element={<Navigate to="/" replace />} />
+                <Route path="chat" element={<Navigate to="/chats" replace />} />
                 <Route path="chat/:id" element={<ChatWindow />} />
                 <Route path="chat/:id/search" element={<ChatWindow />} />
                 <Route path="chat/:id/details" element={<GroupDetails />} />
@@ -50,13 +54,13 @@ export default function App() {
                 <Route path="moments" element={<MomentsPage />} />
                 <Route path="achievements" element={<AchievementsPage />} />
                 <Route path="leaderboard" element={<LeaderboardPage />} />
-                <Route path="groups" element={<Navigate to="/" replace />} />
+                <Route path="groups" element={<Navigate to="/chats" replace />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="profile" element={<UserProfile />} />
                 <Route path="profile/edit" element={<ProfileEditor />} />
                 <Route path="help" element={<Help />} />
                 <Route path="about" element={<About />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="*" element={<Navigate to="/chats" replace />} />
               </Route>
             </Routes>
           </Suspense>
