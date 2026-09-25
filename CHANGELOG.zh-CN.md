@@ -33,6 +33,7 @@ Chat Buddy 的所有重要变更都将记录在此文件中。
 
 ### 修复
 - **Access token 吊销**：访问令牌鉴权现在会查询会话记录，吊销或过期会话不再只依赖签名校验，而是立即返回未授权。
+- **Onboarding 初始快照**：创建 onboarding 会话时现在会在同一事务写入仅参与者可见的 `onboarding_conversation_created` 世界事件；同步投影会按当前 actor 过滤参与者私有事件。
 
 ---
 

@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Access-token revocation**: access-token authentication now checks the stored session record and rejects revoked or expired sessions instead of relying only on token signature validity.
+- **Onboarding initial snapshot**: creating an onboarding conversation now writes a participant-private `onboarding_conversation_created` world event in the same transaction; sync projection filters participant-restricted events to the authorized actor.
 
 ---
 
