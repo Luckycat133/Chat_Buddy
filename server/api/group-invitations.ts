@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
 import {
+  actors,
   conversationMembers,
   conversations,
   groupInvitations,
@@ -10,7 +11,7 @@ import {
 } from '../../db/schema.js';
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
-import { actorGraphId } from '../services/graph.js';
+import { ensureSameTemplateIdentityLink } from './social.js';
 import { newId } from '../../shared/contracts/ids.js';
 import { InvitationStatus } from '../../shared/contracts/enums.js';
 
@@ -20,6 +21,12 @@ import { InvitationStatus } from '../../shared/contracts/enums.js';
  * Decisions can be 'accepted' or 'declined'. On accept, the member row is
  * promoted to `active` and `joined_at` is stamped; on decline, the row
  * moves to `declined` and the world event records the decision code.
+ *
+ * Same-template identity resolution: once a group holds two active
+ * character actors instantiated from the same template, an active identity
+ * link is ensured (deterministic canonical = earliest-created actor) so
+ * public projections show one identity. Private relationships are never
+ * copied or merged by the link.
  */
 export function registerGroupInvitationRoutes(app: FastifyInstance): void {
   app.post(
@@ -64,7 +71,12 @@ export function registerGroupInvitationRoutes(app: FastifyInstance): void {
           );
         }
         if (inv.status !== InvitationStatus.Pending) {
-          return { id: inv.id, status: inv.status, idempotent: true };
+          return {
+            id: inv.id,
+            status: inv.status,
+            idempotent: true,
+            conversationId: inv.conversationId,
+          };
         }
 
         const newStatus =
@@ -106,14 +118,19 @@ export function registerGroupInvitationRoutes(app: FastifyInstance): void {
         // A group is "active" once at least the organizer and one invitee accept.
         // We don't try to derive complete membership rules here; runtime
         // visibility is enforced on each read.
-        const [conv] = await tx
-          .select()
-          .from(conversations)
-          .where(eq(conversations.id, inv.conversationId))
-          .limit(1);
-        void conv;
 
-        const eventGraphId = await actorGraphId(db, actorId);
+        // Resolve inside the transaction: PGlite serializes a single
+        // connection, so touching the outer `db` here would deadlock
+        // against the open decision transaction.
+        const [eventActor] = await tx
+          .select({ socialGraphId: actors.socialGraphId })
+          .from(actors)
+          .where(eq(actors.id, actorId))
+          .limit(1);
+        if (!eventActor) {
+          throw new ApiError(ApiErrorCodes.Forbidden, 'Actor not found');
+        }
+        const eventGraphId = eventActor.socialGraphId;
         await tx.insert(worldEvents).values({
           id: newId<string>(),
           socialGraphId: eventGraphId,
@@ -130,13 +147,68 @@ export function registerGroupInvitationRoutes(app: FastifyInstance): void {
           idempotencyKey: `invite_decided:${inv.id}:${body.decision}`,
         });
 
-        // Probe: satisfies the strict-typing noUnusedParameters TS hint.
-        void sql`1`;
-
-        return { id: inv.id, status: newStatus, idempotent: false };
+        return {
+          id: inv.id,
+          status: newStatus,
+          idempotent: false,
+          conversationId: inv.conversationId,
+        };
       });
+
+      // Identity resolution runs after the decision commits so its own
+      // transaction never nests inside the decision tx.
+      if (body.decision === 'accepted') {
+        await linkSameTemplateGroupMembers(db, decided.conversationId);
+      }
 
       return decided;
     },
   );
+}
+
+/**
+ * After an acceptance, ensure identity links for every active same-template
+ * character pair in the group. Idempotent; runs outside the decision
+ * transaction so its own tx never nests.
+ */
+async function linkSameTemplateGroupMembers(
+  db: Database,
+  conversationId: string,
+): Promise<void> {
+  const [conv] = await db
+    .select({ id: conversations.id, socialGraphId: conversations.socialGraphId })
+    .from(conversations)
+    .where(eq(conversations.id, conversationId))
+    .limit(1);
+  if (!conv) return;
+
+  const members = await db
+    .select({
+      actorId: conversationMembers.actorId,
+      type: actors.type,
+      templateId: actors.templateId,
+    })
+    .from(conversationMembers)
+    .innerJoin(actors, eq(actors.id, conversationMembers.actorId))
+    .where(
+      and(
+        eq(conversationMembers.conversationId, conv.id),
+        eq(conversationMembers.status, 'active'),
+      ),
+    );
+
+  const characters = members.filter((m) => m.type === 'character' && m.templateId);
+  for (let i = 0; i < characters.length; i += 1) {
+    for (let j = i + 1; j < characters.length; j += 1) {
+      const a = characters[i]!;
+      const b = characters[j]!;
+      if (a.templateId !== b.templateId) continue;
+      await ensureSameTemplateIdentityLink(
+        db,
+        conv.socialGraphId,
+        a.actorId,
+        b.actorId,
+      );
+    }
+  }
 }

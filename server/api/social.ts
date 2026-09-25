@@ -68,12 +68,15 @@ export async function findRelationship(
   a: string,
   b: string,
 ): Promise<{ id: string; state: string } | null> {
-  const [x, y] = orderedPair(a, b);
+  // actor_a/actor_b layout is not canonical on write, so match either order.
   const [row] = await db
     .select({ id: relationships.id, state: relationships.state })
     .from(relationships)
     .where(
-      and(eq(relationships.actorAId, x), eq(relationships.actorBId, y)),
+      or(
+        and(eq(relationships.actorAId, a), eq(relationships.actorBId, b)),
+        and(eq(relationships.actorAId, b), eq(relationships.actorBId, a)),
+      ),
     )
     .limit(1);
   return row ?? null;

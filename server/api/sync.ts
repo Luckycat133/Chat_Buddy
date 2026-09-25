@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
-import { worldEvents, syncCursor } from '../../db/schema.js';
+import { conversations, worldEvents, syncCursor } from '../../db/schema.js';
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 
@@ -74,6 +74,18 @@ export function registerSyncRoutes(app: FastifyInstance): void {
         ? sql`(${worldEvents.occurredAt}, ${worldEvents.id}) > (${since.occurredAt}::timestamptz, ${since.eventId}::uuid)`
         : sql`TRUE`;
 
+      // Hidden AI conversations are invisible to human sync: events bound to
+      // one are dropped entirely (payload included) so no enumeration
+      // identifier survives in the envelope.
+      const notHiddenConversation = sql`(
+        ${worldEvents.conversationId} IS NULL
+        OR NOT EXISTS (
+          SELECT 1 FROM conversations hidden_conv
+          WHERE hidden_conv.id = ${worldEvents.conversationId}
+            AND hidden_conv.type = 'hidden_ai_direct'
+        )
+      )`;
+
       const events = await db
         .select({
           id: worldEvents.id,
@@ -90,7 +102,7 @@ export function registerSyncRoutes(app: FastifyInstance): void {
         })
         .from(worldEvents)
         .where(
-          and(eq(worldEvents.socialGraphId, graphId), baseWhere),
+          and(eq(worldEvents.socialGraphId, graphId), baseWhere, notHiddenConversation),
         )
         .orderBy(worldEvents.occurredAt, worldEvents.id)
         .limit(query.limit);

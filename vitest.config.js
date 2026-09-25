@@ -8,6 +8,11 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.js'],
+    // Pin the cloud flag off so unit tests never require a live server;
+    // cloud-path specs mock the adapter instead.
+    env: {
+      VITE_USE_CLOUD: 'false',
+    },
     include: [
       // Pre-existing React component tests.
       'src/**/*.{test,spec}.{js,jsx}',

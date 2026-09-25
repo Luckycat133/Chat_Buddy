@@ -12,6 +12,7 @@ import {
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 import { newId } from '../../shared/contracts/ids.js';
+import { findRelationship } from './social.js';
 import {
   ConversationType,
   ConversationMemberStatus,
@@ -97,6 +98,25 @@ export function registerConversationRoutes(app: FastifyInstance): void {
 
       const id = newId<string>();
       const graphId = (await actorGraph(db, actorId)) ?? defaultGraphId();
+
+      // Block state outranks every invitation path: a blocked actor can
+      // neither be invited into a conversation nor DM the blocker.
+      const relationships = new Map<
+        string,
+        Awaited<ReturnType<typeof findRelationship>>
+      >();
+      for (const inviteeId of body.inviteeActorIds) {
+        if (inviteeId === actorId) continue;
+        const rel = await findRelationship(db, actorId, inviteeId);
+        relationships.set(inviteeId, rel);
+        if (rel?.state === 'blocked') {
+          throw new ApiError(
+            ApiErrorCodes.ActorBlocked,
+            'Contact is blocked',
+          );
+        }
+      }
+
       await db.transaction(async (tx) => {
         await tx.insert(conversations).values({
           id,
@@ -114,22 +134,30 @@ export function registerConversationRoutes(app: FastifyInstance): void {
         });
         for (const inviteeId of body.inviteeActorIds) {
           if (inviteeId === actorId) continue;
+          const relState = relationships.get(inviteeId)?.state;
+          // Accepted friends join a direct conversation immediately (both
+          // members active, no invitation hop); everyone else goes through
+          // the invitation-confirm path.
+          const autoActive = body.type === 'direct' && relState === 'accepted';
           await tx.insert(conversationMembers).values({
             conversationId: id,
             actorId: inviteeId,
-            status: 'invited',
+            status: autoActive ? 'active' : 'invited',
             role: 'member',
+            ...(autoActive ? { joinedAt: new Date() } : {}),
             invitedByActorId: actorId,
           });
-          await tx.insert(groupInvitations).values({
-            id: newId<string>(),
-            conversationId: id,
-            inviterActorId: actorId,
-            inviteeActorId: inviteeId,
-            visibleMemberSnapshot: [actorId, ...body.inviteeActorIds],
-            purpose: body.publicName ?? 'group chat',
-            status: 'pending',
-          });
+          if (!autoActive) {
+            await tx.insert(groupInvitations).values({
+              id: newId<string>(),
+              conversationId: id,
+              inviterActorId: actorId,
+              inviteeActorId: inviteeId,
+              visibleMemberSnapshot: [actorId, ...body.inviteeActorIds],
+              purpose: body.publicName ?? 'group chat',
+              status: 'pending',
+            });
+          }
         }
         await tx.insert(worldEvents).values({
           id: newId<string>(),

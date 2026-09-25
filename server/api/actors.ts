@@ -2,7 +2,12 @@ import type { FastifyInstance } from 'fastify';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
-import { actors, characterActors, personaTemplates } from '../../db/schema.js';
+import {
+  actorIdentityLinks,
+  actors,
+  characterActors,
+  personaTemplates,
+} from '../../db/schema.js';
 import {
   ActorSchema,
   CharacterActorSchema,
@@ -40,7 +45,27 @@ export function registerActorRoutes(app: FastifyInstance): void {
         })
         .from(actors)
         .where(eq(actors.socialGraphId, graphId));
-      return { items: rows };
+
+      // Public projection of same-template identity links: the linked
+      // duplicate disappears from the list and the canonical actor remains
+      // the single public identity (DOMAIN_ARCHITECTURE §4.6).
+      const links = await db
+        .select({
+          canonicalActorId: actorIdentityLinks.canonicalActorId,
+          linkedActorId: actorIdentityLinks.linkedActorId,
+        })
+        .from(actorIdentityLinks)
+        .where(eq(actorIdentityLinks.status, 'active'));
+      const canonicalOf = new Map(
+        links.map((l) => [l.linkedActorId, l.canonicalActorId]),
+      );
+      const items = rows
+        .filter((row) => !canonicalOf.has(row.id))
+        .map((row) => ({
+          ...row,
+          identityLinkedTo: canonicalOf.get(row.id) ?? null,
+        }));
+      return { items };
     },
   );
 
