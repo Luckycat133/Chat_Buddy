@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { and, eq, isNotNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
-import { conversations, worldEvents, syncCursor } from '../../db/schema.js';
+import { worldEvents, syncCursor } from '../../db/schema.js';
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 
@@ -25,8 +25,9 @@ export function registerSyncRoutes(app: FastifyInstance): void {
     async (request) => {
       const db = request.server.db as Database;
       const accountId = request.requestContext.accountId;
+      const actorId = request.requestContext.actorId;
       const graphId = request.requestContext.socialGraphId;
-      if (!accountId || !graphId) {
+      if (!accountId || !actorId || !graphId) {
         throw new ApiError(
           ApiErrorCodes.Forbidden,
           'No social graph bound to actor',
@@ -86,6 +87,14 @@ export function registerSyncRoutes(app: FastifyInstance): void {
         )
       )`;
 
+      // Participant-restricted events are private to the listed actors even
+      // when those actors share a social graph. Graph-scoped/public events
+      // keep the existing projection behavior.
+      const visibleToActor = sql`(
+        NOT (${worldEvents.visibilityPolicy} ? 'participants')
+        OR ${worldEvents.visibilityPolicy}->'participants' ? ${actorId}
+      )`;
+
       const events = await db
         .select({
           id: worldEvents.id,
@@ -102,7 +111,12 @@ export function registerSyncRoutes(app: FastifyInstance): void {
         })
         .from(worldEvents)
         .where(
-          and(eq(worldEvents.socialGraphId, graphId), baseWhere, notHiddenConversation),
+          and(
+            eq(worldEvents.socialGraphId, graphId),
+            baseWhere,
+            notHiddenConversation,
+            visibleToActor,
+          ),
         )
         .orderBy(worldEvents.occurredAt, worldEvents.id)
         .limit(query.limit);

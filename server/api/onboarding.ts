@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
 import {
@@ -7,14 +7,14 @@ import {
   characterActors,
   conversationMembers,
   conversations,
-  messageBursts,
-  messages,
   personaTemplates,
   relationships,
+  worldEvents,
 } from '../../db/schema.js';
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 import { newId } from '../../shared/contracts/ids.js';
+import { actorGraphId } from '../services/graph.js';
 
 /**
  * Mira onboarding state machine per DEMO_EXPERIENCE §4.
@@ -141,18 +141,27 @@ async function ensureOnboardingConversation(
       'Mira persona template not seeded',
     );
   }
+  const graphId = await actorGraphId(db, actorId);
   const [miraActor] = await db
     .select()
     .from(actors)
-    .where(eq(actors.publicName, 'Mira'))
+    .where(
+      and(
+        eq(actors.publicName, 'Mira'),
+        eq(actors.socialGraphId, graphId),
+      ),
+    )
     .limit(1);
-  const miraActorId = miraActor?.id ?? (await createMiraActor(db, miraTemplate.id));
+  const miraActorId =
+    miraActor?.id ?? (await createMiraActor(db, miraTemplate.id, graphId));
 
   const convoId = newId<string>();
+  const eventId = newId<string>();
+  const occurredAt = new Date();
   await db.transaction(async (tx) => {
     await tx.insert(conversations).values({
       id: convoId,
-      socialGraphId: '00000000-0000-0000-0000-000000000001',
+      socialGraphId: graphId,
       type: 'direct',
       publicName: serializeSnapshot({
         state: 'welcome',
@@ -186,16 +195,25 @@ async function ensureOnboardingConversation(
     if (relRows.length === 0) {
       await tx.insert(relationships).values({
         id: newId<string>(),
-        socialGraphId: '00000000-0000-0000-0000-000000000001',
+        socialGraphId: graphId,
         actorAId: a!,
         actorBId: b!,
         state: 'accepted',
         initiatedBy: miraActorId,
       });
     }
-    void messageBursts;
-    void messages;
-    void isNull;
+    await tx.insert(worldEvents).values({
+      id: eventId,
+      socialGraphId: graphId,
+      type: 'onboarding_conversation_created',
+      actorId,
+      subjectActorIds: [actorId],
+      conversationId: convoId,
+      payload: { initialState: 'welcome' },
+      visibilityPolicy: { participants: [actorId] },
+      occurredAt,
+      idempotencyKey: `onboarding_conversation_created:${convoId}`,
+    });
   });
 
   const [convo] = await db
@@ -239,12 +257,13 @@ async function loadMiraTemplate(
 async function createMiraActor(
   db: Database,
   templateId: string,
+  socialGraphId: string,
 ): Promise<string> {
   const id = newId<string>();
   await db.transaction(async (tx) => {
     await tx.insert(actors).values({
       id,
-      socialGraphId: '00000000-0000-0000-0000-000000000001',
+      socialGraphId,
       type: 'character',
       publicName: 'Mira',
       templateId,
@@ -253,7 +272,7 @@ async function createMiraActor(
       actorId: id,
       templateId,
       templateRevision: 1,
-      socialGraphId: '00000000-0000-0000-0000-000000000001',
+      socialGraphId,
     });
   });
   return id;
