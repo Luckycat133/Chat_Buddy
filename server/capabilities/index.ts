@@ -1,6 +1,6 @@
 export { fetchWeather } from './weather.js';
 export { fetchLightSearch } from './search.js';
-export { requestCalendarAction } from './calendar.js';
+export { requestCalendarAction, readTodayCalendar } from './calendar.js';
 export {
   generateImage,
   synthesizeSpeech,
@@ -22,6 +22,7 @@ export type {
 export type {
   CalendarAction,
   CalendarReadResult,
+  TodayCalendarResult,
 } from './calendar.js';
 export type {
   ImageAspectRatio,

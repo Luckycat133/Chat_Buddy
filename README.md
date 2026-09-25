@@ -95,6 +95,11 @@ Meet your favorite anime characters:
 - **WeChat-style Features**: Location tags, privacy settings, and cover photos
 - **Emoji Reactions**: React to posts with 😂❤️👍🔥😮😢
 
+### ☁️ Cloud Session Tools
+- **Active sessions**: View device summaries, creation time, and last activity; revoke sessions other than the current one.
+- **Local chat search**: Filter cached conversations and friends by name or friend note from the chat-list search entry.
+- **Today’s calendar**: View today’s events in Settings when the calendar capability is connected; otherwise follow the connection prompt.
+
 ---
 
 ## Getting Started
@@ -187,6 +192,7 @@ npm run dev
 - State: Clean Architecture (ChatEngine + Context)
 - AI: one configured OpenRouter/OpenAI-compatible text model; Tavily and MiniMax only for explicit search/media actions
 - Storage: LocalStorage (settings) + IndexedDB (chats, documents, and media)
+- Cloud operations: authenticated Fastify routes backed by Postgres, with active-session revocation and calendar-read authorization
 
 ### Project Structure
 

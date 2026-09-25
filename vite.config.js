@@ -91,6 +91,7 @@ export default defineConfig(({ mode }) => ({
     port: 5173,
     strictPort: false,
     host: true,
+    allowedHosts: ['.serveousercontent.com', '.trycloudflare.com'],
     headers: DEVELOPMENT_SECURITY_HEADERS,
     proxy: {
       '/api': {

@@ -225,6 +225,56 @@ describe('calendar connect and confirmed writes', () => {
   });
 });
 
+describe('today calendar endpoint', () => {
+  it('returns explicit connection guidance when no provider is connected', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/capabilities/calendar/today',
+      headers: auth,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      connected: false,
+      events: [],
+      guidance: {
+        code: 'calendar_not_connected',
+        connectPath: '/v1/capabilities/calendar/connect',
+      },
+    });
+  });
+
+  it('returns today events and writes an audit record when connected', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/v1/capabilities/calendar/connect',
+      headers: auth,
+      payload: { provider: 'demo' },
+    });
+    const response = await app.inject({
+      method: 'GET',
+      url: '/v1/capabilities/calendar/today',
+      headers: auth,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      connected: true,
+      source: 'demo',
+      timezone: 'Asia/Shanghai',
+    });
+    expect(response.json().date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(response.json().events).toHaveLength(2);
+
+    const audits = await db
+      .select()
+      .from(toolExecutions)
+      .where(eq(toolExecutions.toolName, 'calendar.today'));
+    const audit = audits[0];
+    expect(audit?.toolName).toBe('calendar.today');
+    expect(audit?.permissionState).toBe('succeeded');
+    expect(audit?.completedAt).toBeTruthy();
+  });
+});
+
 describe('weather consent toggle endpoint', () => {
   it('persists consent and default city without calling any provider', async () => {
     const enable = await app.inject({

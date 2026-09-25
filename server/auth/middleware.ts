@@ -65,6 +65,7 @@ async function authenticate(
     .where(eq(actors.accountId, account.id))
     .limit(1);
   request.requestContext.accountId = account.id;
+  request.requestContext.sessionId = session.sessionId;
   request.requestContext.actorId = actor?.id ?? null;
   request.requestContext.socialGraphId = actor?.socialGraphId ?? null;
 }

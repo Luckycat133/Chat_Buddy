@@ -9,6 +9,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 export interface RequestContext {
   requestId: string;
   accountId: string | null;
+  sessionId: string | null;
   actorId: string | null;
   socialGraphId: string | null;
   startedAt: number;
@@ -36,6 +37,7 @@ export function attachRequestContext(
   request.requestContext = {
     requestId,
     accountId: null,
+    sessionId: null,
     actorId: null,
     socialGraphId: null,
     startedAt: Date.now(),

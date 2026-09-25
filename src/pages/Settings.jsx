@@ -23,6 +23,7 @@ import CharacterMemoryPanel from '../components/CharacterMemoryPanel';
 import { INITIAL_PERSONAS } from '../data/personas';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { APP_VERSION } from '../utils/appVersion';
+import { DeviceSessionsPanel, TodaySchedulePanel } from '../components/SettingsP1Panels';
 
 const BackgroundSettingsModal = React.lazy(() => import('../features/background/BackgroundSettingsModal'));
 const ApiConfigPanel = React.lazy(() => import('../components/ApiConfigPanel'));
@@ -429,6 +430,16 @@ export default function Settings() {
                                     )}
                                 </div>
                             )}
+                        </section>
+
+                        <section className="animate-fade-slide-up" style={{ animationDelay: '275ms' }}>
+                            <div className="section-title">
+                                {t('device_sessions')}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <DeviceSessionsPanel />
+                                <TodaySchedulePanel />
+                            </div>
                         </section>
 
                         <section className="animate-fade-slide-up" style={{ animationDelay: '300ms' }}>

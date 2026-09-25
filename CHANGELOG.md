@@ -13,6 +13,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased] — Cloud Session Management and Daily Tools (2026-09-25)
+
+### Added
+- **Device and session management**: authenticated users can list active sessions, inspect device and activity metadata, and revoke another session from the Settings page.
+- **Chat search**: the chat list now filters locally cached conversations and friends by name, display name, and friend note without a new backend request.
+- **Today’s calendar**: Settings can display today’s calendar events when the calendar capability is connected; disconnected users receive setup guidance.
+- **Session security metadata**: sessions persist access-token hashes, user-agent summaries, and last-seen timestamps so revoked or expired access tokens are rejected immediately.
+
+### Changed
+- **Cloud calendar API**: added the authorized `GET /v1/capabilities/calendar/today` endpoint with provider-connect guidance and tool-execution auditing.
+- **Development host access**: the Vite dev server accepts the configured Cloudflare and Serveo tunnel hostnames for local and remote QA.
+
+### Fixed
+- **Access-token revocation**: access-token authentication now checks the stored session record and rejects revoked or expired sessions instead of relying only on token signature validity.
+
+---
+
 ## [Unreleased] — Cloud Runtime Skeleton (2026-09-15)
 
 > Server-side cloud runtime for the Chat Buddy companion app: Fastify API + Postgres (Drizzle) + shared zod contracts + realtime, plus a full static-audit fix pass (initial draft by MiniMax-M3, audited and fixed with glm-5.3-flash; 594 unit tests, tsc, lint, build, PGlite smoke and a real-PG boot round-trip all verified).

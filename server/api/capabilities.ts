@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
-import { actorCapabilitySettings, toolExecutions } from '../../db/schema.js';
+import { accounts, actorCapabilitySettings, toolExecutions } from '../../db/schema.js';
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 import { newId } from '../../shared/contracts/ids.js';
@@ -13,6 +13,7 @@ import {
   fetchWeather,
   fetchLightSearch,
   requestCalendarAction,
+  readTodayCalendar,
   generateImage,
   synthesizeSpeech,
   MediaError,
@@ -30,6 +31,82 @@ import {
  * writes require an explicit confirmation step before success is claimed.
  */
 export function registerCapabilityRoutes(app: FastifyInstance): void {
+  app.get(
+    '/v1/capabilities/calendar/today',
+    { preHandler: requireAuth },
+    async (request) => {
+      const db = request.server.db as Database;
+      const actorId = request.requestContext.actorId;
+      if (!actorId) {
+        throw new ApiError(ApiErrorCodes.Forbidden, 'No actor bound to session');
+      }
+      const [settings] = await db
+        .select()
+        .from(actorCapabilitySettings)
+        .where(eq(actorCapabilitySettings.actorId, actorId))
+        .limit(1);
+      if (!settings?.calendarProvider) {
+        return {
+          connected: false,
+          date: null,
+          timezone: null,
+          events: [],
+          guidance: {
+            code: 'calendar_not_connected',
+            message: 'Connect a calendar provider before loading today\'s events.',
+            connectPath: '/v1/capabilities/calendar/connect',
+          },
+        };
+      }
+
+      const [account] = await db
+        .select({ timezone: accounts.timezone })
+        .from(accounts)
+        .where(eq(accounts.id, request.requestContext.accountId!))
+        .limit(1);
+      const timezone = account?.timezone ?? 'Asia/Shanghai';
+      const id = newId<string>();
+      await db.insert(toolExecutions).values({
+        id,
+        requestingActorId: actorId,
+        targetHumanActorId: actorId,
+        conversationId: null,
+        toolName: 'calendar.today',
+        arguments: { provider: settings.calendarProvider, timezone },
+        permissionState: ToolExecutionStatus.Confirmed,
+      });
+      try {
+        const result = await readTodayCalendar(
+          settings.calendarProvider,
+          timezone,
+        );
+        await db
+          .update(toolExecutions)
+          .set({
+            result,
+            completedAt: new Date(),
+            permissionState: ToolExecutionStatus.Succeeded,
+          })
+          .where(eq(toolExecutions.id, id));
+        return { connected: true, ...result, guidance: null };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        await db
+          .update(toolExecutions)
+          .set({
+            result: { error: message },
+            completedAt: new Date(),
+            permissionState: ToolExecutionStatus.Failed,
+          })
+          .where(eq(toolExecutions.id, id));
+        throw new ApiError(
+          ApiErrorCodes.ToolFailure,
+          `calendar today failed: ${message}`,
+        );
+      }
+    },
+  );
+
   app.post(
     '/v1/capabilities/weather',
     { preHandler: requireAuth },

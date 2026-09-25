@@ -2,11 +2,13 @@ import React, { useState, useEffect, useMemo, useCallback, memo, Suspense } from
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Pin, Circle, Trash2, MessageSquarePlus, Sparkles, X } from 'lucide-react';
 import { useChat } from './context/ChatContext';
+import { useFriend } from '../../context/FriendContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { cn } from '../../utils/cn';
 import { formatChatListTime } from '../../utils/formatTime';
 import { SkeletonList, SkeletonChatCard } from '../../components/Skeleton';
 import HighlightText from '../../components/HighlightText';
+import { filterChatListEntries, chatSearchText } from './utils/chatListSearch.js';
 
 const Dashboard = React.lazy(() => import('../../pages/Dashboard'));
 
@@ -167,6 +169,7 @@ function ContextMenuItem({ icon, label, onClick, active, colorClass = "text-[var
 // ========== Main ChatList Component ==========
 export default function ChatList() {
     const { chats, personas, typingIndicators, presenceMap, pinChat, markChatUnread, deleteChat } = useChat();
+    const { friendMeta } = useFriend();
     const { t, language } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
     const [searchFocused, setSearchFocused] = useState(false);
@@ -219,21 +222,20 @@ export default function ChatList() {
     // Memoize filtered and sorted chats
     const filteredChats = useMemo(() => {
         const normalizedSearch = searchTerm.trim().toLowerCase();
-        return chats
-            .map(chat => ({ chat, meta: getChatMetadata(chat) }))
-            .filter(({ meta }) => {
-                const isSocialChat = meta.type === 'social';
-                const matchesTab = activeTab === 'all' || meta.type === activeTab;
-                const matchesSearch = meta.name.toLowerCase().includes(normalizedSearch);
-                return isSocialChat && matchesSearch && matchesTab;
-            })
-            .sort((a, b) => {
-                if (a.chat.isPinned && !b.chat.isPinned) return -1;
-                if (!a.chat.isPinned && b.chat.isPinned) return 1;
-                const aTime = a.chat.lastMessage?.timestamp || a.chat.createdAt;
-                const bTime = b.chat.lastMessage?.timestamp || b.chat.createdAt;
-                return new Date(bTime) - new Date(aTime);
-            });
+        const entries = chats.map(chat => {
+            const meta = getChatMetadata(chat);
+            return {
+                chat,
+                meta,
+                searchText: chatSearchText(chat, meta, personas, friendMeta),
+            };
+        });
+        return filterChatListEntries(
+            entries,
+            normalizedSearch,
+            activeTab,
+            ({ meta }) => meta.type === 'social',
+        );
     }, [chats, getChatMetadata, searchTerm, activeTab]);
 
     // Memoize event handlers

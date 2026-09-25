@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
-import { accounts, actors, socialGraphs } from '../../db/schema.js';
+import { accounts, actors, sessions, socialGraphs } from '../../db/schema.js';
 import { optionalAuthenticate, requireAuth } from '../auth/middleware.js';
 import {
   issueTokens,
@@ -43,7 +43,8 @@ export function registerAuthRoutes(app: FastifyInstance): void {
         .parse(request.body);
 
       const db = request.server.db as Database;
-      const tokens = await issueForAccount(db, body);
+      const userAgent = request.headers['user-agent']?.slice(0, 512) ?? 'Unknown';
+      const tokens = await issueForAccount(db, body, userAgent);
       reply.code(200);
       return tokens;
     },
@@ -57,6 +58,69 @@ export function registerAuthRoutes(app: FastifyInstance): void {
         .parse(request.body);
       const db = request.server.db as Database;
       return refreshSession(db, body.refreshToken);
+    },
+  );
+
+  app.get(
+    '/v1/auth/sessions',
+    { preHandler: requireAuth },
+    async (request) => {
+      const db = request.server.db as Database;
+      const accountId = requireAccountId(request.requestContext.accountId);
+      const rows = await db
+        .select({
+          id: sessions.id,
+          userAgent: sessions.userAgent,
+          lastSeenAt: sessions.lastSeenAt,
+          createdAt: sessions.createdAt,
+          expiresAt: sessions.expiresAt,
+          revokedAt: sessions.revokedAt,
+        })
+        .from(sessions)
+        .where(eq(sessions.accountId, accountId))
+        .orderBy(desc(sessions.lastSeenAt));
+      return {
+        items: rows.map((row) => ({
+          id: row.id,
+          userAgent: row.userAgent,
+          lastSeenAt: row.lastSeenAt.toISOString(),
+          createdAt: row.createdAt.toISOString(),
+          expiresAt: row.expiresAt.toISOString(),
+          revokedAt: row.revokedAt?.toISOString() ?? null,
+          current: row.id === request.requestContext.sessionId,
+        })),
+      };
+    },
+  );
+
+  app.delete(
+    '/v1/auth/sessions/:id',
+    { preHandler: requireAuth },
+    async (request) => {
+      const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
+      const db = request.server.db as Database;
+      const accountId = requireAccountId(request.requestContext.accountId);
+      if (id === request.requestContext.sessionId) {
+        throw new ApiError(
+          ApiErrorCodes.Conflict,
+          'Cannot revoke the current session',
+        );
+      }
+      const [owned] = await db
+        .select({ id: sessions.id })
+        .from(sessions)
+        .where(
+          and(
+            eq(sessions.accountId, accountId),
+            eq(sessions.id, id),
+          ),
+        )
+        .limit(1);
+      if (!owned) {
+        throw new ApiError(ApiErrorCodes.NotFound, 'Session not found');
+      }
+      await revokeSession(db, accountId, id);
+      return { ok: true, id };
     },
   );
 
@@ -86,6 +150,7 @@ async function issueForAccount(
     appleSubject?: string;
     socialGraphId?: string;
   },
+  userAgent: string,
 ): Promise<{
   accessToken: string;
   accessExpiresAt: string;
@@ -133,7 +198,7 @@ async function issueForAccount(
     });
   }
 
-  const tokens = await issueTokens(db, accountId);
+  const tokens = await issueTokens(db, accountId, userAgent);
   return {
     accessToken: tokens.accessToken,
     accessExpiresAt: tokens.accessExpiresAt.toISOString(),
@@ -142,6 +207,16 @@ async function issueForAccount(
     accountId,
     actorId: accountId,
   };
+}
+
+function requireAccountId(accountId: string | null): string {
+  if (!accountId) {
+    throw new ApiError(
+      ApiErrorCodes.Unauthorized,
+      'No account bound to session',
+    );
+  }
+  return accountId;
 }
 
 async function ensureDefaultGraph(db: Database): Promise<string> {

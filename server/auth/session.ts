@@ -1,9 +1,10 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { eq, and, gt, isNull } from 'drizzle-orm';
 import type { Database } from '../../db/index.js';
-import { sessions, accounts } from '../../db/schema.js';
+import { sessions } from '../../db/schema.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 import { serverEnv } from '../config.js';
+import { newId } from '../../shared/contracts/ids.js';
 
 /**
  * Session tokens follow WEB_IMPLEMENTATION §14:
@@ -33,6 +34,7 @@ export interface AuthenticatedSession {
 export async function issueTokens(
   db: Database,
   accountId: string,
+  userAgent = 'Unknown',
 ): Promise<IssuedTokens> {
   const env = serverEnv();
   const accessToken = randomBytes(32).toString('base64url');
@@ -42,15 +44,24 @@ export async function issueTokens(
     Date.now() + env.SESSION_TTL_SEC * 1000,
   );
 
-  const refreshHash = hashRefresh(refreshToken);
+  const sessionId = newId<string>();
+  const refreshHash = hashOpaqueToken(refreshToken);
 
   await db.insert(sessions).values({
+    id: sessionId,
     accountId,
     refreshTokenHash: refreshHash,
+    accessTokenHash: null,
+    userAgent: userAgent.trim().slice(0, 512) || 'Unknown',
+    lastSeenAt: new Date(),
     expiresAt: refreshExpiresAt,
   });
 
   const signedAccess = signAccessToken(accessToken, accountId, accessExpiresAt);
+  await db
+    .update(sessions)
+    .set({ accessTokenHash: hashOpaqueToken(signedAccess) })
+    .where(eq(sessions.id, sessionId));
   return {
     accessToken: signedAccess,
     accessExpiresAt,
@@ -70,7 +81,7 @@ export async function rotateRefresh(
   db: Database,
   presented: string,
 ): Promise<IssuedTokens & { accountId: string }> {
-  const presentedHash = hashRefresh(presented);
+  const presentedHash = hashOpaqueToken(presented);
 
   const existingRows = await db
     .select()
@@ -93,7 +104,7 @@ export async function rotateRefresh(
     .set({ revokedAt: new Date() })
     .where(eq(sessions.id, existing.id));
 
-  const tokens = await issueTokens(db, existing.accountId);
+  const tokens = await issueTokens(db, existing.accountId, existing.userAgent);
   return { ...tokens, accountId: existing.accountId };
 }
 
@@ -124,29 +135,42 @@ export async function authenticateAccessToken(
   if (!decoded) {
     throw new ApiError(ApiErrorCodes.Unauthorized, 'Invalid access token');
   }
-  const accountRows = await db
-    .select({ id: accounts.id })
-    .from(accounts)
-    .where(eq(accounts.id, decoded.accountId))
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(
+      and(
+        eq(sessions.accountId, decoded.accountId),
+        eq(sessions.accessTokenHash, hashOpaqueToken(token)),
+        gt(sessions.expiresAt, new Date()),
+        isNull(sessions.revokedAt),
+      ),
+    )
     .limit(1);
-  const account = accountRows[0];
-  if (!account) {
-    throw new ApiError(ApiErrorCodes.Unauthorized, 'Unknown account');
+  if (!session) {
+    throw new ApiError(
+      ApiErrorCodes.Unauthorized,
+      'Access token rejected or session expired',
+    );
   }
+  const now = new Date();
+  await db
+    .update(sessions)
+    .set({ lastSeenAt: now })
+    .where(eq(sessions.id, session.id));
   return {
-    accountId: account.id,
+    accountId: session.accountId,
     accessExpiresAt: decoded.expiresAt,
-    sessionId: decoded.sessionId,
+    sessionId: session.id,
   };
 }
 
 interface SignedAccess {
   accountId: string;
-  sessionId: string;
   expiresAt: Date;
 }
 
-function hashRefresh(token: string): string {
+function hashOpaqueToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
@@ -196,5 +220,5 @@ function verifyAccessToken(token: string): SignedAccess | null {
   const b = Buffer.from(expected);
   if (a.length !== b.length) return null;
   if (!timingSafeEqual(a, b)) return null;
-  return { accountId, sessionId: rawToken, expiresAt };
+  return { accountId, expiresAt };
 }

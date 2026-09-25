@@ -172,6 +172,10 @@ export const sessions = pgTable(
       .references(() => accounts.id, { onDelete: 'cascade' }),
     refreshTokenHash: text('refresh_token_hash').notNull(),
     accessTokenHash: text('access_token_hash'),
+    userAgent: text('user_agent').notNull().default('Unknown'),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
