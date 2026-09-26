@@ -17,8 +17,16 @@ export const useMoments = () => {
         if (authorId === 'user-me') {
             return { id: 'user-me', name: 'You', name_zh: '我', avatar: null };
         }
+        const cloudActor = state.actorNames?.[authorId];
+        if (cloudActor) {
+            return {
+                id: authorId,
+                name: cloudActor.publicName || authorId,
+                isCloudActor: true,
+            };
+        }
         return INITIAL_PERSONAS.find(p => p.id === authorId) || { id: authorId, name: 'Unknown', avatar: null };
-    }, []);
+    }, [state.actorNames]);
 
     const getImageApiConfig = useCallback(() => {
         return {
@@ -68,10 +76,24 @@ export const MomentsProvider = ({ children }) => {
 
 // Internal provider to access state/actions for AI Hook
 const InternalMomentsProvider = ({ children }) => {
-    const { setMomentsData, setImageApiKey } = useMomentsState();
+    const {
+        posts,
+        setMomentsData,
+        setImageApiKey,
+        setCloudFeedError,
+        cloudMode,
+        actorNames,
+    } = useMomentsState();
 
     return (
-        <MomentsActionProvider setMomentsData={setMomentsData} setImageApiKey={setImageApiKey}>
+        <MomentsActionProvider
+            setMomentsData={setMomentsData}
+            setImageApiKey={setImageApiKey}
+            setCloudFeedError={setCloudFeedError}
+            cloudMode={cloudMode}
+            actorNames={actorNames}
+            posts={posts}
+        >
             <MomentsAIOrchestrator />
             {children}
         </MomentsActionProvider>
@@ -80,7 +102,7 @@ const InternalMomentsProvider = ({ children }) => {
 
 // Component to run AI hooks (needs access to both State and Actions)
 const MomentsAIOrchestrator = () => {
-    const { posts, lastAIPostTime, lastStoryEventDate } = useMomentsState();
+    const { posts, lastAIPostTime, lastStoryEventDate, cloudMode } = useMomentsState();
     const {
         generateDynamicAIPost,
         generateAIComment,
@@ -94,6 +116,7 @@ const MomentsAIOrchestrator = () => {
     useMomentsAI({
         posts,
         lastAIPostTime,
+        cloudMode,
         generateDynamicAIPost,
         generateAIComment,
         toggleLike,
@@ -117,6 +140,7 @@ const MomentsAIOrchestrator = () => {
 function useMomentsAI({
     posts,
     lastAIPostTime,
+    cloudMode,
     generateDynamicAIPost,
     generateAIComment,
     toggleLike,
@@ -260,6 +284,7 @@ function useMomentsAI({
 
     // Init AI posts if empty
     useEffect(() => {
+        if (cloudMode) return undefined;
         if (posts.length === 0) {
             const initialAIs = [...INITIAL_PERSONAS].sort(() => Math.random() - 0.5).slice(0, 4);
             initialAIs.forEach((persona, index) => {

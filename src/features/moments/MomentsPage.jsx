@@ -84,7 +84,14 @@ function FeedTabs({ active, onChange, language }) {
 }
 
 export default function MomentsPage() {
-    const { posts } = useMoments();
+    const {
+        posts,
+        cloudMode,
+        cloudFeedCursor,
+        cloudFeedLoading,
+        cloudFeedError,
+        loadMoreMoments,
+    } = useMoments();
     const { userProfile, getDisplayName } = useUser();
     const { t, language } = useLanguage();
 
@@ -95,14 +102,14 @@ export default function MomentsPage() {
     const [composerPrompt, setComposerPrompt] = useState('');
     const [selectedPost, setSelectedPost] = useState(null);
     const [scrolled, setScrolled] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const [entranceLoading, setEntranceLoading] = useState(true);
     const [activeHashtag, setActiveHashtag] = useState(null);
     const [activeTab, setActiveTab] = useState('all');
     const [visibleCount, setVisibleCount] = useState(10);
 
     // Simulate loading state for smooth entrance animation
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 350);
+        const timer = setTimeout(() => setEntranceLoading(false), 350);
         return () => clearTimeout(timer);
     }, []);
 
@@ -124,6 +131,18 @@ export default function MomentsPage() {
 
     const paginatedPosts = filteredPosts.slice(0, visibleCount);
     const trendingTags = useMemo(() => extractTopHashtags(safePosts), [safePosts]);
+    const isLoading = cloudMode ? cloudFeedLoading : entranceLoading;
+
+    const handleLoadMore = () => {
+        if (cloudMode) {
+            if (cloudFeedCursor && visibleCount + 10 >= filteredPosts.length) {
+                loadMoreMoments();
+            }
+            setVisibleCount(count => count + 10);
+            return;
+        }
+        setVisibleCount(count => count + 10);
+    };
 
     const openComposer = (prompt = '') => {
         setComposerPrompt(prompt);
@@ -285,6 +304,16 @@ export default function MomentsPage() {
                                 )}
                             </div>
 
+                            {cloudMode && cloudFeedError && (
+                                <div
+                                    role="alert"
+                                    className="rounded-2xl border border-red-500/25 bg-red-500/8 px-4 py-3 text-[13px] text-red-600 dark:text-red-300"
+                                >
+                                    {language === 'zh' ? '云端动态暂时不可用' : 'Cloud moments are temporarily unavailable'}
+                                    <span className="ml-1 opacity-75">{cloudFeedError}</span>
+                                </div>
+                            )}
+
                             {/* 帖子列表 */}
                             {isLoading ? (
                                 <SkeletonList count={3} skeleton={SkeletonMomentCard} className="space-y-4" />
@@ -294,9 +323,11 @@ export default function MomentsPage() {
                                         <Camera size={28} className="text-[var(--color-text-muted)]" />
                                     </div>
                                     <h3 className="mt-4 text-[17px] font-bold text-[var(--color-text-main)]">
-                                        {activeHashtag
-                                            ? (language === 'zh' ? `没有关于 ${activeHashtag} 的动态` : `No posts tagged ${activeHashtag}`)
-                                            : (t('no_posts') || (language === 'zh' ? '还没有动态' : 'Nothing here yet'))}
+                                        {cloudFeedError
+                                            ? (language === 'zh' ? '暂时无法加载动态' : 'Moments could not be loaded')
+                                            : (activeHashtag
+                                                ? (language === 'zh' ? `没有关于 ${activeHashtag} 的动态` : `No posts tagged ${activeHashtag}`)
+                                                : (t('no_posts') || (language === 'zh' ? '还没有动态' : 'Nothing here yet')))}
                                     </h3>
                                     <p className="mt-2 max-w-xs text-[13px] leading-6 text-[var(--color-text-muted)]">
                                         {activeHashtag
@@ -334,17 +365,20 @@ export default function MomentsPage() {
                                         ))}
                                     </div>
 
-                                    {filteredPosts.length > visibleCount ? (
+                                    {filteredPosts.length > visibleCount || (cloudMode && cloudFeedCursor) ? (
                                         <button
                                             type="button"
-                                            onClick={() => setVisibleCount(c => c + 10)}
-                                            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-white)] py-3 text-[13px] font-semibold text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-hover)]"
+                                            onClick={handleLoadMore}
+                                            disabled={cloudMode && cloudFeedLoading}
+                                            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-white)] py-3 text-[13px] font-semibold text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-bg-hover)] disabled:cursor-wait disabled:opacity-60"
                                         >
-                                            <RefreshCw size={14} />
+                                            <RefreshCw size={14} className={cloudMode && cloudFeedLoading ? 'animate-spin' : ''} />
                                             {t('load_more') || (language === 'zh' ? '加载更多' : 'Load more')}
-                                            <span className="text-[var(--color-text-light)]">
-                                                ({filteredPosts.length - visibleCount} {language === 'zh' ? '条' : 'left'})
-                                            </span>
+                                            {filteredPosts.length > visibleCount && (
+                                                <span className="text-[var(--color-text-light)]">
+                                                    ({filteredPosts.length - visibleCount} {language === 'zh' ? '条' : 'left'})
+                                                </span>
+                                            )}
                                         </button>
                                     ) : filteredPosts.length > 0 && visibleCount >= filteredPosts.length && (
                                         <div className="py-4 text-center text-[12px] text-[var(--color-text-muted)]">

@@ -19,6 +19,14 @@ import {
     sanitizeMomentText,
 } from '../services/momentsContentService';
 import { isRenderableMomentImage } from '../services/momentsMediaService';
+import {
+    DEFAULT_AUDIENCE_POLICY,
+    HEART_REACTION,
+    createCloudInteraction,
+    createCloudMoment,
+    mapCloudMoment,
+    newClientInteractionKey,
+} from '../services/momentsCloudService';
 
 const MomentsActionContext = createContext();
 
@@ -33,7 +41,15 @@ export const useMomentsActions = () => {
     return context;
 };
 
-export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey }) => {
+export const MomentsActionProvider = ({
+    children,
+    setMomentsData,
+    setImageApiKey,
+    setCloudFeedError = () => {},
+    cloudMode = false,
+    actorNames = {},
+    posts = [],
+}) => {
     const { language, resolvedAiLanguage } = useLanguage();
     const preferredLanguage = resolvedAiLanguage || language || 'zh';
 
@@ -47,7 +63,7 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
         return targetLanguage === 'zh' ? (persona.name_zh || persona.name) : persona.name;
     }, [preferredLanguage]);
 
-    const createPost = useCallback((content, images = [], video = null, authorId = 'user-me', options = {}) => {
+    const createPostLocal = useCallback((content, images = [], video = null, authorId = 'user-me', options = {}) => {
         const {
             location = null,
             visibility = 'public',
@@ -65,7 +81,6 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
 
         const normalizedContent = sanitizeMomentText(content, postLanguage);
         const sanitizedImages = (Array.isArray(images) ? images : []).filter(isRenderableMomentImage);
-
         const newPost = {
             id: createId('post'),
             authorId,
@@ -98,6 +113,79 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
         return newPost.id;
     }, [preferredLanguage, setMomentsData]);
 
+    const createPost = useCallback((content, images = [], video = null, authorId = 'user-me', options = {}) => {
+        if (!cloudMode || authorId !== 'user-me') {
+            return createPostLocal(content, images, video, authorId, options);
+        }
+
+        const {
+            location = null,
+            visibility = 'public',
+            visibleTo = null,
+            hiddenFrom = null,
+            language: postLanguage = preferredLanguage,
+        } = options;
+        const placeholder = {
+            id: createId('cloud-post-pending'),
+            authorId: 'user-me',
+            content: sanitizeMomentText(content, postLanguage),
+            images: (Array.isArray(images) ? images : []).filter(isRenderableMomentImage),
+            video,
+            location,
+            visibility,
+            visibleTo,
+            hiddenFrom,
+            language: postLanguage,
+            storyTitle: null,
+            hashtags: [],
+            createdAt: new Date().toISOString(),
+            likes: [],
+            comments: [],
+            reactions: {},
+            shareCount: 0,
+            shares: [],
+            aiFeedback: null,
+            aiAssist: null,
+            repostOf: null,
+            cloud: true,
+            pending: true,
+        };
+
+        setMomentsData(prev => ({ ...prev, posts: [placeholder, ...(prev.posts || [])] }));
+        setCloudFeedError(null);
+
+        (async () => {
+            try {
+                const created = await createCloudMoment({
+                    content: placeholder.content,
+                    audiencePolicy: DEFAULT_AUDIENCE_POLICY,
+                    mediaAssets: [],
+                });
+                // The current service returns the Moment directly; tolerate the
+                // documented envelope as well so the client stays contract-safe.
+                const moment = created?.moment || created;
+                const mappedPost = mapCloudMoment(moment, new Map(Object.entries(actorNames)));
+                if (!mappedPost) throw new Error('Cloud moment response was invalid');
+
+                setMomentsData(prev => ({
+                    ...prev,
+                    posts: (prev.posts || []).map(post => (
+                        post.id === placeholder.id ? mappedPost : post
+                    )),
+                }));
+            } catch (error) {
+                setMomentsData(prev => ({
+                    ...prev,
+                    posts: (prev.posts || []).filter(post => post.id !== placeholder.id),
+                }));
+                setCloudFeedError(error?.message || 'Failed to create cloud moment');
+            }
+        })();
+
+        return placeholder.id;
+    }, [actorNames, cloudMode, createPostLocal, preferredLanguage, setCloudFeedError, setMomentsData]);
+
+    // The cloud API has no moment-delete endpoint, so deletion remains a local optimistic action.
     const deletePost = useCallback((postId) => {
         setMomentsData(prev => ({
             ...prev,
@@ -106,6 +194,41 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
     }, [setMomentsData]);
 
     const toggleLike = useCallback((postId, userId = 'user-me') => {
+        const targetPost = posts.find(post => post.id === postId);
+        if (cloudMode && userId === 'user-me' && targetPost) {
+            const previousLikes = Array.isArray(targetPost.likes) ? targetPost.likes : [];
+            const hadLiked = previousLikes.includes(userId);
+
+            setMomentsData(prev => ({
+                ...prev,
+                posts: (prev.posts || []).map(post => {
+                    if (post.id !== postId) return post;
+                    const likes = Array.isArray(post.likes) ? post.likes : [];
+                    return {
+                        ...post,
+                        likes: hadLiked ? likes.filter(id => id !== userId) : [...likes, userId],
+                    };
+                }),
+            }));
+
+            if (hadLiked) return;
+            setCloudFeedError(null);
+            createCloudInteraction(postId, {
+                type: 'reaction',
+                content: HEART_REACTION,
+                clientIdempotencyKey: newClientInteractionKey(),
+            }).catch(error => {
+                setMomentsData(prev => ({
+                    ...prev,
+                    posts: (prev.posts || []).map(post => (
+                        post.id === postId ? { ...post, likes: previousLikes } : post
+                    )),
+                }));
+                setCloudFeedError(error?.message || 'Failed to like cloud moment');
+            });
+            return;
+        }
+
         setMomentsData(prev => ({
             ...prev,
             posts: (prev.posts || []).map(post => {
@@ -118,9 +241,49 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
                 };
             }),
         }));
-    }, [setMomentsData]);
+    }, [cloudMode, posts, setCloudFeedError, setMomentsData]);
 
     const addReaction = useCallback((postId, emoji, userId = 'user-me') => {
+        const targetPost = posts.find(post => post.id === postId);
+        if (cloudMode && userId === 'user-me' && targetPost) {
+            const previousUsers = Array.isArray(targetPost.reactions?.[emoji])
+                ? targetPost.reactions[emoji]
+                : [];
+            if (previousUsers.includes(userId)) return;
+
+            setMomentsData(prev => ({
+                ...prev,
+                posts: (prev.posts || []).map(post => {
+                    if (post.id !== postId) return post;
+                    const reactions = { ...(post.reactions || {}) };
+                    const users = Array.isArray(reactions[emoji]) ? reactions[emoji] : [];
+                    return { ...post, reactions: { ...reactions, [emoji]: [...users, userId] } };
+                }),
+            }));
+            setCloudFeedError(null);
+            createCloudInteraction(postId, {
+                type: 'reaction',
+                content: emoji,
+                clientIdempotencyKey: newClientInteractionKey(),
+            }).catch(error => {
+                setMomentsData(prev => ({
+                    ...prev,
+                    posts: (prev.posts || []).map(post => {
+                        if (post.id !== postId) return post;
+                        const reactions = { ...(post.reactions || {}) };
+                        if (previousUsers.length > 0) {
+                            reactions[emoji] = previousUsers;
+                        } else {
+                            delete reactions[emoji];
+                        }
+                        return { ...post, reactions };
+                    }),
+                }));
+                setCloudFeedError(error?.message || 'Failed to react to cloud moment');
+            });
+            return;
+        }
+
         setMomentsData(prev => ({
             ...prev,
             posts: (prev.posts || []).map(post => {
@@ -133,7 +296,7 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
                 return { ...post, reactions };
             }),
         }));
-    }, [setMomentsData]);
+    }, [cloudMode, posts, setCloudFeedError, setMomentsData]);
 
     const addComment = useCallback((postId, content, authorId = 'user-me', replyTo = null) => {
         const detectedLanguage = detectMomentLanguage(content);
@@ -159,8 +322,27 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
             }),
         }));
 
+        if (cloudMode && authorId === 'user-me' && posts.some(post => post.id === postId)) {
+            setCloudFeedError(null);
+            createCloudInteraction(postId, {
+                type: 'comment',
+                content: newComment.content,
+                clientIdempotencyKey: newClientInteractionKey(),
+            }).catch(error => {
+                setMomentsData(prev => ({
+                    ...prev,
+                    posts: (prev.posts || []).map(post => (
+                        post.id === postId
+                            ? { ...post, comments: (post.comments || []).filter(comment => comment.id !== newComment.id) }
+                            : post
+                    )),
+                }));
+                setCloudFeedError(error?.message || 'Failed to comment on cloud moment');
+            });
+        }
+
         return newComment;
-    }, [preferredLanguage, setMomentsData]);
+    }, [cloudMode, posts, preferredLanguage, setCloudFeedError, setMomentsData]);
 
     const deleteComment = useCallback((postId, commentId) => {
         setMomentsData(prev => ({
@@ -175,6 +357,7 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
         }));
     }, [setMomentsData]);
 
+    // The cloud API has no share endpoint, so share tracking remains a local optimistic action.
     const incrementShare = useCallback((postId, meta = {}) => {
         const {
             sharerId = 'user-me',
@@ -205,6 +388,7 @@ export const MomentsActionProvider = ({ children, setMomentsData, setImageApiKey
         }));
     }, [setMomentsData]);
 
+    // The cloud API has no repost endpoint, so repost remains a local optimistic action.
     const repostPost = useCallback((postId, note = '', authorId = 'user-me') => {
         let repostedPostId = null;
 

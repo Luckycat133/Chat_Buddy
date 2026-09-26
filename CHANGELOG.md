@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased] — Cloud Session Management and Daily Tools (2026-09-25)
+## [Unreleased] — Cloud Session Management, Daily Tools & Moments Cloud (2026-09-25)
 
 ### Added
 - **Cloud media tools**: `CloudClient` now exposes typed message, image-generation, and TTS operations; cloud chat surfaces use the configured providers and report unavailable providers explicitly.
@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Access-token revocation**: access-token authentication now checks the stored session record and rejects revoked or expired sessions instead of relying only on token signature validity.
 - **Onboarding initial snapshot**: creating an onboarding conversation now writes a participant-private `onboarding_conversation_created` world event in the same transaction; sync projection filters participant-restricted events to the authorized actor.
+
+### Added
+- **Moments cloud sync**: when `VITE_USE_CLOUD=true`, the Moments feed is now cloud-authoritative — on mount it fetches the feed + actor names in parallel with cursor pagination (`loadMoreMoments`); human post / like / reaction / comment route to the existing `/v1/moments` cloud API (`createCloudMoment` / `createCloudInteraction` with client idempotency keys, optimistic updates with rollback on failure); AI persona moments and cloud-nonexistent delete/repost/share keep the existing local path; a failed cloud fetch surfaces an error state instead of faking local data. New `src/features/moments/context/MomentsCloud.spec.js` (10 tests).
 
 ---
 

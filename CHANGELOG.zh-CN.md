@@ -35,6 +35,9 @@ Chat Buddy 的所有重要变更都将记录在此文件中。
 - **Access token 吊销**：访问令牌鉴权现在会查询会话记录，吊销或过期会话不再只依赖签名校验，而是立即返回未授权。
 - **Onboarding 初始快照**：创建 onboarding 会话时现在会在同一事务写入仅参与者可见的 `onboarding_conversation_created` 世界事件；同步投影会按当前 actor 过滤参与者私有事件。
 
+### 新增
+- **Moments 云同步**：`VITE_USE_CLOUD=true` 时，Moments feed 改为云端权威——挂载时并行拉取 feed + actor 名，支持游标分页（`loadMoreMoments`）；人类发帖 / like / reaction / comment 路由到既有 `/v1/moments` 云 API（`createCloudMoment` / `createCloudInteraction`，带客户端幂等键，乐观更新 + 失败回滚）；AI persona 帖及云端没有端点的 delete/repost/share 保持本地路径；云拉取失败时展示错误态而非伪造本地数据。新增 `src/features/moments/context/MomentsCloud.spec.js`（10 个测试）。
+
 ---
 
 ## [0.4.1] — 生产就绪 (2026-05-01)
