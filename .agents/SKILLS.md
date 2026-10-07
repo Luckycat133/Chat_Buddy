@@ -8,7 +8,9 @@ Load only the Skill whose trigger matches the current task. A Skill may be reuse
 
 | Skill | Use here for |
 |---|---|
+| `chat-buddy-web-demo-development` | Cloud-authoritative social behavior; implemented source/test routing in WEB_IMPLEMENTATION section 25 |
 | `github-actions` | GitHub Actions workflow design, debugging, and hardening |
+| `vercel-composition-patterns` | Compound React components and explicit variants; apply React 19 guidance only to code that benefits from it |
 
 ## Maintenance rules
 
@@ -17,3 +19,12 @@ Load only the Skill whose trigger matches the current task. A Skill may be reuse
 - Prefer links for IDE-specific discovery so Codex and Claude read the same maintained content.
 - Add or expand a Skill only when it captures repeatable project knowledge that is not already clear from code or repository documentation.
 - For small changes, run focused checks first and expand testing only when failures, risk, or new scope justify it.
+
+## Source-based routing update — 2026-10-03
+
+Start with the project-specific skill above for product/data/runtime work; load
+UI, testing or architecture specialists only when that narrower task needs them.
+The source maps record an inspection date, not a new runtime or deployment pass.
+
+`webapp-testing` now uses available browser tools or the repository Playwright
+suite; it no longer requires an Antigravity-only browser API.

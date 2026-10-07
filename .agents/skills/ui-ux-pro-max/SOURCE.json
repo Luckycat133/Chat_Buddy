@@ -1,0 +1,20 @@
+{
+  "skill": "ui-ux-pro-max",
+  "upstream": {
+    "source": "Pre-existing project skill; exact upstream revision not recorded in the project lockfile.",
+    "revision": null
+  },
+  "local_revision": {
+    "id": "20261006-cross-client-compatibility",
+    "scope": "Client-neutral path/tool/reference correction; no product implementation changes.",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "before_sha256": "b3ab45c714a7222dbf41bff153fc0570640e356ba272417d396da950a7863a78",
+        "after_sha256": "2004d1a887c44dd08bb7d143777862af2c2b843fc6154865f3fa58bd987dc984",
+        "change": "Resolve all 12 command examples against the loaded package, preserving project output cwd."
+      }
+    ]
+  },
+  "note": "Retained lockfile source/computedHash is provenance, not a verified upstream commit or current package hash. Local content hashes are recorded separately."
+}

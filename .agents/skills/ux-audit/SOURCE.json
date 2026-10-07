@@ -1,0 +1,27 @@
+{
+  "skill": "ux-audit",
+  "upstream": {
+    "source": "jezweb/claude-skills",
+    "sourceType": "github",
+    "computedHash": "c698ff4ad969cd80cc48d01ceff48e10fd4e15ca01defd196631798d01cc7d3b"
+  },
+  "local_revision": {
+    "id": "20261006-cross-client-compatibility",
+    "scope": "Client-neutral path/tool/reference correction; no product implementation changes.",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "before_sha256": "b317f1390b8faec588806571ef8db8db3d3dd6bae0655eb3d478569c39eacc55",
+        "after_sha256": "0766372aef4c83abd5306c258068460df5d3def7c9c8687879aaadb6ebcd112b",
+        "change": "Support native Antigravity and client-discovered browser tools; remove client-specific detection and redundant confirmations."
+      },
+      {
+        "path": "references/browser-tools.md",
+        "before_sha256": "aa65c9f27578410f7afb084ee58210f1244b2e5fbe4b1ac40de963a8eceb3cac",
+        "after_sha256": "afbed6fa0767918dfe765a30f995f0565634ed4413316170bf9e795bdde92fa4",
+        "change": "Separate native client browser routing from optional Claude MCP examples."
+      }
+    ]
+  },
+  "note": "Retained lockfile source/computedHash is provenance, not a verified upstream commit or current package hash. Local content hashes are recorded separately."
+}

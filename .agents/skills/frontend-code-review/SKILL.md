@@ -16,7 +16,11 @@ Stick to the checklist below for every applicable file and mode.
 
 ## Checklist
 
-See [references/code-quality.md](references/code-quality.md), [references/performance.md](references/performance.md), [references/business-logic.md](references/business-logic.md) for the living checklist split by category—treat it as the canonical set of rules to follow.
+This installed package did not include its original referenced checklists. The following is a locally maintained replacement, not a recovered upstream checklist. Apply the points relevant to the changed code and the repository's current contract:
+
+- **Code quality:** trace state ownership, Hook dependencies and cleanup, loading/error/empty states, accessible control names, keyboard behavior, and the project's bilingual/theming conventions. Cite the concrete affected path rather than stylistic preference.
+- **Performance:** look for measurable or demonstrable repeated work, unnecessary subscriptions, unbounded list rendering, and avoidable large asset/bundle costs. Do not require memoization without an actual dependency or render-cost reason.
+- **Business behavior:** trace user actions through persistence and the response shown in the UI; check duplicate submissions, stale async responses, permission boundaries and data compatibility. Preserve stored user data and report missing runtime evidence explicitly.
 
 Flag each rule violation with urgency metadata so future reviewers can prioritize fixes.
 

@@ -1,0 +1,19 @@
+{
+  "description": "Project-specific read-only startup reminders",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|compact|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "d=\"$(pwd -P)\"; while [ \"$d\" != / ]; do if [ -f \"$d/.codex/hooks/session_start.py\" ]; then if command -v python3 >/dev/null 2>&1; then python3 \"$d/.codex/hooks/session_start.py\"; else printf '%s\\n' '{}'; fi; exit 0; fi; if [ -e \"$d/.git\" ] || [ -f \"$d/AGENTS.md\" ] || [ -f \"$d/AGENTS.override.md\" ] || [ -f \"$d/.codex/config.toml\" ] || [ -f \"$d/.codex/hooks.json\" ]; then break; fi; d=\"$(dirname \"$d\")\"; done; printf '%s\\n' '{}'",
+            "timeout": 3,
+            "additionalContextLimit": 500,
+            "statusMessage": "读取项目接续提示"
+          }
+        ]
+      }
+    ]
+  }
+}
