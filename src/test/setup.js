@@ -1,18 +1,14 @@
-import { expect, beforeAll, afterAll, afterEach, vi } from 'vitest';
+import { expect, afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import * as matchers from '@testing-library/jest-dom/matchers';
-import { server } from './msw/server';
+import './networkSetup.js';
 
 // 扩展expect匹配器
 expect.extend(matchers);
 
-// Keep all network behavior deterministic and reset per-test handlers.
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
-  server.resetHandlers();
   cleanup();
 });
-afterAll(() => server.close());
 
 // Mock localStorage
 const localStorageMock = (() => {
