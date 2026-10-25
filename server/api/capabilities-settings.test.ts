@@ -19,7 +19,6 @@ import type { Database } from '../../db/index.js';
 let app: FastifyInstance;
 let pg: Awaited<ReturnType<typeof createTestDatabase>>['pg'];
 let db: Awaited<ReturnType<typeof createTestDatabase>>['db'];
-let token: string;
 
 const auth = { authorization: `Bearer ${''}` };
 

@@ -6,23 +6,38 @@ export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
-    environment: 'jsdom',
-    setupFiles: ['./src/test/setup.js'],
+    // PGlite initializes a second WASM Postgres instance for initdb. CPU-count
+    // parallelism can exhaust memory before hooks finish on shared/CI runners.
+    // Bound the pool without changing test/hook deadlines or in-test concurrency.
+    maxWorkers: 2,
     // Pin the cloud flag off so unit tests never require a live server;
     // cloud-path specs mock the adapter instead.
     env: {
       VITE_USE_CLOUD: 'false',
     },
-    include: [
-      // Pre-existing React component tests.
-      'src/**/*.{test,spec}.{js,jsx}',
-      // Typed browser cloud-client tests.
-      'src/**/*.{test,spec}.ts',
-      // New cloud-runtime tests (server + shared).
-      'server/**/*.{test,spec}.ts',
-      'shared/**/*.{test,spec}.ts',
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'browser',
+          environment: 'jsdom',
+          setupFiles: ['./src/test/setup.js'],
+          include: ['src/**/*.{test,spec}.{js,jsx}', 'src/**/*.{test,spec}.ts'],
+          exclude: ['node_modules', 'dist', 'public', 'src/test/integration/**'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'server',
+          environment: 'node',
+          // Keep the same network guard, without loading React or browser mocks.
+          setupFiles: ['./src/test/networkSetup.js'],
+          include: ['server/**/*.{test,spec}.ts', 'shared/**/*.{test,spec}.ts'],
+          exclude: ['node_modules', 'dist', 'public'],
+        },
+      },
     ],
-    exclude: ['node_modules', 'dist', 'public', 'src/test/integration/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov', 'json'],

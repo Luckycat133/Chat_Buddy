@@ -124,7 +124,11 @@ export async function runCharacterInvitationTick(
         reasonCode: 'character_unavailable',
         source: 'deterministic',
       }, now);
-      applied ? (result.decided += 1) : (result.skipped += 1);
+      if (applied) {
+        result.decided += 1;
+      } else {
+        result.skipped += 1;
+      }
       continue;
     }
 
@@ -139,7 +143,11 @@ export async function runCharacterInvitationTick(
         reasonCode: 'sender_unavailable',
         source: 'deterministic',
       }, now);
-      applied ? (result.decided += 1) : (result.skipped += 1);
+      if (applied) {
+        result.decided += 1;
+      } else {
+        result.skipped += 1;
+      }
       continue;
     }
 
@@ -151,7 +159,11 @@ export async function runCharacterInvitationTick(
         reasonCode: 'blocked',
         source: 'deterministic',
       }, now);
-      applied ? (result.decided += 1) : (result.skipped += 1);
+      if (applied) {
+        result.decided += 1;
+      } else {
+        result.skipped += 1;
+      }
       continue;
     }
     if (social.relationshipState === 'accepted') {
@@ -161,7 +173,11 @@ export async function runCharacterInvitationTick(
         reasonCode: 'already_related',
         source: 'deterministic',
       }, now);
-      applied ? (result.decided += 1) : (result.skipped += 1);
+      if (applied) {
+        result.decided += 1;
+      } else {
+        result.skipped += 1;
+      }
       continue;
     }
 
@@ -181,7 +197,11 @@ export async function runCharacterInvitationTick(
       decision,
       now,
     );
-    applied ? (result.decided += 1) : (result.skipped += 1);
+    if (applied) {
+      result.decided += 1;
+    } else {
+      result.skipped += 1;
+    }
   }
 
   return result;
