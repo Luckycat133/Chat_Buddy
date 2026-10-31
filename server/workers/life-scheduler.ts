@@ -185,7 +185,7 @@ export async function runLifeTick(
       continue;
     }
 
-    let candidate: string | null = null;
+    let candidate: string | null;
     try {
       candidate = await generator({
         actorId: ch.actorId,

@@ -1,6 +1,12 @@
 # Browser Tool Reference
 
-## Tool Selection
+## Client-native entrypoint
+
+Start from the browser tools actually available in this session and read their tool documentation. In Antigravity, use its installed browser guide and exposed native browser surface. In Claude Code, use an enabled browser integration if present. Tool names below document optional Claude integrations only; they are not universal names and must not be invented on another client. A native browser is a valid complete path even when no listed MCP namespace or CLI exists.
+
+Before using a logged-in session, verify the intended site/account context without printing credentials, and keep one operator per shared tab. Tool availability, authentication, navigation, real interaction, and expected visible result are separate evidence layers.
+
+## Optional Claude integrations
 
 | Tool | Best For | Auth Support | Setup |
 |------|----------|-------------|-------|
@@ -8,7 +14,7 @@
 | **Playwright MCP** | Public apps, parallel sessions | Manual login required | MCP plugin |
 | **playwright-cli** | Scripted flows, sub-agent tasks | Persistent session state | npm package |
 
-**Default**: Use Chrome MCP when available. It uses your real browser session — OAuth, cookies, and all auth state just work. For unauthenticated or public apps, Playwright is fine.
+Select an integration only when its actual tools are exposed and its observed session state fits the task. Authentication must be checked; it is not guaranteed by an integration name. Follow the current tool schema if it differs from these examples.
 
 ## Chrome MCP Commands
 

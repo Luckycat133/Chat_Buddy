@@ -14,3 +14,7 @@ Follow `CLAUDE.md` for repository-specific rules, then use `.agents/SKILLS.md` t
 
 维护：只同步此标记块；各工具专用正文保留，不强求整份入口相同。项目若明确规定完整镜像，仍保持完整镜像。仅在规则更新或交付涉及规则时检查入口/副本一致性。
 <!-- agent-workflow:v1:end -->
+
+## 项目接续钩子（2026-10-03）
+
+本项目配置仅用于 SessionStart 的短提示；行为、边界和客户端信任说明见 [.codex/hooks/README.md](.codex/hooks/README.md)。配置自检不等于原生客户端已加载，也不替代当前任务验证。

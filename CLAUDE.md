@@ -526,3 +526,13 @@ Build command: `npm run build`
 
 维护：只同步此标记块；各工具专用正文保留，不强求整份入口相同。项目若明确规定完整镜像，仍保持完整镜像。仅在规则更新或交付涉及规则时检查入口/副本一致性。
 <!-- agent-workflow:v1:end -->
+
+## 项目技能入口
+
+按当前任务从 `.agents/SKILLS.md` 选择技能；`.claude/skills` 仅提供发现入口，正文维护在项目现有真源。不要一次加载全部技能。
+
+## 当前任务接续提醒（2026-10-06）
+
+先读 README.md 当前维护范围与 WEB_TO_IOS_MIGRATION.md；Web 当前以关键修复和迁移为主。产品行为任务加载 .agents/skills/chat-buddy-web-demo-development/SKILL.md 并核对当前代码。保护导出备份与 IndexedDB，VITE_* 不是密钥保管位置；迁移设计、mock、真实浏览器数据往返与 iOS 导入分别留证，按当前任务范围验证。
+
+此处承载静态上下文；不另设只重复文本的 Claude SessionStart 钩子。

@@ -99,8 +99,11 @@ jobs:
           # Must be exported: a bare `PGPASSWORD=x` assignment stays a shell-local
           # variable and psql never sees it (fe_sendauth: no password supplied).
           export PGPASSWORD=chat_buddy
-          # Apply the hand-curated migration (matches drizzle-kit output).
-          psql -h localhost -U chat_buddy -d chat_buddy -f db/migrations/0000_init_cloud_runtime.sql
+          # This disposable database needs every checked-in migration, matching
+          # server/test/pglite.ts. The Drizzle journal currently lists only 0000.
+          for migration in db/migrations/*.sql; do
+            psql -v ON_ERROR_STOP=1 -h localhost -U chat_buddy -d chat_buddy -f "$migration"
+          done
       - name: Seed
         run: npm run db:seed
       - name: Boot server

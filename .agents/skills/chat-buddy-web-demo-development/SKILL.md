@@ -61,6 +61,14 @@ Treat these as requirements, not questions to reopen:
 19. Companion tools are weather, calendar, and bounded web search; deep professional work is out of demo scope.
 20. Human friends and mixed human/AI groups are in the demo.
 
+## Locate the implemented path
+
+For a cloud/runtime fix, read the source-and-test map at the end of
+[references/WEB_IMPLEMENTATION.md](references/WEB_IMPLEMENTATION.md) before following
+its target architecture. It distinguishes the implemented cloud bridge, server
+workers and privacy/sync tests from planned queue/cache abstractions. Product
+contracts remain unchanged; source presence alone does not prove deployed service.
+
 ## Working method
 
 ### 1. Inspect before editing

@@ -705,3 +705,48 @@ A Web change is complete when:
 - `npm run build`
 - relevant Playwright tests
 - prompt/runtime benchmark updated when AI behavior changes
+
+## 25. Implemented source and regression routing (2026-10-03)
+
+The earlier layout and implementation sequence include targets. Resolve the
+current owner below before adding a parallel runtime or assuming a planned
+repository/service/cache layer already exists. Check package.json for actual
+versions/scripts; older root CLAUDE examples describe the original local app.
+
+| Changed behavior | Current source | Relevant regression entry |
+|---|---|---|
+| Browser cloud mode and request/session handling | `src/api/cloud-bridge.tsx`, `src/api/cloud-adapter.ts`, `src/api/client.ts` | `src/api/cloud-adapter.spec.js`, `src/api/client.spec.ts`, `e2e/cloud-window.smoke.spec.js` |
+| Authentication/session device isolation | `server/auth/session.ts`, `server/auth/middleware.ts`, `server/api/auth.ts` | `server/auth/session.test.ts`, `server/api/auth-sessions.test.ts` |
+| Actor/relationship and group permissions | `server/api/social.ts`, `friend-requests.ts`, `group-invitations.ts`, `server/services/graph.ts` | `server/api/social.test.ts`, `server/api/robustness.test.ts` |
+| Human-visible events and hidden AI isolation | `server/api/sync.ts`, `server/api/hidden-ai.ts`, `server/api/moments.ts` | `server/api/sync.test.ts`, `server/api/hidden-ai.test.ts`, `server/api/moments.test.ts` |
+| Model proposals and generation | `server/runtime/actions/envelope.ts`, `server/runtime/prompts/compiler.ts`, `server/services/generation.ts` | `server/runtime/prompts/compiler.test.ts`, `server/services/generation.test.ts` |
+| Proactive/offline life and deduplication | `server/workers/proactive.ts`, `offline-scheduler.ts`, `life-scheduler.ts`, `quiet-hours.ts` | Corresponding `server/workers/*.test.ts` |
+| SQL state and migrations | `db/schema.ts`, `db/migrations/`, `server/test/pglite.ts` | Affected API/worker tests, then actual migration checks when schema changes |
+
+For sync/privacy changes, cover same-graph unauthorized actors as well as a
+cross-graph caller. Hidden-AI events must be absent from human envelopes entirely,
+including identifiers and payloads. Preserve the cursor total order and explicit
+ISO timestamp binding in `server/api/sync.ts`; test a second request on the same
+connection, empty pages and invalid cursors. Reading events is not permission to
+share their memory with another actor.
+
+An envelope passing Zod and permitted-actor checks is not by itself proof that a
+social action was authorized and persisted. Trace the generation/worker caller,
+authorization, event write and recipient projection. Retried or concurrent
+proactive work must not duplicate messages; quiet hours and expiry must survive
+reconnect and clock boundaries.
+
+Run a focused offline example from the root:
+
+```bash
+npm run test -- server/api/sync.test.ts server/api/hidden-ai.test.ts
+npm run test -- server/workers/proactive.test.ts server/workers/quiet-hours.test.ts
+```
+
+`vitest.config.js` sets `VITE_USE_CLOUD=false` and cloud specs mock their adapter;
+a passing unit test is not a hosted cloud-path result. For browser acceptance,
+inspect the current Playwright config, explicitly identify frontend/backend/mock
+mode, and verify the user action plus server consequence and reload/reconnect.
+PGlite regression coverage does not replace a requested PostgreSQL migration or
+live auth/provider test. Do not run real social messages or model calls just to
+validate this documentation map.
