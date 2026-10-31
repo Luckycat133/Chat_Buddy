@@ -102,7 +102,9 @@ function Harness() {
 function Probe() {
     const state = useMomentsState();
     const actions = useMomentsActions();
-    latest = { ...state, ...actions };
+    React.useEffect(() => {
+        latest = { ...state, ...actions };
+    }, [state, actions]);
     return React.createElement('output', {
         'aria-label': 'moments-state',
         children: JSON.stringify({
