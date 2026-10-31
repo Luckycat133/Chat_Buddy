@@ -897,7 +897,7 @@ export class AIPipeline {
                 .filter(Boolean);
             let parts = segments.length > 1 ? segments : null;
             if (!parts && !hasSystemNotice && cleanResponse.length > 44) {
-                const sentences = cleanResponse.match(/[^。！？!?～…\.]+[。！？!?～…\.]+\s*|[^。！？!?～…\.]+$/g) || [];
+                const sentences = cleanResponse.match(/[^。！？!?～….]+[。！？!?～….]+\s*|[^。！？!?～….]+$/g) || [];
                 if (sentences.length >= 2) {
                     parts = [];
                     let current = '';
