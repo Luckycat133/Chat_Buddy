@@ -28,7 +28,13 @@ const localStorageMock = (() => {
   };
 })();
 
-globalThis.localStorage = localStorageMock;
+// jsdom 30 exposes localStorage as a getter-only property, so a plain
+// assignment throws. defineProperty keeps this working on both jsdom 29 and 30.
+Object.defineProperty(globalThis, 'localStorage', {
+  configurable: true,
+  writable: true,
+  value: localStorageMock
+});
 
 // JSDOM does not implement layout/scroll APIs used by the message timeline.
 Object.defineProperty(globalThis.HTMLElement.prototype, 'scrollIntoView', {
