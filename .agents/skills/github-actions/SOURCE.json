@@ -1,0 +1,14 @@
+{
+  "origin": "Existing project github-actions skill; upstream identity retained in _meta.json and .clawhub/origin.json",
+  "upstream_version": "1.0.0",
+  "upstream_revision": "Not independently established; this maintenance patch does not assert an immutable upstream commit",
+  "reviewed_on": "2026-10-03",
+  "adaptations": [
+    {
+      "file": "skill-card.md",
+      "reason": "Correct six artifact/ references to existing sibling documentation; no content or execution-policy changes",
+      "before_sha256": "39cb9eff28944e66ea9275ecad2a06f3c5abdab9106c2c4875433559a1db62f1",
+      "after_sha256": "b845d831c6e6d49ae07642635c92d0117d949b0d3bbd4a97c9a16a5d88a85a16"
+    }
+  ]
+}

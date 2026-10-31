@@ -27,12 +27,12 @@ Mitigation: Review moderation, autoreview, and maintainer workflows before use a
 ## Reference(s): <br>
 - [ClawHub Skill Page](https://clawhub.ai/ivangdavila/github-actions) <br>
 - [Skill Homepage](https://clawic.com/skills/github-actions) <br>
-- [Setup](artifact/setup.md) <br>
-- [Workflow Patterns](artifact/workflow-patterns.md) <br>
-- [Security Model](artifact/security-model.md) <br>
-- [Debugging Playbook](artifact/debugging-playbook.md) <br>
-- [Release Patterns](artifact/release-patterns.md) <br>
-- [Performance Tuning](artifact/performance-tuning.md) <br>
+- [Setup](setup.md) <br>
+- [Workflow Patterns](workflow-patterns.md) <br>
+- [Security Model](security-model.md) <br>
+- [Debugging Playbook](debugging-playbook.md) <br>
+- [Release Patterns](release-patterns.md) <br>
+- [Performance Tuning](performance-tuning.md) <br>
 
 
 ## Skill Output: <br>

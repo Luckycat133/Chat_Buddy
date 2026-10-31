@@ -1,0 +1,20 @@
+{
+  "skill": "frontend-code-review",
+  "upstream": {
+    "source": "Pre-existing project skill; exact upstream revision not recorded in the project lockfile.",
+    "revision": null
+  },
+  "local_revision": {
+    "id": "20261006-cross-client-compatibility",
+    "scope": "Client-neutral path/tool/reference correction; no product implementation changes.",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "before_sha256": "c0fcb93011ee4fbc086dabfca0a810b805fb406a2c447bdf3ee4397174678e25",
+        "after_sha256": "d683f1bf60b9af0a9a0a3bffe7f1ba91b31ff0f75bec7761d5606ef3d29b5ef0",
+        "change": "Replace missing mandatory reference set with an explicitly local, repository-aware checklist."
+      }
+    ]
+  },
+  "note": "Retained lockfile source/computedHash is provenance, not a verified upstream commit or current package hash. Local content hashes are recorded separately."
+}

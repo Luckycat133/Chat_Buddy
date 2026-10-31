@@ -1,0 +1,21 @@
+{
+  "skill": "e2e-testing-patterns",
+  "upstream": {
+    "source": "wshobson/agents",
+    "sourceType": "github",
+    "computedHash": "5b76a0209fee373a3cdf22d241fb6bf275e19fc69f92915e07c6448538a14e9d"
+  },
+  "local_revision": {
+    "id": "20261006-cross-client-compatibility",
+    "scope": "Client-neutral path/tool/reference correction; no product implementation changes.",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "before_sha256": "f3034c2456de96375a74f6b91b1dbe47775f0c8e5cae935e6dd48b6b0c486bd9",
+        "after_sha256": "9b51d72900824b96cac174c69d8129d29d0db897e7ce655eee484578e3b1dcff",
+        "change": "Remove six nonexistent supporting resources while preserving the complete inline workflow."
+      }
+    ]
+  },
+  "note": "Retained lockfile source/computedHash is provenance, not a verified upstream commit or current package hash. Local content hashes are recorded separately."
+}
