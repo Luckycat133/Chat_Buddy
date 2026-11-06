@@ -49,11 +49,8 @@ jobs:
         run: npm run build
       - name: Verify no secrets leaked into bundle
         run: |
-          set -euo pipefail
-          if grep -RInE 'sk-(or|cp)|tvly-' dist/ public/ assets/ 2>/dev/null; then
-            echo '::error::Bundled JS contains a real provider key'
-            exit 1
-          fi
+          node --test scripts/check-bundle-secrets.test.mjs
+          node scripts/check-bundle-secrets.mjs dist/ public/ assets/
       - name: Upload build artifact
         uses: actions/upload-artifact@v7
         with:
