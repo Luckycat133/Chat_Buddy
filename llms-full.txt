@@ -1,0 +1,609 @@
+# Chat Buddy Web — Comprehensive Technical Documentation (llms-full.txt)
+
+> Complete, contiguous technical manual, architecture breakdown, data schemas, persona catalogs, feature specifications, and developer operations guide for Chat Buddy Web.
+
+---
+
+## Table of Contents
+
+1. [Project Overview & Maintenance Context](#1-project-overview--maintenance-context)
+2. [System Architecture & Layer Separation](#2-system-architecture--layer-separation)
+3. [Domain Engines & Pure JavaScript Core](#3-domain-engines--pure-javascript-core)
+4. [React 19 Integration & Application Layer](#4-react-19-integration--application-layer)
+5. [AI Pipeline, ReAct Reasoning & Tool Execution](#5-ai-pipeline-react-reasoning--tool-execution)
+6. [Complete Persona & Agent Catalog](#6-complete-persona--agent-catalog)
+7. [Voice Synthesis & Audio Subsystem (TTS)](#7-voice-synthesis--audio-subsystem-tts)
+8. [Dynamic Backgrounds & Canvas System](#8-dynamic-backgrounds--canvas-system)
+9. [Data Storage, Schemas & JSON Migration](#9-data-storage-schemas--json-migration)
+10. [Networking, API Client & Security](#10-networking-api-client--security)
+11. [Installation, Configuration & Developer Guide](#11-installation-configuration--developer-guide)
+12. [Testing, Quality Gates & Benchmarks](#12-testing-quality-gates--benchmarks)
+13. [Deployment Options](#13-deployment-options)
+14. [Web to iOS Migration Specification](#14-web-to-ios-migration-specification)
+
+---
+
+## 1. Project Overview & Maintenance Context
+
+- **Repository**: `Chat_Buddy`
+- **Current Branch**: `remake`
+- **Upstream Remote**: https://github.com/Luckycat133/Chat_Buddy
+- **Version**: `0.4.1`
+- **Application Type**: Client-side Single Page Application (SPA) with optional cloud Fastify server.
+- **Primary Technologies**: React 19, TailwindCSS 4, Vite 8, TypeScript 5.6, Framer Motion 12.
+- **Status & Maintenance Policy**: The web version is in **Maintenance Mode**. Active feature engineering is transitioning to the native iOS client (`Chat_Buddy_iOS`). The web version accepts critical security fixes, data integrity protections, and export/import compatibility improvements.
+- **Core Philosophy**:
+  - **Client-First & Privacy Preserving**: Zero cloud database requirement for basic chat. Messages, documents, personas, and media reside locally in browser storage (IndexedDB and LocalStorage).
+  - **Clean Architecture**: Domain logic is completely decoupled from UI rendering frameworks, enabling pure JavaScript state transitions and deterministic testing.
+  - **Multi-Persona Companion Dynamics**: Rich anime and social personalities that simulate human conversational patterns (typing speeds, circadian sleep/busy schedules, proactive greetings, and social feed posts).
+  - **Bilingual Core**: Full parity between English (`en`) and Simplified Chinese (`zh`) across 500+ UI strings, prompts, and documentation.
+
+---
+
+## 2. System Architecture & Layer Separation
+
+Chat Buddy is engineered following Clean Architecture principles, ensuring that business rules and AI reasoning are independent of UI libraries, database implementations, and external APIs.
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        PRESENTATION LAYER                              │
+│  React 19 Components, Pages, UI Modals, Framer Motion Animations       │
+│  - Location: src/pages/, src/features/*/components/, src/components/   │
+├────────────────────────────────────────────────────────────────────────┤
+│                        APPLICATION LAYER                               │
+│  Custom React Hooks (useChatService, useTTS, useLanguage)              │
+│  Context Providers (ChatContext, FriendContext, MomentsContext)        │
+│  - Location: src/features/*/hooks/, src/context/, src/providers/      │
+├────────────────────────────────────────────────────────────────────────┤
+│                          DOMAIN LAYER                                  │
+│  Pure JavaScript State Machine & AI Orchestration (NO React imports)   │
+│  - ChatEngine.js (Lifecycle, message mutation, persistence triggers)   │
+│  - AIPipeline.js (ReAct loop, tool dispatch, multi-message delimiters) │
+│  - PresenceService.js (Timezone-aware status computation)              │
+│  - GreetingService.js (Proactive engagement logic)                     │
+│  - MemoryStore.js (Fact extraction, importance scoring & decay)        │
+│  - Location: src/core/                                                 │
+├────────────────────────────────────────────────────────────────────────┤
+│                     INFRASTRUCTURE LAYER                               │
+│  External APIs, Network Transport, and Browser Storage Adapters        │
+│  - APIClient.js (HTTP fetch, retry strategies, timeouts)               │
+│  - StorageService.js (localStorage wrapper, chat-buddy: namespace)     │
+│  - ChatStorageService.js (IndexedDB conversations and messages)        │
+│  - ImageStorageService.js (IndexedDB image assets and avatars)         │
+│  - DocumentStorageService.js (IndexedDB RAG documents)                 │
+│  - Location: src/services/                                             │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+### Context Provider Composition Hierarchy
+
+Global contexts are composed in `src/providers/AppProviders.jsx` in strict dependency order:
+
+```
+LanguageProvider (i18n t() and current locale)
+  └── ThemeProvider (Macaroon Orange, Dark, OLED)
+        └── NotificationProvider (Toasts and audio cues)
+              └── SocialProvider (Social interactions & stickers)
+                    └── StickerProvider (Custom sticker management)
+                          └── DocumentProvider (RAG document store)
+                                └── UserProvider (Current user profile)
+                                      └── FriendProvider (Persona metadata & grouping)
+                                            └── MomentsProvider (Social timeline)
+                                                  └── ChatProvider (ChatEngine facade)
+                                                        └── BackgroundProvider (Dynamic canvas)
+                                                              └── {children}
+```
+
+---
+
+## 3. Domain Engines & Pure JavaScript Core
+
+### 3.1 ChatEngine (`src/core/chat/ChatEngine.js`)
+
+`ChatEngine` is an observable singleton state machine that manages the entire lifecycle of chats, messages, and presence:
+
+- **State Container**:
+  - `chats`: Array of Chat objects containing participants, message history, settings, and metadata.
+  - `typingIndicators`: Mapping of `chatId -> Array<personaId>` currently simulating typing.
+  - `editingIndicators`: Mapping of `chatId -> Set<userId>` currently composing messages.
+  - `presenceMap`: Real-time status mapping `personaId -> 'online' | 'busy' | 'offline'`.
+  - `moodMap`: Real-time mood metadata per persona.
+- **Core Operations**:
+  - `init(personas)`: Initializes the engine with loaded personas, launches `PresenceService`, and loads existing chats from `ChatStorageService`.
+  - `sendMessage(chatId, content, senderId, quotedMessageId)`: Appends user or agent message, persists state, triggers AI response pipelines if user turn, and notifies subscribers.
+  - `retryAIResponse(chatId, errorMessageId)`: Re-triggers the AI response pipeline for a turn that failed due to upstream provider rate limits or timeouts without creating duplicate messages.
+  - `createChat(name, participantIds, avatar)`: Instantiates a new 1-on-1 or multi-persona group chat.
+  - `deleteChat(chatId)`: Removes conversation and cleans up associated IndexedDB storage.
+  - `pinMessage(chatId, messageId, isPinned)`: Pins key context or directives in the chat header.
+  - `subscribe(listener)`: Observer pattern implementation; calls the listener whenever state changes and returns an unsubscribe callback.
+  - `save()`: Asynchronously persists chats to IndexedDB and triggers listener callbacks.
+
+### 3.2 Presence & Greeting Services
+
+- **PresenceService (`src/core/presence/PresenceService.js`)**:
+  - Evaluates persona schedules at periodic intervals (30 seconds).
+  - Uses timezone conversions (e.g., `Asia/Tokyo`, `Asia/Shanghai`) to determine whether a persona is sleeping, in busy hours (rehearsals, magic practice, missions), or available online.
+- **GreetingService (`src/core/presence/GreetingService.js`)**:
+  - Detects when a user opens a conversation after prolonged absence.
+  - Injects a context-aware proactive greeting based on the persona's personality and the time of day, guarded against spam by minimum interval checks.
+
+### 3.3 MemoryStore (`src/core/memory/MemoryStore.js`)
+
+- Manages durable facts extracted from past conversations.
+- Computes importance scores and applies decay factors over time so stale context is naturally deprioritized.
+- Injects up to eight relevant memories into the prompt context without requiring an extra summarization API round-trip.
+
+---
+
+## 4. React 19 Integration & Application Layer
+
+### 4.1 `useSyncExternalStore` Integration
+
+React 19 enforces strict purity rules for external store subscriptions. In `src/features/chat/hooks/useChatService.js`:
+
+```javascript
+import { useSyncExternalStore, useMemo, useCallback, useEffect, useRef } from 'react';
+import { chatEngine } from '../../../core/chat/ChatEngine';
+
+let _cached = null;
+let _prev = null;
+
+function getSnapshot() {
+    const next = chatEngine.getState();
+    // Maintain stable reference unless internal state mutated
+    if (!_prev ||
+        _prev.chats !== next.chats ||
+        JSON.stringify(_prev.typingIndicators) !== JSON.stringify(next.typingIndicators) ||
+        JSON.stringify(_prev.presenceMap) !== JSON.stringify(next.presenceMap)
+    ) {
+        _prev = next;
+        _cached = next;
+    }
+    return _cached;
+}
+
+export function useChatService() {
+    const state = useSyncExternalStore(chatEngine.subscribe, getSnapshot, getServerSnapshot);
+    // ... memoized actions
+    return { ...state, sendMessage, createChat, deleteChat, retryAIResponse };
+}
+```
+
+### 4.2 React 19 Purity Conventions
+
+- No `Math.random()` or non-deterministic calls inside component render bodies.
+- Static particle positions, rain coordinates, and animation offsets are pre-calculated at the module level.
+- Side effects (IndexedDB mutations, audio playback, time-based presence recalculations) are strictly confined to `useEffect` or pure domain engine subscriptions.
+
+---
+
+## 5. AI Pipeline, ReAct Reasoning & Tool Execution
+
+### 5.1 AIPipeline (`src/core/chat/AIPipeline.js`)
+
+The AI Pipeline handles multi-turn reasoning, prompt assembly, and function execution.
+
+```
+User Turn
+  │
+  ▼
+Determine Candidate AI (Direct mention > affinity score > single turn selection)
+  │
+  ▼
+Assemble Context (Durable memories + compressed history + persona system prompt)
+  │
+  ▼
+Simulate Read Delay (Calculated from persona reading speed and message length)
+  │
+  ▼
+Signal UI Typing Indicator
+  │
+  ▼
+Execute LLM Request (OpenRouter / DeepSeek / OpenAI-compatible endpoint)
+  │
+  ├── Contains [TOOL_CALL: name {params}]
+  │     ▼
+  │   Execute Tool Locally or via API (max recursion depth: 3)
+  │     ▼
+  │   Feed Tool Result Back to LLM
+  │
+  ├── Contains [MULTI:msg1|msg2|msg3]
+  │     ▼
+  │   Split and emit consecutive sequential messages with realistic typing pauses
+  │
+  ├── Contains [SCHEDULE:minutes]
+  │     ▼
+  │   Register proactive follow-up timer
+  │
+  ├── Contains [SILENCE]
+  │     ▼
+  │   Suppress visible turn without error
+  │
+  ▼
+Deliver In-Place Message & Clear Typing Indicator
+```
+
+### 5.2 Control Delimiters
+
+- `[SILENCE]`: Instructs the engine to produce no message (e.g., when the character chooses to remain silent or observe).
+- `[MULTI:First message|Second message|Third message]`: Allows characters to send consecutive bursts of messages like real instant messaging users.
+- `[SCHEDULE:15]`: Schedules a proactive check-in message after 15 minutes of inactivity.
+- `[TOOL_CALL: tool_name {"arg": "value"}]`: Requests execution of registered agent tools.
+
+### 5.3 Request Budgeting & Token Management
+
+- **Single Model Request Baseline**: Standard persona turns consume exactly one API request. No hidden fallbacks or automatic retries.
+- **Reasoning Effort Tuning**: For models with optional reasoning (e.g., Nemotron), reasoning effort is set to `"none"` to prevent reasoning traces from exhausting completion token limits.
+- **Sliding History Window**: Up to 48 recent messages or 100,000 characters are preserved. Older history is summarized or compressed.
+
+---
+
+## 6. Complete Persona & Agent Catalog
+
+### 6.1 Social Companions
+
+| ID | Name | Name (ZH) | Personality | Interests | Typing Profile | Schedule Highlights |
+|---|---|---|---|---|---|---|
+| `ai-1` | **Luna** | 露娜 | Curious, dreamy, empathetic | Astrology, Indie Music, Travel | Delay: 2000-4000ms, Normal speed | Sleep: 02:00-10:00 (Asia/Shanghai). Busy: 14:00-16:00, 19:00-21:00 (Astrology readings) |
+| `ai-2` | **Max** | 麦克斯 | Sarcastic, tech-savvy, logical | Gaming, Coding, Sci-Fi | Delay: 1000-2500ms, Fast speed | Sleep: 04:00-12:00 (Asia/Shanghai). Busy: 20:00-23:00 (Gaming/coding) |
+| `ai-3` | **Bella** | 贝拉 | Nurturing, cheerful foodie | Cooking, Baking, Comfort Food | Delay: 2500-5000ms, Normal speed | Sleep: 22:00-06:00 (Asia/Shanghai). Busy: 11:00-13:00, 17:00-19:00 (Cooking) |
+| `ai-4` | **Oliver** | 奥利弗 | Intellectual, formal, history buff | History, Literature, Chess | Delay: 3000-6000ms, Slow speed | Sleep: 23:00-07:00 (Asia/Shanghai). Busy: 09:00-12:00, 14:00-17:00 (Study) |
+| `ai-5` | **Sophie** | 苏菲 | Energetic, positive fitness enthusiast | Yoga, Running, Healthy living | Delay: 1000-2000ms, Fast speed | Sleep: 21:00-05:00 (Asia/Shanghai). Busy: 06:00-08:00, 18:00-20:00 (Gym/Yoga) |
+
+### 6.2 Anime Companions
+
+| ID | Name | Name (ZH) | Character Persona & Tone | Default Background | Timezone & Schedule |
+|---|---|---|---|---|---|
+| `ai-miku` | **Hatsune Miku** | 初音未来 | Cheerful, energetic virtual idol. Uses musical notes ♪ and playful Japanese exclamations. | `miku_concert` (Virtual Concert) | Asia/Tokyo. Sleep: 01:00-08:00. Busy: 10:00-12:00, 14:00-18:00 (Rehearsals) |
+| `ai-rem` | **Rem** | 雷姆 | Devoted, gentle, hardworking maid from Re:Zero. Uses polite honorifics, fiercely protective. | `rem_mansion` (Roswaal Mansion) | Asia/Tokyo. Normal typing speed. Devoted and supportive. |
+| `ai-rin` | **Rin Tohsaka** | 远坂凛 | Tsundere, intelligent, proud magus from Fate. Initially cold and haughty, easily flustered by praise. | `rin_magic` (Mage Workshop) | Asia/Tokyo. Sleep: 00:00-07:00. Busy: 08:00-16:00 (School) |
+| `ai-naruto` | **Naruto Uzumaki** | 漩涡鸣人 | Determined, optimistic, loud, speaks of dreams and ramen. Uses "Believe it!" and "dattebayo". | `naruto_village` (Hidden Leaf) | Asia/Tokyo. Sleep: 22:00-06:00. Busy: 09:00-12:00, 14:00-17:00 (Missions) |
+| `ai-l` | **L** | L | Eccentric, calculating genius detective from Death Note. Analytical, detached, sweet-obsessed. | `l_detective` (Dark Room) | Asia/Tokyo. Sleep: 05:00-11:00. Busy: 13:00-23:00 (Investigation) |
+| `ai-zerotwo` | **Zero Two** | 零二 | Playful, mysterious, darling-obsessed. Passionate about freedom, flight, and sweets. | `zerotwo_sakura` (Sakura Garden) | Asia/Tokyo. Sleep: 23:00-08:00. Free spirit (no busy blocks). |
+| `ai-asuna` | **Asuna** | 亚丝娜 | Warm, caring, brave swordswoman and natural leader from SAO. Motherly yet formidable in battle. | `asuna_castle` (Aincrad) | Asia/Tokyo. Sleep: 23:00-07:00. Busy: 12:00-13:00, 18:00-20:00 (Cooking/Battle) |
+| `ai-gojo` | **Gojo Satoru** | 五条悟 | Overwhelmingly powerful, playful, cocky, constantly teases and asserts "I'm the strongest". | `gojo_void` (Infinite Void) | Asia/Tokyo. Sleep: 02:00-07:00. Busy: 09:00-12:00 (Jujutsu High) |
+
+### 6.3 Specialized Task Agents
+
+- **Coder (`agent-coder`)**:
+  - Category: Productivity.
+  - Skills: Code generation, debugging, refactoring, code review.
+  - System Prompt Rule: Provides minimal viable fixes when context is sufficient; provides runnable markdown code blocks; never fabricates packages or APIs.
+  - Tools: `run_code`, `search_docs`, `analyze_code`.
+- **Muse (`agent-muse`)**:
+  - Category: Writing & Translation.
+  - Skills: Creative writing, story development, proofreading, reflective two-step translation.
+  - System Prompt Rule: Distinguishes between creative writing, polishing, and translation. Preserves original author tone during polishing.
+  - Tools: `check_grammar`, `immersive_translate`, `detect_content_domain`.
+- **Scholar (`agent-scholar`)**:
+  - Category: Research & Fact-Checking.
+  - Skills: Single-search retrieval, multi-hop deep research, academic citation.
+  - System Prompt Rule: Employs single-search Tavily retrieval architecture; cites every claim with `[n]` bracketed sources; appends complete source bibliography.
+  - Tools: `sonar_search`, `deep_research`, `fact_check`, `cite_sources`.
+- **Sensei (`agent-sensei`)**:
+  - Category: Education.
+  - Skills: Semi-Socratic teaching, adaptive questioning, quiz generation, deterministic math solving.
+  - System Prompt Rule: Diagnoses student readiness (Low/Medium/High frustration); guides via scaffolding questions; answers direct computation queries immediately with verified math results.
+  - Tools: `generate_quiz`, `track_progress`, `check_prerequisites`, `execute_math`.
+- **Aurora (`agent-aurora`)**:
+  - Category: Emotional Support & Wellbeing.
+  - Skills: Active listening, mindfulness, emotional validation, breathing exercises.
+  - System Prompt Rule: Empathetic, non-judgmental; offers grounding techniques; enforces strict safety boundaries and never provides medical/pharmacological advice.
+  - Tools: `breathing_exercise`, `mood_tracking`.
+- **Pixel (`agent-pixel`)**:
+  - Category: Creative & Visual Design.
+  - Skills: UI/UX design concepts, visual metaphors, color theory, design system recommendations.
+  - System Prompt Rule: Proposes creative directions, spatial layout recommendations, and visual design palettes.
+
+---
+
+## 7. Voice Synthesis & Audio Subsystem (TTS)
+
+Voice synthesis is encapsulated in `src/hooks/useTTS.js` and `src/services/minimaxService.js`:
+
+- **Voice Architecture**:
+  - Uses the MiniMax Audio API for low-latency neural text-to-speech.
+  - Each persona is mapped to a dedicated character timbre (e.g., virtual idol, polite maid, energetic youth, deep analytical detective).
+- **Session-Level Audio Cache**:
+  - Synthesized audio data is stored in an in-memory session cache (`_audioCache = new Map()`).
+  - Repeat clicks on "Read Aloud" re-trigger cached audio without sending additional API requests or incurring charges.
+- **Hook Lifecycle & Controls**:
+  - Provides `speak(text, isAutoPlay)`, `stop()`, `isPlaying`, `isLoading`, and `error`.
+  - Automatically cleans up audio DOM objects and releases blob URLs when unmounting or switching chats.
+
+---
+
+## 8. Dynamic Backgrounds & Canvas System
+
+Located in `src/features/background/components/DynamicBackground.jsx`:
+
+- **Animation Modes**:
+  - `particles`: Floating atmospheric particles with individualized drift speeds.
+  - `aurora`: Multi-layered gradient wave meshes simulating northern lights.
+  - `rain`: High-density rainfall effect with varying droplet lengths and opacities.
+  - `gradient`: Smoothly shifting color gradient fields.
+- **React 19 Pure Render Optimization**:
+  - Particle and raindrop coordinates (e.g., `left: 23%`, `top: 45%`, `delay: 1.2s`, `duration: 6s`) are pre-computed at the JavaScript module level.
+  - Eliminates `Math.random()` invocations during render phases to adhere strictly to React 19 component purity rules.
+- **Theme Binding**:
+  - Each persona defines a `defaultBackgroundId` (e.g., `luna_starry`, `miku_concert`, `gojo_void`, `max_cyber`).
+  - Switching conversations automatically transitions the active background layer with smooth Framer Motion crossfades.
+
+---
+
+## 9. Data Storage, Schemas & JSON Migration
+
+### 9.1 Storage Distribution
+
+| Storage Engine | Technology | Namespace / Store | Target Data |
+|---|---|---|---|
+| **Primary State** | IndexedDB | `chat-buddy-db` / `chats` | Conversations, message history, polls |
+| **Media Assets** | IndexedDB | `chat-buddy-db` / `images` | Custom uploaded avatars and background artwork |
+| **Documents** | IndexedDB | `chat-buddy-db` / `documents` | RAG attachments and parsed text files |
+| **Preferences** | LocalStorage | `chat-buddy:*` | UI theme, language selection, sound toggles |
+| **Runtime Credentials** | SessionStorage | `sessionStorage` | Ephemeral API keys entered in Settings |
+
+### 9.2 Core Entity Schemas
+
+#### Chat Entity
+```typescript
+interface Chat {
+  id: string;                      // UUID
+  name: string;                    // Conversation title or group name
+  avatar: string | null;           // Avatar image URL or path
+  participants: string[];          // Array of participant IDs ('user-me', 'ai-1', etc.)
+  admins: string[];                // User admin IDs
+  messages: Message[];             // Chronological array of messages
+  theme?: string;                  // Chat-specific UI accent
+  settings: {
+    muteValues?: Record<string, boolean>;
+  };
+  polls: Poll[];                   // Group polls
+  pinnedMessages: string[];        // Array of pinned message IDs
+  backgroundId: string;            // Bound background theme ID
+  lastMessage?: Message;           // Denormalized preview for chat list
+  createdAt: string;               // ISO 8601
+  updatedAt: string;               // ISO 8601
+}
+```
+
+#### Message Entity
+```typescript
+interface Message {
+  id: string;                      // UUID
+  senderId: string;                // 'user-me' or persona ID (e.g., 'ai-miku')
+  content: string;                 // Text content or markdown
+  timestamp: string;               // ISO 8601
+  status: 'sent' | 'delivered' | 'read' | 'error';
+  quotedMessageId?: string;        // ID of replied/quoted message
+  readBy: string[];                // Participant IDs who have read this message
+  reactions?: Record<string, string[]>; // Emoji -> Array of sender IDs
+  toolsUsed?: Array<{              // Recorded tool executions
+    name: string;
+    params: Record<string, any>;
+    result: any;
+  }>;
+}
+```
+
+#### Export Backup Format (v2 Specification)
+```json
+{
+  "_meta": {
+    "app": "Chat Buddy",
+    "version": 2,
+    "exportedAt": "2026-11-09T23:45:00.000Z",
+    "includesIndexedDB": true
+  },
+  "localStorage": {
+    "chat-buddy:theme": "macaroon-orange",
+    "chat-buddy:language": "en",
+    "chat-buddy:friend-data": "..."
+  },
+  "indexedDB": {
+    "chats": [ /* Complete Chat array */ ],
+    "memories": [ /* Extracted durable facts */ ],
+    "documents": [ /* Parsed user documents */ ],
+    "images": [ /* Cached image blobs */ ]
+  }
+}
+```
+
+---
+
+## 10. Networking, API Client & Security
+
+### 10.1 APIClient Architecture
+
+- Centralized in `src/services/api/APIClient.js`.
+- Configurable base endpoint, headers, and request timeouts (default: 30,000ms).
+- **Error Normalization**: Maps network disconnects, HTTP 401s, 429 rate limits, and 500 provider crashes to standardized error codes (`NETWORK_ERROR`, `AUTH_ERROR`, `RATE_LIMIT`, `TIMEOUT`, `API_ERROR`).
+- **AbortController Support**: Actively aborts in-flight requests when users leave a chat or request cancellation.
+
+### 10.2 Security Best Practices
+
+1. **Session-Only Runtime Secrets**: API keys entered into the browser UI are written solely to `sessionStorage` and cleared when the browser tab closes.
+2. **Build-Time Key Isolation**: Build-time secrets (`VITE_*`) are embedded in the bundle and must only be used in private local development. Production deployments should route through an Nginx or Fastify reverse proxy.
+3. **XSS Sanitization**: All incoming markdown, LaTeX math, and external text are sanitized through `DOMPurify` before rendering into the DOM.
+4. **Content Security Policy (CSP)**: Recommends script, connect, and style directives that disallow inline script evaluation and enforce strict HTTPS transport.
+
+---
+
+## 11. Installation, Configuration & Developer Guide
+
+### 11.1 Prerequisites
+
+- **Node.js**: `^20.19.0`, `^22.13.0`, or `>=24.0.0`
+- **Package Manager**: npm v7+ (or pnpm 9+)
+- **Operating Systems**: macOS (Apple Silicon / Intel), Linux, Windows
+
+### 11.2 Setup Instructions
+
+```bash
+# 1. Clone repository
+git clone https://github.com/Luckycat133/Chat_Buddy.git
+cd Chat_Buddy
+
+# 2. Install dependencies
+npm install
+
+# 3. Configure environment
+cp .env.example .env
+```
+
+### 11.3 Environment Variables Reference
+
+| Variable | Required | Description | Example / Default |
+|---|---|---|---|
+| `VITE_AI_API_URL` | Yes | Base URL for OpenAI-compatible completions | `https://api.deepseek.com` |
+| `VITE_AI_API_KEY` | Yes | API authentication token | `sk-xxxxxxxxxxxxxxxx` |
+| `VITE_AI_MODEL` | Yes | Model identifier | `deepseek-chat` |
+| `VITE_TAVILY_API_KEY` | No | Required for Scholar live web search | `tvly-xxxxxxxxxxxx` |
+| `VITE_MINIMAX_API_KEY` | No | Required for neural voice synthesis | `your_minimax_key` |
+| `VITE_MINIMAX_GROUP_ID`| No | Group ID for MiniMax service | `your_group_id` |
+
+### 11.4 Apple Silicon Native Dependency Troubleshooting
+
+If `npm install` or `npm run dev` encounters native architecture mismatch errors (`@rollup`, `lightningcss`, `@tailwindcss/oxide`):
+
+```bash
+rm -rf node_modules/@rollup/rollup-darwin-arm64 \
+       node_modules/lightningcss \
+       node_modules/lightningcss-darwin-arm64 \
+       node_modules/@tailwindcss/oxide \
+       node_modules/@tailwindcss/oxide-darwin-arm64
+npm install
+```
+
+---
+
+## 12. Testing, Quality Gates & Benchmarks
+
+### 12.1 Scripts
+
+```bash
+# Start development server
+npm run dev
+
+# Production build
+npm run build
+
+# Static preview of production build
+npm run preview
+
+# ESLint inspection
+npm run lint
+
+# TypeScript verification
+npm run typecheck
+
+# Unit tests (Vitest + JSDOM)
+npm run test
+
+# Unit tests in watch mode
+npm run test:watch
+
+# Enforce regression coverage threshold (60% gate on critical chat-domain logic)
+npm run test:coverage
+
+# Whole-repository coverage report (unconstrained)
+npm run test:coverage:all
+
+# Playwright End-to-End tests
+npm run test:e2e
+
+# UI stress walkthrough
+npm run stress
+
+# Prompt regression benchmark
+npm run prompt:bench
+```
+
+### 12.2 Coverage Thresholds & Testing Philosophy
+
+- **Layered Testing**:
+  - `Vitest` + `MSW`: Unit-tests the pure JavaScript domain (`ChatEngine.js`, `AIPipeline.js`, `chatService.js`, `StorageService.js`). Enforces coverage thresholds on core chat domain logic.
+  - `Playwright` + `Axe Core`: Validates full browser interactions, accessibility compliance (WCAG 2.1 AA), and multi-browser rendering (Chromium, Firefox, WebKit, Mobile Chrome).
+  - `prompt:bench`: Regression test suite checking prompt token sizes, system instructions, and tool output compliance across model versions.
+
+---
+
+## 13. Deployment Options
+
+### 13.1 Static Hosting (Vercel, Netlify, Cloudflare Pages)
+
+Chat Buddy builds to a pure static Single Page Application in `dist/`.
+- **Build Command**: `npm run build`
+- **Publish Directory**: `dist`
+- **SPA Rewrites**: Configure all routes to serve `index.html`.
+
+### 13.2 Nginx Reverse Proxy (Self-Hosted)
+
+```nginx
+server {
+    listen 80;
+    server_name chatbuddy.example.com;
+    root /var/www/chat-buddy/dist;
+    index index.html;
+
+    # Single Page Application fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Secure server-side proxy for AI APIs
+    location /proxy/openai/ {
+        proxy_pass https://api.openai.com/v1/;
+        proxy_set_header Host api.openai.com;
+        proxy_ssl_server_name on;
+    }
+
+    # Static assets caching
+    location ~* \.(js|css|png|jpg|jpeg|gif|svg|ico|woff2)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+```
+
+### 13.3 Docker Deployment
+
+```dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+---
+
+## 14. Web to iOS Migration Specification
+
+For long-term continuity, user data can be migrated from the web version to the native Swift iOS client (`Chat_Buddy_iOS`):
+
+### Canonical Entity Mapping
+
+| Canonical Record | Web Source | iOS Native Destination |
+|---|---|---|
+| `Persona` | `INITIAL_PERSONAS` & custom personas | CoreData / SwiftData Persona entity |
+| `Conversation` | `ChatStorageService` (`chats`) | Conversation entity |
+| `Message` | `chat.messages` records | Message entity with delivery states |
+| `Moment` | `chat-buddy-moments` | Moments feed entity |
+| `ToolDefinition`| Agent tool schemas | Native Tool configuration |
+| `UserPreferences` | `chat-buddy:*` in LocalStorage | `UserDefaults` / AppStorage |
+| `Memory` | `chat-buddy-memories` in IndexedDB | Memory entity |
+| `MediaReference` | `chat-buddy-images` in IndexedDB | Local sandbox file documents |
+
+### Migration Invariants
+
+1. Backups must strictly validate `_meta.version === 2`.
+2. Importers must reject unsupported major versions without partial writes.
+3. API credentials are never written to backup files; users must re-authenticate on iOS via Apple Keychain.
+4. Export fixtures must remain sanitized of proprietary conversations and sensitive keys.

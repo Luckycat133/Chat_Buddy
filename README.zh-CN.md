@@ -7,12 +7,13 @@
 ![React](https://img.shields.io/badge/React-19-61DAFB.svg)
 ![Tests](https://img.shields.io/badge/tests-471%20passing-success.svg)
 ![核心覆盖率](https://img.shields.io/badge/core%20lines-88.86%25-success.svg)
+[![llms.txt](https://img.shields.io/badge/llms.txt-standard-blue.svg)](llms.txt)
 
 **AI 聊天伴侣**
 
 一个现代化的响应式AI聊天应用，支持多种个性角色、二次元角色、群聊和双语切换。
 
-[English](README.md) | [中文](README.zh-CN.md)
+[English](README.md) | [中文](README.zh-CN.md) | [llms.txt](llms.txt) | [llms-full.txt](llms-full.txt)
 
 </div>
 

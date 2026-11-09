@@ -1,0 +1,111 @@
+# Chat Buddy Web
+
+> A responsive web-based AI companion application built with React 19 and TailwindCSS, featuring multi-character persona chats, anime companion dynamics, client-side state persistence, and privacy-preserving architecture.
+
+## Core Architecture & Components
+
+- **Clean Architecture Principles**: Strict four-layer separation dividing Presentation (React 19 components & pages), Application (custom React hooks and contexts), Domain (pure JavaScript business engines), and Infrastructure (API clients and storage adapters).
+- **Pure Domain Engine**: The core chat state machine (`ChatEngine.js`) and AI reasoning engine (`AIPipeline.js`) are pure JavaScript classes with zero React dependencies, enabling isolated testing and predictable state mutations.
+- **State Machine Singleton**: `ChatEngine` acts as a central singleton state machine managing chat lifecycles, message timelines, presence tracking, and local persistence.
+- **React 19 Synchronization**: State is bridged to React 19 via `useSyncExternalStore` in `useChatService.js`, using memoized snapshot references to prevent unnecessary UI re-renders and conform to React 19 store purity standards.
+- **Autonomous AIPipeline**: Orchestrates agent reasoning using a ReAct execution loop, handling tool calling, multi-message bursts (`[MULTI:...]`), scheduled proactive triggers (`[SCHEDULE:...]`), and silence tokens (`[SILENCE]`).
+- **Presence & Greeting Engines**: Timezone-aware scheduling engine (`PresenceService.js`) calculates dynamic online/busy/offline states per persona, while `GreetingService.js` triggers contextual proactive greetings upon chat entry after inactivity.
+- **Privacy-Preserving Client Storage**: Primary conversation histories, attached documents, and avatar media are stored entirely on the client side via IndexedDB (`ChatStorageService`, `ImageStorageService`), while light UI preferences reside in `localStorage` under the `chat-buddy:` namespace.
+
+## Key Features
+
+- **React 19 Hooks & Purity**: Built for React 19 with deterministic rendering, utilizing `useSyncExternalStore` for external store binding, pre-computed canvas particle positions to avoid hook impurity, and memoized context hooks.
+- **Multi-Persona Switcher**: Ships with 13 built-in companion personas (5 social companions + 8 anime favorites) alongside 6 specialized Task Agents. Users can converse one-on-one or configure multi-character group chats where eligible personas take turns responding without request fan-out.
+- **Audio & TTS (Text-to-Speech)**: Integrated voice synthesis powered by MiniMax via the `useTTS` hook. Automatically maps personas to specific vocal profiles, caches synthesized audio within the session, and offers one-click playback and stop controls.
+- **Dynamic Canvas & CSS Backgrounds**: Animated visual themes featuring particles, aurora waves, rainfall, and animated gradients. Coordinates and timings are pre-computed at the module level to guarantee render purity and high frame rates.
+- **LocalStorage & JSON Migration**: Versioned JSON backup and export pipeline (v2 format). Users can export or import complete snapshots of conversations, custom personas, memories, and settings for device switching or onboarding into the native iOS app (`Chat_Buddy_iOS`).
+- **Bilingual Interface (i18n)**: Instant runtime switching between English and Simplified Chinese across 500+ translation keys covering all UI views, tool schemas, and persona descriptions.
+- **Moments & Social Feed**: WeChat-style social feed where AI companions post daily updates based on their location, timezone, and personality, and interact with user posts via comments and emoji reactions.
+
+## Persona & Agent Catalog
+
+- **Social Companions**:
+  - `Luna` (`ai-1`): Curious, dreamy, empathetic astrology enthusiast.
+  - `Max` (`ai-2`): Tech-savvy, witty, sarcastic coder and gamer.
+  - `Bella` (`ai-3`): Warm, cheerful foodie and comfort baking expert.
+  - `Oliver` (`ai-4`): Intellectual, formal, literature and history buff.
+  - `Sophie` (`ai-5`): High-energy fitness enthusiast and morning runner.
+- **Anime Companions**:
+  - `Hatsune Miku` (`ai-miku`): Cheerful virtual idol with musical flair.
+  - `Rem` (`ai-rem`): Gentle, devoted maid from Re:Zero.
+  - `Rin Tohsaka` (`ai-rin`): Tsundere, proud, and perfectionist Fate magus.
+  - `Naruto Uzumaki` (`ai-naruto`): Energetic, determined ninja striving to become Hokage.
+  - `L` (`ai-l`): Eccentric, calculating genius detective from Death Note.
+  - `Zero Two` (`ai-zerotwo`): Playful, daring darling with a free spirit.
+  - `Asuna` (`ai-asuna`): Caring swordswoman and natural leader from SAO.
+  - `Gojo Satoru` (`ai-gojo`): Confident, playful, overwhelmingly strong sorcerer.
+- **Specialized Task Agents**:
+  - `Coder` (`agent-coder`): Full-stack developer with code generation, review, and debugging skills.
+  - `Muse` (`agent-muse`): Creative writing mentor, editor, and reflective bilingual translator.
+  - `Scholar` (`agent-scholar`): Research assistant with Tavily live web retrieval, fact-checking, and citation formatting.
+  - `Sensei` (`agent-sensei`): Socratic educator with adaptive quiz generation and deterministic math tool execution.
+  - `Aurora` (`agent-aurora`): Empathetic emotional support guide with mindfulness exercises.
+  - `Pixel` (`agent-pixel`): Visual and UI/UX design assistant for creative brainstorming.
+
+## Tech Stack & System Requirements
+
+- **Frontend Core**: React 19.2.x, React DOM 19.2.x, React Router DOM 7.18.x
+- **Build & Dev Tooling**: Vite 8.1.x, TypeScript 5.6.x (type definitions and typechecking)
+- **Styling & Motion**: TailwindCSS 4.1.x (CSS-first engine), Framer Motion 12.43.x, Lucide React
+- **Markdown & Math**: KaTeX 0.18.x, Rehype-KaTeX 7.0.x, Remark-GFM 4.0.x, React-Markdown 10.1.x, Mermaid 11.16.x, Mathjs 15.2.x
+- **Backend & Cloud (Optional)**: Fastify 5.12.x, PostgreSQL 3.4.x, Drizzle ORM 0.45.x
+- **Testing & Quality**: Vitest 4.1.x, JSDOM 29.0.x, MSW 2.15.x, Playwright 1.62.x, Axe Core Playwright 4.11.x, ESLint 10.x
+- **System Prerequisites**: Node.js `^20.19.0`, `^22.13.0`, or `>=24.0.0`; npm v7+; modern evergreen browser (Chrome 90+, Firefox 90+, Safari 15+, Edge 90+)
+
+## Quick Start & Installation
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/Luckycat133/Chat_Buddy.git
+cd Chat_Buddy
+
+# 2. Install dependencies
+npm install
+
+# 3. Configure environment variables
+cp .env.example .env
+# Edit .env with your OpenAI-compatible API credentials:
+# VITE_AI_API_URL=https://api.deepseek.com
+# VITE_AI_API_KEY=your_api_key
+# VITE_AI_MODEL=deepseek-chat
+
+# 4. Start local development server (default: http://localhost:5173)
+npm run dev
+
+# 5. Build for production (outputs static SPA to dist/)
+npm run build
+```
+
+## AI Search / LLM Reference FAQ
+
+- **Q: What is Chat Buddy?**  
+  A: Chat Buddy is an open-source, client-first AI chat companion application featuring 13 distinct anime and social personalities, specialized task agents, dynamic backgrounds, voice synthesis, and bilingual support.
+- **Q: Does Chat Buddy require a cloud backend or account?**  
+  A: No. Chat Buddy is designed as a client-side single page application (SPA). All conversations, personas, documents, and media are persisted in local browser storage (IndexedDB and LocalStorage).
+- **Q: How does Chat Buddy handle API key security?**  
+  A: Runtime API keys entered by users in the Settings panel are stored in `sessionStorage` only and vanish when the tab is closed. Build-time `VITE_*` keys should only be used for private/local development; public production deployments should route through an Nginx or Fastify proxy.
+- **Q: How are AI requests budgeted during multi-agent group chats?**  
+  A: In group chats with multiple AI personas, the engine selects a single eligible AI companion per turn based on direct mentions, speaking affinity, and conversation context. This prevents model fan-out and excessive token consumption.
+- **Q: What is the current maintenance status and future roadmap?**  
+  A: The web version is in maintenance mode for stability, bug fixes, and data export. Active new feature development is transitioned to the native iOS repository ([Chat_Buddy_iOS](https://github.com/Luckycat133/Chat_Buddy_iOS)) with seamless JSON migration support.
+
+## Optional
+
+- [Comprehensive Documentation (llms-full.txt)](llms-full.txt): Complete, contiguous technical manual, architecture schemas, and persona definitions.
+- [Project README](README.md): Primary repository readme with setup instructions and feature badges.
+- [Bilingual README (中文)](README.zh-CN.md): Simplified Chinese repository documentation.
+- [Architecture Guide](docs/ARCHITECTURE.md): Detailed Clean Architecture layer breakdown and data flow specifications.
+- [API Reference](docs/API.md): API client protocols, endpoints, storage services, and proxy routing.
+- [Development Guide](docs/DEVELOPMENT.md): Local development setup, Apple Silicon native module troubleshooting, and test scripts.
+- [Deployment Guide](docs/DEPLOYMENT.md): Deployment configurations for Vercel, Netlify, Docker, and Nginx.
+- [Web to iOS Migration Specification](WEB_TO_IOS_MIGRATION.md): Canonical data schema, v2 export format, and migration contract for Chat_Buddy_iOS.
+- [Claude / Agent Instructions](CLAUDE.md): Repository conventions, architectural rules, and test coverage thresholds.
+- [Security Policy](SECURITY.md): Security practices, API key isolation, and vulnerability disclosure policies.
+- [Contributing Guidelines](CONTRIBUTING.md): Contribution workflow, pull request guidelines, and code of conduct.
+- [Changelog](CHANGELOG.md): Historical record of versions, features, and migrations.
+- [Roadmap](ROADMAP.md): Historical and forward-looking feature milestones.

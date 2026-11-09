@@ -23,12 +23,13 @@
 ![React](https://img.shields.io/badge/React-19+-61DAFB.svg)
 ![Tests](https://img.shields.io/badge/tests-471%20passing-success.svg)
 ![Core Coverage](https://img.shields.io/badge/core%20lines-88.86%25-success.svg)
+[![llms.txt](https://img.shields.io/badge/llms.txt-standard-blue.svg)](llms.txt)
 
 **AI Chat Companion**
 
 A modern, responsive AI chat application featuring multiple personalities, anime characters, group chats, and bilingual support.
 
-[English](README.md) | [中文](README.zh-CN.md)
+[English](README.md) | [中文](README.zh-CN.md) | [llms.txt](llms.txt) | [llms-full.txt](llms-full.txt)
 
 </div>
 
@@ -41,6 +42,7 @@ A modern, responsive AI chat application featuring multiple personalities, anime
 - [Getting Started](#getting-started)
 - [Usage Guide](#usage-guide)
 - [Architecture](#architecture)
+- [AI & LLM Documentation (llms.txt)](#ai--llm-documentation-llmstxt)
 - [Contributing](#contributing)
 - [Changelog](#changelog)
 
@@ -222,6 +224,15 @@ graph LR
     C --> F[Storage]
     C --> G[UI]
 ```
+
+---
+
+## AI & LLM Documentation (llms.txt)
+
+Chat Buddy supports Generative Engine Optimization (GEO) and complies with the [llmstxt.org](https://llmstxt.org) standard for AI search engines, agents, and LLMs (e.g., Perplexity, Cursor, Copilot, ChatGPT):
+
+- **[llms.txt](llms.txt)**: Concise machine-readable summary, architecture patterns, key feature inventory, and frequently asked questions for LLM search indexing.
+- **[llms-full.txt](llms-full.txt)**: Complete, contiguous technical manual, detailed Clean Architecture specifications, data schemas, complete persona catalogs, and setup instructions.
 
 ---
 
