@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import llmsFull from '../../llms-full.txt?raw';
 import {
     clearConfig,
     clearAllAppData,
@@ -160,6 +161,23 @@ describe('apiConfig', () => {
         // Then
         expect(sessionStorage.getItem('chat-buddy:session-api-key')).not.toBe('sk-secret');
         expect(getConfig().apiKey).toBe('');
+    });
+
+    it('accepts the documented v2 backup example with database and store nesting', async () => {
+        const example = llmsFull.match(/#### Export Backup Format[^\n]*\n```json\n([\s\S]*?)\n```/);
+        expect(example).not.toBeNull();
+        const backup = JSON.parse(example[1]);
+        expect(backup.indexedDB['chat-buddy-main'].kv).toEqual([
+            { key: 'chat-buddy-chats', value: [], updatedAt: expect.any(Number) },
+            { key: 'chat-buddy-documents', value: [], updatedAt: expect.any(Number) },
+            { key: 'chat-buddy-rag-index', value: [], updatedAt: expect.any(Number) },
+        ]);
+        const file = new File([JSON.stringify(backup)], 'documented-backup.json', { type: 'application/json' });
+
+        // jsdom has no IndexedDB: this validates the actual importer/schema
+        // and localStorage writes, not an IndexedDB or native iOS round trip.
+        await expect(importData(file)).resolves.toBe(Object.keys(backup.localStorage).length);
+        expect(localStorage.getItem('chat-buddy:language')).toBe('en');
     });
 
     it('test_when_import_contains_foreign_storage_key_should_reject_without_writes', async () => {

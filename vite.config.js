@@ -1,5 +1,27 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+
+// Keep the repository-root references as the single source of truth.
+// Emit only this public allowlist, never the surrounding agent/config files.
+function llmsAssets() {
+  let root;
+  return {
+    name: 'chat-buddy-llms-assets',
+    apply: 'build',
+    configResolved(config) {
+      root = config.root;
+    },
+    async buildStart() {
+      for (const fileName of ['llms.txt', 'llms-full.txt']) {
+        const path = resolve(root, fileName);
+        this.addWatchFile(path);
+        this.emitFile({ type: 'asset', fileName, source: await readFile(path) });
+      }
+    },
+  };
+}
 
 const SECURITY_HEADERS = {
   'Content-Security-Policy': "default-src 'self'; script-src 'self' 'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*; worker-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'",
@@ -19,6 +41,7 @@ const DEVELOPMENT_SECURITY_HEADERS = {
 
 export default defineConfig(({ mode }) => ({
   plugins: [
+    llmsAssets(),
     react({
       jsxRuntime: 'automatic',
     }),

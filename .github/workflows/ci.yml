@@ -47,6 +47,8 @@ jobs:
         env:
           VITE_CLOUD_BASE_URL: 'http://localhost:8080'
         run: npm run build
+      - name: Verify public LLM references
+        run: node --test scripts/llms-assets.test.mjs
       - name: Verify no secrets leaked into bundle
         run: |
           node --test scripts/check-bundle-secrets.test.mjs
