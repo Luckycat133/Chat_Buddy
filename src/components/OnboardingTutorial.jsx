@@ -52,7 +52,7 @@ export default function OnboardingTutorial({ currentStep, totalSteps, nextStep, 
     }, [updateSpotlight]);
 
     return (
-        <div className="fixed inset-0 z-[9999]">
+        <div data-testid="legacy-onboarding-tour" className="fixed inset-0 z-[9999]">
             {/* Overlay */}
             <div
                 className="absolute inset-0 transition-all duration-500"

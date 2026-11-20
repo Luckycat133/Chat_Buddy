@@ -11,12 +11,14 @@ import { LanguageProvider } from '../../context/LanguageContext';
 
 const cloudMocks = vi.hoisted(() => ({
   getCloud: vi.fn(),
+  authedCloudFetch: vi.fn(),
   loadTokens: vi.fn(() => ({ actorId: 'actor-me' })),
   cloudEnabled: vi.fn(() => true),
 }));
 
 vi.mock('../../api/cloud-adapter', () => ({
   getCloud: cloudMocks.getCloud,
+  authedCloudFetch: cloudMocks.authedCloudFetch,
   loadTokens: cloudMocks.loadTokens,
   cloudEnabled: cloudMocks.cloudEnabled,
 }));
@@ -47,6 +49,7 @@ describe('CloudChatWindow', () => {
   beforeEach(() => {
     sessionStorage.clear();
     cloudMocks.getCloud.mockReset();
+    cloudMocks.authedCloudFetch.mockReset().mockResolvedValue({ ok: true });
     cloudMocks.loadTokens.mockReturnValue({ actorId: 'actor-me' });
     cloudMocks.cloudEnabled.mockReturnValue(true);
   });
@@ -80,6 +83,7 @@ describe('CloudChatWindow', () => {
     await waitFor(() => expect(screen.getByTestId('cloud-message-timeline')).toBeInTheDocument());
     expect(screen.getByText('Hello from cloud')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '朗读' })).toBeInTheDocument();
+    expect(cloudMocks.authedCloudFetch).not.toHaveBeenCalled();
   });
 
   it('test_when_load_fails_should_show_alert_with_retry_button', async () => {
@@ -91,6 +95,45 @@ describe('CloudChatWindow', () => {
     await waitFor(() => expect(screen.getByTestId('cloud-chat-error')).toBeInTheDocument());
     expect(screen.getByRole('alert')).toHaveTextContent(/Boom/);
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it('saves the Mira receipt only after a failed timeline successfully retries and renders', async () => {
+    const user = userEvent.setup();
+    const welcome = {
+      id: 'mira-welcome',
+      conversationId: 'c1',
+      senderActorId: 'actor-mira',
+      sequence: 1,
+      clientIdempotencyKey: 'mira-first-contact-v1',
+      kind: 'text',
+      content: 'Hi from Mira',
+      status: 'accepted',
+      createdAt: '2026-09-24T00:00:00.000Z',
+    };
+    let renderedWhenPosted;
+    cloudMocks.authedCloudFetch.mockImplementation(async () => {
+      renderedWhenPosted = screen.queryByText(welcome.content);
+      return { ok: true };
+    });
+    const cloud = createMockCloud({
+      getMessages: vi.fn()
+        .mockRejectedValueOnce(new Error('Timeline offline'))
+        .mockResolvedValue({ items: [welcome] }),
+      listActors: vi.fn().mockResolvedValue([{ id: 'actor-mira', publicName: 'Mira' }]),
+    });
+
+    renderRoute(cloud);
+    expect(await screen.findByTestId('cloud-chat-error')).toBeInTheDocument();
+    expect(cloudMocks.authedCloudFetch).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /retry/i }));
+    expect(await screen.findByText(welcome.content)).toBeInTheDocument();
+    await waitFor(() => expect(cloudMocks.authedCloudFetch).toHaveBeenCalledExactlyOnceWith(
+      '/v1/onboarding/read',
+      { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ conversationId: 'c1', messageId: welcome.id }) },
+    ));
+    expect(renderedWhenPosted).toBeInTheDocument();
   });
 
   it('test_when_user_sends_message_should_call_cloud_send', async () => {
