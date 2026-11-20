@@ -3,7 +3,8 @@ name: chat-buddy-web-demo-development
 description: Implement, refactor, review, and test the cloud-first Chat Buddy Web Demo and its shared companion runtime. Use when working on the React Web client, hosted backend, social graph, human/AI friend requests, mixed groups, Moments, proactive messages, character memory, relationship continuity, actor identity linking, weather/calendar/search capabilities, cloud sync, or demo acceptance.
 metadata:
   author: Luckycat133
-  version: "2026-08-18-demo-v1"
+  version: "2026-11-15-audit-1"
+  contract_version: "2026-08-18-demo-v1"
   product: chat-buddy
   platform: web-cloud
 ---
@@ -28,13 +29,15 @@ Do not reinterpret the product as:
 
 Load only what the task requires:
 
+- Current delivery facts, reviewed CI evidence, gaps, and source anchors: [references/DELIVERY_STATUS.md](references/DELIVERY_STATUS.md). Read this first for reviews, status updates, or hosted-runtime work.
+- Current implementation priorities and exit gates: [../../../ROADMAP.md](../../../ROADMAP.md)
 - Product behavior and non-negotiable rules: [references/PRODUCT_CONTRACT.md](references/PRODUCT_CONTRACT.md)
 - Complete demo flows and screens: [references/DEMO_EXPERIENCE.md](references/DEMO_EXPERIENCE.md)
 - Shared data model, runtime, API, sync, and privacy: [references/DOMAIN_ARCHITECTURE.md](references/DOMAIN_ARCHITECTURE.md)
 - Web/backend implementation plan: [references/WEB_IMPLEMENTATION.md](references/WEB_IMPLEMENTATION.md)
 - Acceptance scenarios and release gates: [references/ACCEPTANCE.md](references/ACCEPTANCE.md)
 
-When behavior changes, update both the Web and iOS project skills to the same contract version.
+When behavior changes, update both the Web and iOS project skills to the same contract version. The November 2026 audit changes delivery evidence, not the product contract; it does not certify the iOS repository.
 
 ## Settled product decisions
 
@@ -63,11 +66,21 @@ Treat these as requirements, not questions to reopen:
 
 ## Locate the implemented path
 
-For a cloud/runtime fix, read the source-and-test map at the end of
-[references/WEB_IMPLEMENTATION.md](references/WEB_IMPLEMENTATION.md) before following
-its target architecture. It distinguishes the implemented cloud bridge, server
-workers and privacy/sync tests from planned queue/cache abstractions. Product
-contracts remain unchanged; source presence alone does not prove deployed service.
+For a cloud/runtime fix, read [references/DELIVERY_STATUS.md](references/DELIVERY_STATUS.md) and the source-and-test map at the end of [references/WEB_IMPLEMENTATION.md](references/WEB_IMPLEMENTATION.md) before following its target architecture. The older source map is navigation, not a delivery certificate. Product contracts remain unchanged; source presence alone does not prove a wired or deployed service.
+
+The reviewed baseline is `remake@be4d237eeeaf80b7116b0445b01bfcc4c0933fcb` (2026-11-12). It has substantive cloud APIs and domain regressions, but independent attention, complete social-event-to-memory continuity, and release acceptance remain incomplete. Never import the legacy 15-theme roadmap's Done labels into the hosted-demo status.
+
+## Delivery evidence protocol
+
+Keep these evidence levels separate: **implemented**, **tested at a named layer**, **full scenario accepted**, and **deployed/live verified**. A stub, schema, source comment, mocked response, successful HTTP status, or green job title cannot promote a feature to the next level.
+
+For every status change, record the commit, source entrypoint and callers, assertion/fixture, command or CI run URL, environment/model mode, result including skips, and remaining gap. Distinguish a historical Actions run from a check executed in the current session. Update DELIVERY_STATUS and ROADMAP together; do not copy old counts to a new commit.
+
+The reviewed CI has 67 passing Vitest files / 863 tests. Its P0 Playwright artifact has 96 passes and 4 skips: 24 API-level tests repeated across four configured projects, with A01 skipped in all four. Several named scenarios only assert dev-signin success. This is not A01-A25 product acceptance or cross-browser UI proof. Coverage was not generated in that run. See the ledger for exact scope and evidence.
+
+For a release gate, missing runtime infrastructure must fail rather than silently skip required scenarios. Assert the social consequence, not just a token, 2xx response, or test name. Preserve useful domain tests while replacing shallow acceptance checks. Do not weaken ACCEPTANCE.md to fit current code.
+
+Use `npm ci` and `package-lock.json`; do not restore a second package-manager lock incidentally. Report scoped CI lint separately from `npm run lint`. Treat `npm run db:migrate`, all-SQL CI bootstrapping, and PGlite setup as different paths until their schema equivalence and upgrade behavior are proven.
 
 ## Working method
 
@@ -81,7 +94,7 @@ Read the nearest owning files, tests, migrations, and relevant reference. Confir
 - server runtime
 - migration/import compatibility
 
-Do not extend legacy local authority when the change belongs in the cloud path.
+Do not extend legacy local authority when the change belongs in the cloud path. Trace the selected browser mode and the actual server/worker entrypoint; a provider-key proxy is not a server-authoritative social runtime. At the reviewed baseline, `cloudEnabled()` requires `VITE_USE_CLOUD=true` or `1`; missing flags retain legacy behavior.
 
 ### 2. Classify the change
 
@@ -116,6 +129,8 @@ Before model or UI work, verify:
 
 Authorization is server-side. Client filtering is never sufficient.
 
+Apply audience authorization to every prompt section, including relationship narratives and derived memories. Model-generated memory must inherit its source conversation/relationship and disclosure constraints; an empty policy or `relationshipId: null` is not evidence that a human secret is actor-global knowledge. Revalidate deletion, supersession, grants, block state, and actual observation when projecting and recalling it.
+
 ### 4. Implement a vertical slice
 
 For a user-visible behavior, include:
@@ -131,7 +146,7 @@ For a user-visible behavior, include:
 - observability
 - tests
 
-Do not land a UI-only mock for a behavior that must survive another device or app closure.
+Do not land a UI-only mock for a behavior that must survive another device or app closure. Show worker registration, restart recovery, job ownership, and replay behavior; exported tick functions and in-process timers alone are not durable offline delivery.
 
 ### 5. Keep AI output subordinate to domain rules
 
@@ -147,6 +162,10 @@ Model output proposes actions. Validate:
 
 Persist approved actions and source events. Never store or expose chain-of-thought.
 
+An eligible actor is not automatically a speaking actor. Persist an independently attributable decision before executing it; distinguish intentional wait/no_action from provider failure. Carry cascade identity, budgets, retry state, and wait wake-up conditions across jobs. A failed actor must not prevent independent peers from completing.
+
+Human, AI, and proactive message writers must share safe per-conversation sequence allocation and stable operation-derived idempotency. Resolve the real social graph from authorized domain state, never a demo UUID. Commit the authoritative message and its required event atomically or through a transactional outbox; swallowing event failures is not a reliable continuity contract.
+
 ### 6. Test the social consequence
 
 Do not stop at “message rendered.” Test later effects:
@@ -160,6 +179,8 @@ Do not stop at “message rendered.” Test later effects:
 - same-template link avoids duplicate public actors
 - group cascade becomes dormant without a visible reply cap
 
+Include negative paths for uninvited/declined members, non-viewers, unrelated humans, private narrative summaries, newly generated memories, replay after restart, and concurrent human/AI writes. Test schema-valid but unauthorized model actions, not just malformed JSON.
+
 ### 7. Finish cleanly
 
 Run relevant checks, inspect diffs, update fixtures/contracts, and report:
@@ -167,8 +188,11 @@ Run relevant checks, inspect diffs, update fixtures/contracts, and report:
 - behavior added or changed
 - product invariant preserved
 - migrations/contracts changed
-- tests run
+- tests run, environment, and skipped cases
+- implementation/test/acceptance/deployment status separately
 - known limitation
+
+Do not run billable providers, send real invitations/messages, or perform destructive account operations merely to refresh documentation. Use controlled fixtures and obtain explicit authorization for live acceptance actions.
 
 ## Current-repository corrections
 
@@ -213,4 +237,4 @@ A change is not done unless:
 - no uncontrolled AI cascade remains
 - tests match [references/ACCEPTANCE.md](references/ACCEPTANCE.md)
 
-For commands and platform-specific definition of done, follow [references/WEB_IMPLEMENTATION.md](references/WEB_IMPLEMENTATION.md).
+For commands and platform-specific definition of done, follow [references/WEB_IMPLEMENTATION.md](references/WEB_IMPLEMENTATION.md). For what has actually been verified, use [references/DELIVERY_STATUS.md](references/DELIVERY_STATUS.md), not the target architecture or legacy completion labels.
