@@ -3,6 +3,10 @@ import { randomUUID } from 'node:crypto';
 
 const cloud = process.env.E2E_CLOUD_BASE_URL ?? 'http://localhost:8080';
 
+// This spec intercepts browser traffic to keep a failed timeline load in
+// effect until Retry. A production preview can install a service worker.
+test.use({ serviceWorkers: 'block' });
+
 async function signIn(request, email) {
   const response = await request.post(cloud + '/v1/auth/dev-signin', {
     data: { displayName: 'A01 fixture', email },
@@ -34,19 +38,29 @@ test('A01 fresh cloud account lands in Chats with one real unread Mira welcome',
   await expect(row).toBeVisible();
   await expect(row.getByTestId('first-contact-unread')).toHaveCount(1);
   let interruptTimeline = true;
-  await page.route((url) => /^\/v1\/conversations\/[^/]+\/messages$/.test(url.pathname), async (route) => {
-    if (interruptTimeline && route.request().method() === 'GET') {
-      interruptTimeline = false;
-      await route.abort('failed');
-    } else {
-      await route.continue();
-    }
-  });
+  const interruptedPaths = [];
+  await page.context().route(
+    (url) => url.origin === new URL(cloud).origin &&
+      /^\/v1\/conversations\/[^/]+\/messages$/.test(url.pathname),
+    async (route) => {
+      const req = route.request();
+      if (interruptTimeline && req.method() === 'GET') {
+        interruptedPaths.push(new URL(req.url()).pathname);
+        await route.abort('failed');
+      } else {
+        await route.continue();
+      }
+    },
+  );
   await row.click();
   await expect(page).toHaveURL(/\/chats\/[0-9a-f-]+$/);
   const id = new URL(page.url()).pathname.split('/').pop();
+  const timeline = '/v1/conversations/' + id + '/messages';
+  await expect.poll(() => interruptedPaths).toContain(timeline);
   const loadError = page.getByTestId('cloud-chat-error');
   await expect(loadError).toBeVisible();
+  const bubbles = page.getByTestId('cloud-message-bubble');
+  await expect(bubbles).toHaveCount(0);
   const snapshot = await request.post(cloud + '/v1/onboarding/bootstrap', {
     headers: { authorization: 'Bearer ' + tokens.accessToken },
   });
@@ -55,8 +69,11 @@ test('A01 fresh cloud account lands in Chats with one real unread Mira welcome',
 
   const read = page.waitForResponse((response) =>
     response.url().endsWith('/v1/onboarding/read') && response.request().method() === 'POST');
+  const reload = page.waitForResponse((response) =>
+    new URL(response.url()).pathname === timeline && response.request().method() === 'GET');
+  interruptTimeline = false;
   await loadError.getByRole('button').click();
-  const bubbles = page.getByTestId('cloud-message-bubble');
+  expect((await reload).ok()).toBeTruthy();
   await expect(bubbles).toHaveCount(1);
   await expect(bubbles.first()).toContainText('What would you like me to call you?');
 
@@ -68,7 +85,7 @@ test('A01 fresh cloud account lands in Chats with one real unread Mira welcome',
   });
   expect(denied.status()).toBe(403);
 
-  const second = await browser.newContext();
+  const second = await browser.newContext({ serviceWorkers: 'block' });
   try {
     const otherPage = await second.newPage();
     const anotherSession = await signIn(request, email);
