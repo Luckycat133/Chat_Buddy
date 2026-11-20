@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CloudSun } from 'lucide-react';
-import { MIRA_WELCOME_MESSAGE_KEY } from '@shared/contracts/message';
+import { MIRA_WELCOME_MESSAGE_KEY } from '../../../shared/contracts/message';
 import { authedCloudFetch } from '../../api/cloud-adapter';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCloudMessages } from './hooks/useCloudMessages';
