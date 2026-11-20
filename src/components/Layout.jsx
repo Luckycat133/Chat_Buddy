@@ -7,6 +7,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { SHORTCUT_DEFINITIONS, formatShortcut } from '../config/shortcuts';
 import { useOnboarding } from '../hooks/useOnboarding';
 import KeyboardShortcutsModal from './KeyboardShortcutsModal';
+import { cloudEnabled } from '../api/cloud-adapter';
 import OnboardingTutorial from './OnboardingTutorial';
 import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
 
@@ -157,7 +158,7 @@ export default function Layout() {
             )}
 
             {/* Onboarding Tutorial */}
-            {onboarding.shouldShow && (
+            {!cloudEnabled() && onboarding.shouldShow && (
                 <OnboardingTutorial
                     currentStep={onboarding.currentStep}
                     totalSteps={onboarding.totalSteps}

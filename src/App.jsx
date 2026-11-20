@@ -1,3 +1,4 @@
+import { cloudEnabled } from './api/cloud-adapter';
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AppProviders from './providers/AppProviders';
@@ -7,6 +8,7 @@ import ChatWindow from './features/chat/ChatWindow';
 import CloudChatWindow from './features/chat/CloudChatWindow';
 
 const ChatList = lazy(() => import('./features/chat/ChatList'));
+const CloudFirstContact = lazy(() => import('./features/chat/CloudFirstContact'));
 const CreateChat = lazy(() => import('./features/chat/CreateChat'));
 const GroupDetails = lazy(() => import('./features/chat/GroupDetails'));
 const Settings = lazy(() => import('./pages/Settings'));
@@ -39,7 +41,7 @@ export default function App() {
               <Route path="/" element={<Layout />}>
                 {/* DEMO_EXPERIENCE.md §3: Chats is the default landing destination. */}
                 <Route index element={<Navigate to="/chats" replace />} />
-                <Route path="chats" element={<ChatList />} />
+                <Route path="chats" element={cloudEnabled() ? <CloudFirstContact /> : <ChatList />} />
                 <Route path="chats/:conversationId" element={<CloudChatWindow />} />
                 <Route path="dashboard" element={<Dashboard />} />
                 <Route path="chat" element={<Navigate to="/chats" replace />} />

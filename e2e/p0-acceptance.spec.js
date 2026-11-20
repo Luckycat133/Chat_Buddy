@@ -30,27 +30,7 @@ test.describe('P0 acceptance (ACCEPTANCE.md §2)', () => {
     }
   });
 
-  // FIXME(feature): the web app has no /chats page wired to the cloud
-  // adapter yet (src/api/cloud-adapter.ts exists but no page renders
-  // [data-testid="chat-list"]). Re-enable once the chats page lands.
-  test.fixme('A01 first contact is a real chat', async ({ page, request }) => {
-    // Given a new account, when initial sync completes:
-    //   - Mira exists as an accepted first friend
-    //   - Chats is the landing destination
-    //   - one unread Mira message exists
-    //   - no multi-page tutorial blocks the chat
-    const res = await request.post(`${CLOUD_HEALTH_URL}/v1/auth/dev-signin`, {
-      data: { displayName: 'A01 Tester' },
-    });
-    expect(res.ok()).toBeTruthy();
-    const tokens = await res.json();
-    expect(tokens.accessToken).toBeTruthy();
-    expect(tokens.accountId).toBeTruthy();
-    // Onboarding conversation is created lazily by /v1/onboarding.
-    await page.goto('/chats');
-    await expect(page.locator('[data-testid="chat-list"]')).toBeVisible();
-  });
-
+  // A01 exercises the real Chats UI in cloud-first-contact.spec.js.
   test('A02 conversational onboarding', async ({ request }) => {
     const tokens = await (
       await request.post(`${CLOUD_HEALTH_URL}/v1/auth/dev-signin`, {

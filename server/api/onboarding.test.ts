@@ -13,6 +13,7 @@ import {
   conversationMembers,
   conversations,
   personaTemplates,
+  relationships,
   worldEvents,
 } from '../../db/schema.js';
 import { newId } from '../../shared/contracts/ids.js';
@@ -84,6 +85,37 @@ afterEach(async () => {
 });
 
 describe('onboarding initial world-event snapshot', () => {
+  it('bootstraps exactly one private Mira message and persists its receipt', async () => {
+    const bootstrap = () => app.inject({
+      method: 'POST', url: '/v1/onboarding/bootstrap', headers: bearer(ownerToken),
+    });
+    const [first, repeat] = await Promise.all([bootstrap(), bootstrap()]);
+    expect(first.statusCode).toBe(200);
+    expect(repeat.statusCode).toBe(200);
+    const initial = first.json() as { conversationId: string; unread: boolean };
+    expect(initial.unread).toBe(true);
+    expect(repeat.json()).toEqual(initial);
+    const [a, b] = [seed.humanActorId, seed.characterActorId].sort();
+    const [contact] = await db.select({ state: relationships.state }).from(relationships)
+      .where(and(eq(relationships.actorAId, a!), eq(relationships.actorBId, b!)));
+    expect(contact?.state).toBe('accepted');
+
+    const timelineUrl = '/v1/conversations/' + initial.conversationId + '/messages';
+    const mine = await app.inject({ method: 'GET', url: timelineUrl, headers: bearer(ownerToken) });
+    expect(mine.statusCode).toBe(200);
+    expect(mine.json().items).toEqual([expect.objectContaining({
+      sequence: 1, senderActorId: seed.characterActorId,
+    })]);
+    const other = await app.inject({ method: 'GET', url: timelineUrl, headers: bearer(strangerToken) });
+    expect(other.statusCode).toBe(403);
+
+    const read = await app.inject({
+      method: 'POST', url: '/v1/onboarding/read', headers: bearer(ownerToken),
+    });
+    expect(read.statusCode).toBe(200);
+    expect((await bootstrap()).json()).toEqual({ ...initial, unread: false });
+  });
+
   it('creates the conversation and private event in one successful transaction', async () => {
     const response = await app.inject({
       method: 'POST',
