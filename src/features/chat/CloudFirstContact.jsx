@@ -9,8 +9,6 @@ export default function CloudFirstContact() {
   const [contact, setContact] = useState(null);
   const [otherChats, setOtherChats] = useState([]);
   const [loadError, setLoadError] = useState(false);
-  const [openError, setOpenError] = useState(false);
-  const [opening, setOpening] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -36,20 +34,6 @@ export default function CloudFirstContact() {
     return () => { active = false; };
   }, [attempt]);
 
-  async function openContact() {
-    setOpenError(false);
-    setOpening(true);
-    try {
-      const response = await authedCloudFetch('/v1/onboarding/read', { method: 'POST' });
-      if (!response.ok) throw new Error('First contact unavailable');
-      navigate('/chats/' + encodeURIComponent(contact.conversationId));
-    } catch {
-      setOpenError(true);
-    } finally {
-      setOpening(false);
-    }
-  }
-
   return (
     <section data-testid="chat-list" className="relative h-full overflow-auto p-5">
       <h1 className="mb-4 text-xl font-semibold">{t('nav_chats')}</h1>
@@ -64,8 +48,7 @@ export default function CloudFirstContact() {
         <button
           type="button"
           data-testid="first-contact-mira"
-          disabled={opening}
-          onClick={openContact}
+          onClick={() => navigate('/chats/' + encodeURIComponent(contact.conversationId))}
           className="flex w-full flex-col items-start gap-1 rounded-xl border border-[var(--color-border)] p-4 text-left"
         >
           <strong>{t('first_contact_mira')}</strong>
@@ -79,7 +62,6 @@ export default function CloudFirstContact() {
             ? chat.publicName : t('first_contact_other_chat')}
         </Link>
       ))}
-      {openError && <p role="alert">{t('first_contact_open_failed')}</p>}
     </section>
   );
 }

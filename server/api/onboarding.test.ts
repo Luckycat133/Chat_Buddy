@@ -109,8 +109,17 @@ describe('onboarding initial world-event snapshot', () => {
     const other = await app.inject({ method: 'GET', url: timelineUrl, headers: bearer(strangerToken) });
     expect(other.statusCode).toBe(403);
 
+    const [welcome] = mine.json().items as Array<{ id: string }>;
+    const wrong = await app.inject({
+      method: 'POST', url: '/v1/onboarding/read', headers: bearer(ownerToken),
+      payload: { conversationId: initial.conversationId, messageId: newId<string>() },
+    });
+    expect(wrong.statusCode).toBe(404);
+    expect((await bootstrap()).json()).toEqual(initial);
+
     const read = await app.inject({
       method: 'POST', url: '/v1/onboarding/read', headers: bearer(ownerToken),
+      payload: { conversationId: initial.conversationId, messageId: welcome!.id },
     });
     expect(read.statusCode).toBe(200);
     expect((await bootstrap()).json()).toEqual({ ...initial, unread: false });

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CloudSun } from 'lucide-react';
+import { MIRA_WELCOME_MESSAGE_KEY } from '@shared/contracts/message';
+import { authedCloudFetch } from '../../api/cloud-adapter';
 import { useLanguage } from '../../context/LanguageContext';
 import { useCloudMessages } from './hooks/useCloudMessages';
 import CloudMessageTimeline from './components/cloud/CloudMessageTimeline';
@@ -30,6 +32,28 @@ function CloudChatWindow({ conversationId }) {
     actorMap,
     currentActorId,
   } = useCloudMessages(conversationId);
+
+  const postedWelcome = useRef(null);
+  const welcomeId = status === 'ready' ? messages.find((message) =>
+    message.clientIdempotencyKey === MIRA_WELCOME_MESSAGE_KEY &&
+    message.senderActorId !== currentActorId &&
+    message.status === 'accepted' && !message.deletedAt)?.id : null;
+
+  // A committed welcome bubble, not opening the chat, triggers the receipt.
+  useEffect(() => {
+    if (!welcomeId || postedWelcome.current === welcomeId) return;
+    postedWelcome.current = welcomeId;
+    authedCloudFetch('/v1/onboarding/read', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ conversationId, messageId: welcomeId }),
+    }).then((response) => {
+      if (!response.ok) postedWelcome.current = null;
+    }).catch(() => {
+      // The timeline stays usable. Reopening retries an unpersisted receipt.
+      postedWelcome.current = null;
+    });
+  }, [conversationId, welcomeId]);
 
   const handleSend = async (content) => {
     dismissSendError();

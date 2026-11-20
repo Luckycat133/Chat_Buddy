@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
 import {
@@ -15,6 +15,7 @@ import {
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 import { newId } from '../../shared/contracts/ids.js';
+import { MIRA_WELCOME_MESSAGE_KEY } from '../../shared/contracts/message.js';
 
 /**
  * Mira onboarding state machine per DEMO_EXPERIENCE §4.
@@ -38,7 +39,6 @@ const ONBOARDING_STATES = [
 ] as const;
 type OnboardingState = (typeof ONBOARDING_STATES)[number];
 
-const WELCOME_KEY = 'mira-first-contact-v1';
 const WELCOME_COPY = 'Hi, I’m Mira. What would you like me to call you?';
 
 interface OnboardingSnapshot {
@@ -82,7 +82,7 @@ export function registerOnboardingRoutes(app: FastifyInstance): void {
           eq(conversationMembers.actorId, actorId),
         ))
         .where(and(eq(messages.conversationId, convo.id),
-          eq(messages.clientIdempotencyKey, WELCOME_KEY)))
+          eq(messages.clientIdempotencyKey, MIRA_WELCOME_MESSAGE_KEY)))
         .limit(1);
       return {
         conversationId: convo.id,
@@ -96,17 +96,27 @@ export function registerOnboardingRoutes(app: FastifyInstance): void {
     '/v1/onboarding/read',
     { preHandler: requireAuth },
     async (request) => {
-      const db = request.server.db as Database;
       const actorId = request.requestContext.actorId;
       if (!actorId) throw new ApiError(ApiErrorCodes.Forbidden, 'No actor bound to session');
+      const { conversationId, messageId } = z.object({
+        conversationId: z.string().uuid(),
+        messageId: z.string().uuid(),
+      }).parse(request.body);
+      const db = request.server.db as Database;
       const convo = await loadOnboardingConversation(db, actorId);
-      if (!convo) throw new ApiError(ApiErrorCodes.NotFound, 'First contact not found');
-      // Only the authenticated member's receipt is changed, and only for the
-      // first welcome sequence. Never rewind a newer read cursor.
+      if (convo?.id !== conversationId) {
+        throw new ApiError(ApiErrorCodes.NotFound, 'First contact not found');
+      }
+      const [welcome] = await db.select({ sequence: messages.sequence }).from(messages)
+        .where(and(eq(messages.conversationId, conversationId), eq(messages.id, messageId),
+          eq(messages.clientIdempotencyKey, MIRA_WELCOME_MESSAGE_KEY), isNull(messages.deletedAt)))
+        .limit(1);
+      if (!welcome) throw new ApiError(ApiErrorCodes.NotFound, 'Welcome message not found');
+      // Update only this member's welcome receipt; never rewind a newer cursor.
       await db.update(conversationMembers).set({
-        lastReadSequence: sql`greatest(${conversationMembers.lastReadSequence}, 1)`,
-      }).where(and(eq(conversationMembers.conversationId, convo.id),
-        eq(conversationMembers.actorId, actorId)));
+        lastReadSequence: sql`greatest(${conversationMembers.lastReadSequence}, ${welcome.sequence})`,
+      }).where(and(eq(conversationMembers.conversationId, conversationId),
+        eq(conversationMembers.actorId, actorId), eq(conversationMembers.status, 'active')));
       return { ok: true };
     },
   );
@@ -253,7 +263,7 @@ async function ensureOnboardingConversation(
       conversationId: convoId,
       senderActorId: miraActorId,
       sequence: 1,
-      clientIdempotencyKey: WELCOME_KEY,
+      clientIdempotencyKey: MIRA_WELCOME_MESSAGE_KEY,
       kind: 'text',
       content: WELCOME_COPY,
     });

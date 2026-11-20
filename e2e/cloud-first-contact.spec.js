@@ -33,12 +33,34 @@ test('A01 fresh cloud account lands in Chats with one real unread Mira welcome',
   const row = page.getByTestId('first-contact-mira');
   await expect(row).toBeVisible();
   await expect(row.getByTestId('first-contact-unread')).toHaveCount(1);
+  let interruptTimeline = true;
+  await page.route((url) => /^\/v1\/conversations\/[^/]+\/messages$/.test(url.pathname), async (route) => {
+    if (interruptTimeline && route.request().method() === 'GET') {
+      interruptTimeline = false;
+      await route.abort('failed');
+    } else {
+      await route.continue();
+    }
+  });
   await row.click();
   await expect(page).toHaveURL(/\/chats\/[0-9a-f-]+$/);
   const id = new URL(page.url()).pathname.split('/').pop();
+  const loadError = page.getByTestId('cloud-chat-error');
+  await expect(loadError).toBeVisible();
+  const snapshot = await request.post(cloud + '/v1/onboarding/bootstrap', {
+    headers: { authorization: 'Bearer ' + tokens.accessToken },
+  });
+  expect(snapshot.ok()).toBeTruthy();
+  expect(await snapshot.json()).toMatchObject({ conversationId: id, unread: true });
+
+  const read = page.waitForResponse((response) =>
+    response.url().endsWith('/v1/onboarding/read') && response.request().method() === 'POST');
+  await loadError.getByRole('button').click();
   const bubbles = page.getByTestId('cloud-message-bubble');
   await expect(bubbles).toHaveCount(1);
   await expect(bubbles.first()).toContainText('What would you like me to call you?');
+
+  expect((await read).ok()).toBeTruthy();
 
   const outsider = await signIn(request, 'a01-outsider-' + randomUUID() + '@example.test');
   const denied = await request.get(cloud + '/v1/conversations/' + id + '/messages', {
