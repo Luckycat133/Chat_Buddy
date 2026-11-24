@@ -10,37 +10,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `v0.1.x` — Foundation Layer (i18n, API, UI Design System)
 - `v0.2.x` — Basic Role-Play (Characters, Chat, Social)
 - `v0.3.x` — Basic Agent (Memory, Agents, RAG, Professional Skills)
+- `v0.4.x` — Macaron Modern UI & Production Readiness
+- `v0.5.x` — Cloud Runtime, Session Management & CI Hardening
 
 ---
 
-## [Unreleased] — Cloud Session Management, Daily Tools & Moments Cloud (2026-09-25)
+## [Unreleased]
+
+---
+
+## [0.5.2] - 2026-11-12
+
+### Added
+- **AI & LLM documentation (GEO)**: added `llms.txt` and `llms-full.txt` conforming to the `llmstxt.org` specification and linked them from `README.md` and `README.zh-CN.md` (#50).
+- **Bundle secret scanning**: added `scripts/check-bundle-secrets.mjs` and unit tests to verify production bundles do not embed sensitive credentials (#49).
+
+### Changed
+- **Dependency & CI maintenance**: updated npm dependency groups (#43, #49) and GitHub Actions workflows including `github/codeql-action` (#44, #47), and refreshed repository agent rules and configs (`d73feeec`).
+
+### Fixed
+- **CI lint & PGlite test contention**: bounded PGlite test workers, separated Node test network setup (`src/test/networkSetup.js`), applied all SQL migrations before E2E seeding in CI, and cleared remaining ESLint errors across web, server, and test files (#45, #46).
+- **Dependency update compatibility**: repaired CI compatibility and bundle secret scanning following the bulk npm dependency updates (#49).
+
+### Removed
+- **Unused pnpm lockfiles**: removed broken, drifting `pnpm-lock.yaml` and `pnpm-workspace.yaml` so `package-lock.json` and `package.json` overrides serve as the sole dependency source of truth (#51).
+
+---
+
+## [0.5.1] - 2026-09-26
 
 ### Added
 - **Cloud media tools**: `CloudClient` now exposes typed message, image-generation, and TTS operations; cloud chat surfaces use the configured providers and report unavailable providers explicitly.
-
-### Changed
-- **Dependency maintenance**: updated Drizzle ORM/Kit and Vitest patch versions, added the explicit Testing Library DOM peer, and reduced the dependency audit to 0 high / 4 moderate findings without unsafe downgrades.
-
-### Added
 - **Device and session management**: authenticated users can list active sessions, inspect device and activity metadata, and revoke another session from the Settings page.
 - **Chat search**: the chat list now filters locally cached conversations and friends by name, display name, and friend note without a new backend request.
 - **Today’s calendar**: Settings can display today’s calendar events when the calendar capability is connected; disconnected users receive setup guidance.
 - **Session security metadata**: sessions persist access-token hashes, user-agent summaries, and last-seen timestamps so revoked or expired access tokens are rejected immediately.
+- **Moments cloud sync**: when `VITE_USE_CLOUD=true`, the Moments feed is now cloud-authoritative — on mount it fetches the feed + actor names in parallel with cursor pagination (`loadMoreMoments`); human post / like / reaction / comment route to the existing `/v1/moments` cloud API (`createCloudMoment` / `createCloudInteraction` with client idempotency keys, optimistic updates with rollback on failure); AI persona moments and cloud-nonexistent delete/repost/share keep the existing local path; a failed cloud fetch surfaces an error state instead of faking local data. Added `src/features/moments/context/MomentsCloud.spec.js` (10 tests).
 
 ### Changed
 - **Cloud calendar API**: added the authorized `GET /v1/capabilities/calendar/today` endpoint with provider-connect guidance and tool-execution auditing.
-- **Development host access**: the Vite dev server accepts the configured Cloudflare and Serveo tunnel hostnames for local and remote QA.
+- **Development host access**: the Vite dev server accepts configured Cloudflare, Serveo, and `localhost.run` tunnel hostnames for local and remote QA.
+- **Dependency maintenance**: updated Drizzle ORM/Kit and Vitest patch versions, added the explicit Testing Library DOM peer, and reduced the dependency audit to 0 high / 4 moderate findings without unsafe downgrades.
 
 ### Fixed
 - **Access-token revocation**: access-token authentication now checks the stored session record and rejects revoked or expired sessions instead of relying only on token signature validity.
 - **Onboarding initial snapshot**: creating an onboarding conversation now writes a participant-private `onboarding_conversation_created` world event in the same transaction; sync projection filters participant-restricted events to the authorized actor.
-
-### Added
-- **Moments cloud sync**: when `VITE_USE_CLOUD=true`, the Moments feed is now cloud-authoritative — on mount it fetches the feed + actor names in parallel with cursor pagination (`loadMoreMoments`); human post / like / reaction / comment route to the existing `/v1/moments` cloud API (`createCloudMoment` / `createCloudInteraction` with client idempotency keys, optimistic updates with rollback on failure); AI persona moments and cloud-nonexistent delete/repost/share keep the existing local path; a failed cloud fetch surfaces an error state instead of faking local data. New `src/features/moments/context/MomentsCloud.spec.js` (10 tests).
+- **Capability tool execution FK**: resolved the `tool_executions` foreign-key violation causing A20/A21/A22 E2E failures (`072a3bc6`) and rebuilt Moments/social audience & cloud-adapter auth handling (`a9cb54e3`).
+- **Nested `esbuild` security override**: overrode nested `esbuild@0.18.20` in the `@esbuild-kit` chain to `^0.28.1` (GHSA-67mh-4wv8-2f99, `76b01846`).
 
 ---
 
-## [Unreleased] — Cloud Runtime Skeleton (2026-09-15)
+## [0.5.0] - 2026-09-15
 
 > Server-side cloud runtime for the Chat Buddy companion app: Fastify API + Postgres (Drizzle) + shared zod contracts + realtime, plus a full static-audit fix pass (initial draft by MiniMax-M3, audited and fixed with glm-5.3-flash; 594 unit tests, tsc, lint, build, PGlite smoke and a real-PG boot round-trip all verified).
 
@@ -61,15 +81,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added — Tooling & Tests
 - `scripts/pglite-smoke.ts` — PGlite migration + seed smoke (fails with non-zero exit on any step).
 - `e2e/p0-acceptance.spec.js` — P0 acceptance flows A01–A25 (Playwright).
+- Expanded unit test coverage for `toolService` (56 tests), `ChatDeduplicator` (18 tests), and `ExportService` (24 tests).
 - TS config, ESLint TS support, vitest coverage of `server/shared/db`, agent docs (AGENTS/GEMINI/CLAUDE) and skill mirrors.
 
 ### Changed — CI
 - Consolidated lint/test/build job; new `e2e-p0` job with a Postgres service; coverage artifact path corrected to `test_reports/coverage`.
 
-### Fixed — Audit Pass
+### Fixed — Audit Pass & CI
 - Boot-blocking `FST_ERR_LOG_INVALID_LOGGER_CONFIG` (pino instance now passed via `loggerInstance`).
 - CI and smoke referenced a non-existent `0001_*` migration filename → corrected to `0000_init_cloud_runtime.sql`.
 - Smoke script exited 0 on failure paths → all failures now set `process.exitCode = 1`.
+- Restored redacted CI YAML credentials, exported `PGPASSWORD` for `psql`, and built `dist` before Playwright preview startup (`40471ae5`, `cfae73c8`, `d66731fe`).
+
+---
 
 ## [0.4.1] — Production Readiness (2026-05-01)
 
