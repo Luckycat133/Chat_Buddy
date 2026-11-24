@@ -17,9 +17,7 @@ Load only the Skill whose trigger matches the current task. A Skill may be reuse
 | `webapp-testing` | Browser verification using available browser tools or the repository Playwright suite |
 | `ux-audit` | Structured user-experience, accessibility, and interaction flow audits |
 | `ui-ux-pro-max` (global) | General UI/UX design system guidance via global skill (`~/.gemini/config/skills/ui-ux-pro-max`) |
-| `launch` | Feature & product launch planning, Product Hunt/early access go-to-market, and release announcements |
-| `ai-seo` | AI search visibility (GEO/AEO), `llms.txt`, and citation optimization |
-| `social` | Organic launch posts, build-in-public updates from commits, and threads for X/LinkedIn |
+| `distribution-publisher` (Claude Agent) | Dedicated agent (`~/.claude/agents/distribution-publisher.md`) for MCP/Skill registries, ClawHub, `skills.sh`, GEO/`llms.txt`, and launch copy |
 
 ## Maintenance rules
 
