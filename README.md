@@ -38,7 +38,6 @@ A modern, responsive AI chat application featuring multiple personalities, anime
 ## Table of Contents
 
 - [Features](#features)
-- [Demo](#demo)
 - [Getting Started](#getting-started)
 - [Usage Guide](#usage-guide)
 - [Architecture](#architecture)
@@ -133,6 +132,22 @@ cp .env.example .env
 npm run dev
 ```
 
+> **Package manager:** `npm` (`package-lock.json`) is the sole supported package manager for this repository (`pnpm` lockfiles were removed).
+
+### Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite web development server |
+| `npm run dev:server` | Start Fastify cloud runtime server in watch mode |
+| `npm run build` | Build production web bundle (`vite build`) |
+| `npm run build:server` | Compile cloud server TypeScript into `dist/server` |
+| `npm run lint` | Run ESLint across the repository |
+| `npm run typecheck` | Run TypeScript type checks (`tsc --noEmit`) |
+| `npm test` | Run Vitest unit & server test suite |
+| `npm run test:e2e` | Run Playwright E2E suite |
+| `npm run prompt:bench` | Run prompt regression benchmark |
+
 ### Environment Variables
 
 | Variable | Required | Description |
@@ -185,7 +200,7 @@ npm run dev
 
 ## Architecture
 
-> See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for details.
+> See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for architectural details, or browse the full [documentation index](docs/README.md).
 
 ### Tech Stack
 
@@ -265,11 +280,10 @@ We welcome contributions! Please follow these guidelines:
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for version history.
-
-**Current Web Version**: v0.4.1
+See [CHANGELOG.md](CHANGELOG.md) for full version history (latest documented milestone: **v0.5.2**; `package.json` stays at `0.4.1`).
 
 ### Recent Updates
+- ☁️ **Cloud Runtime & Session Management (`v0.5.0`–`v0.5.2`)**: Fastify 5 + Postgres/Drizzle backend skeleton, shared Zod contracts, Moments cloud sync, device/session revocation, bundle secret scanning, and `llms.txt` GEO docs
 - 🖼️ **Immersive Background System**: 20+ AI-generated backgrounds for each persona
 - 🌙 **Dark Mode Overhaul**: Complete CSS variable system with glass effects
 - 📱 **iOS 26 Style**: Refined border-radius and subtle animations
@@ -298,6 +312,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 **Made with ❤️ for anime fans and AI enthusiasts**
 
-[⬆ Back to Top](#chat-buddy-remake)
+[⬆ Back to Top](#chat-buddy-web)
 
 </div>
