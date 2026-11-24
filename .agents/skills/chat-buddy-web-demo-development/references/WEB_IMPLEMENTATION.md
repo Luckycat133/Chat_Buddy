@@ -750,3 +750,29 @@ mode, and verify the user action plus server consequence and reload/reconnect.
 PGlite regression coverage does not replace a requested PostgreSQL migration or
 live auth/provider test. Do not run real social messages or model calls just to
 validate this documentation map.
+
+### R2 relationship prompt evidence (2026-11-15)
+
+Local changes on `remake@be4d237eeeaf80b7116b0445b01bfcc4c0933fcb` close the
+relationship-narrative part of Milestone 1. `compilePrompt` checks the active
+participants and accepted relationship in the same query that selects its
+latest narrative. Group prompts and an AI relay to a different counterpart
+exclude the private narrative. A two-character hidden direct conversation can
+still use the two participants' own narrative.
+
+Four new privacy cases failed on the original compiler. The final PGlite run
+passed all 54 tests across four suites, including five new compiler cases and
+a generation case that captures the actual prompt passed to a stubbed model
+gateway. TypeScript and ESLint on the changed server files also passed.
+
+```sh
+npm test -- --project server server/runtime/prompts/compiler.test.ts \
+  server/services/generation.test.ts server/services/narrative.test.ts \
+  server/api/hidden-ai.test.ts
+npm run typecheck
+```
+
+R2 still requires source and disclosure scope on generated-memory writes,
+including revocation and later recall. The supported PostgreSQL migration
+path and the hosted provider and multi-user release scenarios require their
+own validation.
