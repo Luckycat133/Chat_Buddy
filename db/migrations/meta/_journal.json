@@ -8,6 +8,48 @@
       "when": 1789399412820,
       "tag": "0000_init_cloud_runtime",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790305713001,
+      "tag": "0001_moment_interaction_client_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790305713002,
+      "tag": "0002_greedy_shooting_star",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790305713003,
+      "tag": "0003_p1_social_capabilities_data_rights",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790305713004,
+      "tag": "0004_sessions_access_token_hash",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790317872000,
+      "tag": "0005_session_device_metadata",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794734113496,
+      "tag": "0006_restore_graph_indexes",
+      "breakpoints": true
     }
   ]
 }

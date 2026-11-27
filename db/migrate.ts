@@ -1,24 +1,27 @@
 /**
- * Apply pending Drizzle migrations against `DATABASE_URL`.
- * Use only on environments you trust with destructive operations.
+ * Apply the checked-in Drizzle migration journal against DATABASE_URL.
  */
-import { drizzle } from 'drizzle-orm/postgres-js';
-import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import { loadServerEnv } from '../server/config.js';
+import { applyMigrationPlan, readMigrationPlan } from './migration-plan.js';
 
 async function main(): Promise<void> {
   const env = loadServerEnv();
-  const client = postgres(env.DATABASE_URL, { max: 1 });
-  const db = drizzle(client);
-  await migrate(db, { migrationsFolder: './db/migrations' });
-  await client.end();
-   
-  console.log('migrations applied');
+  const plan = readMigrationPlan();
+  const client = postgres(env.DATABASE_URL, { max: 1, prepare: !env.DATABASE_POOLED });
+  try {
+    const applied = await client.begin(tx => applyMigrationPlan(
+      async <Row extends Record<string, unknown>>(query: string, params: (string | number)[] = []) =>
+        tx.unsafe<Row[]>(query, params),
+      plan,
+    ));
+    console.log(`migrations applied: ${applied}`);
+  } finally {
+    await client.end();
+  }
 }
 
 main().catch((err) => {
-   
-  console.error('migration failed', err);
-  process.exit(1);
+  console.error('migration failed:', err instanceof Error ? err.message : String(err));
+  process.exitCode = 1;
 });

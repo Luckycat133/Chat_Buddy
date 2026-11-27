@@ -1,0 +1,2 @@
+CREATE INDEX "actor_reports_graph_idx" ON "actor_reports" USING btree ("social_graph_id");--> statement-breakpoint
+CREATE INDEX "contact_invites_graph_idx" ON "contact_invites" USING btree ("social_graph_id");

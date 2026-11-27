@@ -13,7 +13,7 @@
  *   - Failures are logged and swallowed; they must never fail the user
  *     request that triggered them.
  */
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
 import {
@@ -22,15 +22,15 @@ import {
   conversations,
   messageBursts,
   memoryItems,
-  messages,
   toolExecutions,
-  worldEvents,
 } from '../../db/schema.js';
 import { newId } from '../../shared/contracts/ids.js';
-import { MessageKind, MessageStatus, ToolExecutionStatus } from '../../shared/contracts/enums.js';
+import { MessageKind, ToolExecutionStatus } from '../../shared/contracts/enums.js';
 import { ActionEnvelopeSchema } from '../runtime/actions/envelope.js';
 import { compilePrompt, resolveWeatherState } from '../runtime/prompts/compiler.js';
+import { hasVisibleSource, isPromptScopeCurrent, readPromptAudience, type GeneratedScope } from '../runtime/prompts/privacy.js';
 import { fetchWeather } from '../capabilities/index.js';
+import { appendConversationMessage, findConversationEvent, withConversationWrite } from './conversation-writes.js';
 import {
   createChatCompletion,
   DEFAULT_GATEWAY_MODEL,
@@ -177,43 +177,6 @@ function buildUserPrompt(sections: {
   return [sections.burst, sections.recentEvents]
     .filter((s) => s.length > 0)
     .join('\n\n');
-}
-
-async function openOrExtendBurst(
-  tx: Tx,
-  conversationId: string,
-  senderActorId: string,
-  sequence: number,
-): Promise<string> {
-  const [open] = await tx
-    .select()
-    .from(messageBursts)
-    .where(
-      and(
-        eq(messageBursts.conversationId, conversationId),
-        eq(messageBursts.senderActorId, senderActorId),
-        sql`${messageBursts.closedAt} IS NULL`,
-      ),
-    )
-    .orderBy(sql`${messageBursts.openedAt} DESC`)
-    .limit(1);
-  if (open) {
-    await tx
-      .update(messageBursts)
-      .set({ lastMessageSequence: sequence })
-      .where(eq(messageBursts.id, open.id));
-    return open.id;
-  }
-  const id = newId<string>();
-  await tx.insert(messageBursts).values({
-    id,
-    conversationId,
-    senderActorId,
-    firstMessageSequence: sequence,
-    lastMessageSequence: sequence,
-    openedAt: new Date(),
-  });
-  return id;
 }
 
 const ToolRequestsSchema = z.object({
@@ -514,7 +477,9 @@ export async function resolveWeatherToolReply(
 
   let toolResult: Record<string, unknown>;
   let toolSucceeded = false;
-  if (!weatherState.authorized) {
+  if (weatherState.authorized && weatherState.requiresExplicitCity && !requestedCity) {
+    toolResult = { status: 'city_needed', detail: 'Ask which city to look up in this conversation.' };
+  } else if (!weatherState.authorized) {
     toolResult = {
       status: 'not_enabled',
       detail:
@@ -744,36 +709,29 @@ async function resolveReplyFromCompletion(
   };
 }
 
-/**
- * Persist model-proposed memory patches as ai_self memories (§7.4 step
- * 7, §8, §4.19). The character owns what it observed during the turn;
- * provenance points at the reply world event that produced it; policies
- * are server-forced to empty — a model never widens memory access.
- */
+/** Generated facts inherit the scope of their observed conversation. */
 async function persistMemoryPatches(
   tx: Tx,
   input: {
     conversationId: string;
     characterActorId: string;
     patches: MemoryPatchInput[];
-    sourceEventId: string | null;
+    source: { eventId: string; actorId: string };
+    scope: GeneratedScope;
   },
 ): Promise<void> {
-  const sourceEventId = input.sourceEventId ?? newId<string>();
   for (const patch of input.patches) {
     await tx.insert(memoryItems).values({
       ownerActorId: input.characterActorId,
-      relationshipId: null,
-      sourceEventId,
-      // source=ai_self: the memory originates from this character's own
-      // generation, so the source actor is the character itself.
-      sourceActorId: input.characterActorId,
-      type: patch.type,
+      relationshipId: input.scope.relationshipId,
+      sourceEventId: input.source.eventId,
+      sourceActorId: input.source.actorId,
+      type: input.scope.relationshipId ? 'private' : 'shared',
       objectiveFact: patch.objectiveFact,
       subjectiveInterpretation: patch.subjectiveInterpretation,
       confidence: patch.confidence,
-      visibilityPolicy: {},
-      sharePolicy: {},
+      visibilityPolicy: input.scope,
+      sharePolicy: { conversationIds: [input.conversationId] },
       relevanceTags: [],
     });
   }
@@ -797,12 +755,16 @@ export async function generateRepliesForConversation(
   triggerBurstId: string | null,
 ): Promise<void> {
   try {
+    if (!triggerBurstId) return;
     const [conv] = await db
-      .select({ type: conversations.type })
+      .select()
       .from(conversations)
       .where(eq(conversations.id, conversationId))
       .limit(1);
-    if (!conv || conv.type === 'hidden_ai_direct') return;
+    if (!conv || conv.status !== 'active' || conv.type === 'hidden_ai_direct') return;
+    const [trigger] = await db.select({ sender: messageBursts.senderActorId }).from(messageBursts)
+      .where(and(eq(messageBursts.id, triggerBurstId), eq(messageBursts.conversationId, conversationId)));
+    if (!trigger) return;
 
     const characters = await db
       .select({
@@ -816,6 +778,7 @@ export async function generateRepliesForConversation(
           eq(conversationMembers.conversationId, conversationId),
           eq(conversationMembers.status, 'active'),
           eq(actors.type, 'character'),
+          ne(actors.id, trigger.sender),
         ),
       );
     if (characters.length === 0) return;
@@ -824,23 +787,20 @@ export async function generateRepliesForConversation(
     const model = serverEnv().MODEL_GATEWAY_MODEL ?? DEFAULT_GATEWAY_MODEL;
 
     for (const character of characters) {
+      // One reply decision per character and triggering burst. Its first
+      // durable event is the receipt for the entire atomic batch.
+      const decision = `${triggerBurstId}:${character.actorId}`;
+      const eventKey = (index: number) => `reply_bubble:${decision}:${index}`;
+      if (await findConversationEvent(db, conv, eventKey(0))) continue;
+
       const sections = await compilePrompt(db, {
         actorId: character.actorId,
-        burstId: triggerBurstId ?? '',
+        burstId: triggerBurstId,
         conversationId,
       });
-      const burstContents = triggerBurstId
-        ? await db
-            .select({ content: messages.content })
-            .from(messages)
-            .where(
-              and(
-                eq(messages.conversationId, conversationId),
-                eq(messages.burstId, triggerBurstId),
-              ),
-            )
-            .then((rows) => rows.map((r) => r.content))
-        : [];
+      const provenance = sections.provenance;
+      if (!provenance?.burstContents.length) continue;
+      const { burstContents, scope, source } = provenance;
       const system = buildSystemPrompt(sections);
       const prompt = buildUserPrompt(sections);
 
@@ -923,62 +883,34 @@ export async function generateRepliesForConversation(
       }
       const modelUsed = completion?.model ?? model;
 
-      await db.transaction(async (tx) => {
-        const sequenceRow = await tx
-          .select({
-            next: sql<number>`COALESCE(MAX(${messages.sequence}), 0) + 1`,
-          })
-          .from(messages)
-          .where(eq(messages.conversationId, conversationId));
-        let sequence = sequenceRow[0]?.next ?? 1;
-        const burstId = await openOrExtendBurst(
-          tx,
-          conversationId,
-          character.actorId,
-          sequence,
-        );
-        // send_delay_ms only staggers the bubbles' timestamps (typing
-        // rhythm); no timer ever blocks the transaction.
+      await withConversationWrite(db, conversationId, async (tx, conversation) => {
+        if (!conversation || conversation.socialGraphId !== conv.socialGraphId ||
+          await findConversationEvent(tx, conversation, eventKey(0))) return;
+        const audience = await readPromptAudience(tx, conversationId);
+        if (!audience || !(await isPromptScopeCurrent(tx, audience, character.actorId, scope))) return;
+
+        // Timestamps carry typing rhythm without sleeping inside the transaction.
+        const now = Date.now();
         let cumulativeDelayMs = 0;
-        let firstWorldEventId: string | null = null;
-        for (const bubble of resolved.bubbles) {
-          const id = newId<string>();
-          const worldEventId = newId<string>();
-          if (firstWorldEventId === null) firstWorldEventId = worldEventId;
-          await tx.insert(messages).values({
-            id,
-            conversationId,
+        for (const [index, bubble] of resolved.bubbles.entries()) {
+          await appendConversationMessage(tx, conversation, {
             senderActorId: character.actorId,
-            sequence,
-            // Gateway replies are server-generated; key is deterministic.
-            clientIdempotencyKey: `ai:${id}`,
+            clientIdempotencyKey: `ai:burst:${decision}:${index}`,
             kind: MessageKind.Text,
             content: bubble.text,
-            burstId,
-            status: MessageStatus.Accepted,
-            createdAt: new Date(Date.now() + cumulativeDelayMs),
-          });
-          await tx.insert(worldEvents).values({
-            id: worldEventId,
-            socialGraphId: '00000000-0000-0000-0000-000000000001',
-            type: 'message_sent',
-            actorId: character.actorId,
-            subjectActorIds: [character.actorId],
-            conversationId,
-            payload: {
-              messageId: id,
-              sequence,
-              burstId,
-              model: modelUsed,
-              ...(bubble.sendDelayMs > 0
-                ? { sendDelayMs: bubble.sendDelayMs }
-                : {}),
-              ...(degraded ? { degraded: true } : {}),
+            createdAt: new Date(now + cumulativeDelayMs),
+          }, {
+            openBurst: true,
+            event: {
+              idempotencyKey: eventKey(index),
+              causedByEventId: source?.eventId,
+              payload: {
+                model: modelUsed,
+                ...(bubble.sendDelayMs > 0 ? { sendDelayMs: bubble.sendDelayMs } : {}),
+                ...(degraded ? { degraded: true } : {}),
+              },
             },
-            visibilityPolicy: { conversation: conversationId },
-            idempotencyKey: `message_sent:${id}`,
           });
-          sequence += 1;
           cumulativeDelayMs += bubble.sendDelayMs;
         }
 
@@ -994,12 +926,18 @@ export async function generateRepliesForConversation(
             }),
           );
         }
-        if (resolved.memoryPatches.accepted.length > 0) {
+        if (
+          resolved.memoryPatches.accepted.length > 0 &&
+          (scope.relationshipId || audience.type === 'group') &&
+          source && source.actorId !== character.actorId &&
+          await hasVisibleSource(tx, audience, source.eventId, source.actorId)
+        ) {
           await persistMemoryPatches(tx, {
             conversationId,
             characterActorId: character.actorId,
             patches: resolved.memoryPatches.accepted,
-            sourceEventId: firstWorldEventId,
+            source,
+            scope,
           });
         }
       });

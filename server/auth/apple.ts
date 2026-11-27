@@ -1,50 +1,54 @@
-/**
- * Sign-in-with-Apple token verification per WEB_IMPLEMENTATION §4.3.
- *
- * The Apple JWT is verified against the public key published at
- * https://appleid.apple.com/auth/keys. For demo we accept a stub token
- * (subject only) and let the dev-signin path create an account. The
- * production path wires `jose` to verify the RS256 signature against
- * Apple's JWKS.
- */
-import { createRemoteJWKSet, jwtVerify } from 'jose';
-
-export interface AppleClaims {
-  sub: string;
-  email?: string;
-  email_verified?: boolean;
-  iss: 'https://appleid.apple.com';
-  aud: string;
-  iat: number;
-  exp: number;
-}
+import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
+import { z } from 'zod';
 
 const APPLE_JWKS_URL = 'https://appleid.apple.com/auth/keys';
 const APPLE_ISSUER = 'https://appleid.apple.com';
 
-let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
-function getJwks() {
-  if (!jwks) {
-    jwks = createRemoteJWKSet(new URL(APPLE_JWKS_URL));
-  }
-  return jwks;
+const appleClaimsSchema = z.object({
+  sub: z.string().min(1).refine((subject) => subject.trim() === subject),
+  email: z.string().optional(),
+  email_verified: z.union([z.boolean(), z.enum(['true', 'false'])])
+    .transform((value) => value === true || value === 'true')
+    .optional(),
+  iss: z.literal(APPLE_ISSUER),
+  aud: z.string().min(1),
+  nonce: z.string().min(1),
+  iat: z.number().int().nonnegative(),
+  exp: z.number().int().positive(),
+});
+
+export type AppleClaims = z.infer<typeof appleClaimsSchema>;
+
+interface AppleVerificationContext {
+  audience: string;
+  expectedNonce: string;
 }
 
-export async function verifyAppleIdentityToken(
-  token: string,
-  audience: string,
-): Promise<AppleClaims> {
-  try {
-    const { payload } = await jwtVerify(token, getJwks(), {
-      issuer: APPLE_ISSUER,
-      audience,
-      algorithms: ['RS256'],
-    });
-    return payload as unknown as AppleClaims;
-  } catch (err) {
-    throw new Error(
-      `Apple token verification failed: ${err instanceof Error ? err.message : String(err)}`,
-      { cause: err },
-    );
-  }
+/** Verify an identity assertion against the server's authentication attempt. */
+export function createAppleIdentityTokenVerifier(resolveKey: JWTVerifyGetKey) {
+  return async function verify(token: string, context: AppleVerificationContext): Promise<AppleClaims> {
+    try {
+      const { audience, expectedNonce } = context;
+      if (!audience.trim() || !expectedNonce.trim()) throw new Error();
+      const { payload } = await jwtVerify(token, resolveKey, {
+        issuer: APPLE_ISSUER,
+        audience,
+        algorithms: ['RS256'],
+      });
+      const claims = appleClaimsSchema.parse(payload);
+      const now = Math.floor(Date.now() / 1000);
+      if (claims.nonce !== expectedNonce || claims.iat > now || claims.iat >= claims.exp) {
+        throw new Error();
+      }
+      return claims;
+    } catch {
+      throw new Error('Apple identity token verification failed');
+    }
+  };
 }
+
+let jwks: ReturnType<typeof createRemoteJWKSet> | undefined;
+export const verifyAppleIdentityToken = createAppleIdentityTokenVerifier((header, token) => {
+  jwks ??= createRemoteJWKSet(new URL(APPLE_JWKS_URL));
+  return jwks(header, token);
+});

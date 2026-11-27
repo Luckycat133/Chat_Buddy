@@ -8,9 +8,13 @@ with two Moments each.
 ```bash
 docker compose up -d postgres
 export DATABASE_URL=postgres://chat_buddy:dev_only_change_me@localhost:5432/chat_buddy
+export SESSION_SIGNING_KEY='development-only-demo-seed-key-0001'
 npm run db:migrate
 npm run db:seed
 ```
+
+See the [cloud migration guide](../../docs/CLOUD_MIGRATIONS.md) for current
+verification and the procedure for a database bootstrapped outside the journal.
 
 The seed:
 

@@ -1,20 +1,31 @@
-# Agent entry
+# AGENTS.md — Chat Buddy Remake
 
-Follow `CLAUDE.md` for repository-specific rules, then use `.agents/SKILLS.md` to select task-specific project Skills. Load only Skills relevant to the current request.
+## 当前维护范围与技能入口
 
-<!-- agent-workflow:v1:start -->
-## 通用执行约定（2026-09-13）
+先读 [README.md](README.md) 与 [WEB_TO_IOS_MIGRATION.md](WEB_TO_IOS_MIGRATION.md)：Web 端当前以**关键修复和向 iOS 迁移为主**，不盲目扩写无关大重构。按当前任务从 [.agents/SKILLS.md](.agents/SKILLS.md) 选用项目 Skill（产品行为任务先加载 [.agents/skills/chat-buddy-web-demo-development/SKILL.md](.agents/skills/chat-buddy-web-demo-development/SKILL.md)）；切勿一次全量加载所有 Skill。
 
-- 将行动请求执行到可验证结果；用上下文补齐常规细节，只有答案会实质改变结果时才澄清。新消息用于调整当前目标，不因阶段完成而反复询问是否继续。
-- 系统/开发者限制优先；用户明确授权高于通用 Skill 默认流程。本块统一通用工作流，保留本项目的产品基线、兼容性、发布、凭据和计费专用门禁。缺少必要授权时先完成可审查的前置工作；已有同范围授权不重复索取。
-- 只加载当前任务相关的入口、技能和必要片段；历史日志不是当前状态。规则导致暂停或偏离时，给出准确文件、条款和原因，不把自己的推断说成硬门。
-- 默认用简洁段落报告结果和必要证据。独立子任务在工具与权限允许、且能明显节省时间时并行，先分配文件所有权；小任务不强行委派，不默默创建用户侧边栏任务。
-- 验证覆盖实际改动和风险；小型文档或可逆改动不自动触发全产品测试。协议、发布、数据迁移等仍执行项目相应门禁。通过后停止重复检查；失败、新改动或未解决风险才扩大测试。
-- 分开报告已改、已验证、未执行与阻塞；操作发起不等于结果完成。保留用户工作，未经当前任务授权不提交、推送、发布或改变模型/账户配置。
+## 构建与校验命令
 
-维护：只同步此标记块；各工具专用正文保留，不强求整份入口相同。项目若明确规定完整镜像，仍保持完整镜像。仅在规则更新或交付涉及规则时检查入口/副本一致性。
-<!-- agent-workflow:v1:end -->
+```bash
+npm run dev              # 开发服务 (http://localhost:5173)
+npm run build            # 生产构建 (输出 dist/)
+npm run lint             # ESLint 校验
+npm run test             # Vitest + jsdom 单元测试
+npx playwright test      # E2E 测试（需先启 :5173 开发服务）
+npm run prompt:bench     # Prompt 回归评测
+```
 
-## 项目接续钩子（2026-10-03）
+改动完成后，在跑通受影响的单测 / `npm run lint` / `npm run build` 前不得宣称完成。
 
-本项目配置仅用于 SessionStart 的短提示；行为、边界和客户端信任说明见 [.codex/hooks/README.md](.codex/hooks/README.md)。配置自检不等于原生客户端已加载，也不替代当前任务验证。
+## 架构硬边界与踩坑警告（附原因）
+
+- **领域层纯净性**：`src/core/`（`ChatEngine`、`AIPipeline`、`PresenceService` 等）**严禁引入任何 React 依赖**，因为 iOS 迁移与纯 JS 单测均直接依赖其框架无关的状态机契约。
+- **存储与导出兼容**：轻配置在 LocalStorage（命名空间 `chat-buddy:`），聊天/文档/媒体在 IndexedDB。任何数据模型调整必须保护已有导出备份与 IndexedDB 存量数据可读，防止破坏用户记录或 Web→iOS 导入链路。
+- **前端环境变量安全**：`VITE_*` 变量会被打包进客户端静态产物，**绝不是密钥保管位置**；严禁把真实 API Key 或私有凭据硬编码进 `VITE_*` 或源码。
+- **验证证据分离**：迁移设计、Mock 测试、真实浏览器数据往返与 iOS 导入分别留证，不能用单测通过冒充真实浏览器持久化或 iOS 兼容已通过。
+- **TailwindCSS 4**：采用 CSS-first 配置（无 `tailwind.config.js`），勿按 v3 方式新增传统配置文件。
+
+## 深入参考与钩子（1 跳指针）
+
+- 完整目录树、`ChatEngine` 状态结构、核心模块 API 与测试清单：[docs/agent-reference.md](docs/agent-reference.md)
+- 项目 Codex SessionStart 钩子边界说明：[.codex/hooks/README.md](.codex/hooks/README.md)

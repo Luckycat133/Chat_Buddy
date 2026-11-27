@@ -19,6 +19,7 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx db/migrate.ts",
+    "db:test-migrations": "node --test db/migrate.postgres.test.mjs",
     "db:seed": "tsx db/seeds/seed-demo.ts",
     "db:check": "drizzle-kit check",
     "db:studio": "drizzle-kit studio",

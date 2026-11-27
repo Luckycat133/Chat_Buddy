@@ -12,7 +12,7 @@ import {
   latestNarrativeVersion,
 } from './narrative.js';
 import { compilePrompt } from '../runtime/prompts/compiler.js';
-import { relationshipNarratives, relationships } from '../../db/schema.js';
+import { conversationMembers, conversations, relationshipNarratives, relationships } from '../../db/schema.js';
 import { newId } from '../../shared/contracts/ids.js';
 import { resetServerEnvForTests } from '../config.js';
 
@@ -140,6 +140,18 @@ describe('appendRelationshipNarrative', () => {
 describe('prompt compiler renders the highest narrative version', () => {
   it('uses the latest version, never an older one', async () => {
     const { relId, seed } = await seedAcceptedRelationship();
+    const conversationId = newId<string>();
+    await db.insert(conversations).values({
+      id: conversationId,
+      socialGraphId: seed.graphId,
+      type: 'direct',
+      createdByActorId: seed.humanActorId,
+    });
+    await db.insert(conversationMembers).values(
+      [seed.humanActorId, seed.characterActorId].map((actorId) => ({
+        conversationId, actorId, status: 'active' as const,
+      })),
+    );
     await appendRelationshipNarrative(sdb, {
       relationshipId: relId,
       currentDynamic: 'VERSION-ONE-动态',
@@ -151,7 +163,7 @@ describe('prompt compiler renders the highest narrative version', () => {
 
     const sections = await compilePrompt(sdb, {
       actorId: seed.characterActorId,
-      conversationId: '00000000-0000-4000-8000-000000000000',
+      conversationId,
       burstId: '',
     });
     expect(sections.relationship).toContain('VERSION-TWO-动态');

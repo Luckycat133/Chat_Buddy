@@ -6,14 +6,14 @@ import {
   accounts,
   conversations,
   conversationMembers,
-  devices,
   friendRequests,
   memoryItems,
   moments,
   relationships,
-  sessions,
 } from '../../db/schema.js';
-import { requireAuth } from '../auth/middleware.js';
+import type { AccountDeletionReceipt } from '../../shared/contracts/account.js';
+import { requireAuth, requireBearerToken } from '../auth/middleware.js';
+import { requestAccountDeletion } from '../auth/session.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 
 /**
@@ -23,11 +23,7 @@ import { ApiError, ApiErrorCodes } from '../errors.js';
  * Export returns an idempotent JSON snapshot of the caller's account,
  * actors, conversations, messages, moments, and memories.
  *
- * Delete performs a destructive scrub:
- *   - sessions + devices revoked
- *   - account status -> 'deleted', deleted_at stamped
- *   - private data removed; shared historical content is tombstoned
- *     via 'actor_blocked' events rather than rewritten.
+ * Delete starts account deletion and revokes access and push delivery.
  */
 export function registerAccountRoutes(app: FastifyInstance): void {
   app.get(
@@ -100,38 +96,15 @@ export function registerAccountRoutes(app: FastifyInstance): void {
 
   app.post(
     '/v1/account/delete',
-    { preHandler: requireAuth },
-    async (request) => {
-      const body = z
+    async (request): Promise<AccountDeletionReceipt> => {
+      const token = requireBearerToken(request);
+      z
         .object({ confirmation: z.literal('delete my account') })
+        .strict()
         .parse(request.body);
-      void body;
       const db = request.server.db as Database;
-      const accountId = request.requestContext.accountId;
-      if (!accountId) {
-        throw new ApiError(
-          ApiErrorCodes.Unauthorized,
-          'No account bound to session',
-        );
-      }
-      const now = new Date();
-      await db.transaction(async (tx) => {
-        // Revoke all sessions and devices.
-        await tx
-          .update(sessions)
-          .set({ revokedAt: now })
-          .where(eq(sessions.accountId, accountId));
-        await tx
-          .update(devices)
-          .set({ notificationPermission: 'denied' })
-          .where(eq(devices.accountId, accountId));
-        // Mark account as deleting; cron job will hard-delete after grace.
-        await tx
-          .update(accounts)
-          .set({ status: 'deleting', deletedAt: now })
-          .where(eq(accounts.id, accountId));
-      });
-      return { ok: true, deletionStartedAt: now.toISOString() };
+      const startedAt = await requestAccountDeletion(db, token);
+      return { ok: true, status: 'deleting', deletionStartedAt: startedAt.toISOString() };
     },
   );
 }

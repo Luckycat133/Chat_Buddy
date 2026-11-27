@@ -22,14 +22,10 @@ import type { Database } from '../../db/index.js';
 import {
   conversationMembers,
   conversations,
-  messages,
   proactiveIntents,
   pushDeliveryAttempts,
   relationshipPreferences,
-  relationships,
-  worldEvents,
 } from '../../db/schema.js';
-import { newId } from '../../shared/contracts/ids.js';
 import { MessageKind, ProactiveStatus } from '../../shared/contracts/enums.js';
 import {
   inQuietHours,
@@ -37,6 +33,8 @@ import {
   parseQuietHoursPolicy,
 } from './quiet-hours.js';
 import { NoopPushPort, type PushPort } from '../services/push.js';
+import { appendConversationMessage, findConversationEvent, withConversationWrite } from '../services/conversation-writes.js';
+import { readPromptAudience } from '../runtime/prompts/privacy.js';
 
 export interface ProactiveMessageInput {
   intentId: string;
@@ -135,6 +133,7 @@ export async function runProactiveTick(
     }
     claimed += 1;
 
+    let appending = false;
     try {
       // Quiet hours: defer on the user-local basis; retry after the window.
       const policy = parseQuietHoursPolicy(intent.quietHoursPolicy);
@@ -150,49 +149,10 @@ export async function runProactiveTick(
         continue;
       }
 
-      // The target must not have opted out of proactive messages.
-      const [pref] = await db
-        .select({ allow: relationshipPreferences.allowProactiveMessage })
-        .from(relationshipPreferences)
-        .where(eq(relationshipPreferences.ownerActorId, intent.targetActorId))
-        .limit(1);
-      if (pref && pref.allow === false) {
-        await db
-          .update(proactiveIntents)
-          .set({ status: ProactiveStatus.Cancelled })
-          .where(eq(proactiveIntents.id, intent.id));
-        skipped += 1;
-        continue;
-      }
-
-      // A real accepted relationship is required (friend/DM state).
-      const [rel] = await db
-        .select({ id: relationships.id })
-        .from(relationships)
-        .where(
-          sql`${relationships.state} = 'accepted' AND (
-            (${relationships.actorAId} = ${intent.sourceActorId}
-              AND ${relationships.actorBId} = ${intent.targetActorId})
-            OR
-            (${relationships.actorAId} = ${intent.targetActorId}
-              AND ${relationships.actorBId} = ${intent.sourceActorId})
-          )`,
-        )
-        .limit(1);
-      if (!rel) {
-        await db
-          .update(proactiveIntents)
-          .set({ status: ProactiveStatus.Cancelled })
-          .where(eq(proactiveIntents.id, intent.id));
-        skipped += 1;
-        continue;
-      }
-
       // Delivery needs an existing direct conversation between the pair.
       const shared = await db
       .select({
         conversationId: conversationMembers.conversationId,
-        socialGraphId: conversations.socialGraphId,
       })
       .from(conversationMembers)
       .innerJoin(
@@ -202,6 +162,7 @@ export async function runProactiveTick(
       .where(
         and(
           eq(conversations.type, 'direct'),
+          eq(conversations.status, 'active'),
           eq(conversationMembers.status, 'active'),
           sql`${conversationMembers.actorId} = ${intent.sourceActorId}`,
           sql`EXISTS (
@@ -212,8 +173,9 @@ export async function runProactiveTick(
           )`,
         ),
       )
-      .limit(1);
-      if (shared.length === 0) {
+      .orderBy(conversations.createdAt, conversations.id);
+      const candidate = shared[0]?.conversationId;
+      if (!candidate || !(await proactiveDeliveryAllowed(db, candidate, intent))) {
         await db
           .update(proactiveIntents)
           .set({ status: ProactiveStatus.Cancelled })
@@ -221,7 +183,7 @@ export async function runProactiveTick(
         skipped += 1;
         continue;
       }
-      const conversationId = shared[0]!.conversationId;
+      const conversationId = candidate;
 
       // Generation happens outside the transaction: a gateway failure
       // fails the intent without leaving half-written state.
@@ -234,70 +196,93 @@ export async function runProactiveTick(
         conversationId,
       });
 
-      const messageId = newId<string>();
-      const eventGraphId = shared[0]!.socialGraphId;
-      await db.transaction(async (tx) => {
-        const [seqRow] = await tx
-          .select({ next: sql<number>`COALESCE(MAX(${messages.sequence}), 0) + 1` })
-          .from(messages)
-          .where(eq(messages.conversationId, conversationId));
-        const sequence = seqRow?.next ?? 1;
-        await tx.insert(messages).values({
-          id: messageId,
-          conversationId,
+      appending = true;
+      const message = await withConversationWrite(db, conversationId, async (tx, conversation) => {
+        const [current] = await tx.select({ status: proactiveIntents.status }).from(proactiveIntents)
+          .where(eq(proactiveIntents.id, intent.id)).for('update');
+        if (!conversation || current?.status !== ProactiveStatus.Claimed) return null;
+
+        const eventKey = `proactive_message_sent:${intent.id}`;
+        const finish = (status: typeof proactiveIntents.$inferSelect.status) =>
+          tx.update(proactiveIntents).set({ status }).where(eq(proactiveIntents.id, intent.id));
+        if (await findConversationEvent(tx, conversation, eventKey)) {
+          await finish(ProactiveStatus.Sent);
+          return null;
+        }
+        if (intent.expiresAt <= (options.now ?? new Date())) {
+          await finish(ProactiveStatus.Expired);
+          return null;
+        }
+        if (!(await proactiveDeliveryAllowed(tx, conversationId, intent))) {
+          await finish(ProactiveStatus.Cancelled);
+          return null;
+        }
+
+        const persisted = await appendConversationMessage(tx, conversation, {
           senderActorId: intent.sourceActorId,
-          sequence,
           clientIdempotencyKey: `proactive:${intent.id}`,
           kind: MessageKind.Text,
           content,
-          status: 'accepted',
-        });
-        await tx.insert(worldEvents).values({
-          id: newId<string>(),
-          socialGraphId: eventGraphId,
-          type: 'proactive_message_sent',
-          actorId: intent.sourceActorId,
-          subjectActorIds: [intent.targetActorId],
-          conversationId,
-          payload: {
-            intentId: intent.id,
-            messageId,
-            reason: intent.reason,
+        }, {
+          openBurst: false,
+          event: {
+            type: 'proactive_message_sent',
+            idempotencyKey: eventKey,
+            subjectActorIds: [intent.targetActorId],
+            payload: { intentId: intent.id, reason: intent.reason },
           },
-          visibilityPolicy: { conversation: conversationId },
-          idempotencyKey: `proactive_message_sent:${intent.id}`,
         });
-        await tx
-          .update(proactiveIntents)
-          .set({ status: ProactiveStatus.Sent })
-          .where(eq(proactiveIntents.id, intent.id));
+        await finish(ProactiveStatus.Sent);
+        return persisted;
       });
+      if (!message) {
+        skipped += 1;
+        continue;
+      }
       sent += 1;
 
-      // Push only after the message is durable; a push failure keeps the
-      // message and the sent status — every attempt is audited.
-      const pushResult = await pushPort.send({
+      // A post-commit transport or audit failure cannot undo a sent message
+      // or put the intent back into the writer's retry queue.
+      const result = await pushPort.send({
         actorId: intent.targetActorId,
         intentId: intent.id,
         conversationId,
-        messageId,
+        messageId: message.id,
         body: content,
-      });
+      }).catch(() => ({ ok: false, detail: 'Push transport failed' }));
       await db.insert(pushDeliveryAttempts).values({
         intentId: intent.id,
         actorId: intent.targetActorId,
         channel: pushPort.channel,
-        ok: pushResult.ok,
-        detail: pushResult.detail,
+        ok: result.ok,
+        detail: result.detail,
       });
     } catch {
       failed += 1;
-      await db
-        .update(proactiveIntents)
-        .set({ status: ProactiveStatus.Failed })
-        .where(eq(proactiveIntents.id, intent.id));
+      await db.update(proactiveIntents)
+        .set({ status: appending ? ProactiveStatus.Pending : ProactiveStatus.Failed })
+        .where(and(eq(proactiveIntents.id, intent.id), eq(proactiveIntents.status, ProactiveStatus.Claimed)));
     }
   }
 
   return { claimed, sent, skipped, failed, expired: expiredRows.length };
+}
+
+async function proactiveDeliveryAllowed(
+  db: Pick<Database, 'select' | 'selectDistinct'>,
+  conversationId: string,
+  intent: typeof proactiveIntents.$inferSelect,
+) {
+  const audience = await readPromptAudience(db, conversationId);
+  if (audience?.type !== 'direct' || !audience.relationshipId ||
+    !audience.members.some((m) => m.id === intent.sourceActorId) ||
+    !audience.members.some((m) => m.id === intent.targetActorId)) return false;
+  const [preference] = await db
+    .select({ allow: relationshipPreferences.allowProactiveMessage })
+    .from(relationshipPreferences)
+    .where(and(
+      eq(relationshipPreferences.relationshipId, audience.relationshipId),
+      eq(relationshipPreferences.ownerActorId, intent.targetActorId),
+    ));
+  return preference?.allow !== false;
 }

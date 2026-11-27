@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { closeTestDatabase, createTestDatabase } from '../test/pglite.js';
 import { seedSocialGraph } from '../test/fixtures.js';
 import { resetServerEnvForTests } from '../config.js';
@@ -8,14 +8,18 @@ import {
   conversationMembers,
   conversations,
   messageBursts,
+  memoryGrants,
   memoryItems,
   messages,
+  relationshipNarratives,
+  relationships,
   socialGraphs,
   toolExecutions,
   worldEvents,
 } from '../../db/schema.js';
 import { newId } from '../../shared/contracts/ids.js';
 import type { Database } from '../../db/index.js';
+import { compilePrompt } from '../runtime/prompts/compiler.js';
 
 /**
  * The weather tool round (WEB_IMPLEMENTATION §19 + DOMAIN_ARCHITECTURE
@@ -82,6 +86,7 @@ function envelopeReply(texts: string[], toolRequests?: unknown[]): string {
 }
 
 async function seedConversation(): Promise<{
+  graphId: string;
   conversationId: string;
   burstId: string;
   humanActorId: string;
@@ -132,10 +137,47 @@ async function seedConversation(): Promise<{
   });
 
   return {
+    graphId: seed.graphId,
     conversationId,
     burstId,
     humanActorId: seed.humanActorId,
     characterActorId: seed.characterActorId,
+  };
+}
+
+async function authorizeMemorySource(scene: Awaited<ReturnType<typeof seedConversation>>) {
+  const [message] = await db.select().from(messages).where(eq(messages.burstId, scene.burstId));
+  const { id: messageId, sequence } = message!;
+  const relationshipId = newId<string>();
+  await db.insert(relationships).values({
+    id: relationshipId,
+    socialGraphId: scene.graphId,
+    actorAId: scene.humanActorId,
+    actorBId: scene.characterActorId,
+    state: 'accepted',
+    initiatedBy: scene.humanActorId,
+  });
+  const eventId = newId<string>();
+  await db.insert(worldEvents).values({
+    id: eventId,
+    socialGraphId: scene.graphId,
+    actorId: scene.humanActorId,
+    type: 'message_sent',
+    conversationId: scene.conversationId,
+    payload: { messageId, sequence, burstId: scene.burstId },
+    visibilityPolicy: { conversation: scene.conversationId },
+    idempotencyKey: `message_sent:${messageId}`,
+  });
+  return { eventId, messageId, relationshipId };
+}
+
+function memoryReply(fact: string) {
+  return {
+    content: JSON.stringify({
+      messages: [{ target: 'current_conversation', text: '记住啦！' }],
+      memory_patches: [{ type: 'public', objectiveFact: fact, subjectiveInterpretation: '', confidence: 'reported' }],
+    }),
+    model: 'test-model',
   };
 }
 
@@ -200,6 +242,44 @@ describe('extractToolRequests', () => {
     ]);
     expect(extractToolRequests('今天天气不错')).toEqual([]);
     expect(extractToolRequests('```json\n{"broken": true}\n```')).toEqual([]);
+  });
+});
+
+describe('generation prompt audience', () => {
+  it('sends only the exact counterpart narrative to the model gateway', async () => {
+    const scene = await seedConversation();
+    const other = await seedSocialGraph(db);
+    const currentRelationship = newId<string>();
+    const unrelatedRelationship = newId<string>();
+    await db.insert(relationships).values([
+      {
+        id: currentRelationship, socialGraphId: scene.graphId,
+        actorAId: scene.humanActorId, actorBId: scene.characterActorId,
+        state: 'accepted', initiatedBy: scene.humanActorId,
+      },
+      {
+        id: unrelatedRelationship, socialGraphId: other.graphId,
+        actorAId: other.humanActorId, actorBId: scene.characterActorId,
+        state: 'accepted', initiatedBy: other.humanActorId,
+      },
+    ]);
+    const relevant = '相同双人关系中的虚构叙事';
+    const unrelated = '不同双人关系中的合成私密事实';
+    await db.insert(relationshipNarratives).values([
+      { relationshipId: currentRelationship, version: 1, currentDynamic: relevant },
+      { relationshipId: unrelatedRelationship, version: 1, currentDynamic: unrelated },
+    ]);
+    gatewayMocks.createChatCompletion.mockResolvedValueOnce({
+      content: envelopeReply(['我们慢慢聊。']), model: 'test-model',
+    });
+
+    await generateRepliesForConversation(sdb, scene.conversationId, scene.burstId);
+
+    expect(gatewayMocks.createChatCompletion).toHaveBeenCalledTimes(1);
+    const { system, prompt } = gatewayMocks.createChatCompletion.mock.calls[0]![0]!;
+    expect(system).toContain(relevant);
+    expect(`${system}\n${prompt}`).not.toContain(unrelated);
+    expect(await insertedReplyTexts(scene.conversationId)).toEqual(['我们慢慢聊。']);
   });
 });
 
@@ -559,21 +639,22 @@ describe('empty reply recovery in generation', () => {
 });
 
 describe('memory_patches persistence in generation', () => {
-  it('persists validated patches as ai_self memories with provenance', async () => {
+  it('scopes generated facts to their original message and audience regardless of the model label', async () => {
     const scene = await seedConversation();
+    const source = await authorizeMemorySource(scene);
     gatewayMocks.createChatCompletion.mockResolvedValueOnce({
       content: JSON.stringify({
         messages: [{ target: 'current_conversation', text: '记住啦！' }],
         memory_patches: [
           {
-            type: 'private',
+            type: 'public',
             objectiveFact: '用户住在厦门',
             subjectiveInterpretation: '用户亲口告诉我的',
             confidence: 'reported',
           },
           // Duplicate within the same reply → deduped.
           {
-            type: 'private',
+            type: 'public',
             objectiveFact: '用户住在厦门',
             subjectiveInterpretation: '重复的一次',
             confidence: 'reported',
@@ -590,20 +671,140 @@ describe('memory_patches persistence in generation', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
       ownerActorId: scene.characterActorId,
-      sourceActorId: scene.characterActorId,
+      sourceActorId: scene.humanActorId,
+      sourceEventId: source.eventId,
+      relationshipId: source.relationshipId,
       type: 'private',
       objectiveFact: '用户住在厦门',
       subjectiveInterpretation: '用户亲口告诉我的',
       confidence: 'reported',
-      sharePolicy: {},
-      visibilityPolicy: {},
+      sharePolicy: { conversationIds: [scene.conversationId] },
+      visibilityPolicy: {
+        origin: 'generation',
+        conversationId: scene.conversationId,
+        messageIds: [source.messageId],
+      },
     });
-    // Provenance points at the reply's own message_sent world event.
-    const [event] = await db
-      .select()
-      .from(worldEvents)
-      .where(eq(worldEvents.type, 'message_sent'));
-    expect(rows[0]!.sourceEventId).toBe(event?.id);
+    const [summary] = await db.insert(relationshipNarratives).values({
+      relationshipId: source.relationshipId,
+      version: 1,
+      currentDynamic: '只有原始参与者知道的总结',
+      changedByEventIds: [source.eventId],
+    }).returning();
+    const [replyEvent] = await db.select().from(worldEvents)
+      .where(and(eq(worldEvents.type, 'message_sent'), eq(worldEvents.actorId, scene.characterActorId)));
+    await db.insert(memoryItems).values({
+      ownerActorId: scene.characterActorId,
+      sourceActorId: scene.characterActorId,
+      sourceEventId: replyEvent!.id,
+      type: 'public',
+      objectiveFact: '历史记忆没有可靠来源',
+      subjectiveInterpretation: '',
+      confidence: 'observed',
+    });
+    const compile = (actorId: string, conversationId: string) => compilePrompt(sdb, {
+      actorId,
+      conversationId,
+      burstId: scene.burstId,
+    });
+    const original = await compile(scene.characterActorId, scene.conversationId);
+    expect(original.memories).toContain('用户住在厦门');
+    expect(original.memories).not.toContain('历史记忆没有可靠来源');
+    expect(original.relationship).toContain(summary!.currentDynamic);
+
+    const other = await seedSocialGraph(db);
+    await db.insert(memoryGrants).values([other.humanActorId, other.characterActorId].map((actorId) => ({
+      memoryId: rows[0]!.id,
+      granteeActorId: actorId,
+      grantedByEventId: newId<string>(),
+      permission: 'disclose' as const,
+    })));
+    for (const [type, otherMembers] of [
+      ['direct', [other.humanActorId]],
+      ['group', [scene.humanActorId, other.humanActorId]],
+      ['hidden_ai_direct', [other.characterActorId]],
+    ] as const) {
+      const conversationId = newId<string>();
+      await db.insert(conversations).values({
+        id: conversationId,
+        socialGraphId: scene.graphId,
+        type,
+        createdByActorId: scene.characterActorId,
+      });
+      const actorIds = [scene.characterActorId, ...otherMembers];
+      await db.insert(conversationMembers).values(actorIds.map((actorId) => ({
+        actorId, conversationId, status: 'active' as const, joinedAt: new Date(),
+      })));
+      for (const actorId of actorIds) {
+        const prompt = Object.values(await compile(actorId, conversationId)).join('\n');
+        expect(prompt).not.toContain('用户住在厦门');
+        expect(prompt).not.toContain('历史记忆没有可靠来源');
+        expect(prompt).not.toContain(summary!.currentDynamic);
+      }
+    }
+
+    await db.update(messages).set({ deletedAt: new Date() }).where(eq(messages.id, source.messageId));
+    const afterDeletion = await compile(scene.characterActorId, scene.conversationId);
+    expect(afterDeletion.memories).not.toContain('用户住在厦门');
+    expect(afterDeletion.relationship).not.toContain(summary!.currentDynamic);
+    expect(afterDeletion.burst + afterDeletion.recentEvents).not.toContain('北京今天天气怎么样？');
+  });
+
+  it('revalidates an upstream grant through an actual derivative and excludes blocked branches', async () => {
+    const scene = await seedConversation();
+    const source = await authorizeMemorySource(scene);
+    const originalFact = '原始参与者允许知道的事实';
+    const derivative = '真实生成的衍生记忆';
+    const [parent] = await db.insert(memoryItems).values({
+      ownerActorId: scene.humanActorId,
+      sourceActorId: scene.humanActorId,
+      sourceEventId: source.eventId,
+      relationshipId: source.relationshipId,
+      type: 'private',
+      objectiveFact: originalFact,
+      subjectiveInterpretation: '',
+      confidence: 'observed',
+    }).returning();
+    const grant = {
+      memoryId: parent!.id,
+      granteeActorId: scene.characterActorId,
+      permission: 'know' as const,
+      grantedByEventId: source.eventId,
+    };
+    await db.insert(memoryGrants).values(grant);
+    gatewayMocks.createChatCompletion.mockResolvedValueOnce(memoryReply(derivative));
+    await generateRepliesForConversation(sdb, scene.conversationId, scene.burstId);
+    const [request] = gatewayMocks.createChatCompletion.mock.calls[0]!;
+    expect(`${request.system}\n${request.prompt}`).toContain(originalFact);
+    const prompt = () => compilePrompt(sdb, {
+      actorId: scene.characterActorId,
+      conversationId: scene.conversationId,
+      burstId: scene.burstId,
+    });
+    expect((await prompt()).memories).toContain(derivative);
+    await db.delete(memoryGrants).where(eq(memoryGrants.memoryId, parent!.id));
+    expect((await prompt()).memories).not.toContain(derivative);
+    await db.insert(memoryGrants).values(grant);
+    expect((await prompt()).memories).toContain(derivative);
+    await db.update(memoryItems).set({ supersededById: newId<string>() }).where(eq(memoryItems.id, parent!.id));
+    expect((await prompt()).memories).not.toContain(derivative);
+    await db.update(memoryItems).set({ supersededById: null }).where(eq(memoryItems.id, parent!.id));
+    await db.update(relationships).set({ state: 'blocked' }).where(eq(relationships.id, source.relationshipId));
+    expect((await prompt()).provenance).toBeNull();
+  });
+
+  it('discards an in-flight reply and the associated patch when the source is withdrawn', async () => {
+    const scene = await seedConversation();
+    const source = await authorizeMemorySource(scene);
+    gatewayMocks.createChatCompletion.mockImplementationOnce(async () => {
+      await db.update(messages).set({ deletedAt: new Date() }).where(eq(messages.id, source.messageId));
+      return memoryReply('等待时被收回的事实');
+    });
+
+    await generateRepliesForConversation(sdb, scene.conversationId, scene.burstId);
+
+    expect(await insertedReplyTexts(scene.conversationId)).toEqual([]);
+    expect(await db.select().from(memoryItems)).toHaveLength(0);
   });
 
   it('rejects policy-proposing and schema-invalid patches fail-closed', async () => {

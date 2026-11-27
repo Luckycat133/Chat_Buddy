@@ -31,20 +31,8 @@ async function authenticate(
   request: FastifyRequest,
   required: boolean,
 ): Promise<void> {
-  const header = request.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
-    if (required) {
-      throw new ApiError(ApiErrorCodes.Unauthorized, 'Missing bearer token');
-    }
-    return;
-  }
-  const token = header.slice('Bearer '.length).trim();
-  if (!token) {
-    if (required) {
-      throw new ApiError(ApiErrorCodes.Unauthorized, 'Empty bearer token');
-    }
-    return;
-  }
+  const token = required ? requireBearerToken(request) : readBearerToken(request);
+  if (!token) return;
   const db = request.server.db as Database;
   const session = await authenticateAccessToken(db, token);
 
@@ -54,7 +42,7 @@ async function authenticate(
     .from(accounts)
     .where(eq(accounts.id, session.accountId))
     .limit(1);
-  if (!account || account.status === 'deleted') {
+  if (!account || account.status !== 'active') {
     throw new ApiError(ApiErrorCodes.Unauthorized, 'Account unavailable');
   }
   // Per DOMAIN_ARCHITECTURE §4.1, an account owns exactly one human actor.
@@ -68,4 +56,20 @@ async function authenticate(
   request.requestContext.sessionId = session.sessionId;
   request.requestContext.actorId = actor?.id ?? null;
   request.requestContext.socialGraphId = actor?.socialGraphId ?? null;
+}
+
+export function requireBearerToken(request: FastifyRequest): string {
+  const token = readBearerToken(request);
+  if (!token) {
+    throw new ApiError(
+      ApiErrorCodes.Unauthorized,
+      token === null ? 'Missing bearer token' : 'Empty bearer token',
+    );
+  }
+  return token;
+}
+
+function readBearerToken(request: FastifyRequest): string | null {
+  const header = request.headers.authorization;
+  return header?.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : null;
 }

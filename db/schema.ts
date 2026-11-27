@@ -614,6 +614,7 @@ export const moments = pgTable(
   (table) => ({
     actorIdx: index('moments_actor_idx').on(table.actorId),
     graphIdx: index('moments_graph_idx').on(table.socialGraphId),
+    importKeyIdx: uniqueIndex('moments_import_key_idx').on(table.importKey),
   }),
 );
 
@@ -684,6 +685,7 @@ export const memoryItems = pgTable(
     relationshipIdx: index('memory_items_relationship_idx').on(
       table.relationshipId,
     ),
+    importKeyIdx: uniqueIndex('memory_items_import_key_idx').on(table.importKey),
   }),
 );
 
@@ -833,6 +835,7 @@ export const contactInvites = pgTable(
   (table) => ({
     codeIdx: uniqueIndex('contact_invites_code_idx').on(table.code),
     graphIdx: index('contact_invites_graph_idx').on(table.socialGraphId),
+    creatorIdx: index('contact_invites_creator_idx').on(table.createdByActorId),
   }),
 );
 

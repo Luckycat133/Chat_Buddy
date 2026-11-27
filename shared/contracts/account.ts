@@ -25,3 +25,10 @@ export const PublicAccountSchema = AccountSchema.pick({
   createdAt: true,
 });
 export type PublicAccount = z.infer<typeof PublicAccountSchema>;
+
+export const AccountDeletionReceiptSchema = z.object({
+  ok: z.literal(true),
+  status: z.literal('deleting'),
+  deletionStartedAt: z.string().datetime(),
+});
+export type AccountDeletionReceipt = z.infer<typeof AccountDeletionReceiptSchema>;

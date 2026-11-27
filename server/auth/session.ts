@@ -1,7 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { eq, and, gt, isNull } from 'drizzle-orm';
 import type { Database } from '../../db/index.js';
-import { sessions } from '../../db/schema.js';
+import { accounts, devices, sessions } from '../../db/schema.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 import { serverEnv } from '../config.js';
 import { newId } from '../../shared/contracts/ids.js';
@@ -36,34 +36,55 @@ export async function issueTokens(
   accountId: string,
   userAgent = 'Unknown',
 ): Promise<IssuedTokens> {
+  return db.transaction(async (tx) => {
+    await lockActiveAccount(tx, accountId);
+    return insertSession(tx, accountId, userAgent);
+  });
+}
+
+async function lockAccount(db: Pick<Database, 'select'>, accountId: string) {
+  const [account] = await db
+    .select({ status: accounts.status, deletedAt: accounts.deletedAt })
+    .from(accounts)
+    .where(eq(accounts.id, accountId))
+    .for('update');
+  return account;
+}
+
+async function lockActiveAccount(db: Pick<Database, 'select'>, accountId: string): Promise<void> {
+  const account = await lockAccount(db, accountId);
+  if (account?.status !== 'active') {
+    throw new ApiError(ApiErrorCodes.Unauthorized, 'Account unavailable');
+  }
+}
+
+async function insertSession(
+  db: Pick<Database, 'insert'>,
+  accountId: string,
+  userAgent: string,
+): Promise<IssuedTokens> {
   const env = serverEnv();
-  const accessToken = randomBytes(32).toString('base64url');
+  const rawAccess = randomBytes(32).toString('base64url');
   const refreshToken = randomBytes(REFRESH_BYTES).toString('base64url');
   const accessExpiresAt = new Date(Date.now() + ACCESS_TTL_SEC * 1000);
   const refreshExpiresAt = new Date(
     Date.now() + env.SESSION_TTL_SEC * 1000,
   );
 
-  const sessionId = newId<string>();
-  const refreshHash = hashOpaqueToken(refreshToken);
+  const accessToken = signAccessToken(rawAccess, accountId, accessExpiresAt);
 
   await db.insert(sessions).values({
-    id: sessionId,
+    id: newId<string>(),
     accountId,
-    refreshTokenHash: refreshHash,
-    accessTokenHash: null,
+    refreshTokenHash: hashOpaqueToken(refreshToken),
+    accessTokenHash: hashOpaqueToken(accessToken),
     userAgent: userAgent.trim().slice(0, 512) || 'Unknown',
     lastSeenAt: new Date(),
     expiresAt: refreshExpiresAt,
   });
 
-  const signedAccess = signAccessToken(accessToken, accountId, accessExpiresAt);
-  await db
-    .update(sessions)
-    .set({ accessTokenHash: hashOpaqueToken(signedAccess) })
-    .where(eq(sessions.id, sessionId));
   return {
-    accessToken: signedAccess,
+    accessToken,
     accessExpiresAt,
     refreshToken,
     refreshExpiresAt,
@@ -83,8 +104,8 @@ export async function rotateRefresh(
 ): Promise<IssuedTokens & { accountId: string }> {
   const presentedHash = hashOpaqueToken(presented);
 
-  const existingRows = await db
-    .select()
+  const [existing] = await db
+    .select({ id: sessions.id, accountId: sessions.accountId })
     .from(sessions)
     .where(
       and(
@@ -94,18 +115,83 @@ export async function rotateRefresh(
       ),
     )
     .limit(1);
-  const existing = existingRows[0];
   if (!existing) {
     throw new ApiError(ApiErrorCodes.Unauthorized, 'Refresh token rejected');
   }
 
-  await db
-    .update(sessions)
-    .set({ revokedAt: new Date() })
-    .where(eq(sessions.id, existing.id));
+  return db.transaction(async (tx) => {
+    // Deletion and session issuance acquire the same account lock first.
+    await lockActiveAccount(tx, existing.accountId);
+    const now = new Date();
+    const [rotated] = await tx
+      .update(sessions)
+      .set({ revokedAt: now })
+      .where(and(
+        eq(sessions.id, existing.id),
+        eq(sessions.accountId, existing.accountId),
+        eq(sessions.refreshTokenHash, presentedHash),
+        gt(sessions.expiresAt, now),
+        isNull(sessions.revokedAt),
+      ))
+      .returning({ userAgent: sessions.userAgent });
+    if (!rotated) {
+      throw new ApiError(ApiErrorCodes.Unauthorized, 'Refresh token rejected');
+    }
 
-  const tokens = await issueTokens(db, existing.accountId, existing.userAgent);
-  return { ...tokens, accountId: existing.accountId };
+    const tokens = await insertSession(tx, existing.accountId, rotated.userAgent);
+    return { ...tokens, accountId: existing.accountId };
+  });
+}
+
+export async function requestAccountDeletion(db: Database, token: string): Promise<Date> {
+  const decoded = verifyAccessToken(token);
+  if (!decoded) {
+    throw new ApiError(ApiErrorCodes.Unauthorized, 'Invalid access token');
+  }
+  const { accountId, expiresAt } = decoded;
+  return db.transaction(async (tx) => {
+    const account = await lockAccount(tx, accountId);
+    const pendingAt = account?.status === 'deleting' ? account.deletedAt : null;
+    const now = new Date();
+    const tokenHash = pendingAt
+      ? deletionReceiptHash(token, accountId, pendingAt)
+      : hashOpaqueToken(token);
+    const [session] = await tx
+      .select({ id: sessions.id, revokedAt: sessions.revokedAt })
+      .from(sessions)
+      .where(and(
+        eq(sessions.accountId, accountId),
+        eq(sessions.accessTokenHash, tokenHash),
+        gt(sessions.expiresAt, now),
+      ))
+      .for('update');
+    if (session && expiresAt > now) {
+      if (pendingAt && session.revokedAt?.getTime() === pendingAt.getTime()) {
+        return pendingAt;
+      }
+      if (!session.revokedAt && account?.status === 'active') {
+        await tx
+          .update(accounts)
+          .set({ status: 'deleting', deletedAt: now })
+          .where(eq(accounts.id, accountId));
+        await tx
+          .update(sessions)
+          .set({ revokedAt: now })
+          .where(and(eq(sessions.accountId, accountId), isNull(sessions.revokedAt)));
+        // Replace the initiator's revoked access hash with a receipt-only hash.
+        await tx
+          .update(sessions)
+          .set({ accessTokenHash: deletionReceiptHash(token, accountId, now) })
+          .where(eq(sessions.id, session.id));
+        await tx
+          .update(devices)
+          .set({ notificationPermission: 'denied', pushTokenEncrypted: null })
+          .where(eq(devices.accountId, accountId));
+        return now;
+      }
+    }
+    throw new ApiError(ApiErrorCodes.Unauthorized, 'Account or session unavailable');
+  });
 }
 
 export async function revokeSession(
@@ -118,12 +204,16 @@ export async function revokeSession(
     await db
       .update(sessions)
       .set({ revokedAt: now })
-      .where(and(eq(sessions.accountId, accountId), eq(sessions.id, sessionId)));
+      .where(and(
+        eq(sessions.accountId, accountId),
+        eq(sessions.id, sessionId),
+        isNull(sessions.revokedAt),
+      ));
   } else {
     await db
       .update(sessions)
       .set({ revokedAt: now })
-      .where(eq(sessions.accountId, accountId));
+      .where(and(eq(sessions.accountId, accountId), isNull(sessions.revokedAt)));
   }
 }
 
@@ -136,14 +226,16 @@ export async function authenticateAccessToken(
     throw new ApiError(ApiErrorCodes.Unauthorized, 'Invalid access token');
   }
   const [session] = await db
-    .select()
+    .select({ id: sessions.id, accountId: sessions.accountId })
     .from(sessions)
+    .innerJoin(accounts, eq(accounts.id, sessions.accountId))
     .where(
       and(
         eq(sessions.accountId, decoded.accountId),
         eq(sessions.accessTokenHash, hashOpaqueToken(token)),
         gt(sessions.expiresAt, new Date()),
         isNull(sessions.revokedAt),
+        eq(accounts.status, 'active'),
       ),
     )
     .limit(1);
@@ -172,6 +264,10 @@ interface SignedAccess {
 
 function hashOpaqueToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
+}
+
+function deletionReceiptHash(token: string, accountId: string, startedAt: Date): string {
+  return hashOpaqueToken(`account-deletion-receipt\0${accountId}\0${startedAt.toISOString()}\0${token}`);
 }
 
 function signAccessToken(

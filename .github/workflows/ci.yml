@@ -78,10 +78,11 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      DATABASE_URL: postgres://chat_buddy:chat_buddy@localhost:5432/chat_buddy
-      SESSION_SIGNING_KEY: ${{ secrets.SESSION_SIGNING_KEY || 'test-signing-key-do-not-use-in-prod-please' }}
+      DATABASE_URL: postgres://chat_buddy:chat_buddy@127.0.0.1:5432/chat_buddy
+      SESSION_SIGNING_KEY: 'test-signing-key-do-not-use-in-prod-please'
       NODE_ENV: test
       LOG_LEVEL: warn
+      HOST: '127.0.0.1'
       PORT: 8080
     steps:
       - uses: actions/checkout@v7
@@ -91,51 +92,48 @@ jobs:
           cache: 'npm'
       - run: npm ci --no-audit --no-fund
       - run: npx playwright install --with-deps chromium
+      - name: Verify migration and upgrade on PostgreSQL
+        env:
+          MIGRATION_TEST_DATABASE_URL: postgres://chat_buddy:chat_buddy@127.0.0.1:5432/chat_buddy
+        run: npm run db:test-migrations
       - name: Apply migrations
-        run: |
-          # Must be exported: a bare `PGPASSWORD=x` assignment stays a shell-local
-          # variable and psql never sees it (fe_sendauth: no password supplied).
-          export PGPASSWORD=chat_buddy
-          # This disposable database needs every checked-in migration, matching
-          # server/test/pglite.ts. The Drizzle journal currently lists only 0000.
-          for migration in db/migrations/*.sql; do
-            psql -v ON_ERROR_STOP=1 -h localhost -U chat_buddy -d chat_buddy -f "$migration"
-          done
+        run: npm run db:migrate
       - name: Seed
         run: npm run db:seed
-      - name: Boot server
+      - name: Build web app for preview server
+        run: npm run build
+      - name: Compile server
+        run: npm run build:server
+      - name: Boot compiled server
         run: |
-          npm run dev:server &
+          setsid npm run start:server > "$RUNNER_TEMP/chat-buddy-server.log" 2>&1 &
           SERVER_PID=$!
-          # Wait for /healthz to return 200.
+          echo "$SERVER_PID" > "$RUNNER_TEMP/chat-buddy-server.pid"
+          ready() {
+            curl --max-time 2 -fsS http://127.0.0.1:8080/healthz >/dev/null 2>&1 &&
+              curl --max-time 2 -fsS http://127.0.0.1:8080/readyz >/dev/null 2>&1
+          }
           for i in $(seq 1 60); do
-            if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then
+            if ready; then
               echo "server ready after $i attempts"
               break
             fi
             sleep 1
           done
-          if ! curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then
-            echo '::error::Server failed to start within 60s'
-            kill $SERVER_PID || true
+          if ! ready; then
+            echo '::error::Compiled server or PostgreSQL did not become ready'
+            cat "$RUNNER_TEMP/chat-buddy-server.log"
             exit 1
           fi
-          # Keep server alive for the duration of the playwright run via a sentinel.
-          echo $SERVER_PID > /tmp/server.pid
-      - name: Build web app for preview server
-        # playwright.config webServer runs `npm run preview` (vite preview on
-        # 4173) which needs dist/ — without this build it times out waiting
-        # (120s) and the whole e2e-p0 job dies before any test runs.
-        run: npm run build
       - name: Run A01-A25
         env:
-          E2E_CLOUD_BASE_URL: 'http://localhost:8080'
+          E2E_CLOUD_BASE_URL: 'http://127.0.0.1:8080'
         run: npx playwright test e2e/p0-acceptance.spec.js
       - name: Stop server
         if: always()
         run: |
-          if [ -f /tmp/server.pid ]; then
-            kill $(cat /tmp/server.pid) || true
+          if [ -f "$RUNNER_TEMP/chat-buddy-server.pid" ]; then
+            kill -- "-$(cat "$RUNNER_TEMP/chat-buddy-server.pid")" || true
           fi
       - name: Upload Playwright report
         if: always()

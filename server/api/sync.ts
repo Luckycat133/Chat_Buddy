@@ -95,6 +95,22 @@ export function registerSyncRoutes(app: FastifyInstance): void {
         OR ${worldEvents.visibilityPolicy}->'participants' ? ${actorId}
       )`;
 
+      // Conversation events belong to the conversation's graph. An active
+      // participant may have joined from another graph; unrelated actors in
+      // the owning graph have no basis for receiving that event.
+      const inAuthorizedScope = sql`(
+        CASE WHEN ${worldEvents.visibilityPolicy} ? 'conversation' THEN EXISTS (
+          SELECT 1 FROM conversations event_conv
+          JOIN conversation_members cm ON cm.conversation_id = event_conv.id
+          WHERE event_conv.id = ${worldEvents.conversationId}
+            AND event_conv.id::text = ${worldEvents.visibilityPolicy}->>'conversation'
+            AND event_conv.status = 'active'
+            AND cm.actor_id = ${actorId}
+            AND cm.status = 'active'
+            AND (event_conv.type <> 'group' OR cm.joined_at <= ${worldEvents.occurredAt})
+        ) ELSE ${worldEvents.socialGraphId} = ${graphId} END
+      )`;
+
       const events = await db
         .select({
           id: worldEvents.id,
@@ -112,10 +128,10 @@ export function registerSyncRoutes(app: FastifyInstance): void {
         .from(worldEvents)
         .where(
           and(
-            eq(worldEvents.socialGraphId, graphId),
             baseWhere,
             notHiddenConversation,
             visibleToActor,
+            inAuthorizedScope,
           ),
         )
         .orderBy(worldEvents.occurredAt, worldEvents.id)

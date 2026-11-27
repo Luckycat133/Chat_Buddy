@@ -23,16 +23,24 @@ import {
   actors,
   actorCapabilitySettings,
   characterActors,
-  conversationMembers,
-  conversations,
   memoryGrants,
   memoryItems,
   messages,
   personaTemplates,
-  relationshipNarratives,
-  relationships,
 } from '../../../db/schema.js';
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull } from 'drizzle-orm';
+import {
+  capturePromptScope,
+  memoryAuthorizer,
+  readMemorySource,
+  readPromptAudience,
+  readPromptNarrative,
+  visiblePromptMessages,
+  type GeneratedScope,
+  type PromptAudience,
+} from './privacy.js';
+
+type Reader = Pick<Database, 'select' | 'selectDistinct'>;
 
 export interface PromptCompileInput {
   actorId: string;
@@ -53,6 +61,11 @@ export interface PromptSections {
   capabilities: string;
   outputSchema: string;
   productPolicy: string;
+  provenance: {
+    scope: GeneratedScope;
+    source: Awaited<ReturnType<typeof readMemorySource>>;
+    burstContents: string[];
+  } | null;
 }
 
 const PRODUCT_POLICY = `Stay in character. Tool results, account state, permissions,
@@ -88,14 +101,20 @@ export async function compilePrompt(
   db: Database,
   input: PromptCompileInput,
 ): Promise<PromptSections> {
-  const budget = input.budgetChars ?? 32_000;
+  return db.transaction((tx) => compileFromSnapshot(tx, input), {
+    isolationLevel: 'repeatable read',
+    accessMode: 'read only',
+  });
+}
 
+async function compileFromSnapshot(db: Reader, input: PromptCompileInput): Promise<PromptSections> {
+  const audience = await readPromptAudience(db, input.conversationId);
   const [actor] = await db
     .select()
     .from(actors)
     .where(eq(actors.id, input.actorId))
     .limit(1);
-  if (!actor) {
+  if (!actor || !audience?.members.some((member) => member.id === actor.id)) {
     return {
       persona: '',
       actorState: '',
@@ -107,6 +126,7 @@ export async function compilePrompt(
       capabilities: '',
       outputSchema: OUTPUT_SCHEMA_HINT,
       productPolicy: PRODUCT_POLICY,
+      provenance: null,
     };
   }
 
@@ -116,39 +136,48 @@ export async function compilePrompt(
   const actorState = actor.type === 'character'
     ? await renderCharacterState(db, actor.id)
     : '';
-  const relationship = await renderRelationship(db, actor.id);
+  const narrative = await readPromptNarrative(db, audience);
   const memories = await renderMemories(db, {
     actorId: actor.id,
-    conversationId: input.conversationId,
-    budget,
+    audience,
+    budget: input.budgetChars ?? 32_000,
   });
-  const burst = await renderBurst(db, input.conversationId, input.burstId);
-  const recentEvents = await renderRecentEvents(db, input.conversationId);
-  const socialContext = await renderSocialContext(db, input.conversationId, actor.id);
-  const capabilities = await renderCapabilities(
-    db,
-    actor.templateId,
-    input.conversationId,
-  );
+  const burst = await renderBurst(db, audience, input.burstId);
+  const recent = await renderRecentEvents(db, audience);
+  const socialContext = renderSocialContext(audience, actor.id);
+  const capabilities = await renderCapabilities(db, actor.templateId, audience);
+  const source = input.burstId ? await readMemorySource(db, audience, input.burstId) : null;
 
   return {
     persona,
     actorState,
-    relationship,
-    memories,
-    burst,
-    recentEvents,
+    relationship: audience.relationshipId
+      ? `# Relationship narratives\n\n## Relationship ${audience.relationshipId} (accepted)\n\n${narrative?.currentDynamic ?? '(no narrative yet)'}`
+      : '# Relationship narratives\n(none)',
+    memories: memories.text,
+    burst: burst.text,
+    recentEvents: recent.text,
     socialContext,
-    capabilities,
+    capabilities: capabilities.text,
     outputSchema: OUTPUT_SCHEMA_HINT,
     productPolicy: PRODUCT_POLICY,
+    provenance: {
+      scope: capturePromptScope(audience, {
+        messageIds: [...new Set([...burst.messageIds, ...recent.messageIds])],
+        memoryIds: memories.memoryIds,
+        narrativeVersion: narrative?.version ?? null,
+        weatherDefault: capabilities.weatherDefault,
+      }),
+      source,
+      burstContents: burst.contents,
+    },
   };
 }
 
 /* ----------------------------- helpers --------------------------------- */
 
 async function renderPersona(
-  db: Database,
+  db: Reader,
   templateId: string,
 ): Promise<string> {
   const [tpl] = await db
@@ -172,7 +201,7 @@ async function renderPersona(
 }
 
 async function renderCharacterState(
-  db: Database,
+  db: Reader,
   actorId: string,
 ): Promise<string> {
   const [ch] = await db
@@ -190,353 +219,139 @@ async function renderCharacterState(
   ].join('\n');
 }
 
-async function renderRelationship(
-  db: Database,
-  actorId: string,
-): Promise<string> {
-  const rows = await db
-    .select()
-    .from(relationships)
-    .where(
-      sql`${relationships.actorAId} = ${actorId} OR ${relationships.actorBId} = ${actorId}`,
-    )
-    .limit(16);
-  if (rows.length === 0) return '# Relationship narratives\n(none)';
-  const sections: string[] = ['# Relationship narratives'];
-  for (const rel of rows) {
-    const [narrative] = await db
-      .select()
-      .from(relationshipNarratives)
-      .where(eq(relationshipNarratives.relationshipId, rel.id))
-      .orderBy(desc(relationshipNarratives.version))
-      .limit(1);
-    sections.push(`## Relationship ${rel.id} (${rel.state})`);
-    sections.push(
-      narrative
-        ? narrative.currentDynamic
-        : '(no narrative yet)',
-    );
-  }
-  return sections.join('\n\n');
-}
-
-/**
- * Conversation audience of a conversation minus the compiling actor:
- * active members only (§5: visibility is computed at delivery time).
- */
-async function conversationAudience(
-  db: Database,
-  conversationId: string,
-  actorId: string,
-): Promise<Array<{ actorId: string; type: string }>> {
-  const [conv] = await db
-    .select({ type: conversations.type })
-    .from(conversations)
-    .where(eq(conversations.id, conversationId))
-    .limit(1);
-  if (!conv) return [];
-  const members = await db
-    .select({ actorId: conversationMembers.actorId })
-    .from(conversationMembers)
-    .where(
-      and(
-        eq(conversationMembers.conversationId, conversationId),
-        eq(conversationMembers.status, 'active'),
-      ),
-    );
-  return members
-    .filter((m) => m.actorId !== actorId)
-    .map((m) => ({ actorId: m.actorId, type: conv.type }));
-}
-
-/**
- * Memory authorization per DOMAIN_ARCHITECTURE §5 ("Memory"):
- * a prompt may include a memory only when
- *   1. the requesting character owns it, OR an explicit `memory_grants`
- *      row authorizes the requesting actor as a grantee (unexpired;
- *      every grant permission level implies at least "know"),
- *   2. the target conversation's audience is compatible with the
- *      share policy,
- *   3. the source data has not been deleted or superseded.
- * Everything else stays fail-closed: no grant row → the memory never
- * enters the grantee's prompt, exactly like an unauthorized one.
- *
- * A relationship-scoped private memory may enter only a 1:1
- * conversation (direct or hidden_ai_direct) whose sole other active
- * member is that relationship's counterpart, and only while the
- * relationship is still accepted (a block invalidates access).
- * `shared`/`public`/`reported`/`native_world` memories may enter any
- * conversation the owner participates in, subject to explicit
- * share-policy overrides:
- *   - sharePolicy.conversationIds: allow-list (when non-empty)
- *   - sharePolicy.excludeConversationIds: deny-list
- */
+/** Authorize facts for the response model and everyone who will hear it. */
 export async function isMemoryPermittedInConversation(
   db: Database,
-  input: {
-    memory: typeof memoryItems.$inferSelect;
-    conversationId: string;
-  },
+  input: { memory: typeof memoryItems.$inferSelect; conversationId: string },
 ): Promise<boolean> {
-  const { memory, conversationId } = input;
-  const [conv] = await db
-    .select({ type: conversations.type })
-    .from(conversations)
-    .where(eq(conversations.id, conversationId))
-    .limit(1);
-  if (!conv) return false; // no real conversation, no permitted audience
-  if (memory.deletedAt !== null) return false;
-  if (memory.supersededById !== null) return false;
-
-  const share = (memory.sharePolicy ?? {}) as {
-    conversationIds?: unknown;
-    excludeConversationIds?: unknown;
-  };
-  const allowList = Array.isArray(share.conversationIds)
-    ? (share.conversationIds as unknown[]).filter(
-        (v): v is string => typeof v === 'string',
-      )
-    : [];
-  const denyList = Array.isArray(share.excludeConversationIds)
-    ? (share.excludeConversationIds as unknown[]).filter(
-        (v): v is string => typeof v === 'string',
-      )
-    : [];
-  if (denyList.includes(conversationId)) return false;
-  if (allowList.length > 0 && !allowList.includes(conversationId)) {
-    return false;
-  }
-
-  if (memory.type !== 'private') return true;
-  if (!memory.relationshipId) {
-    // The owner's own inner memory: owner-wide knowledge.
-    return true;
-  }
-  const [rel] = await db
-    .select({
-      actorAId: relationships.actorAId,
-      actorBId: relationships.actorBId,
-      state: relationships.state,
-    })
-    .from(relationships)
-    .where(eq(relationships.id, memory.relationshipId))
-    .limit(1);
-  if (!rel || rel.state !== 'accepted') return false;
-
-  const audience = await conversationAudience(
-    db,
-    conversationId,
-    memory.ownerActorId,
-  );
-  if (audience.length !== 1) return false; // group or empty: no private leak
-  if (conv.type !== 'direct' && conv.type !== 'hidden_ai_direct') return false;
-  const counterpart =
-    rel.actorAId === memory.ownerActorId ? rel.actorBId : rel.actorAId;
-  return audience[0]!.actorId === counterpart;
+  const audience = await readPromptAudience(db, input.conversationId);
+  return audience !== null && memoryAuthorizer(db, audience)(input.memory, input.memory.ownerActorId);
 }
 
 async function renderMemories(
-  db: Database,
-  input: { actorId: string; conversationId: string; budget: number },
-): Promise<string> {
-  const owned = await db
-    .select()
-    .from(memoryItems)
-    .where(eq(memoryItems.ownerActorId, input.actorId))
+  db: Reader,
+  input: { actorId: string; audience: PromptAudience; budget: number },
+) {
+  const owned = await db.select().from(memoryItems)
+    .where(and(eq(memoryItems.ownerActorId, input.actorId), isNull(memoryItems.deletedAt), isNull(memoryItems.supersededById)))
+    .orderBy(desc(memoryItems.createdAt))
     .limit(64);
 
-  // Grant-recipient path: memories explicitly granted to this actor by
-  // another actor. The grant row alone is not sufficient — every entry
-  // still passes isMemoryPermittedInConversation (deleted/superseded/
-  // share-policy/private-branch checks) and expired grants are dropped,
-  // so the path remains fail-closed while authorized memories become
-  // visible to the grantee's prompt.
-  const grantedRows = await db
-    .select({ memory: memoryItems, expiresAt: memoryGrants.expiresAt })
+  const granted = await db.select({ memory: memoryItems })
     .from(memoryGrants)
     .innerJoin(memoryItems, eq(memoryItems.id, memoryGrants.memoryId))
-    .where(eq(memoryGrants.granteeActorId, input.actorId))
+    .where(and(eq(memoryGrants.granteeActorId, input.actorId), isNull(memoryItems.deletedAt), isNull(memoryItems.supersededById)))
+    .orderBy(desc(memoryItems.createdAt))
     .limit(64);
 
-  const now = Date.now();
-  const byId = new Map<
-    string,
-    { memory: typeof memoryItems.$inferSelect; grantedBy: string | null }
-  >();
-  for (const m of owned) byId.set(m.id, { memory: m, grantedBy: null });
-  for (const row of grantedRows) {
-    if (byId.has(row.memory.id)) continue; // owner view already included
-    if (row.expiresAt && row.expiresAt.getTime() <= now) continue;
-    byId.set(row.memory.id, {
-      memory: row.memory,
-      grantedBy: row.memory.ownerActorId,
-    });
-  }
+  const candidates = new Map(owned.map((memory) => [memory.id, memory]));
+  for (const { memory } of granted) candidates.set(memory.id, memory);
 
-  const out: string[] = ['# Permitted memories (with provenance)'];
+  const out = ['# Permitted memories (with provenance)'];
+  const memoryIds: string[] = [];
+  const authorize = memoryAuthorizer(db, input.audience);
   let used = 0;
-  for (const entry of byId.values()) {
-    const m = entry.memory;
-    if (
-      !(await isMemoryPermittedInConversation(db, {
-        memory: m,
-        conversationId: input.conversationId,
-      }))
-    ) {
-      continue;
-    }
-    const provenance = entry.grantedBy
-      ? `source_event=${m.sourceEventId} granted_by=${entry.grantedBy}`
+  for (const m of candidates.values()) {
+    if (!(await authorize(m, input.actorId))) continue;
+    const provenance = m.ownerActorId !== input.actorId
+      ? `source_event=${m.sourceEventId} granted_by=${m.ownerActorId}`
       : m.sourceActorId
         ? `source_event=${m.sourceEventId} via=${m.sourceActorId}`
         : `source_event=${m.sourceEventId}`;
     const line = `- [${m.type}/${m.confidence}] ${m.objectiveFact} — ${m.subjectiveInterpretation} (provenance: ${provenance})`;
     if (used + line.length > input.budget) break;
     out.push(line);
+    memoryIds.push(m.id);
     used += line.length;
   }
-  return out.join('\n');
+  return { text: out.join('\n'), memoryIds };
 }
 
-async function renderBurst(
-  db: Database,
-  conversationId: string,
-  burstId: string,
-): Promise<string> {
-  if (!burstId) return '';
-  const rows = await db
+async function renderBurst(db: Reader, audience: PromptAudience, burstId: string) {
+  const rows = burstId ? await db
     .select({
-      sequence: messages.sequence,
+      id: messages.id,
       sender: actors.publicName,
       senderType: actors.type,
       content: messages.content,
     })
     .from(messages)
     .innerJoin(actors, eq(actors.id, messages.senderActorId))
-    .where(
-      and(
-        eq(messages.conversationId, conversationId),
-        eq(messages.burstId, burstId),
-      ),
-    )
-    .orderBy(asc(messages.sequence));
-  if (rows.length === 0) return '';
-  const lines = rows.map(
-    (r) => `${r.sender} (${r.senderType}): ${r.content}`,
-  );
-  return `# Current conversation burst
-${lines.join('\n')}`;
+    .where(and(visiblePromptMessages(audience), eq(messages.burstId, burstId)))
+    .orderBy(asc(messages.sequence)) : [];
+  const lines = rows.map((r) => `${r.sender} (${r.senderType}): ${r.content}`);
+  return {
+    text: rows.length ? `# Current conversation burst\n${lines.join('\n')}` : '',
+    messageIds: rows.map((r) => r.id),
+    contents: rows.map((r) => r.content),
+  };
 }
 
-async function renderRecentEvents(
-  db: Database,
-  conversationId: string,
-): Promise<string> {
+async function renderRecentEvents(db: Reader, audience: PromptAudience) {
   const rows = await db
     .select({
+      id: messages.id,
       sequence: messages.sequence,
       sender: actors.publicName,
       content: messages.content,
     })
     .from(messages)
     .innerJoin(actors, eq(actors.id, messages.senderActorId))
-    .where(eq(messages.conversationId, conversationId))
+    .where(visiblePromptMessages(audience))
     .orderBy(desc(messages.sequence))
     .limit(20);
-  if (rows.length === 0) return '';
-  const lines = rows
-    .reverse()
-    .map((r) => `seq${r.sequence} ${r.sender}: ${r.content}`);
-  return `# Recent conversation events (oldest first)\n${lines.join('\n')}`;
+  const lines = rows.reverse().map((r) => `seq${r.sequence} ${r.sender}: ${r.content}`);
+  return {
+    text: rows.length ? `# Recent conversation events (oldest first)\n${lines.join('\n')}` : '',
+    messageIds: rows.map((r) => r.id),
+  };
 }
 
-async function renderSocialContext(
-  db: Database,
-  conversationId: string,
-  actorId: string,
-): Promise<string> {
-  const members = await db
-    .select({ id: actors.id, name: actors.publicName, type: actors.type })
-    .from(conversationMembers)
-    .innerJoin(actors, eq(conversationMembers.actorId, actors.id))
-    .where(eq(conversationMembers.conversationId, conversationId));
-  const filtered = members.filter((m) => m.id !== actorId);
+function renderSocialContext(audience: PromptAudience, actorId: string): string {
+  const others = audience.members.filter((m) => m.id !== actorId);
   return [
-    `# Social context`,
-    `Visible actors in conversation: ${filtered
-      .map((m) => `${m.name} (${m.type})`)
-      .join(', ')}`,
+    '# Social context',
+    `Visible actors in conversation: ${others.map((m) => `${m.name} (${m.type})`).join(', ')}`,
   ].join('\n');
 }
 
-/**
- * Weather authorization for a conversation (WEB_IMPLEMENTATION §19).
- *
- * Consent is a user gesture performed by a human, so the capability is
- * enabled for a conversation only when one of its active human members
- * has recorded weather consent; that member's stored default city is the
- * fallback when a tool request names none. Fail-closed: no consent row →
- * `authorized: false`, and the runtime must neither execute the tool nor
- * let the model fabricate data.
- */
-export async function resolveWeatherState(
-  db: Database,
-  conversationId: string,
-): Promise<{ authorized: boolean; defaultCity: string | null; humanActorId: string | null }> {
-  const humans = await db
-    .select({ actorId: conversationMembers.actorId })
-    .from(conversationMembers)
-    .innerJoin(actors, eq(actors.id, conversationMembers.actorId))
-    .where(
-      and(
-        eq(conversationMembers.conversationId, conversationId),
-        eq(conversationMembers.status, 'active'),
-        eq(actors.type, 'human'),
-      ),
-    );
-  if (humans.length === 0) {
-    return { authorized: false, defaultCity: null, humanActorId: null };
-  }
-  const settingsRows = await db
-    .select()
-    .from(actorCapabilitySettings)
-    .where(
-      inArray(
-        actorCapabilitySettings.actorId,
-        humans.map((h) => h.actorId),
-      ),
-    );
-  // Prefer a consenting member's defaults; fall back to the first human
-  // so audit rows always name the user the tool would act for.
-  const consented =
-    settingsRows.find((s) => s.weatherConsentAt != null) ?? null;
-  if (!consented) {
-    return {
-      authorized: false,
-      defaultCity: null,
-      humanActorId: humans[0]!.actorId,
-    };
-  }
+/** The saved city is private to the human's direct chat. */
+export async function resolveWeatherState(db: Database, conversationId: string) {
+  return weatherForAudience(db, await readPromptAudience(db, conversationId));
+}
+
+async function weatherForAudience(db: Reader, audience: PromptAudience | null) {
+  const humanIds = audience?.members.filter((m) => m.type === 'human').map((m) => m.id) ?? [];
+  const settings = humanIds.length > 0
+    ? await db.select().from(actorCapabilitySettings)
+      .where(inArray(actorCapabilitySettings.actorId, humanIds)).orderBy(actorCapabilitySettings.actorId)
+    : [];
+  const consent = settings.find((row) => row.weatherConsentAt);
+  const privateDefault = audience?.type === 'direct' && humanIds.length === 1 ? consent : undefined;
   return {
-    authorized: true,
-    defaultCity: consented.weatherCity ?? null,
-    humanActorId: consented.actorId,
+    authorized: consent !== undefined,
+    defaultCity: privateDefault?.weatherCity ?? null,
+    humanActorId: consent?.actorId ?? humanIds[0] ?? null,
+    requiresExplicitCity: audience?.type === 'group' || humanIds.length > 1,
+    weatherDefault: privateDefault?.weatherCity
+      ? { actorId: privateDefault.actorId, settingsVersion: privateDefault.updatedAt.toISOString() }
+      : null,
   };
 }
 
 async function renderCapabilities(
-  db: Database,
+  db: Reader,
   templateId: string | null,
-  conversationId: string,
-): Promise<string> {
-  if (!templateId) return '# Capabilities\n(none)';
+  audience: PromptAudience,
+) {
+  if (!templateId) return { text: '# Capabilities\n(none)', weatherDefault: null };
   const [tpl] = await db
     .select({ capabilities: personaTemplates.capabilities })
     .from(personaTemplates)
     .where(eq(personaTemplates.id, templateId))
     .limit(1);
   const caps = (tpl?.capabilities as string[] | undefined) ?? [];
-  if (caps.length === 0) return '# Capabilities\n(none)';
+  if (caps.length === 0) return { text: '# Capabilities\n(none)', weatherDefault: null };
 
   const lines: string[] = [
     '# Capabilities',
@@ -547,13 +362,15 @@ the tool and returns the real result before your final answer. Never invent
 tool data, and never tell the user to check an external app for something a
 capability can provide.`,
   ];
+  let weatherDefault: GeneratedScope['weatherDefault'] = null;
   if (caps.includes('weather')) {
-    const weather = await resolveWeatherState(db, conversationId);
+    const weather = await weatherForAudience(db, audience);
+    weatherDefault = weather.weatherDefault;
     lines.push(
       weather.authorized
-        ? `- weather: ENABLED${weather.defaultCity ? ` (user default city: ${weather.defaultCity})` : ''}. When the user asks about weather, request it with arguments {"city": "<city>"}; use their default city when they do not name one.`
+        ? `- weather: ENABLED${weather.defaultCity ? ` (user default city: ${weather.defaultCity})` : ''}. Request it with arguments {"city": "<city>"}.${weather.requiresExplicitCity ? ' Ask for a city if the conversation does not name one.' : ' Use the user default when available.'}`
         : '- weather: NOT ENABLED by the user yet. Do not request it. When the user asks about weather, stay in character and warmly invite them to enable the weather capability in this app\'s settings (and to tell you their default city). Never claim you know nothing at all, never send them to a system weather app, and never make up weather data.',
     );
   }
-  return lines.join('\n');
+  return { text: lines.join('\n'), weatherDefault };
 }
