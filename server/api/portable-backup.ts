@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
-import type { FastifyInstance, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Database } from '../../db/index.js';
 import { accounts, accountPortableBackups, conversations, conversationMembers, messages } from '../../db/schema.js';
 import {
@@ -18,20 +18,51 @@ function guardSize(document: string) {
   if (Buffer.byteLength(document) > MAX_PORTABLE_BACKUP_BYTES) invalid();
 }
 
+const MAX_STRUCTURE_TOKENS = 100000;
+const MAX_DEPTH = 64;
+
+type WorkBudget = { remaining: number };
+
+// Count only structural tokens before allocating decoded values. Strings
+// (including escaped quotes) are a linear scan over the original text.
+function parseWithBudget(text: string, budget: WorkBudget, maxDepth = MAX_DEPTH): unknown {
+  let depth = 0;
+  let quoted = false;
+  let escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const char = text.charCodeAt(i);
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (char === 92) escaped = true; // backslash
+      else if (char === 34) quoted = false; // quote
+      continue;
+    }
+    if (char === 34) quoted = true;
+    else if (char === 123 || char === 91) { // { [
+      if (++depth > maxDepth) invalid();
+    } else if (char === 125 || char === 93) { // } ]
+      if (--depth < 0) invalid();
+    }
+    if ((char === 123 || char === 91 || char === 44 || char === 58) && --budget.remaining < 0) invalid();
+  }
+  if (depth !== 0 || quoted) invalid();
+  try { return JSON.parse(text) as unknown; } catch { invalid(); }
+}
+
 function validate(document: string) {
   guardSize(document);
-  let value: unknown;
-  try { value = JSON.parse(document); } catch { invalid(); }
+  const budget = { remaining: MAX_STRUCTURE_TOKENS };
+  const value = parseWithBudget(document, budget);
   const parsed = PortableBackupSchema.safeParse(value);
   if (!parsed.success) invalid();
   validateSafeMetadata(value);
   const data = parsed.data;
   for (const [key, entry] of Object.entries(data.localStorage)) {
     if (!/^chat-buddy[-:]/.test(key)) invalid();
-    validateStructuredString(entry);
+    validateStructuredString(entry, budget);
   }
   for (const row of data.indexedDB['chat-buddy-main']?.kv ?? []) {
-    validateStructuredString(row.value);
+    validateStructuredString(row.value, budget);
   }
   for (const keys of [
     data.indexedDB['chat-buddy-main']?.kv.map(record => record.key),
@@ -67,31 +98,26 @@ function validate(document: string) {
   return data;
 }
 
-function validateStructuredString(value: unknown) {
+function validateStructuredString(value: unknown, budget: WorkBudget) {
   if (typeof value !== 'string') return;
   const text = value.trimStart();
   if (!text.startsWith('{') && !text.startsWith('[')) return;
-  let decoded: unknown;
-  try { decoded = JSON.parse(value); } catch { return; }
-  validateSafeMetadata(decoded);
+  // Structured legacy state must be valid JSON, not an obfuscated container.
+  validateSafeMetadata(parseWithBudget(text, budget));
 }
 
-// Fail closed rather than silently modifying a transfer. Old local backup
-// formats with inline credentials can still be kept outside the cloud.
+// Depth is already bounded by the lexical preflight. DFS holds one branch,
+// rather than allocating an auxiliary queue for every archive node.
 function validateSafeMetadata(value: unknown) {
-  const queue = [value];
-  for (let i = 0; i < queue.length; i++) {
-    const next = queue[i];
-    if (next === null || typeof next !== 'object') continue;
-    if (Array.isArray(next)) {
-      for (const item of next) queue.push(item);
-      continue;
-    }
-    for (const [key, child] of Object.entries(next)) {
-      const normalized = key.toLowerCase().replace(/[^a-z]/g, '');
-      if (/(?:accesstoken|refreshtoken|sessionapikey|apikey|apisecret|authorization|appletokens?|applesubject|password|privatekey)$/.test(normalized)) invalid();
-      queue.push(child);
-    }
+  if (value === null || typeof value !== 'object') return;
+  if (Array.isArray(value)) {
+    for (const item of value) validateSafeMetadata(item);
+    return;
+  }
+  for (const key of Object.keys(value)) {
+    const normalized = key.toLowerCase().replace(/[^a-z]/g, '');
+    if (/(?:accesstoken|refreshtoken|sessionapikey|apikey|apisecret|authorization|appletokens?|applesubject|password|privatekey)$/.test(normalized)) invalid();
+    validateSafeMetadata((value as Record<string, unknown>)[key]);
   }
 }
 
@@ -103,6 +129,24 @@ function privateDownload(reply: FastifyReply, document: string) {
 }
 
 export function registerPortableBackupRoutes(app: FastifyInstance): void {
+  const writing = new Set<string>();
+  const admitted = new WeakMap<FastifyRequest, { accountId: string; timer: ReturnType<typeof setTimeout> }>();
+  const largeUploads = new Map<string, { bytes: number; until: number }>();
+
+  function finish(request: FastifyRequest) {
+    const slot = admitted.get(request);
+    if (slot) {
+      clearTimeout(slot.timer);
+      writing.delete(slot.accountId);
+    }
+    admitted.delete(request);
+  }
+
+  // Register this route family in a Fastify child scope. Parse its PUT body
+  // as bounded text so malicious envelope nesting never reaches JSON.parse.
+  app.removeContentTypeParser('application/json');
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_request, body, callback) => callback(null, body));
+
   app.get('/v1/account/backup', { preHandler: requireAuth }, async (request, reply) => {
     const accountId = request.requestContext.accountId;
     if (!accountId) throw new ApiError(ApiErrorCodes.Unauthorized, 'No account bound to session');
@@ -113,10 +157,45 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
     return privateDownload(reply, backup.document);
   });
 
-  app.put('/v1/account/backup', { preHandler: requireAuth, bodyLimit: MAX_PORTABLE_BACKUP_BYTES * 2 + 32 }, async request => {
-    const { accountId, actorId, socialGraphId } = request.requestContext;
+  app.put('/v1/account/backup', {
+    onRequest: [requireAuth, async (request, reply) => {
+      const accountId = request.requestContext.accountId;
+      if (!accountId) throw new ApiError(ApiErrorCodes.Unauthorized, 'No account bound to session');
+      if (writing.has(accountId) || writing.size >= 4) {
+        throw new ApiError(ApiErrorCodes.RateLimited, 'An archive upload is already in progress');
+      }
+      writing.add(accountId);
+      const timer = setTimeout(() => {
+        finish(request);
+        reply.hijack();
+        reply.raw.destroy();
+      }, 30_000);
+      timer.unref();
+      admitted.set(request, { accountId, timer });
+      reply.raw.once('close', () => finish(request));
+    }],
+    onResponse: async request => finish(request),
+    onRequestAbort: async request => finish(request),
+    bodyLimit: MAX_PORTABLE_BACKUP_BYTES * 2 + 32,
+  }, async request => {
+    const { accountId, actorId } = request.requestContext;
     if (!accountId) throw new ApiError(ApiErrorCodes.Unauthorized, 'No account bound to session');
-    const { document } = PortableBackupDocumentSchema.parse(request.body);
+    if (!admitted.has(request) || typeof request.body !== 'string') invalid();
+    // Bound the work on large submissions, including invalid ones. Small
+    // interactive files are already protected by lexical/node work caps.
+    const bytes = Buffer.byteLength(request.body);
+    if (bytes > 128 * 1024) {
+      const now = Date.now();
+      for (const [key, state] of largeUploads) if (state.until <= now) largeUploads.delete(key);
+      const state = largeUploads.get(accountId) ?? { bytes: 0, until: now + 10000 };
+      if (state.bytes + bytes > MAX_PORTABLE_BACKUP_BYTES * 6 ||
+        (!largeUploads.has(accountId) && largeUploads.size >= 1024)) {
+        throw new ApiError(ApiErrorCodes.RateLimited, 'Large backup upload budget exhausted');
+      }
+      state.bytes += bytes;
+      largeUploads.set(accountId, state);
+    }
+    const { document } = PortableBackupDocumentSchema.parse(parseWithBudget(request.body, { remaining: 12 }, 2));
     const data = validate(document);
     if (data.cloudAccount && (data.cloudAccount.accountId !== accountId || data.cloudAccount.actorId !== actorId)) {
       throw new ApiError(ApiErrorCodes.Forbidden, 'Backup is bound to a different account');
@@ -129,7 +208,7 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
       if (owner?.status !== 'active') throw new ApiError(ApiErrorCodes.Unauthorized, 'Account unavailable');
       // Imported cloud histories remain read-only and cannot claim authors or
       // conversations outside the bound user's actual graph and membership.
-      if (actorId && socialGraphId && data.cloudAccount) {
+      if (actorId && data.cloudAccount) {
         const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
         const archive = data.cloudAccount.conversations;
         for (let i = 0; i < archive.length; i += 256) {

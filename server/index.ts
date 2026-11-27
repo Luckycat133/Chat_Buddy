@@ -187,7 +187,7 @@ registerMemoryRoutes(app);
 registerProactiveRoutes(app);
 registerMomentRoutes(app);
 registerAccountRoutes(app);
-registerPortableBackupRoutes(app);
+await app.register(async (backup) => { registerPortableBackupRoutes(backup); });
 registerCapabilityRoutes(app);
 registerHiddenAiRoutes(app);
 registerSocialRoutes(app);

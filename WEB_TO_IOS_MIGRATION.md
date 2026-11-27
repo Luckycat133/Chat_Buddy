@@ -114,3 +114,8 @@ every present store before clear, and each individual store write rolls
 back atomically. A late runtime error can interrupt a multi-store local
 restore; keep the original backup. Only the server-owned archive replacement
 is covered by a single transaction.
+
+Account uploads also have JSON structure/depth budgets, one in-flight
+upload per account and four per server process, a bounded upload deadline,
+and rate limits for large documents. A rejected upload leaves the previous
+account archive unchanged.

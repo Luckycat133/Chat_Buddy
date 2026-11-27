@@ -102,6 +102,18 @@ it('round-trips the exact shared Web/iOS golden, scopes it to one account and ro
     expect((await upload(owner, JSON.stringify(raw))).statusCode).toBe(422);
     expect((await download(owner)).body).toBe(golden);
   }
+  // Tiny fixtures cross explicit validation boundaries without load tests.
+  const tooDeep = JSON.parse(golden);
+  tooDeep.localStorage['chat-buddy-meta'] = JSON.parse('['.repeat(65) + '0' + ']'.repeat(65));
+  const limited = await upload(owner, JSON.stringify(tooDeep));
+  expect(limited.statusCode).toBe(422);
+  expect((await download(owner)).body).toBe(golden);
+  const invalidEnvelope = await app.inject({
+    method: 'PUT', url: endpoint, headers: auth(owner),
+    payload: { document: golden, unwanted: { nested: true } },
+  });
+  expect(invalidEnvelope.statusCode).toBe(422);
+  expect((await download(owner)).body).toBe(golden);
   const untrusted = structuredClone(fixtureData);
   untrusted.cloudAccount!.conversations[0]!.messages[1]!.senderActorId = other.humanActorId;
   expect((await upload(owner, JSON.stringify(untrusted))).statusCode).toBe(403);
