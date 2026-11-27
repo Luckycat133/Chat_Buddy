@@ -1,6 +1,6 @@
-import { http, HttpResponse } from 'msw';
+import { HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { server } from '../../../test/msw/server';
+
 
 const mockConfig = {
   apiKey: 'test-api-key',
@@ -8,20 +8,31 @@ const mockConfig = {
   baseUrl: 'https://mock.api',
 };
 
-vi.mock('../../../services/api/aiClient', () => {
-  return {
-    getAIClient: () => ({
-      baseURL: 'https://mock.api',
-      post: async (endpoint, body) => {
-        return fetch('https://mock.api' + endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-      },
-    }),
-    getAIConfiguration: () => mockConfig,
-  };
+// Scope transport fixtures to this test module. No intercepted global fetch
+// or dangling MSW handler can affect another chat test.
+const { post, routes } = vi.hoisted(() => ({ post: vi.fn(), routes: [] }));
+const http = {
+  post: (pattern, handler) => ({ pattern, handler }),
+};
+const server = {
+  use: (...handlers) => routes.unshift(...handlers),
+};
+
+vi.mock('../../../services/api/aiClient', () => ({
+  getAIClient: () => ({ baseURL: 'https://mock.api', post }),
+  getAIConfiguration: () => mockConfig,
+}));
+
+beforeEach(() => {
+  routes.length = 0;
+  post.mockReset();
+  post.mockImplementation(async (endpoint, body) => {
+    const url = 'https://mock.api' + endpoint;
+    const route = routes.find(({ pattern }) => pattern.startsWith('*')
+      ? url.endsWith(pattern.slice(1)) : url === pattern);
+    if (!route) throw new Error('Unmatched fixture route: ' + url);
+    return route.handler({ request: { json: async () => JSON.parse(JSON.stringify(body)) } });
+  });
 });
 
 import {
@@ -142,14 +153,13 @@ describe('chatService.callAI', () => {
 
   it('test_when_network_throws_should_return_null', async () => {
     // Given
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('network fail'));
+    post.mockRejectedValueOnce(new Error('network fail'));
 
     // When
     const result = await callAI([{ role: 'user', content: 'hello' }], { agentId: 'ai-2' });
 
     // Then
     expect(result).toBeNull();
-    fetchSpy.mockRestore();
   });
 
   it('test_when_max_tokens_and_model_override_are_provided_should_keep_single_configured_model', async () => {
@@ -457,9 +467,7 @@ describe('chatService.callAI', () => {
         controller.close();
       },
     });
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
+    post.mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
 
     // When
     const result = await callAI(
@@ -471,7 +479,6 @@ describe('chatService.callAI', () => {
     expect(result).toBe('Hello world');
     expect(onStreamChunk).toHaveBeenNthCalledWith(1, 'Hello ', 'Hello ', expect.any(Object));
     expect(onStreamChunk).toHaveBeenNthCalledWith(2, 'world', 'Hello world', expect.any(Object));
-    fetchSpy.mockRestore();
   });
 
   it('test_when_streaming_sse_contains_only_tool_calls_should_return_native_tool_marker', async () => {
@@ -486,9 +493,7 @@ describe('chatService.callAI', () => {
         controller.close();
       },
     });
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
+    post.mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
 
     // When
     const result = await callAI([{ role: 'user', content: 'tool stream' }], { stream: true });
@@ -496,7 +501,6 @@ describe('chatService.callAI', () => {
     // Then
     expect(result).toContain('[TOOL_CALL_NATIVE:');
     expect(result).toContain('web_search');
-    fetchSpy.mockRestore();
   });
 
   it('test_when_streaming_sse_contains_malformed_frames_should_ignore_them_and_keep_valid_text', async () => {
@@ -512,16 +516,13 @@ describe('chatService.callAI', () => {
         controller.close();
       },
     });
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
+    post.mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
 
     // When
     const result = await callAI([{ role: 'user', content: 'mixed stream' }], { stream: true });
 
     // Then
     expect(result).toBe('still works');
-    fetchSpy.mockRestore();
   });
 
   it('test_when_streaming_answer_hits_length_should_preserve_partial_content', async () => {
@@ -536,14 +537,11 @@ describe('chatService.callAI', () => {
         controller.close();
       },
     });
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
+    post.mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
 
     const result = await callAI([{ role: 'user', content: 'stream long answer' }], { stream: true });
 
     expect(result).toBe('[RESPONSE_TRUNCATED]\nUseful partial');
-    fetchSpy.mockRestore();
   });
 
   it('test_when_streaming_content_is_a_reasoning_trace_should_hide_it', async () => {
@@ -559,9 +557,7 @@ describe('chatService.callAI', () => {
         controller.close();
       },
     });
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
+    post.mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
 
     const result = await callAI(
       [{ role: 'user', content: 'stream safely' }],
@@ -573,7 +569,6 @@ describe('chatService.callAI', () => {
       code: 'reasoning_only_response',
       finishReason: 'length',
     });
-    fetchSpy.mockRestore();
   });
 
   it('test_when_streaming_tool_arguments_arrive_in_fragments_should_reassemble_one_call', async () => {
@@ -588,23 +583,18 @@ describe('chatService.callAI', () => {
         controller.close();
       },
     });
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
+    post.mockResolvedValueOnce(new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } }));
 
     const result = await callAI([{ role: 'user', content: 'use math' }], { stream: true });
 
     expect(result).toContain('[TOOL_CALL_NATIVE:');
     expect(result).toContain('execute_math');
     expect(result).toContain('pi*12^2');
-    fetchSpy.mockRestore();
   });
 
   it('test_when_http_error_body_is_not_json_should_fallback_to_status_text_logging', async () => {
     // Given
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValueOnce(new Response('upstream exploded', { status: 500 }));
+    post.mockResolvedValueOnce(new Response('upstream exploded', { status: 500 }));
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // When
@@ -613,13 +603,12 @@ describe('chatService.callAI', () => {
     // Then
     expect(result).toBeNull();
     expect(errorSpy).toHaveBeenCalledWith('API Error:', 'HTTP 500', '(Agent: ai-9)');
-    fetchSpy.mockRestore();
     errorSpy.mockRestore();
   });
 
   it('test_when_network_throws_without_agent_id_should_log_empty_suffix_and_return_null', async () => {
     // Given
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('offline'));
+    post.mockRejectedValueOnce(new Error('offline'));
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     // When
@@ -628,7 +617,6 @@ describe('chatService.callAI', () => {
     // Then
     expect(result).toBeNull();
     expect(errorSpy).toHaveBeenCalledWith('API Call Failed:', expect.any(Error), '');
-    fetchSpy.mockRestore();
     errorSpy.mockRestore();
   });
 
