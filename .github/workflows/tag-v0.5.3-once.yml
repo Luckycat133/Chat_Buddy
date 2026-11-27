@@ -1,0 +1,33 @@
+name: Create Chat_Buddy v0.5.3 tag once
+on:
+  push:
+    branches: ['dots/tag-v0.5.3-once']
+    paths: ['.github/workflows/tag-v0.5.3-once.yml']
+permissions:
+  contents: write
+jobs:
+  exact-tag:
+    if: github.repository == 'Luckycat133/Chat_Buddy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Create precise tag without overwriting
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: 'v0.5.3'
+          TARGET: 'e64ded61e0a6b6770576aa366e10c075d307ebd4'
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "Luckycat133/Chat_Buddy"
+          test "$GITHUB_REF" = "refs/heads/dots/tag-v0.5.3-once"
+          test "$TAG" = "v0.5.3"
+          [[ "$TARGET" =~ ^[a-f0-9]{40}$ ]]
+          current="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/remake" --jq .object.sha)"
+          test "$current" = "$TARGET"
+          version="$(gh api "repos/$GITHUB_REPOSITORY/contents/package.json?ref=$TARGET" --jq .content | base64 --decode | jq -r .version)"
+          lock="$(gh api "repos/$GITHUB_REPOSITORY/contents/package-lock.json?ref=$TARGET" --jq .content | base64 --decode | jq -r ".version")"
+          test "$lock" = "$version"
+          test "v$version" = "$TAG"
+          created="$(gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$TAG" -f "sha=$TARGET" --jq .object.sha)"
+          test "$created" = "$TARGET"
