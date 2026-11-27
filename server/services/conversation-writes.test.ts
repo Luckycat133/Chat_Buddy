@@ -21,9 +21,10 @@ import { seedSocialGraph, type SeededGraph } from '../test/fixtures.js';
 import { closeTestDatabase, createTestDatabase, type TestDatabase } from '../test/pglite.js';
 import { runProactiveTick } from '../workers/proactive.js';
 
+import type * as ModelGateway from './model-gateway.js';
 const { model } = vi.hoisted(() => ({ model: vi.fn() }));
 vi.mock('./model-gateway.js', async (importOriginal) => ({
-  ...await importOriginal<typeof import('./model-gateway.js')>(),
+  ...await importOriginal<typeof ModelGateway>(),
   createChatCompletion: model,
 }));
 

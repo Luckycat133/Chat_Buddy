@@ -4,7 +4,6 @@ import { z } from 'zod';
 import type { Database } from '../../db/index.js';
 import {
   conversationMembers,
-  conversations,
   messageBursts,
   messages,
   worldEvents,
