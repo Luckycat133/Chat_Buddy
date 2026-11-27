@@ -1,0 +1,49 @@
+name: Publish v0.5.4 source release once
+on:
+  push:
+    branches: ['dots/publish-v0.5.4-once']
+    paths: ['.github/workflows/publish-v0.5.4-once.yml']
+permissions:
+  contents: write
+jobs:
+  publish-exact-release:
+    if: github.repository == 'Luckycat133/Chat_Buddy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Publish GitHub Release on verified existing tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: 'v0.5.4'
+          TARGET: '29c3a26d3183f8b912668e0ba38dccd142adc979'
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'Luckycat133/Chat_Buddy'
+          test "$GITHUB_REF" = 'refs/heads/dots/publish-v0.5.4-once'
+          [[ "$TAG" =~ ^v0\.[0-9]+\.[0-9]+$ ]]
+          test "$TAG" = 'v0.5.4'
+          ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq '.object.type + ":" + .object.sha')"
+          test "$ref" = "commit:$TARGET"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json tagName,isDraft,isPrerelease --jq '.tagName' >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite'
+            exit 1
+          fi
+          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
+          ## Changes
+          
+          Adds byte-identical Web v2 private backup import, preview and re-export for account-bound conversations and inline or reference-only attachments. Live history export follows account permissions and excludes hidden/deleted content. Includes transaction rollback and upload work limits.
+          
+          ## Scope
+          
+          Private archives are limited to 4 MiB. Import does not write to live conversations, restore credentials or change membership. This release publishes source archives; it is not a production deployment or a signed application build.
+          
+          ## Verification
+          
+          - [PR #56](https://github.com/Luckycat133/Chat_Buddy/pull/56)
+          - [CI](https://github.com/Luckycat133/Chat_Buddy/actions/runs/45993356498)
+          - [CodeQL Analysis](https://github.com/Luckycat133/Chat_Buddy/actions/runs/45993356522)
+          NOTES
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
+          receipt="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json tagName,isDraft,isPrerelease --jq '[.tagName,.isDraft,.isPrerelease] | @tsv')"
+          test "$receipt" = "$(printf '%s\tfalse\tfalse' "$TAG")"
