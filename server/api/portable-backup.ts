@@ -7,6 +7,8 @@ import {
   MAX_PORTABLE_BACKUP_BYTES, PortableAttachmentSchema, PortableBackupDocumentSchema, PortableBackupSchema,
   type PortableBackup,
 } from '../../shared/contracts/portable-backup.js';
+import { PortableMergeCommitSchema } from '../../shared/contracts/portable-backup.js';
+import { mergePrivateArchive } from '../services/portable-merge.js';
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 
@@ -130,6 +132,7 @@ function privateDownload(reply: FastifyReply, document: string) {
 
 export function registerPortableBackupRoutes(app: FastifyInstance): void {
   const writing = new Set<string>();
+  const merging = new Set<string>();
   const admitted = new WeakMap<FastifyRequest, { accountId: string; timer: ReturnType<typeof setTimeout>; processing: boolean }>();
   const largeUploads = new Map<string, { bytes: number; until: number }>();
 
@@ -150,6 +153,36 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
   // as bounded text so malicious envelope nesting never reaches JSON.parse.
   app.removeContentTypeParser('application/json');
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (_request, body, callback) => callback(null, body));
+
+  for (const mode of ['preview', 'commit'] as const) {
+    app.post(`/v1/account/backup/merge/${mode}`, { onRequest: requireAuth, bodyLimit: 1024 }, async (request, reply) => {
+      const { accountId, actorId, socialGraphId } = request.requestContext;
+      if (!accountId || !actorId || !socialGraphId) throw new ApiError(ApiErrorCodes.Unauthorized, 'No account actor');
+      const parsed = typeof request.body === 'string' ? parseWithBudget(request.body, { remaining: 12 }, 2) : null;
+      let token: string | undefined;
+      if (mode === 'commit') {
+        const result = PortableMergeCommitSchema.safeParse(parsed);
+        if (!result.success) invalid();
+        token = result.data.previewToken;
+      } else if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || Object.keys(parsed).length !== 0) invalid();
+      reply.header('cache-control', 'private, no-store');
+      if (merging.size >= 4 || merging.has(accountId)) {
+        throw new ApiError(ApiErrorCodes.RateLimited, 'An archive merge request is already in progress.');
+      }
+      merging.add(accountId);
+      try {
+        return await mergePrivateArchive(request.server.db as Database, { accountId, actorId, socialGraphId }, validate, token);
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        // Drizzle driver exceptions can embed SQL bindings with private chat
+        // contents and attachment bytes. Keep both response and logs generic.
+        request.log.warn({ mode }, 'private archive merge transaction failed');
+        throw new ApiError(ApiErrorCodes.Internal, 'Private archive merge did not complete');
+      } finally {
+        merging.delete(accountId);
+      }
+    });
+  }
 
   app.get('/v1/account/backup', { preHandler: requireAuth }, async (request, reply) => {
     const accountId = request.requestContext.accountId;

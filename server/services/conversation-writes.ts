@@ -6,7 +6,7 @@ import { newId } from '../../shared/contracts/ids.js';
 export type ConversationWriteTransaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 type Conversation = typeof conversations.$inferSelect;
 
-function conversationAdvisoryKey(conversationId: string): string {
+export function conversationAdvisoryKey(conversationId: string): string {
   const value = BigInt(`0x${conversationId.replace(/-/g, '')}`);
   return (value & ((1n << 63n) - 1n)).toString();
 }

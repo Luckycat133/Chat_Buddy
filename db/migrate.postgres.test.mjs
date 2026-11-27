@@ -76,10 +76,11 @@ async function assertLatest(client) {
   const [checkpoint] = await client`select
     to_regclass('public.push_delivery_attempts') is not null as delivery_table,
     to_regclass('public.actor_reports_graph_idx') is not null as report_index,
+    to_regclass('public.account_portable_merge_quotas') is not null as archive_quota_table,
     to_regclass('public.contact_invites_creator_idx') is not null as existing_invite_index,
     (select count(*)::int from information_schema.columns where table_schema = 'public'
       and table_name = 'sessions' and column_name in ('access_token_hash', 'user_agent', 'last_seen_at')) as session_fields`;
-  assert.deepEqual({ ...checkpoint }, { delivery_table: true, report_index: true, existing_invite_index: true, session_fields: 3 });
+  assert.deepEqual({ ...checkpoint }, { delivery_table: true, report_index: true, archive_quota_table: true, existing_invite_index: true, session_fields: 3 });
   assert.equal((await receipts(client)).length, history.length);
 }
 

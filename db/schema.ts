@@ -172,6 +172,20 @@ export const accountPortableBackups = pgTable('account_portable_backups', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, table => [check('portable_backup_payload_size', sql`octet_length(${table.document}) <= 4194304`)]);
 
+export const accountPortableMergeQuotas = pgTable('account_portable_merge_quotas', {
+  accountId: uuid('account_id').primaryKey().references(() => accounts.id, { onDelete: 'cascade' }),
+  lifetimeRows: integer('lifetime_rows').notNull(),
+  lifetimeBytes: integer('lifetime_bytes').notNull(),
+  windowStartedAt: timestamp('window_started_at', { withTimezone: true }).notNull(),
+  windowRows: integer('window_rows').notNull(),
+  windowBytes: integer('window_bytes').notNull(),
+  windowCommits: integer('window_commits').notNull(),
+}, table => [
+  check('portable_merge_quota_nonnegative', sql`
+    ${table.lifetimeRows} >= 0 AND ${table.lifetimeBytes} >= 0 AND
+    ${table.windowRows} >= 0 AND ${table.windowBytes} >= 0 AND ${table.windowCommits} >= 0`),
+]);
+
 export const sessions = pgTable(
   'sessions',
   {

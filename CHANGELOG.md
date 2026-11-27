@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.5] - 2026-11-27
+
+- Add preview and explicit confirmation for private cloud archive merges. Append only missing supported messages and attachments authored by you, without replacing online messages, permissions, memberships, shared conversations or the original archive.
+
 ## [0.5.4] - 2026-11-27
 
 ### Added

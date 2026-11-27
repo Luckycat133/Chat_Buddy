@@ -47,3 +47,20 @@ export const PortableBackupDocumentSchema = z.object({ document: z.string().max(
 export const PortableBackupReceiptSchema = z.object({
   sha256: z.string().regex(/^[0-9a-f]{64}$/), updated: z.boolean(),
 }).strict();
+
+const mergeStats = z.object({
+  insert: z.number().int().nonnegative(), skip: z.number().int().nonnegative(), conflict: z.number().int().nonnegative(),
+}).strict();
+export const PortableMergeReceiptSchema = z.object({
+  archiveSha256: z.string().regex(/^[0-9a-f]{64}$/),
+  counts: z.object({ conversations: mergeStats, messages: mergeStats, attachments: mergeStats }).strict(),
+  conflicts: z.object({ conversations: z.array(id).max(50), messages: z.array(id).max(50), attachments: z.array(id).max(50) }).strict().optional(),
+}).strict();
+export const PortableMergePreviewSchema = PortableMergeReceiptSchema.extend({
+  previewToken: z.string().min(1).max(512),
+});
+export const PortableMergeResultSchema = PortableMergeReceiptSchema.extend({
+  affectedConversationIds: z.array(z.string().uuid()).max(100),
+  affectedConversationStarts: z.record(z.string().uuid(), z.number().int().positive()),
+});
+export const PortableMergeCommitSchema = z.object({ previewToken: z.string().min(1).max(512), confirm: z.literal(true) }).strict();
