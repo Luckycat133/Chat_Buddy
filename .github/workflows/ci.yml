@@ -102,6 +102,7 @@ jobs:
         run: npm run db:seed
       - name: Build web app for preview server
         env:
+          VITE_USE_CLOUD: 'true'
           VITE_CLOUD_BASE_URL: 'http://127.0.0.1:8080'
         run: npm run build
       - name: Compile server
