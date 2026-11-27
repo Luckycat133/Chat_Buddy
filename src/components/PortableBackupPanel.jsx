@@ -53,16 +53,20 @@ export function PortableBackupPanel({ chinese }) {
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState(null);
     const fileRef = useRef(null);
+    const accountEpoch = useRef(0);
     useEffect(() => {
-        const reset = () => { setStored(null); setSelection(null); setError(null); resetMerge(); };
+        const reset = () => { ++accountEpoch.current; setBusy(false); setStored(null); setSelection(null); setError(null); resetMerge(); };
         window.addEventListener(cloudAccountChangedEvent, reset);
         return () => window.removeEventListener(cloudAccountChangedEvent, reset);
     }, []);
     const run = async (operation) => {
+        const epoch = accountEpoch.current;
+        const current = () => epoch === accountEpoch.current;
+        const ensureCurrent = () => { if (!current()) throw Error('The signed-in account changed'); };
         setBusy(true);
         setError(null);
-        try { await operation(); } catch (err) { setError(err.message); }
-        finally { setBusy(false); }
+        try { await operation(ensureCurrent); } catch (err) { if (current()) setError(err.message); }
+        finally { if (current()) setBusy(false); }
     };
     const pick = (event) => {
         const file = event.target.files?.[0];
@@ -70,42 +74,46 @@ export function PortableBackupPanel({ chinese }) {
         setSelection(null);
         resetMerge();
         if (!file) return;
-        void run(async () => {
+        void run(async (ensureCurrent) => {
             if (file.size > MAX_PORTABLE_BACKUP_BYTES) throw Error('Backup exceeds 4 MiB');
             const document = await file.text();
             const data = parsePortableBackup(document);
+            ensureCurrent();
             setSelection({ document, data });
         });
     };
     return <section className="settings-group" aria-label={label('跨端账号备份', 'Portable account backup')}>
         <p>{label('备份与当前帐号绑定。导入会替换已保存的备份，但不会修改在线聊天、成员身份或权限。附件不可用时保留引用。单个文件最多 4 MiB。', 'A backup is bound to your current account. Import replaces the saved backup, not live conversations, members or permissions. Unavailable attachments retain their references. Maximum 4 MiB.')}</p>
-        <button type="button" disabled={busy} onClick={() => void run(async () => {
+        <button type="button" disabled={busy} onClick={() => void run(async (ensureCurrent) => {
             const { data } = await readPortableBackup('live');
             const local = await buildWebV2Backup({ requireComplete: true });
             const document = JSON.stringify({ ...local, cloudAccount: data.cloudAccount, ...(data.attachments ? { attachments: data.attachments } : {}) });
             parsePortableBackup(document);
+            ensureCurrent();
             download(document);
         })}>{label('导出当前账号与本机备份', 'Export current account and browser data')}</button>
         <button type="button" disabled={busy} onClick={() => fileRef.current?.click()}>{label('选择 Web v2 备份', 'Select a Web v2 backup')}</button>
         <input hidden ref={fileRef} type="file" accept=".json,application/json" onChange={pick} />
-        {selection && <button type="button" disabled={busy} onClick={() => void run(async () => {
+        {selection && <button type="button" disabled={busy} onClick={() => void run(async (ensureCurrent) => {
             resetMerge();
             await restorePortableBackup(selection.document);
             const reread = await readPortableBackup('stored');
             if (reread.document !== selection.document) throw Error('The stored backup does not match this file');
+            ensureCurrent();
             setStored(reread);
             setSelection(null);
         })}>{label('导入并替换已保存的备份', 'Import and replace saved backup')}</button>}
-        <button type="button" disabled={busy} onClick={() => void run(async () => { resetMerge(); setStored(await readPortableBackup('stored')); })}>{label('读取已导入备份', 'Open imported backup')}</button>
+        <button type="button" disabled={busy} onClick={() => void run(async (ensureCurrent) => { resetMerge(); const archive = await readPortableBackup('stored'); ensureCurrent(); setStored(archive); })}>{label('读取已导入备份', 'Open imported backup')}</button>
         {stored && <>
             <button type="button" onClick={() => download(stored.document)}>{label('原样重新导出', 'Re-export original backup')}</button>
             <p>{label('合并只补入你自己发送的受支持消息。共享、已删除或找不到的会话以及有冲突的内容不会修改。本机数据和权限不变。', 'Merge only adds supported messages you sent in private conversations without another human participant. Shared, deleted or unavailable conversations and conflicts are unchanged. Browser data and permissions are unchanged.')}</p>
-            <button type="button" disabled={busy} onClick={() => void run(async () => {
+            <button type="button" disabled={busy} onClick={() => void run(async (ensureCurrent) => {
                 resetMerge();
                 const preview = await requestPortableMerge();
                 if (preview.archiveSha256 !== await portableArchiveHash(stored.document)) {
                     throw Error(label('已存档案已变更，请重新打开。', 'The stored archive changed. Open it again.'));
                 }
+                ensureCurrent();
                 setMerge(preview);
             })}>{label('预览在线合并', 'Preview online merge')}</button>
             {merge && <section aria-label={label('合并差异', 'Merge differences')}>
@@ -120,10 +128,10 @@ export function PortableBackupPanel({ chinese }) {
                     <label><input type="checkbox" checked={confirmed} disabled={busy} onChange={event => setConfirmed(event.target.checked)} />
                         {label('我确认将预览中的新增消息写入在线会话。', 'I confirm adding the previewed messages to live conversations.')}
                     </label>
-                    <button type="button" disabled={busy || !confirmed} onClick={() => void run(async () => {
-                        try { setResult(await requestPortableMerge(merge.previewToken)); }
-                        catch (err) { if (err instanceof StaleMergePreviewError) throw Error(label('预览已过期或数据已更改，请重新预览。', 'Preview expired or data changed. Preview again.')); throw err; }
-                        finally { setMerge(null); setConfirmed(false); }
+                    <button type="button" disabled={busy || !confirmed} onClick={() => void run(async (ensureCurrent) => {
+                        try { const receipt = await requestPortableMerge(merge.previewToken); ensureCurrent(); setResult(receipt); }
+                        catch (err) { if (err instanceof StaleMergePreviewError) throw Error(label('预览已过期或数据已更改，请重新预览。', 'Preview expired or data changed. Preview again.'), { cause: err }); throw err; }
+                        finally { ensureCurrent(); setMerge(null); setConfirmed(false); }
                     })}>{label('确认合并到在线会话', 'Confirm merge to live conversations')}</button>
                 </>}
             </section>}

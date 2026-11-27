@@ -132,6 +132,7 @@ function privateDownload(reply: FastifyReply, document: string) {
 
 export function registerPortableBackupRoutes(app: FastifyInstance): void {
   const writing = new Set<string>();
+  const merging = new Set<string>();
   const admitted = new WeakMap<FastifyRequest, { accountId: string; timer: ReturnType<typeof setTimeout>; processing: boolean }>();
   const largeUploads = new Map<string, { bytes: number; until: number }>();
 
@@ -165,7 +166,15 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
         token = result.data.previewToken;
       } else if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || Object.keys(parsed).length !== 0) invalid();
       reply.header('cache-control', 'private, no-store');
-      return mergePrivateArchive(request.server.db as Database, { accountId, actorId, socialGraphId }, validate, token);
+      if (merging.size >= 4 || merging.has(accountId)) {
+        throw new ApiError(ApiErrorCodes.RateLimited, 'An archive merge request is already in progress.');
+      }
+      merging.add(accountId);
+      try {
+        return await mergePrivateArchive(request.server.db as Database, { accountId, actorId, socialGraphId }, validate, token);
+      } finally {
+        merging.delete(accountId);
+      }
     });
   }
 

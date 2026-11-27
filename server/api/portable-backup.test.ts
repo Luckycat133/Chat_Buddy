@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import type { Database } from '../../db/index.js';
-import { accountPortableBackups, accounts, actors, conversations, conversationMembers, messages } from '../../db/schema.js';
+import { accountPortableBackups, accounts, actors, conversations, conversationMembers, messages, worldEvents } from '../../db/schema.js';
 import { PortableBackupSchema, type PortableBackup } from '../../shared/contracts/portable-backup.js';
 import { issueTokens } from '../auth/session.js';
 import { resetServerEnvForTests } from '../config.js';
@@ -266,8 +266,10 @@ it('merges only private self-authored rows and rolls back a failed multi-message
   } finally {
     await fixture.pg.exec('DROP TRIGGER reject_archive_insert ON messages; DROP FUNCTION reject_archived_row();');
   }
+  const worldBefore = await db.select({ id: worldEvents.id }).from(worldEvents).where(eq(worldEvents.conversationId, privateId));
   const success = await write();
   expect(success.statusCode, success.body).toBe(200);
+  expect(await db.select({ id: worldEvents.id }).from(worldEvents).where(eq(worldEvents.conversationId, privateId))).toEqual(worldBefore);
   expect(success.json().affectedConversationStarts).toEqual({ [privateId]: 3 });
   const rows = await db.select().from(messages).where(eq(messages.conversationId, privateId));
   const recovered = rows.find(row => row.content === first.content);
@@ -275,7 +277,10 @@ it('merges only private self-authored rows and rolls back a failed multi-message
   expect(recovered?.id).not.toBe(first.id);
   expect(reply?.replyToMessageId).toBe(recovered?.id);
   expect(reply?.sequence).toBe(4);
-  expect(recovered?.structuredPayload).toEqual({ attachments: [fixtureData.attachments![0]] });
+  expect(recovered?.structuredPayload).toEqual({
+    attachments: [{ ...fixtureData.attachments![0], id: expect.stringMatching(/^backup:[0-9a-f]{64}$/) }],
+  });
+  expect(recovered?.structuredPayload).toEqual(reply?.structuredPayload);
   expect((await write()).statusCode).toBe(409);
   const again = (await post('preview', {})).json();
   expect(again.counts.messages).toEqual({ insert: 0, skip: 2, conflict: 7 });
