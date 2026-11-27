@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.5.3] - 2026-11-27
 
 ### Added
-- Shared Web/iOS portable preferences fixture for display and AI language, theme mode, blur and theme color.
+- Shared Web/iOS portable preferences fixture for display and AI language, theme mode, OLED mode and animation intensity.
 
 ### Fixed
 - Hosted CI now exercises all 25 Chromium acceptance cases and fails if the cloud API is unavailable.
