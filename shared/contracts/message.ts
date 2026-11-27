@@ -7,6 +7,8 @@ import {
   MessageStatus,
 } from './enums.js';
 
+export const MIRA_WELCOME_MESSAGE_KEY = 'mira-first-contact-v1';
+
 const isoDatetime = z.string().datetime();
 
 export const MessageSchema = z.object({

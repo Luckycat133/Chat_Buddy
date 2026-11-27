@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
 import {
@@ -7,6 +7,7 @@ import {
   characterActors,
   conversationMembers,
   conversations,
+  messages,
   personaTemplates,
   relationships,
   worldEvents,
@@ -14,7 +15,7 @@ import {
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 import { newId } from '../../shared/contracts/ids.js';
-import { actorGraphId } from '../services/graph.js';
+import { MIRA_WELCOME_MESSAGE_KEY } from '../../shared/contracts/message.js';
 
 /**
  * Mira onboarding state machine per DEMO_EXPERIENCE §4.
@@ -38,6 +39,8 @@ const ONBOARDING_STATES = [
 ] as const;
 type OnboardingState = (typeof ONBOARDING_STATES)[number];
 
+const WELCOME_COPY = 'Hi, I’m Mira. What would you like me to call you?';
+
 interface OnboardingSnapshot {
   state: OnboardingState;
   facts: Record<string, string>;
@@ -59,6 +62,62 @@ export function registerOnboardingRoutes(app: FastifyInstance): void {
       const convo = await loadOnboardingConversation(db, actorId);
       if (!convo) return { state: 'welcome' as OnboardingState, facts: {} };
       return parseSnapshot(convo);
+    },
+  );
+
+  app.post(
+    '/v1/onboarding/bootstrap',
+    { preHandler: requireAuth },
+    async (request) => {
+      const db = request.server.db as Database;
+      const actorId = request.requestContext.actorId;
+      if (!actorId) throw new ApiError(ApiErrorCodes.Forbidden, 'No actor bound to session');
+      const convo = await ensureOnboardingConversation(db, actorId);
+      const [welcome] = await db
+        .select({ content: messages.content, sequence: messages.sequence,
+          lastReadSequence: conversationMembers.lastReadSequence })
+        .from(messages)
+        .innerJoin(conversationMembers, and(
+          eq(conversationMembers.conversationId, messages.conversationId),
+          eq(conversationMembers.actorId, actorId),
+        ))
+        .where(and(eq(messages.conversationId, convo.id),
+          eq(messages.clientIdempotencyKey, MIRA_WELCOME_MESSAGE_KEY)))
+        .limit(1);
+      return {
+        conversationId: convo.id,
+        preview: welcome?.content ?? null,
+        unread: welcome != null && welcome.sequence > welcome.lastReadSequence,
+      };
+    },
+  );
+
+  app.post(
+    '/v1/onboarding/read',
+    { preHandler: requireAuth },
+    async (request) => {
+      const actorId = request.requestContext.actorId;
+      if (!actorId) throw new ApiError(ApiErrorCodes.Forbidden, 'No actor bound to session');
+      const { conversationId, messageId } = z.object({
+        conversationId: z.string().uuid(),
+        messageId: z.string().uuid(),
+      }).parse(request.body);
+      const db = request.server.db as Database;
+      const convo = await loadOnboardingConversation(db, actorId);
+      if (convo?.id !== conversationId) {
+        throw new ApiError(ApiErrorCodes.NotFound, 'First contact not found');
+      }
+      const [welcome] = await db.select({ sequence: messages.sequence }).from(messages)
+        .where(and(eq(messages.conversationId, conversationId), eq(messages.id, messageId),
+          eq(messages.clientIdempotencyKey, MIRA_WELCOME_MESSAGE_KEY), isNull(messages.deletedAt)))
+        .limit(1);
+      if (!welcome) throw new ApiError(ApiErrorCodes.NotFound, 'Welcome message not found');
+      // Update only this member's welcome receipt; never rewind a newer cursor.
+      await db.update(conversationMembers).set({
+        lastReadSequence: sql`greatest(${conversationMembers.lastReadSequence}, ${welcome.sequence})`,
+      }).where(and(eq(conversationMembers.conversationId, conversationId),
+        eq(conversationMembers.actorId, actorId), eq(conversationMembers.status, 'active')));
+      return { ok: true };
     },
   );
 
@@ -105,7 +164,7 @@ export function registerOnboardingRoutes(app: FastifyInstance): void {
 }
 
 async function loadOnboardingConversation(
-  db: Database,
+  db: Pick<Database, 'select'>,
   actorId: string,
 ): Promise<typeof conversations.$inferSelect | null> {
   const rows = await db
@@ -119,6 +178,7 @@ async function loadOnboardingConversation(
       and(
         eq(conversationMembers.actorId, actorId),
         eq(conversations.type, 'direct'),
+        eq(conversations.createdByActorId, actorId),
         sql`${conversations.publicName} LIKE 'onboarding:%'`,
       ),
     )
@@ -131,34 +191,31 @@ async function ensureOnboardingConversation(
   db: Database,
   actorId: string,
 ): Promise<typeof conversations.$inferSelect> {
-  const existing = await loadOnboardingConversation(db, actorId);
-  if (existing) return existing;
+  return db.transaction(async (tx) => {
+    // Two tabs can bootstrap the same account concurrently. Lock its actor
+    // before looking for the first chat and creating message/relationship/event.
+    const [owner] = await tx.select({ graphId: actors.socialGraphId })
+      .from(actors).where(eq(actors.id, actorId)).for('update');
+    if (!owner) throw new ApiError(ApiErrorCodes.Forbidden, 'No actor bound to session');
+    const existing = await loadOnboardingConversation(tx, actorId);
+    if (existing) return existing;
 
-  const miraTemplate = await loadMiraTemplate(db);
-  if (!miraTemplate) {
-    throw new ApiError(
-      ApiErrorCodes.Internal,
-      'Mira persona template not seeded',
-    );
-  }
-  const graphId = await actorGraphId(db, actorId);
-  const [miraActor] = await db
-    .select()
-    .from(actors)
-    .where(
-      and(
-        eq(actors.publicName, 'Mira'),
-        eq(actors.socialGraphId, graphId),
-      ),
-    )
-    .limit(1);
-  const miraActorId =
-    miraActor?.id ?? (await createMiraActor(db, miraTemplate.id, graphId));
+    const miraTemplate = await loadMiraTemplate(tx);
+    if (!miraTemplate) {
+      throw new ApiError(ApiErrorCodes.Internal, 'Mira persona template not seeded');
+    }
+    const graphId = owner.graphId;
+    const [miraActor] = await tx.select().from(actors).where(and(
+      eq(actors.publicName, 'Mira'),
+      eq(actors.socialGraphId, graphId),
+      eq(actors.templateId, miraTemplate.id),
+      eq(actors.type, 'character'),
+    )).limit(1);
+    const miraActorId = miraActor?.id ?? (await createMiraActor(tx, miraTemplate.id, graphId));
+    const convoId = newId<string>();
+    const eventId = newId<string>();
+    const occurredAt = new Date();
 
-  const convoId = newId<string>();
-  const eventId = newId<string>();
-  const occurredAt = new Date();
-  await db.transaction(async (tx) => {
     await tx.insert(conversations).values({
       id: convoId,
       socialGraphId: graphId,
@@ -202,6 +259,14 @@ async function ensureOnboardingConversation(
         initiatedBy: miraActorId,
       });
     }
+    await tx.insert(messages).values({
+      conversationId: convoId,
+      senderActorId: miraActorId,
+      sequence: 1,
+      clientIdempotencyKey: MIRA_WELCOME_MESSAGE_KEY,
+      kind: 'text',
+      content: WELCOME_COPY,
+    });
     await tx.insert(worldEvents).values({
       id: eventId,
       socialGraphId: graphId,
@@ -214,14 +279,10 @@ async function ensureOnboardingConversation(
       occurredAt,
       idempotencyKey: `onboarding_conversation_created:${convoId}`,
     });
+    const [convo] = await tx.select().from(conversations)
+      .where(eq(conversations.id, convoId)).limit(1);
+    return convo!;
   });
-
-  const [convo] = await db
-    .select()
-    .from(conversations)
-    .where(eq(conversations.id, convoId))
-    .limit(1);
-  return convo!;
 }
 
 function parseSnapshot(convo: { publicName: string | null }): OnboardingSnapshot {
@@ -244,7 +305,7 @@ function serializeSnapshot(snap: OnboardingSnapshot): string {
 }
 
 async function loadMiraTemplate(
-  db: Database,
+  db: Pick<Database, 'select'>,
 ): Promise<typeof personaTemplates.$inferSelect | null> {
   const rows = await db
     .select()
@@ -255,25 +316,23 @@ async function loadMiraTemplate(
 }
 
 async function createMiraActor(
-  db: Database,
+  db: Pick<Database, 'insert'>,
   templateId: string,
   socialGraphId: string,
 ): Promise<string> {
   const id = newId<string>();
-  await db.transaction(async (tx) => {
-    await tx.insert(actors).values({
-      id,
-      socialGraphId,
-      type: 'character',
-      publicName: 'Mira',
-      templateId,
-    });
-    await tx.insert(characterActors).values({
-      actorId: id,
-      templateId,
-      templateRevision: 1,
-      socialGraphId,
-    });
+  await db.insert(actors).values({
+    id,
+    socialGraphId,
+    type: 'character',
+    publicName: 'Mira',
+    templateId,
+  });
+  await db.insert(characterActors).values({
+    actorId: id,
+    templateId,
+    templateRevision: 1,
+    socialGraphId,
   });
   return id;
 }

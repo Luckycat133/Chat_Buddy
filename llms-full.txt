@@ -398,16 +398,33 @@ interface Message {
   "localStorage": {
     "chat-buddy:theme": "macaroon-orange",
     "chat-buddy:language": "en",
-    "chat-buddy:friend-data": "..."
+    "chat-buddy:friend-data": {}
   },
   "indexedDB": {
-    "chats": [ /* Complete Chat array */ ],
-    "memories": [ /* Extracted durable facts */ ],
-    "documents": [ /* Parsed user documents */ ],
-    "images": [ /* Cached image blobs */ ]
+    "chat-buddy-main": {
+      "kv": [
+        { "key": "chat-buddy-chats", "value": [], "updatedAt": 1794267900000 },
+        { "key": "chat-buddy-documents", "value": [], "updatedAt": 1794267900000 },
+        { "key": "chat-buddy-rag-index", "value": [], "updatedAt": 1794267900000 }
+      ]
+    },
+    "chat-buddy-images": { "images": [] },
+    "chat-buddy-memories": { "memories": [] },
+    "chat-buddy-agents": { "custom-agents": [] },
+    "chat-buddy-trivia": { "quiz_history": [] }
   }
 }
 ```
+
+This empty-data example follows `exportAllData()` / `importData()` in
+`src/config/apiConfig.js`: IndexedDB records are grouped by database name and
+object-store name, not flattened into top-level chat/document arrays. The main
+`kv` store contains `{ key, value, updatedAt }` records. `value` holds the complete
+chat, document or RAG chunk array; `updatedAt` is Unix milliseconds.
+The other store arrays contain their own records, including `id` keys. Actual
+backups can contain private conversations and media; this example contains no
+user data or credentials. The shape documents the Web v2 format, not proof of a
+successful native iOS import.
 
 ---
 
