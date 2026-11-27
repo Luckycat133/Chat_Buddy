@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Database } from '../../db/index.js';
 import { accounts, accountPortableBackups, conversations, conversationMembers, messages } from '../../db/schema.js';
@@ -130,7 +130,7 @@ function privateDownload(reply: FastifyReply, document: string) {
 
 export function registerPortableBackupRoutes(app: FastifyInstance): void {
   const writing = new Set<string>();
-  const admitted = new WeakMap<FastifyRequest, { accountId: string; timer: ReturnType<typeof setTimeout> }>();
+  const admitted = new WeakMap<FastifyRequest, { accountId: string; timer: ReturnType<typeof setTimeout>; processing: boolean }>();
   const largeUploads = new Map<string, { bytes: number; until: number }>();
 
   function finish(request: FastifyRequest) {
@@ -140,6 +140,10 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
       writing.delete(slot.accountId);
     }
     admitted.delete(request);
+  }
+
+  function abortReceipt(request: FastifyRequest) {
+    if (!admitted.get(request)?.processing) finish(request);
   }
 
   // Register this route family in a Fastify child scope. Parse its PUT body
@@ -171,73 +175,95 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
         reply.raw.destroy();
       }, 30_000);
       timer.unref();
-      admitted.set(request, { accountId, timer });
-      reply.raw.once('close', () => finish(request));
+      admitted.set(request, { accountId, timer, processing: false });
+      reply.raw.once('close', () => abortReceipt(request));
     }],
-    onResponse: async request => finish(request),
-    onRequestAbort: async request => finish(request),
+    onResponse: async request => abortReceipt(request),
+    onRequestAbort: async request => abortReceipt(request),
     bodyLimit: MAX_PORTABLE_BACKUP_BYTES * 2 + 32,
-  }, async request => {
+  }, async (request, reply) => {
     const { accountId, actorId } = request.requestContext;
     if (!accountId) throw new ApiError(ApiErrorCodes.Unauthorized, 'No account bound to session');
-    if (!admitted.has(request) || typeof request.body !== 'string') invalid();
-    // Bound the work on large submissions, including invalid ones. Small
-    // interactive files are already protected by lexical/node work caps.
-    const bytes = Buffer.byteLength(request.body);
-    if (bytes > 128 * 1024) {
-      const now = Date.now();
-      for (const [key, state] of largeUploads) if (state.until <= now) largeUploads.delete(key);
-      const state = largeUploads.get(accountId) ?? { bytes: 0, until: now + 10000 };
-      if (state.bytes + bytes > MAX_PORTABLE_BACKUP_BYTES * 6 ||
-        (!largeUploads.has(accountId) && largeUploads.size >= 1024)) {
-        throw new ApiError(ApiErrorCodes.RateLimited, 'Large backup upload budget exhausted');
+    const slot = admitted.get(request);
+    if (!slot || typeof request.body !== 'string') invalid();
+    // The upload deadline covers only receiving the body. Once accepted,
+    // hold the permit through commit/rollback even if the client goes away.
+    slot.processing = true;
+    clearTimeout(slot.timer);
+    const deadline = Date.now() + 10_000;
+    const checkWork = () => {
+      if (reply.raw.destroyed || Date.now() > deadline) {
+        throw new ApiError(ApiErrorCodes.RateLimited, 'Archive replacement did not complete');
       }
-      state.bytes += bytes;
-      largeUploads.set(accountId, state);
-    }
-    const { document } = PortableBackupDocumentSchema.parse(parseWithBudget(request.body, { remaining: 12 }, 2));
-    const data = validate(document);
-    if (data.cloudAccount && (data.cloudAccount.accountId !== accountId || data.cloudAccount.actorId !== actorId)) {
-      throw new ApiError(ApiErrorCodes.Forbidden, 'Backup is bound to a different account');
-    }
-    const sha256 = createHash('sha256').update(document).digest('hex');
-    const db = request.server.db as Database;
-    return db.transaction(async tx => {
-      const [owner] = await tx.select({ status: accounts.status }).from(accounts)
-        .where(eq(accounts.id, accountId)).for('update');
-      if (owner?.status !== 'active') throw new ApiError(ApiErrorCodes.Unauthorized, 'Account unavailable');
-      // Imported cloud histories remain read-only and cannot claim authors or
-      // conversations outside the bound user's actual graph and membership.
-      if (actorId && data.cloudAccount) {
-        const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        const archive = data.cloudAccount.conversations;
-        for (let i = 0; i < archive.length; i += 256) {
-          const batch = archive.slice(i, i + 256);
-          const ids = batch.map(thread => thread.id);
-          if (ids.some(id => !uuid.test(id))) invalid();
-          const owned = await tx.select({ id: conversations.id }).from(conversationMembers)
-            .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
-            .where(and(inArray(conversations.id, ids), eq(conversationMembers.actorId, actorId),
-              eq(conversationMembers.status, 'active'),
-              eq(conversations.status, 'active'), ne(conversations.type, 'hidden_ai_direct')));
-          if (owned.length !== batch.length) throw new ApiError(ApiErrorCodes.Forbidden, 'Backup contains an unavailable conversation');
-          const memberRows = await tx.select({ conversationId: conversationMembers.conversationId,
-            actorId: conversationMembers.actorId }).from(conversationMembers)
-            .where(inArray(conversationMembers.conversationId, ids));
-          const membership = new Set(memberRows.map(row => `${row.conversationId}:${row.actorId}`));
-          if (batch.some(thread => thread.messages.some(message => !membership.has(`${thread.id}:${message.senderActorId}`)))) {
-            throw new ApiError(ApiErrorCodes.Forbidden, 'Backup contains an untrusted message author');
+    };
+    try {
+      // Bound the work on large submissions, including invalid ones. Small
+      // interactive files are already protected by lexical/node work caps.
+      const bytes = Buffer.byteLength(request.body);
+      if (bytes > 128 * 1024) {
+        const now = Date.now();
+        for (const [key, state] of largeUploads) if (state.until <= now) largeUploads.delete(key);
+        const state = largeUploads.get(accountId) ?? { bytes: 0, until: now + 10000 };
+        if (state.bytes + bytes > MAX_PORTABLE_BACKUP_BYTES * 6 ||
+          (!largeUploads.has(accountId) && largeUploads.size >= 1024)) {
+          throw new ApiError(ApiErrorCodes.RateLimited, 'Large backup upload budget exhausted');
+        }
+        state.bytes += bytes;
+        largeUploads.set(accountId, state);
+      }
+      const { document } = PortableBackupDocumentSchema.parse(parseWithBudget(request.body, { remaining: 12 }, 2));
+      const data = validate(document);
+      if (data.cloudAccount && (data.cloudAccount.accountId !== accountId || data.cloudAccount.actorId !== actorId)) {
+        throw new ApiError(ApiErrorCodes.Forbidden, 'Backup is bound to a different account');
+      }
+      const sha256 = createHash('sha256').update(document).digest('hex');
+      const db = request.server.db as Database;
+      checkWork();
+      return await db.transaction(async tx => {
+        await tx.execute(sql`SET LOCAL statement_timeout = '5s'`);
+        await tx.execute(sql`SET LOCAL lock_timeout = '2s'`);
+        checkWork();
+        const [owner] = await tx.select({ status: accounts.status }).from(accounts)
+          .where(eq(accounts.id, accountId)).for('update');
+        if (owner?.status !== 'active') throw new ApiError(ApiErrorCodes.Unauthorized, 'Account unavailable');
+        // Imported cloud histories remain read-only and cannot claim authors or
+        // conversations outside the bound user's actual graph and membership.
+        if (actorId && data.cloudAccount) {
+          const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          const archive = data.cloudAccount.conversations;
+          for (let i = 0; i < archive.length; i += 256) {
+            checkWork();
+            const batch = archive.slice(i, i + 256);
+            const ids = batch.map(thread => thread.id);
+            if (ids.some(id => !uuid.test(id))) invalid();
+            const owned = await tx.select({ id: conversations.id }).from(conversationMembers)
+              .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
+              .where(and(inArray(conversations.id, ids), eq(conversationMembers.actorId, actorId),
+                eq(conversationMembers.status, 'active'),
+                eq(conversations.status, 'active'), ne(conversations.type, 'hidden_ai_direct')));
+            if (owned.length !== batch.length) throw new ApiError(ApiErrorCodes.Forbidden, 'Backup contains an unavailable conversation');
+            const memberRows = await tx.select({ conversationId: conversationMembers.conversationId,
+              actorId: conversationMembers.actorId }).from(conversationMembers)
+              .where(inArray(conversationMembers.conversationId, ids));
+            const membership = new Set(memberRows.map(row => `${row.conversationId}:${row.actorId}`));
+            if (batch.some(thread => thread.messages.some(message => !membership.has(`${thread.id}:${message.senderActorId}`)))) {
+              throw new ApiError(ApiErrorCodes.Forbidden, 'Backup contains an untrusted message author');
+            }
           }
         }
-      }
-      const [existing] = await tx.select({ sha256: accountPortableBackups.sha256 })
-        .from(accountPortableBackups).where(eq(accountPortableBackups.accountId, accountId));
-      if (existing?.sha256 === sha256) return { sha256, updated: false };
-      await tx.insert(accountPortableBackups).values({ accountId, sha256, document })
-        .onConflictDoUpdate({ target: accountPortableBackups.accountId,
-          set: { sha256, document, updatedAt: new Date() } });
-      return { sha256, updated: true };
-    });
+        const [existing] = await tx.select({ sha256: accountPortableBackups.sha256 })
+          .from(accountPortableBackups).where(eq(accountPortableBackups.accountId, accountId));
+        checkWork();
+        if (existing?.sha256 === sha256) return { sha256, updated: false };
+        await tx.insert(accountPortableBackups).values({ accountId, sha256, document })
+          .onConflictDoUpdate({ target: accountPortableBackups.accountId,
+            set: { sha256, document, updatedAt: new Date() } });
+        checkWork();
+        return { sha256, updated: true };
+      });
+    } finally {
+      finish(request);
+    }
   });
 
   app.get('/v1/account/backup/live', { preHandler: requireAuth }, async (request, reply) => {

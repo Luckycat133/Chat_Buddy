@@ -119,3 +119,7 @@ Account uploads also have JSON structure/depth budgets, one in-flight
 upload per account and four per server process, a bounded upload deadline,
 and rate limits for large documents. A rejected upload leaves the previous
 account archive unchanged.
+The deadline applies to receiving the upload, not a commit receipt. Work
+holds its admission permit through commit or rollback; transaction SQL and
+lock waits are bounded. If the connection drops at commit, the result may be
+unknown to the client: compare the saved archive SHA before retrying.
