@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { and, asc, eq, gt, inArray, isNull, ne, or } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, lte, ne, or } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import type { Database } from '../../db/index.js';
 import { accounts, accountPortableBackups, conversations, conversationMembers, messages } from '../../db/schema.js';
@@ -26,9 +26,19 @@ function validate(document: string) {
   if (!parsed.success) invalid();
   validateSafeMetadata(value);
   const data = parsed.data;
+  for (const [key, entry] of Object.entries(data.localStorage)) {
+    if (!/^chat-buddy[-:]/.test(key)) invalid();
+    validateStructuredString(entry);
+  }
+  for (const row of data.indexedDB['chat-buddy-main']?.kv ?? []) {
+    validateStructuredString(row.value);
+  }
   for (const keys of [
     data.indexedDB['chat-buddy-main']?.kv.map(record => record.key),
     data.indexedDB['chat-buddy-images']?.images.map(record => record.id),
+    data.indexedDB['chat-buddy-memories']?.memories.map(record => record.id),
+    data.indexedDB['chat-buddy-agents']?.['custom-agents'].map(record => record.id),
+    data.indexedDB['chat-buddy-trivia']?.quiz_history.map(record => record.id),
   ]) {
     if (keys && new Set(keys).size !== keys.length) invalid();
   }
@@ -55,6 +65,13 @@ function validate(document: string) {
     }
   }
   return data;
+}
+
+function validateStructuredString(value: unknown) {
+  if (typeof value !== 'string' || !/^[\s]*[\[{]/.test(value)) return;
+  let decoded: unknown;
+  try { decoded = JSON.parse(value); } catch { return; }
+  validateSafeMetadata(decoded);
 }
 
 // Fail closed rather than silently modifying a transfer. Old local backup
@@ -120,7 +137,7 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
           const owned = await tx.select({ id: conversations.id }).from(conversationMembers)
             .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
             .where(and(inArray(conversations.id, ids), eq(conversationMembers.actorId, actorId),
-              eq(conversationMembers.status, 'active'), eq(conversations.socialGraphId, socialGraphId),
+              eq(conversationMembers.status, 'active'),
               eq(conversations.status, 'active'), ne(conversations.type, 'hidden_ai_direct')));
           if (owned.length !== batch.length) throw new ApiError(ApiErrorCodes.Forbidden, 'Backup contains an unavailable conversation');
           const memberRows = await tx.select({ conversationId: conversationMembers.conversationId,
@@ -157,7 +174,7 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
         cloudAccount: { accountId, actorId, ...account, conversations: list },
       };
       const visible = and(eq(conversationMembers.actorId, actorId), eq(conversationMembers.status, 'active'),
-        eq(conversations.socialGraphId, socialGraphId), eq(conversations.status, 'active'),
+        eq(conversations.status, 'active'),
         ne(conversations.type, 'hidden_ai_direct'));
       let threadCursor: string | undefined;
       let totalBytes = Buffer.byteLength(JSON.stringify(result));
@@ -191,7 +208,9 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
           createdAt: messages.createdAt, editedAt: messages.editedAt,
         }).from(messages).innerJoin(conversations, eq(conversations.id, messages.conversationId))
           .innerJoin(conversationMembers, eq(conversationMembers.conversationId, conversations.id))
-          .where(and(visible, isNull(messages.deletedAt), messageCursor ? or(
+          .where(and(visible, isNull(messages.deletedAt),
+            or(ne(conversations.type, 'group'), lte(conversationMembers.joinedAt, messages.createdAt)),
+            messageCursor ? or(
             gt(messages.conversationId, messageCursor.conversationId),
             and(eq(messages.conversationId, messageCursor.conversationId), gt(messages.sequence, messageCursor.sequence)),
           ) : undefined)).orderBy(asc(messages.conversationId), asc(messages.sequence)).limit(256);

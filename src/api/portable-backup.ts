@@ -1,5 +1,5 @@
 import { MAX_PORTABLE_BACKUP_BYTES, PortableBackupReceiptSchema, PortableBackupSchema } from '../../shared/contracts/portable-backup.js';
-import { getCloud } from './cloud-adapter.js';
+import { boundCloudFetch, loadTokens } from './cloud-adapter.js';
 
 const endpoint = '/v1/account/backup';
 
@@ -9,13 +9,10 @@ export function parsePortableBackup(document: string) {
 }
 
 export async function requestPortableBackup(mode: 'stored' | 'live' | 'import', document?: string) {
-  const client = getCloud();
-  const token = client.getAccessToken();
-  if (!token) throw Error('Sign in to the current account to transfer a backup');
-  const response = await client.fetchImpl(client.baseUrl + endpoint + (mode === 'live' ? '/live' : ''), {
+  const before = loadTokens();
+  const response = await boundCloudFetch(endpoint + (mode === 'live' ? '/live' : ''), {
     method: mode === 'import' ? 'PUT' : 'GET',
     headers: {
-      authorization: `Bearer ${token}`,
       accept: 'application/json',
       ...(mode === 'import' ? { 'content-type': 'application/json' } : {}),
     },
@@ -23,12 +20,19 @@ export async function requestPortableBackup(mode: 'stored' | 'live' | 'import', 
     cache: 'no-store',
   });
   if (!response.ok) throw Error(`Account backup request failed (HTTP ${response.status})`);
-  return response.text();
+  const body = await response.text();
+  const after = loadTokens();
+  if (after.accountId !== before.accountId || after.actorId !== before.actorId) throw Error('The signed-in account changed');
+  return body;
 }
 
 export async function restorePortableBackup(document: string) {
   parsePortableBackup(document);
-  return PortableBackupReceiptSchema.parse(JSON.parse(await requestPortableBackup('import', document)));
+  const receipt = PortableBackupReceiptSchema.parse(JSON.parse(await requestPortableBackup('import', document)));
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(document));
+  const sha256 = Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+  if (receipt.sha256 !== sha256) throw Error('The stored backup does not match this file');
+  return receipt;
 }
 
 export async function readPortableBackup(mode: 'stored' | 'live') {

@@ -76,6 +76,8 @@ it('round-trips the exact shared Web/iOS golden, scopes it to one account and ro
     (copy: PortableBackup) => { copy.attachments![0]!.byteLength += 1; },
     (copy: PortableBackup) => { copy.cloudAccount!.conversations[0]!.messages[0]!.attachmentIds = ['absent']; },
     (copy: PortableBackup) => { copy.localStorage['cb.refresh_token'] = 'synthetic-placeholder'; },
+    (copy: PortableBackup) => { copy.localStorage['chat-buddy:api-config'] = '{"provider":{"api_key":"synthetic"}}'; },
+    (copy: PortableBackup) => { copy.indexedDB['chat-buddy-main']!.kv[0]!.value = '{"privateKey":"synthetic"}'; },
     (copy: PortableBackup) => { copy.cloudAccount!.conversations[0]!.messages.push(copy.cloudAccount!.conversations[0]!.messages[0]!); },
   ]) {
     const copy = structuredClone(fixtureData); corruption(copy);
@@ -136,6 +138,35 @@ it('exports exactly the caller’s live visible session with ordered messages, a
   expect(exported.attachments?.[0]).toEqual(fixtureData.attachments?.[0]);
   expect(exported.cloudAccount?.conversations[0]!.messages[0]!.attachmentIds).toEqual(['cloud-inline-1']);
   expect(live.body).not.toMatch(/(?:other-body|hidden-body|deleted-body|appleSubject|refreshToken)/);
+  expect((await upload(access, live.body)).statusCode).toBe(200);
+  expect((await download(access)).body).toBe(live.body);
+});
+
+
+it('follows active cross-graph group membership, omits pre-join history, and walks message pages without gaps', async () => {
+  const owner = await seedSocialGraph(fixture.db);
+  const host = await seedSocialGraph(fixture.db);
+  const access = (await issueTokens(db, owner.accountId)).accessToken;
+  const group = randomUUID();
+  const joinedAt = new Date('2026-10-01T00:00:00.000Z');
+  await db.insert(conversations).values({ id: group, type: 'group', socialGraphId: host.graphId, createdByActorId: host.humanActorId });
+  await db.insert(conversationMembers).values([
+    { conversationId: group, actorId: owner.humanActorId, status: 'active', joinedAt },
+    { conversationId: group, actorId: host.humanActorId, status: 'active', joinedAt: new Date('2026-09-30T00:00:00.000Z') },
+  ]);
+  await db.insert(messages).values(Array.from({ length: 260 }, (_, sequence) => ({
+    conversationId: group, senderActorId: host.humanActorId, sequence,
+    clientIdempotencyKey: 'fixture-sequence-' + String(sequence), kind: 'text' as const,
+    content: sequence === 0 ? 'never-export-prejoin' : String(sequence),
+    createdAt: new Date(joinedAt.getTime() + sequence * 1000 - 1000),
+  })));
+  const live = await download(access, '/live');
+  expect(live.statusCode).toBe(200);
+  const document = PortableBackupSchema.parse(live.json());
+  expect(document.cloudAccount?.conversations[0]?.id).toBe(group);
+  expect(document.cloudAccount?.conversations[0]?.messages.map(message => message.sequence))
+    .toEqual(Array.from({ length: 259 }, (_, index) => index + 1));
+  expect(live.body).not.toContain('never-export-prejoin');
   expect((await upload(access, live.body)).statusCode).toBe(200);
   expect((await download(access)).body).toBe(live.body);
 });

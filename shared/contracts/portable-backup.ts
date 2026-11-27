@@ -30,9 +30,9 @@ export const PortableBackupSchema = z.object({
   indexedDB: z.object({
     'chat-buddy-main': z.object({ kv: z.array(z.object({ key: id }).passthrough()).max(100000) }).strict().optional(),
     'chat-buddy-images': z.object({ images: z.array(z.object({ id, data: z.string() }).passthrough()).max(100000) }).strict().optional(),
-    'chat-buddy-memories': z.object({ memories: z.array(jsonRecord).max(100000) }).strict().optional(),
-    'chat-buddy-agents': z.object({ 'custom-agents': z.array(jsonRecord).max(100000) }).strict().optional(),
-    'chat-buddy-trivia': z.object({ quiz_history: z.array(jsonRecord).max(100000) }).strict().optional(),
+    'chat-buddy-memories': z.object({ memories: z.array(z.object({ id }).passthrough()).max(100000) }).strict().optional(),
+    'chat-buddy-agents': z.object({ 'custom-agents': z.array(z.object({ id }).passthrough()).max(100000) }).strict().optional(),
+    'chat-buddy-trivia': z.object({ quiz_history: z.array(z.object({ id }).passthrough()).max(100000) }).strict().optional(),
   }).strict(),
   attachments: z.array(PortableAttachmentSchema).max(10000).optional(),
   cloudAccount: z.object({

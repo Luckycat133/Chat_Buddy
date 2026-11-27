@@ -27,7 +27,19 @@
                   "id": "local-message-1",
                   "senderId": "user-me",
                   "content": "本地消息",
-                  "timestamp": "2026-11-27T11:00:00.000Z"
+                  "timestamp": "2026-11-27T11:00:00.000Z",
+                  "attachmentIds": [
+                    "image-local-1",
+                    "missing-remote-image"
+                  ],
+                  "quotedMessageId": null
+                },
+                {
+                  "id": "legacy-image-sticker",
+                  "senderId": "fixture-mira",
+                  "content": "[IMG:data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGMQDJ0JAAF6AQArmWdNAAAAAElFTkSuQmCC]",
+                  "timestamp": "2026-11-27T11:00:00.000Z",
+                  "quotedMessageId": "local-message-1"
                 }
               ]
             }

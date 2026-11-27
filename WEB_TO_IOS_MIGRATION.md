@@ -108,3 +108,9 @@ The old red CI for default `remake` head `cfb8441`
 is historical: its ESLint failures were superseded by `e64ded61` and
 [green `remake` CI](https://github.com/Luckycat133/Chat_Buddy/actions/runs/45965320415).
 There is no separate old branch to remove; retain the default branch.
+
+Browser IndexedDB uses distinct databases: local legacy restore preflights
+every present store before clear, and each individual store write rolls
+back atomically. A late runtime error can interrupt a multi-store local
+restore; keep the original backup. Only the server-owned archive replacement
+is covered by a single transaction.

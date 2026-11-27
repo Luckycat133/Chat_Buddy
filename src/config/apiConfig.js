@@ -638,18 +638,17 @@ export function importData(file) {
                 if (isBrowserIndexedDBAvailable()) {
                     // Resolve all stores before the first destructive action.
                     const destinations = [];
-                    for (const schema of INDEXED_DB_SCHEMAS) {
-                        const records = indexedDBData?.[schema.dbName]?.[schema.storeName];
-                        if (!Array.isArray(records)) continue;
-                        const db = await openDatabase(schema);
-                        if (!db?.objectStoreNames.contains(schema.storeName)) {
-                            db?.close();
-                            for (const previous of destinations) previous.db.close();
-                            throw new Error(`missing_backup_store:${schema.dbName}`);
-                        }
-                        destinations.push({ schema, records, db });
-                    }
                     try {
+                        for (const schema of INDEXED_DB_SCHEMAS) {
+                            const records = indexedDBData?.[schema.dbName]?.[schema.storeName];
+                            if (!Array.isArray(records)) continue;
+                            const db = await openDatabase(schema);
+                            if (!db?.objectStoreNames.contains(schema.storeName)) {
+                                db?.close();
+                                throw new Error(`missing_backup_store:${schema.dbName}`);
+                            }
+                            destinations.push({ schema, records, db });
+                        }
                         for (const { schema, records, db } of destinations) {
                             count += await replaceStoreRecords(schema, records, db);
                         }

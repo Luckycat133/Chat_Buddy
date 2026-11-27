@@ -36,13 +36,19 @@ export interface IssuedTokens {
   actorId: string;
 }
 
+export const cloudAccountChangedEvent = 'chat-buddy:cloud-account-changed';
+
 export function saveTokens(tokens: IssuedTokens): void {
+  const before = loadTokens();
   sessionStorage.setItem('cb.access_token', tokens.accessToken);
   sessionStorage.setItem('cb.refresh_token', tokens.refreshToken);
   sessionStorage.setItem('cb.actor_id', tokens.actorId);
   sessionStorage.setItem('cb.account_id', tokens.accountId);
   sessionStorage.setItem(ACCESS_EXPIRY_KEY, tokens.accessExpiresAt);
   sessionStorage.setItem(REFRESH_EXPIRY_KEY, tokens.refreshExpiresAt);
+  if (before.accountId !== tokens.accountId || before.actorId !== tokens.actorId) {
+    globalThis.dispatchEvent(new Event(cloudAccountChangedEvent));
+  }
 }
 
 export function loadTokens(): {
@@ -66,6 +72,7 @@ export function clearTokens(): void {
   sessionStorage.removeItem('cb.account_id');
   sessionStorage.removeItem(ACCESS_EXPIRY_KEY);
   sessionStorage.removeItem(REFRESH_EXPIRY_KEY);
+  globalThis.dispatchEvent(new Event(cloudAccountChangedEvent));
 }
 
 /**
@@ -120,6 +127,34 @@ export async function authedCloudFetch(
   const recovered = await recoverSession(baseUrl);
   if (!recovered) return response;
   return doFetch(baseUrl, path, init, recovered);
+}
+
+/** Sensitive account routes may refresh only the existing account; they never
+ * bootstrap a different dev account or consume data after account change. */
+export async function boundCloudFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  const baseUrl = getCloud().baseUrl;
+  const original = loadTokens();
+  if (!original.accountId || !original.actorId || !original.accessToken) {
+    throw Error('Sign in to the current account to transfer a backup');
+  }
+  const sameAccount = () => {
+    const current = loadTokens();
+    return current.accountId === original.accountId && current.actorId === original.actorId;
+  };
+  const fresh = accessTokenExpired() && original.refreshToken
+    ? await tryRefresh(baseUrl, original.refreshToken, original) : null;
+  if (!sameAccount()) throw Error('The signed-in account changed');
+  const response = await doFetch(baseUrl, path, init, fresh ?? original.accessToken);
+  if (!sameAccount()) throw Error('The signed-in account changed');
+  if (response.status !== 401 || !original.refreshToken || fresh) return response;
+  const current = loadTokens();
+  const renewed = current.accessToken !== original.accessToken ? current.accessToken
+    : await tryRefresh(baseUrl, original.refreshToken, original);
+  if (!sameAccount()) throw Error('The signed-in account changed');
+  if (!renewed) return response;
+  const retry = await doFetch(baseUrl, path, init, renewed);
+  if (!sameAccount()) throw Error('The signed-in account changed');
+  return retry;
 }
 
 function joinUrl(baseUrl: string, path: string): string {
@@ -184,6 +219,7 @@ async function recoverSession(baseUrl: string): Promise<string | null> {
 async function tryRefresh(
   baseUrl: string,
   refreshToken: string,
+  expected?: ReturnType<typeof loadTokens>,
 ): Promise<string | null> {
   try {
     const res = await fetch(joinUrl(baseUrl, '/v1/auth/refresh'), {
@@ -192,8 +228,15 @@ async function tryRefresh(
       body: JSON.stringify({ refreshToken }),
     });
     if (!res.ok) return null;
-    const tokens = (await res.json()) as IssuedTokens;
-    saveTokens(tokens);
+    const tokens = (await res.json()) as Omit<IssuedTokens, 'actorId'> & { actorId?: string };
+    const current = loadTokens();
+    // The refresh endpoint returns accountId but deliberately omits actorId.
+    // Keep the prior actor only for the exact still-current account.
+    const actorId = tokens.actorId ?? (tokens.accountId === current.accountId ? current.actorId : null);
+    if (expected && (tokens.accountId !== expected.accountId || actorId !== expected.actorId
+      || current.refreshToken !== expected.refreshToken)) return null;
+    if (!actorId) return null;
+    saveTokens({ ...tokens, actorId });
     return tokens.accessToken;
   } catch {
     return null;

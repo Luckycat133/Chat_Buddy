@@ -45,7 +45,13 @@ test('restore and re-export one bound Web v2 archive with real Chromium and a sy
         response.url().endsWith('/v1/account/backup') && response.request().method() === 'PUT');
     await panel.getByRole('button', { name: 'Import and replace saved backup' }).click();
     expect((await write).status()).toBe(200);
-    await panel.locator('summary').click();
+    await panel.locator('summary').filter({ hasText: '云端聊天' }).click();
+    await panel.locator('summary').filter({ hasText: '本地聊天' }).click();
+    const localImage = panel.getByRole('img', { name: 'image-local-1' });
+    await expect.poll(() => localImage.evaluate(node => node.naturalWidth)).toBe(1);
+    await expect(panel.getByText('missing-remote-image (attachment placeholder)')).toBeVisible();
+    const legacyImage = panel.getByRole('img', { name: 'inline-image-0' });
+    await expect.poll(() => legacyImage.evaluate(node => node.naturalWidth)).toBe(1);
     await expect(panel.getByText('云端消息 1')).toBeVisible();
     const image = panel.getByRole('img', { name: '小图.png' });
     await expect.poll(() => image.evaluate(node => node.naturalWidth)).toBe(1);

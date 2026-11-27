@@ -7,6 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   authedCloudFetch,
+  boundCloudFetch,
   clearTokens,
   cloudEnabled,
   saveTokens,
@@ -38,6 +39,23 @@ describe('authedCloudFetch', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('does not dev-bootstrap and refreshes the same account for sensitive backup requests', async () => {
+    const accountId = 'fixture-account';
+    const actorId = 'fixture-actor';
+    saveTokens({ accessToken: 'expired', accessExpiresAt: '2000-01-01T00:00:00Z', refreshToken: 'fixture-refresh',
+      refreshExpiresAt: '2099-01-01T00:00:00Z', accountId, actorId });
+    fetchMock.mockResolvedValueOnce(jsonResponse({
+      accessToken: 'active', accessExpiresAt: '2099-01-01T00:00:00Z', refreshToken: 'rotated',
+      refreshExpiresAt: '2099-01-01T00:00:00Z', accountId,
+    })).mockResolvedValueOnce(jsonResponse({ record: 'sample' }));
+    expect(await (await boundCloudFetch('/v1/account/backup')).json()).toEqual({ record: 'sample' });
+    expect(new Headers(fetchMock.mock.calls[1][1].headers).get('authorization')).toBe('Bearer active');
+    expect(sessionStorage.getItem('cb.actor_id')).toBe(actorId);
+    clearTokens();
+    await expect(boundCloudFetch('/v1/account/backup')).rejects.toThrow('Sign in');
+    expect(fetchMock.mock.calls.map(([url]) => new URL(url).pathname)).toEqual(['/v1/auth/refresh', '/v1/account/backup']);
   });
 
   it('test_when_no_session_exists_should_bootstrap_dev_signin_once_for_concurrent_callers', async () => {
