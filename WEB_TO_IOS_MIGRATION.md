@@ -1,7 +1,7 @@
 # Chat Buddy Web → iOS Migration
 
-**Status:** Draft migration contract  
-**Web source:** `Chat_Buddy` (`remake` branch)  
+**Status:** Draft migration contract
+**Web source:** `Chat_Buddy` (`remake` branch)
 **Destination:** [Chat_Buddy_iOS](https://github.com/Luckycat133/Chat_Buddy_iOS)
 
 The web application is in maintenance mode. Its remaining product work is to keep
@@ -82,3 +82,29 @@ Suggested final tag: `v0.3.3-web-final`.
 - Never inject provider API keys into a public browser build.
 - Keep export fixtures free of real conversations, credentials, and copyrighted
   character assets.
+
+## Web v2 private archive transfer (0.5.4)
+
+The new cloud settings transfer pairs a Web v2 browser export with a live,
+membership-filtered account snapshot. Both Web and iOS can import, preview
+and re-export this archive without changing its bytes. Live user-visible
+conversations and messages are read under a repeatable-read snapshot with
+stable keyset pagination; the account and human actor IDs are kept separate.
+Deleted content and hidden AI conversations are excluded. Imported cloud
+author IDs must be actual members of their archived conversations.
+
+A single account-owned archive is stored transactionally (4 MiB document cap).
+An unchanged document is an idempotent no-op; an explicitly imported
+replacement only replaces the saved archive. Attachments preserve validated
+inline bytes and metadata; sources that are only references are shown as
+placeholders, never fetched automatically. Existing Web v1/v2 browser
+restore and old account export are independent operations. This does not
+merge messages, identity, or membership into the active cloud timeline.
+Legacy Web v2 files with only browser data can be saved as an unbound
+document into the current account's private archive.
+
+The old red CI for default `remake` head `cfb8441`
+([45945673784](https://github.com/Luckycat133/Chat_Buddy/actions/runs/45945673784))
+is historical: its ESLint failures were superseded by `e64ded61` and
+[green `remake` CI](https://github.com/Luckycat133/Chat_Buddy/actions/runs/45965320415).
+There is no separate old branch to remove; retain the default branch.

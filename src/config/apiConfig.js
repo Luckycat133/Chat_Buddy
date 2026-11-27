@@ -364,7 +364,9 @@ function openDatabase(schema) {
 
 async function getAllStoreRecords(schema) {
     const db = await openDatabase(schema);
-    if (!db || !db.objectStoreNames.contains(schema.storeName)) return [];
+    if (!db?.objectStoreNames.contains(schema.storeName)) {
+        throw new Error(`missing_backup_store:${schema.dbName}`);
+    }
 
     return new Promise((resolve, reject) => {
         const tx = db.transaction(schema.storeName, 'readonly');
@@ -388,21 +390,20 @@ async function clearStoreRecords(schema) {
     });
 }
 
-async function replaceStoreRecords(schema, records = []) {
-    const db = await openDatabase(schema);
-    if (!db || !db.objectStoreNames.contains(schema.storeName)) return 0;
-
+async function replaceStoreRecords(schema, records = [], db) {
     return new Promise((resolve, reject) => {
         const tx = db.transaction(schema.storeName, 'readwrite');
         const store = tx.objectStore(schema.storeName);
-        store.clear();
-        let written = 0;
-        records.forEach((record) => {
-            store.put(record);
-            written += 1;
-        });
-        tx.oncomplete = () => resolve(written);
+        tx.oncomplete = () => resolve(records.length);
+        tx.onabort = () => reject(tx.error || new Error('backup_transaction_aborted'));
         tx.onerror = () => reject(tx.error);
+        try {
+            store.clear();
+            for (const record of records) store.put(record);
+        } catch (error) {
+            tx.abort();
+            reject(error);
+        }
     });
 }
 
@@ -503,9 +504,17 @@ function validateBackupPayload(data) {
             throw new Error(`invalid_backup_store:${schema.dbName}`);
         }
         const records = database[schema.storeName];
-        if (records === undefined) continue;
         if (!Array.isArray(records) || records.length > MAX_BACKUP_RECORDS_PER_STORE || records.some((record) => !isPlainObject(record))) {
             throw new Error(`invalid_backup_records:${schema.dbName}`);
+        }
+        const key = schema.storeName === 'kv' ? 'key' : 'id';
+        const seen = new Set();
+        for (const record of records) {
+            const value = record[key];
+            if (typeof value !== 'string' || !value || seen.has(value)) {
+                throw new Error(`invalid_backup_record_key:${schema.dbName}`);
+            }
+            seen.add(value);
         }
     }
 
@@ -555,8 +564,9 @@ export async function clearAllAppData() {
  * Export all Chat Buddy data as a JSON blob (chats, settings, profiles…).
  * Triggers a browser download.
  */
-export async function exportAllData() {
+export async function buildWebV2Backup({ requireComplete = false } = {}) {
     const indexedDBData = {};
+    if (requireComplete && !isBrowserIndexedDBAvailable()) throw new Error('indexeddb_unavailable');
     if (isBrowserIndexedDBAvailable()) {
         await Promise.all(INDEXED_DB_SCHEMAS.map(async (schema) => {
             try {
@@ -566,6 +576,7 @@ export async function exportAllData() {
                     [schema.storeName]: records
                 };
             } catch (e) {
+                if (requireComplete) throw e;
                 console.warn('[apiConfig] IndexedDB export failed:', schema.dbName, e?.message);
                 indexedDBData[schema.dbName] = {
                     ...(indexedDBData[schema.dbName] || {}),
@@ -575,7 +586,7 @@ export async function exportAllData() {
         }));
     }
 
-    const data = {
+    return {
         _meta: {
             app: 'Chat Buddy',
             exportedAt: new Date().toISOString(),
@@ -586,6 +597,9 @@ export async function exportAllData() {
         indexedDB: indexedDBData
     };
 
+}
+export async function exportAllData() {
+    const data = await buildWebV2Backup();
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -622,10 +636,25 @@ export function importData(file) {
                 let count = 0;
 
                 if (isBrowserIndexedDBAvailable()) {
+                    // Resolve all stores before the first destructive action.
+                    const destinations = [];
                     for (const schema of INDEXED_DB_SCHEMAS) {
                         const records = indexedDBData?.[schema.dbName]?.[schema.storeName];
                         if (!Array.isArray(records)) continue;
-                        count += await replaceStoreRecords(schema, records);
+                        const db = await openDatabase(schema);
+                        if (!db?.objectStoreNames.contains(schema.storeName)) {
+                            db?.close();
+                            for (const previous of destinations) previous.db.close();
+                            throw new Error(`missing_backup_store:${schema.dbName}`);
+                        }
+                        destinations.push({ schema, records, db });
+                    }
+                    try {
+                        for (const { schema, records, db } of destinations) {
+                            count += await replaceStoreRecords(schema, records, db);
+                        }
+                    } finally {
+                        for (const { db } of destinations) db.close();
                     }
                 }
 

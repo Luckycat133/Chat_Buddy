@@ -163,6 +163,13 @@ export const accounts = pgTable(
   }),
 );
 
+export const accountPortableBackups = pgTable('account_portable_backups', {
+  accountId: uuid('account_id').primaryKey().references(() => accounts.id, { onDelete: 'cascade' }),
+  sha256: text('sha256').notNull(),
+  document: text('document').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const sessions = pgTable(
   'sessions',
   {

@@ -131,7 +131,7 @@ jobs:
       - name: Run A01-A25
         env:
           E2E_CLOUD_BASE_URL: 'http://127.0.0.1:8080'
-        run: npx playwright test --project=chromium e2e/cloud-first-contact.spec.js e2e/p0-acceptance.spec.js
+        run: npx playwright test --project=chromium e2e/cloud-first-contact.spec.js e2e/p0-acceptance.spec.js e2e/portable-backup.spec.js
       - name: Stop server
         if: always()
         run: |
