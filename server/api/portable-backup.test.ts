@@ -88,6 +88,20 @@ it('round-trips the exact shared Web/iOS golden, scopes it to one account and ro
   Reflect.deleteProperty(missingStore.indexedDB['chat-buddy-images']!, 'images');
   expect((await upload(owner, JSON.stringify(missingStore))).statusCode).toBe(422);
   expect((await download(owner)).body).toBe(golden);
+  const invalidStores = [
+    { 'chat-buddy-memories': { memories: [{ text: 'missing-id' }] } },
+    { 'chat-buddy-memories': { memories: [{ id: 'repeat' }, { id: 'repeat' }] } },
+    { 'chat-buddy-agents': { 'custom-agents': [{ name: 'missing-id' }] } },
+    { 'chat-buddy-agents': { 'custom-agents': [{ id: 'repeat' }, { id: 'repeat' }] } },
+    { 'chat-buddy-trivia': { quiz_history: [{ score: 1 }] } },
+    { 'chat-buddy-trivia': { quiz_history: [{ id: 'repeat' }, { id: 'repeat' }] } },
+  ];
+  for (const store of invalidStores) {
+    const raw = JSON.parse(golden);
+    Object.assign(raw.indexedDB, store);
+    expect((await upload(owner, JSON.stringify(raw))).statusCode).toBe(422);
+    expect((await download(owner)).body).toBe(golden);
+  }
   const untrusted = structuredClone(fixtureData);
   untrusted.cloudAccount!.conversations[0]!.messages[1]!.senderActorId = other.humanActorId;
   expect((await upload(owner, JSON.stringify(untrusted))).statusCode).toBe(403);
