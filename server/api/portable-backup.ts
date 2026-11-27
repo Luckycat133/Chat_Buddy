@@ -68,7 +68,9 @@ function validate(document: string) {
 }
 
 function validateStructuredString(value: unknown) {
-  if (typeof value !== 'string' || !/^[\s]*[\[{]/.test(value)) return;
+  if (typeof value !== 'string') return;
+  const text = value.trimStart();
+  if (!text.startsWith('{') && !text.startsWith('[')) return;
   let decoded: unknown;
   try { decoded = JSON.parse(value); } catch { return; }
   validateSafeMetadata(decoded);
