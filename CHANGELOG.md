@@ -19,6 +19,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.4] - 2026-11-27
+
+### Added
+- Import, preview and byte-identically re-export a private Web v2 archive with local and account-bound chats and inline/reference attachments.
+
+### Fixed
+- Reject malformed backup stores and invalid records before clearing browser data.
+
+---
+
 ## [0.5.3] - 2026-11-27
 
 ### Added

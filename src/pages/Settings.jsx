@@ -1,3 +1,5 @@
+import { PortableBackupPanel } from "../components/PortableBackupPanel";
+import { cloudEnabled } from "../api/cloud-adapter";
 import React, { useState, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
@@ -422,6 +424,7 @@ export default function Settings() {
                                     className="hidden"
                                 />
                             </div>
+                            {cloudEnabled() && <PortableBackupPanel chinese={language === "zh"} />}
                             {importMsg && (
                                 <div className={cn(
                                     "import-msg",

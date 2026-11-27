@@ -22,6 +22,7 @@ import { registerMemoryRoutes } from './api/memory.js';
 import { registerProactiveRoutes } from './api/proactive.js';
 import { registerMomentRoutes } from './api/moments.js';
 import { registerAccountRoutes } from './api/account.js';
+import { registerPortableBackupRoutes } from './api/portable-backup.js';
 import { registerCapabilityRoutes } from './api/capabilities.js';
 import { registerOnboardingRoutes } from './api/onboarding.js';
 import { registerAuthRoutes } from './api/auth.js';
@@ -89,6 +90,7 @@ export async function buildServer(options: ServerOptions): Promise<FastifyInstan
       cb(null, allow.includes(origin));
     },
     credentials: true,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   });
 
   await app.register(cookie, {
@@ -185,6 +187,7 @@ registerMemoryRoutes(app);
 registerProactiveRoutes(app);
 registerMomentRoutes(app);
 registerAccountRoutes(app);
+await app.register(async (backup) => { registerPortableBackupRoutes(backup); });
 registerCapabilityRoutes(app);
 registerHiddenAiRoutes(app);
 registerSocialRoutes(app);

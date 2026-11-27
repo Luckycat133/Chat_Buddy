@@ -5,8 +5,10 @@
  * owns its opaque ID, foreign keys, and uniqueness constraints.
  * Authorization is computed in repositories, not in the database.
  */
+import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   doublePrecision,
   index,
   integer,
@@ -162,6 +164,13 @@ export const accounts = pgTable(
     ),
   }),
 );
+
+export const accountPortableBackups = pgTable('account_portable_backups', {
+  accountId: uuid('account_id').primaryKey().references(() => accounts.id, { onDelete: 'cascade' }),
+  sha256: text('sha256').notNull(),
+  document: text('document').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, table => [check('portable_backup_payload_size', sql`octet_length(${table.document}) <= 4194304`)]);
 
 export const sessions = pgTable(
   'sessions',
