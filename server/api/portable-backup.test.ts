@@ -4,11 +4,12 @@ import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import type { Database } from '../../db/index.js';
-import { accountPortableBackups, accounts, actors, conversations, conversationMembers, messages, worldEvents } from '../../db/schema.js';
+import { accountPortableBackups, accountPortableMergeQuotas, accounts, actors, conversations, conversationMembers, messages, worldEvents } from '../../db/schema.js';
 import { PortableBackupSchema, type PortableBackup } from '../../shared/contracts/portable-backup.js';
 import { issueTokens } from '../auth/session.js';
 import { resetServerEnvForTests } from '../config.js';
 import { buildServer } from '../index.js';
+import { portableMergeQuota } from '../services/portable-merge.js';
 import { seedSocialGraph } from '../test/fixtures.js';
 import { closeTestDatabase, createTestDatabase } from '../test/pglite.js';
 
@@ -266,6 +267,7 @@ it('merges only private self-authored rows and rolls back a failed multi-message
     expect(failed.body).not.toContain('Second missing');
     const rows = await db.select().from(messages).where(eq(messages.conversationId, privateId));
     expect(rows).toHaveLength(2);
+    expect(await db.select().from(accountPortableMergeQuotas).where(eq(accountPortableMergeQuotas.accountId, owner.accountId))).toEqual([]);
     expect(rows.find(m => m.id === old.id)?.content).toBe('Newer online value');
   } finally {
     await fixture.pg.exec('DROP TRIGGER reject_archive_insert ON messages; DROP FUNCTION reject_archived_row();');
@@ -328,4 +330,63 @@ it('namespaces repeated source attachment IDs across two exportable private conv
   expect(attachments[0]?.id).not.toBe(attachments[1]?.id);
   expect(attachments.map(a => a.name).sort()).toEqual(['synthetic-image-0.png', 'synthetic-image-1.png']);
   expect(attachments.map(a => a.contentBase64)).toEqual(Array(2).fill(fixtureData.attachments![0]!.contentBase64));
+});
+
+it('charges durable per-account merge quotas once and cannot reset them by replacing the archive', async () => {
+  const owner = await seedSocialGraph(fixture.db);
+  const access = (await issueTokens(db, owner.accountId)).accessToken;
+  const cid = randomUUID();
+  await db.insert(conversations).values({ id: cid, socialGraphId: owner.graphId, type: 'direct', createdByActorId: owner.humanActorId });
+  await db.insert(conversationMembers).values({ conversationId: cid, actorId: owner.humanActorId, status: 'active' });
+  const head = draftDocument();
+  function draftDocument(): PortableBackup {
+    const draft = structuredClone(fixtureData);
+    const prototype = binding.conversations[0]!;
+    draft.cloudAccount = { ...binding, accountId: owner.accountId, actorId: owner.humanActorId, conversations: [{
+      ...prototype, id: cid, type: 'direct', messages: [{
+        ...prototype.messages[0]!, id: randomUUID(), senderActorId: owner.humanActorId, kind: 'text',
+        structuredPayload: null, attachmentIds: [draft.attachments![0]!.id],
+      }],
+    }] };
+    return draft;
+  }
+  const quota = () => db.select().from(accountPortableMergeQuotas).where(eq(accountPortableMergeQuotas.accountId, owner.accountId));
+  const post = (step: string, payload: object) => app.inject({
+    method: 'POST', url: endpoint + '/merge/' + step, payload, headers: auth(access),
+  });
+  const confirm = async () => {
+    const preview = await post('preview', {});
+    expect(preview.statusCode, preview.body).toBe(200);
+    return post('commit', { previewToken: preview.json().previewToken, confirm: true });
+  };
+  expect((await upload(access, JSON.stringify(head))).statusCode).toBe(200);
+  expect((await confirm()).statusCode).toBe(200);
+  const state = (await quota())[0]!;
+  expect(state).toMatchObject({ lifetimeRows: 1, windowRows: 1, windowCommits: 1 });
+  expect(state.lifetimeBytes).toBeGreaterThan(head.attachments![0]!.byteLength);
+  expect((await confirm()).json().counts.messages.insert).toBe(0);
+  expect(await quota()).toEqual([state]);
+  for (const [limited, reset, reason] of [
+    [{ windowCommits: portableMergeQuota.windowCommits }, { windowCommits: 1 }, 'daily'],
+    [{ windowRows: portableMergeQuota.windowRows }, { windowRows: 1 }, 'daily'],
+    [{ windowBytes: portableMergeQuota.windowBytes }, { windowBytes: state.windowBytes }, 'daily'],
+    [{ lifetimeRows: portableMergeQuota.lifetimeRows }, { lifetimeRows: 1 }, 'cumulative'],
+    [{ lifetimeBytes: portableMergeQuota.lifetimeBytes }, { lifetimeBytes: state.lifetimeBytes }, 'cumulative'],
+  ] as const) {
+    await db.update(accountPortableMergeQuotas).set(limited).where(eq(accountPortableMergeQuotas.accountId, owner.accountId));
+    expect((await upload(access, JSON.stringify(draftDocument()))).statusCode).toBe(200);
+    const charged = await quota();
+    const blocked = await confirm();
+    expect(blocked.statusCode, blocked.body).toBe(429);
+    expect(blocked.body).toContain(reason);
+    expect(await quota()).toEqual(charged);
+    expect(await db.select().from(messages).where(eq(messages.conversationId, cid))).toHaveLength(1);
+    await db.update(accountPortableMergeQuotas).set(reset).where(eq(accountPortableMergeQuotas.accountId, owner.accountId));
+  }
+  await db.update(accountPortableMergeQuotas).set({
+    windowStartedAt: new Date(Date.now() - portableMergeQuota.windowMs - 1000),
+    windowRows: portableMergeQuota.windowRows, windowBytes: portableMergeQuota.windowBytes, windowCommits: portableMergeQuota.windowCommits,
+  }).where(eq(accountPortableMergeQuotas.accountId, owner.accountId));
+  expect((await confirm()).statusCode).toBe(200);
+  expect((await quota())[0]).toMatchObject({ lifetimeRows: 2, windowRows: 1, windowCommits: 1 });
 });

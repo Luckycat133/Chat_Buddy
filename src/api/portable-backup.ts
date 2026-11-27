@@ -48,6 +48,7 @@ export async function requestPortableMerge(previewToken?: string) {
     method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' },
     body: JSON.stringify(previewToken === undefined ? {} : { previewToken, confirm: true }), cache: 'no-store',
   });
+  if (response.status === 429) throw Error('Private archive merge limit reached. Try again later.');
   if (response.status === 409) throw new StaleMergePreviewError('Archive or online data changed. Preview again.');
   if (!response.ok) throw Error(`Account merge request failed (HTTP ${response.status})`);
   const result: unknown = await response.json();

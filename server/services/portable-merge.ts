@@ -1,11 +1,12 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Database } from '../../db/index.js';
-import { accounts, accountPortableBackups, actors, conversations, conversationMembers, messages } from '../../db/schema.js';
+import { accounts, accountPortableBackups, accountPortableMergeQuotas, actors, conversations, conversationMembers, messages } from '../../db/schema.js';
 import { MAX_PORTABLE_BACKUP_BYTES, PortableAttachmentSchema } from '../../shared/contracts/portable-backup.js';
 import type { PortableBackup } from '../../shared/contracts/portable-backup.js';
 import { serverEnv } from '../config.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
+import type { ConversationWriteTransaction } from './conversation-writes.js';
 import { conversationAdvisoryKey } from './conversation-writes.js';
 
 const ttl = 5 * 60 * 1000;
@@ -63,6 +64,41 @@ function safeAttachment(a: Attachment): boolean {
   const prefix = Buffer.from(a.contentBase64.slice(0, 12), 'base64');
   return (a.mimeType === 'image/png' && prefix.subarray(0, 8).toString('hex') === '89504e470d0a1a0a') ||
     (a.mimeType === 'image/jpeg' && prefix.subarray(0, 3).toString('hex') === 'ffd8ff');
+}
+
+export const portableMergeQuota = {
+  windowMs: 24 * 60 * 60 * 1000,
+  windowCommits: 12,
+  windowRows: 5_000,
+  windowBytes: 16 * 1024 * 1024,
+  lifetimeRows: 50_000,
+  lifetimeBytes: 128 * 1024 * 1024,
+} as const;
+
+/** Call under the existing FOR UPDATE account lock. The quota and all new
+ * messages commit/roll back together; archive replacement never resets it. */
+async function chargePortableMerge(tx: ConversationWriteTransaction, accountId: string, rows: number, bytes: number) {
+  const [current] = await tx.select().from(accountPortableMergeQuotas)
+    .where(eq(accountPortableMergeQuotas.accountId, accountId));
+  const now = new Date();
+  const sameWindow = current && now.getTime() - current.windowStartedAt.getTime() < portableMergeQuota.windowMs;
+  const next = {
+    lifetimeRows: (current?.lifetimeRows ?? 0) + rows,
+    lifetimeBytes: (current?.lifetimeBytes ?? 0) + bytes,
+    windowStartedAt: sameWindow ? current.windowStartedAt : now,
+    windowRows: (sameWindow ? current.windowRows : 0) + rows,
+    windowBytes: (sameWindow ? current.windowBytes : 0) + bytes,
+    windowCommits: (sameWindow ? current.windowCommits : 0) + 1,
+  };
+  if (next.lifetimeRows > portableMergeQuota.lifetimeRows || next.lifetimeBytes > portableMergeQuota.lifetimeBytes) {
+    throw new ApiError(ApiErrorCodes.RateLimited, 'The cumulative private archive merge limit was reached.');
+  }
+  if (next.windowRows > portableMergeQuota.windowRows || next.windowBytes > portableMergeQuota.windowBytes ||
+      next.windowCommits > portableMergeQuota.windowCommits) {
+    throw new ApiError(ApiErrorCodes.RateLimited, 'The daily private archive merge limit was reached.');
+  }
+  await tx.insert(accountPortableMergeQuotas).values({ accountId, ...next })
+    .onConflictDoUpdate({ target: accountPortableMergeQuotas.accountId, set: next });
 }
 
 export async function mergePrivateArchive(
@@ -266,6 +302,12 @@ export async function mergePrivateArchive(
     const receipt = { archiveSha256: backup.sha256, counts, conflicts };
     if (token === undefined) return { ...receipt, previewToken: tokenFor(scope, fingerprint, Date.now() + ttl) };
     verify(token, scope, fingerprint);
+    // The existing account lock serializes clients, replicas, and new archive
+    // replacements. Charge only actual inserts (including copied attachment bytes).
+    if (inserts.length) {
+      const bytes = inserts.reduce((n, row) => n + Buffer.byteLength(JSON.stringify(row)) + 64, 0);
+      await chargePortableMerge(tx, accountId, inserts.length, bytes);
+    }
     // Deliberately no message event, notifications, ACL changes to existing chats or AI work.
     for (let i = 0; i < inserts.length; i += 100) await tx.insert(messages).values(
       inserts.slice(i, i + 100).map(row => ({ ...row, clientIdempotencyKey: `private-archive:${randomUUID()}` })),
