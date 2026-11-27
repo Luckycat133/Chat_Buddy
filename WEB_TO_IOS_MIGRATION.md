@@ -123,3 +123,11 @@ The deadline applies to receiving the upload, not a commit receipt. Work
 holds its admission permit through commit or rollback; transaction SQL and
 lock waits are bounded. If the connection drops at commit, the result may be
 unknown to the client: compare the saved archive SHA before retrying.
+
+## Explicit private cloud merge (0.5.5)
+
+1. Use the existing signed-in Web v2 import to store a same-account archive, then open that exact archive.
+2. `POST /v1/account/backup/merge/preview` with `{}` returns the archive SHA-256, five-minute plan token, insert/skip/conflict counts and up to 50 archive IDs per conflict category. It does not mutate data.
+3. Only after confirmation, post `{ "previewToken": "...", "confirm": true }` to `/v1/account/backup/merge/commit`. The transaction replans under the same write locks as live sends. Archive or relevant online changes return 409: reopen/preview again. Response includes affected conversations and their first appended sequence (`affectedConversationStarts`). Fetch the existing messages endpoint using that inclusive cursor; no feed, push, generation or normal send event is emitted.
+4. Only an existing active direct chat you created with yourself and optionally same-graph active accountless characters is eligible. No shared chats, other authors, deleted rows, unknown conversations, restored members, browser device payloads or arbitrary structured actions. Existing IDs (including tombstones) are never overwritten. Missing messages use stable account/conversation-scoped IDs and remap their reply references to avoid cross-account ID collisions. Only supported text/image and PNG/JPEG attachment bytes or zero-byte reference placeholders are appended. Attachment IDs/content are compared per target conversation; original archive bytes remain untouched. Existing inline data is stored per message; this is logical ID deduplication, not a global blob store.
+5. Archive limit 4 MiB, merge up to 100 conversations and 2,000 messages and 8 MiB of expanded data. Unavailable archived conversations are reported as conflicts, not re-created.

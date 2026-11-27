@@ -196,3 +196,89 @@ it('follows active cross-graph group membership, omits pre-join history, and wal
   expect((await upload(access, live.body)).statusCode).toBe(200);
   expect((await download(access)).body).toBe(live.body);
 });
+
+it('merges only private self-authored rows and rolls back a failed multi-message transaction', async () => {
+  const owner = await seedSocialGraph(fixture.db);
+  const other = await seedSocialGraph(fixture.db);
+  const headers = auth((await issueTokens(db, owner.accountId)).accessToken);
+  const outside = auth((await issueTokens(db, other.accountId)).accessToken);
+  const privateId = randomUUID(), sharedId = randomUUID(), deletedId = randomUUID();
+  await db.insert(conversations).values([privateId, sharedId, deletedId].map(id =>
+    ({ id, type: 'direct' as const, socialGraphId: owner.graphId, createdByActorId: owner.humanActorId })));
+  await db.insert(conversationMembers).values([
+    ...[privateId, sharedId, deletedId].map(conversationId => ({ conversationId, actorId: owner.humanActorId, status: 'active' as const })),
+    { conversationId: privateId, actorId: owner.characterActorId, status: 'active' },
+    { conversationId: sharedId, actorId: other.humanActorId, status: 'left' },
+  ]);
+  const timestamp = new Date('2026-11-02T02:03:04.000Z');
+  const make = (content: string, sequence: number, more: Partial<NonNullable<PortableBackup['cloudAccount']>['conversations'][number]['messages'][number]> = {}) => ({
+    id: randomUUID(), senderActorId: owner.humanActorId, sequence, content, kind: 'text', status: 'accepted',
+    createdAt: timestamp.toISOString(), editedAt: null, replyToMessageId: null, structuredPayload: null, ...more,
+  });
+  const old = make('Old value from stale backup', 1);
+  const removed = make('Deleted value must never revive', 2);
+  const first = make('First missing', 3, { attachmentIds: [fixtureData.attachments![0]!.id] });
+  const second = make('Second missing', 4, { replyToMessageId: first.id, attachmentIds: [fixtureData.attachments![0]!.id] });
+  await db.insert(messages).values([
+    { id: old.id, conversationId: privateId, senderActorId: owner.humanActorId, sequence: 1, content: 'Newer online value', kind: 'text', status: 'accepted', clientIdempotencyKey: old.id, createdAt: timestamp },
+    { id: removed.id, conversationId: privateId, senderActorId: owner.humanActorId, sequence: 2, content: removed.content, kind: 'text', status: 'accepted', clientIdempotencyKey: removed.id, createdAt: timestamp, deletedAt: timestamp },
+  ]);
+  const draft = structuredClone(fixtureData);
+  const prototype = binding.conversations[0]!;
+  draft.cloudAccount = { ...binding, accountId: owner.accountId, actorId: owner.humanActorId, conversations: [
+    { ...prototype, id: privateId, type: 'direct', messages: [
+      old, removed, first, second,
+      make('Character archive row must not be inserted', 5, { senderActorId: owner.characterActorId }),
+      make('Unsafe structured payload', 6, { structuredPayload: { command: 'synthetic' } }),
+      make('Cannot link deleted target', 7, { replyToMessageId: removed.id }),
+    ] },
+    { ...prototype, id: sharedId, type: 'direct', messages: [make('Shared chat forbidden', 1)] },
+    { ...prototype, id: deletedId, type: 'direct', messages: [make('Conversation deleted after upload', 1)] },
+  ] };
+  const archive = JSON.stringify(draft);
+  expect((await app.inject({ url: endpoint, method: 'PUT', headers, payload: { document: archive } })).statusCode).toBe(200);
+  await db.update(conversations).set({ status: 'deleted' }).where(eq(conversations.id, deletedId));
+  const post = (suffix: string, payload: unknown, h = headers) => app.inject({ method: 'POST', url: endpoint + '/merge/' + suffix, headers: h, payload: JSON.stringify(payload) });
+  // Fastify's custom parser requires an explicit JSON type when payload is text.
+  headers['content-type' as keyof typeof headers] = 'application/json';
+  outside['content-type' as keyof typeof outside] = 'application/json';
+  expect((await post('preview', {}, outside)).statusCode).toBe(404);
+  const initial = await post('preview', {});
+  expect(initial.statusCode, initial.body).toBe(200);
+  const preview = initial.json();
+  expect(preview.counts.conversations).toEqual({ insert: 0, skip: 1, conflict: 2 });
+  expect(preview.counts.messages).toEqual({ insert: 2, skip: 0, conflict: 7 });
+  expect(preview.counts.attachments).toEqual({ insert: 1, skip: 1, conflict: 0 });
+  expect(preview.conflicts.conversations).toEqual([sharedId, deletedId]);
+  expect(preview.conflicts.messages).toContain(removed.id);
+  const write = (previewToken = preview.previewToken, confirm = true) => post('commit', { previewToken, confirm });
+  expect((await write(preview.previewToken, false)).statusCode).toBe(422);
+  expect((await write('bad-token')).statusCode).toBe(409);
+  expect((await db.select().from(messages)).map(m => m.id)).not.toContain(first.id);
+  await fixture.pg.exec(`CREATE FUNCTION reject_archived_row() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN IF NEW.content = 'Second missing' THEN RAISE EXCEPTION 'synthetic insert rollback'; END IF; RETURN NEW; END;
+    $$; CREATE TRIGGER reject_archive_insert AFTER INSERT ON messages FOR EACH ROW EXECUTE FUNCTION reject_archived_row();`);
+  try {
+    expect((await write()).statusCode).toBe(500);
+    const rows = await db.select().from(messages).where(eq(messages.conversationId, privateId));
+    expect(rows).toHaveLength(2);
+    expect(rows.find(m => m.id === old.id)?.content).toBe('Newer online value');
+  } finally {
+    await fixture.pg.exec('DROP TRIGGER reject_archive_insert ON messages; DROP FUNCTION reject_archived_row();');
+  }
+  const success = await write();
+  expect(success.statusCode, success.body).toBe(200);
+  expect(success.json().affectedConversationStarts).toEqual({ [privateId]: 3 });
+  const rows = await db.select().from(messages).where(eq(messages.conversationId, privateId));
+  const recovered = rows.find(row => row.content === first.content);
+  const reply = rows.find(row => row.content === second.content);
+  expect(recovered?.id).not.toBe(first.id);
+  expect(reply?.replyToMessageId).toBe(recovered?.id);
+  expect(reply?.sequence).toBe(4);
+  expect(recovered?.structuredPayload).toEqual({ attachments: [fixtureData.attachments![0]] });
+  expect((await write()).statusCode).toBe(409);
+  const again = (await post('preview', {})).json();
+  expect(again.counts.messages).toEqual({ insert: 0, skip: 2, conflict: 7 });
+  expect(again.counts.attachments.insert).toBe(0);
+  expect((await download(headers.authorization.slice(7))).body).toBe(archive);
+});

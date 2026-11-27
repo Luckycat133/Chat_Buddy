@@ -18,7 +18,7 @@ function getCurrentActorId() {
   return loadTokens().actorId;
 }
 
-export function useCloudMessages(conversationId) {
+export function useCloudMessages(conversationId, firstSequence) {
   const [status, setStatus] = useState('loading');
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState(null);
@@ -37,7 +37,7 @@ export function useCloudMessages(conversationId) {
     async function run() {
       try {
         const [messageEnvelope, actorList] = await Promise.all([
-          cloud.getMessages(conversationId, { limit: 100 }),
+          cloud.getMessages(conversationId, { limit: 100, ...(firstSequence ? { cursor: firstSequence } : {}) }),
           cloud.listActors(),
         ]);
         if (ignored) return;
@@ -55,7 +55,7 @@ export function useCloudMessages(conversationId) {
     return () => {
       ignored = true;
     };
-  }, [cloud, conversationId, reloadToken]);
+  }, [cloud, conversationId, firstSequence, reloadToken]);
 
   const refetch = useCallback(() => {
     // Event-handler updates: the window shows loading while refetching,

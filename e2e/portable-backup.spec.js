@@ -65,3 +65,79 @@ test('restore and re-export one bound Web v2 archive with real Chromium and a sy
     expect(retrieved.cloudAccount.conversations[0].messages[1].replyToMessageId).toBe('cloud-message-1');
     expect(createHash('sha256').update(Buffer.from(retrieved.attachments[0].contentBase64, 'base64')).digest('hex')).toBe(pngSha);
 });
+
+test('previews, explicitly commits and idempotently restores a private Mira chat on real PostgreSQL', async ({ page, request }) => {
+    const signin = async name => {
+        const res = await request.post(cloud + '/v1/auth/dev-signin', { data: { displayName: name, email: `merge-${randomUUID()}@example.test` } });
+        expect(res.ok()).toBeTruthy();
+        return res.json();
+    };
+    const tokens = await signin('Synthetic Merge');
+    const outsider = await signin('Synthetic Outsider');
+    const headers = { authorization: 'Bearer ' + tokens.accessToken };
+    const outsiders = { authorization: 'Bearer ' + outsider.accessToken };
+    expect((await request.post(cloud + '/v1/onboarding/bootstrap', { headers })).ok()).toBeTruthy();
+    const document = await (await request.get(cloud + '/v1/account/backup/live', { headers })).json();
+    const thread = document.cloudAccount.conversations.find(item => item.type === 'direct');
+    expect(thread).toBeTruthy();
+    const newId = randomUUID();
+    const newMessage = {
+        id: newId, senderActorId: tokens.actorId, sequence: 991, kind: 'text', status: 'accepted',
+        content: 'Synthetic restored message', createdAt: new Date().toISOString(), editedAt: null,
+        replyToMessageId: null, structuredPayload: null, attachmentIds: [golden.attachments[0].id],
+    };
+    document.attachments = [golden.attachments[0]];
+    // Existing Mira authors are allowed to remain in the archive but not reinserted.
+    const direction = cloud + '/v1/conversations/' + thread.id + '/messages';
+    const ahead = async cursor => (await (await request.get(direction + (cursor ? '?cursor=' + cursor : ''), { headers })).json()).items;
+    const before = await ahead();
+    thread.messages.push(newMessage);
+    const backup = cloud + '/v1/account/backup';
+    const archive = JSON.stringify(document);
+    expect((await request.put(backup, { headers, data: { document: archive } })).status()).toBe(200);
+    expect((await request.post(backup + '/merge/preview', { headers: outsiders, data: {} })).status()).toBe(404);
+    await page.addInitScript(session => {
+        for (const [key, value] of Object.entries({
+            access_token: session.accessToken, access_expires_at: session.accessExpiresAt,
+            refresh_token: session.refreshToken, refresh_expires_at: session.refreshExpiresAt,
+            account_id: session.accountId, actor_id: session.actorId,
+        })) sessionStorage.setItem('cb.' + key, value);
+        localStorage.setItem('chat-buddy-lang', '"en"');
+    }, tokens);
+    await page.goto('/settings');
+    const panel = page.getByRole('region', { name: 'Portable account backup' });
+    await panel.getByRole('button', { name: 'Open imported backup' }).click();
+    const preview = panel.getByRole('button', { name: 'Preview online merge' });
+    await preview.click();
+    const plan = panel.getByRole('region', { name: 'Merge differences' });
+    await expect(plan).toContainText('Messages: 1 to add');
+    const commit = panel.getByRole('button', { name: 'Confirm merge to live conversations' });
+    await expect(commit).toBeDisabled();
+    expect(await ahead()).toEqual(before);
+    // A normal writer advancing the sequence invalidates the confirmed snapshot.
+    expect((await request.post(direction, { headers, data: { content: 'Synthetic live update', clientIdempotencyKey: randomUUID() } })).status()).toBe(201);
+    await panel.getByRole('checkbox', { name: 'I confirm adding the previewed messages to live conversations.' }).check();
+    await commit.click();
+    await expect(panel.getByRole('alert')).toContainText('Preview expired or data changed');
+    const justOnline = await ahead();
+    expect(justOnline.map(m => m.content)).not.toContain(newMessage.content);
+    const knownSequence = justOnline.at(-1).sequence;
+    await preview.click();
+    await panel.getByRole('checkbox', { name: 'I confirm adding the previewed messages to live conversations.' }).check();
+    await commit.click();
+    await expect(panel.getByRole('status')).toContainText('Added 1 messages');
+    const delta = await ahead(knownSequence + 1);
+    expect(delta).toHaveLength(1);
+    expect(delta[0]).toMatchObject({ content: newMessage.content, sequence: knownSequence + 1, senderActorId: tokens.actorId });
+    expect(createHash('sha256').update(Buffer.from(delta[0].structuredPayload.attachments[0].contentBase64, 'base64')).digest('hex')).toBe(pngSha);
+    expect((await ahead()).slice(0, justOnline.length)).toEqual(justOnline);
+    await preview.click();
+    await expect(plan).toContainText('Messages: 0 to add');
+    await expect(commit).toHaveCount(0);
+    expect(await ahead(knownSequence + 1)).toEqual(delta);
+    expect(await (await request.get(backup, { headers })).text()).toBe(archive);
+    await page.goto('/chats/' + thread.id + '?restoredFrom=' + (knownSequence + 1));
+    await expect(page.getByTestId('cloud-message-timeline').getByText(newMessage.content)).toBeVisible();
+    const image = page.getByRole('img', { name: golden.attachments[0].name });
+    await expect.poll(() => image.evaluate(node => node.naturalWidth)).toBe(1);
+});

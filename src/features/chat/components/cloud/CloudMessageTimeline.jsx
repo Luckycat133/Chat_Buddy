@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import { cn } from '../../../../utils/cn';
 import { useLanguage } from '../../../../context/LanguageContext';
 import { formatTimeSeparator, shouldShowTimeSeparator } from '../../../../utils/formatTime';
+import { PortableAttachmentSchema } from '../../../../../shared/contracts/portable-backup';
 import TTSButton from '../TTSButton';
 
 function CloudMessageBubble({ message, isMe, senderName, onRetry }) {
@@ -29,6 +30,14 @@ function CloudMessageBubble({ message, isMe, senderName, onRetry }) {
   }
 
   const pending = message.status === 'pending';
+  const refs = message.structuredPayload?.attachments;
+  const assets = Array.isArray(refs) ? refs.flatMap(value => {
+    const asset = PortableAttachmentSchema.safeParse(value);
+    return asset.success ? [asset.data] : [];
+  }) : [];
+  const inlineImage = asset => asset.contentBase64 && ['image/png', 'image/jpeg'].includes(asset.mimeType) &&
+    /^[A-Za-z0-9+/]+=*$/.test(asset.contentBase64) ? `data:${asset.mimeType};base64,${asset.contentBase64}` : null;
+
 
   return (
     <div
@@ -61,7 +70,13 @@ function CloudMessageBubble({ message, isMe, senderName, onRetry }) {
               pending && 'opacity-70',
             )}
           >
-            <p className="whitespace-pre-wrap break-words text-[16px] leading-relaxed">{message.content}</p>
+            {!assets.some(asset => message.kind === 'image' && inlineImage(asset) === message.content) &&
+              <p className="whitespace-pre-wrap break-words text-[16px] leading-relaxed">{message.content}</p>}
+            {assets.map((asset, index) => {
+              const source = inlineImage(asset);
+              return source ? <img key={index} className="max-w-full rounded" loading="lazy" alt={asset.name} src={source} />
+                : <p key={index}>{asset.name || asset.id}</p>;
+            })}
           </div>
           {!isMe && message.kind === 'text' && (
             <div className="mt-1 flex justify-start">
@@ -83,8 +98,9 @@ export default function CloudMessageTimeline({ messages, actorMap, currentActorI
   }, [messages]);
 
   const items = useMemo(() => {
-    return messages.map((msg, index) => {
-      const prev = index > 0 ? messages[index - 1] : null;
+    const visible = messages.filter(message => !message.deletedAt);
+    return visible.map((msg, index) => {
+      const prev = index > 0 ? visible[index - 1] : null;
       const showTimeSeparator = shouldShowTimeSeparator(
         prev?.createdAt,
         msg.createdAt,

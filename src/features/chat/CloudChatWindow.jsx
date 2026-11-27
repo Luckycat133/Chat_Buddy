@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CloudSun } from 'lucide-react';
 import { MIRA_WELCOME_MESSAGE_KEY } from '../../../shared/contracts/message';
 import { authedCloudFetch } from '../../api/cloud-adapter';
@@ -11,12 +11,15 @@ import WeatherCapabilitySheet from './components/cloud/WeatherCapabilitySheet';
 
 export default function CloudChatWindowRoute() {
   const { conversationId } = useParams();
+  const [search] = useSearchParams();
+  const from = Number(search.get('restoredFrom'));
+  const firstSequence = Number.isSafeInteger(from) && from > 0 && from <= 2147483647 ? from : undefined;
   // Remount per conversation: message/sending state can never bleed from
   // one cloud conversation into the next.
-  return <CloudChatWindow key={conversationId ?? 'none'} conversationId={conversationId} />;
+  return <CloudChatWindow key={`${conversationId ?? 'none'}:${firstSequence ?? ''}`} conversationId={conversationId} firstSequence={firstSequence} />;
 }
 
-function CloudChatWindow({ conversationId }) {
+function CloudChatWindow({ conversationId, firstSequence }) {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [weatherSheetOpen, setWeatherSheetOpen] = useState(false);
@@ -31,7 +34,7 @@ function CloudChatWindow({ conversationId }) {
     refetch,
     actorMap,
     currentActorId,
-  } = useCloudMessages(conversationId);
+  } = useCloudMessages(conversationId, firstSequence);
 
   const postedWelcome = useRef(null);
   const welcomeId = status === 'ready' ? messages.find((message) =>
