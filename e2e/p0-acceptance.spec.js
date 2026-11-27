@@ -26,6 +26,7 @@ test.describe('P0 acceptance (ACCEPTANCE.md §2)', () => {
   test.beforeEach(async ({ request }, testInfo) => {
     const ok = await serverAvailable(request);
     if (!ok) {
+      if (process.env.CI) throw new Error(`Cloud runtime not reachable at ${CLOUD_HEALTH_URL}`);
       testInfo.skip(true, `Cloud runtime not reachable at ${CLOUD_HEALTH_URL}`);
     }
   });
