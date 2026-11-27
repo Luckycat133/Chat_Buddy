@@ -260,7 +260,10 @@ it('merges only private self-authored rows and rolls back a failed multi-message
     BEGIN IF NEW.content = 'Second missing' THEN RAISE EXCEPTION 'synthetic insert rollback'; END IF; RETURN NEW; END;
     $$; CREATE TRIGGER reject_archive_insert AFTER INSERT ON messages FOR EACH ROW EXECUTE FUNCTION reject_archived_row();`);
   try {
-    expect((await write()).statusCode).toBe(500);
+    const failed = await write();
+    expect(failed.statusCode).toBe(502);
+    expect(failed.body).toContain('Private archive merge did not complete');
+    expect(failed.body).not.toContain('Second missing');
     const rows = await db.select().from(messages).where(eq(messages.conversationId, privateId));
     expect(rows).toHaveLength(2);
     expect(rows.find(m => m.id === old.id)?.content).toBe('Newer online value');

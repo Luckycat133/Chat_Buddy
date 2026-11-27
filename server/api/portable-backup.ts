@@ -172,6 +172,12 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
       merging.add(accountId);
       try {
         return await mergePrivateArchive(request.server.db as Database, { accountId, actorId, socialGraphId }, validate, token);
+      } catch (error) {
+        if (error instanceof ApiError) throw error;
+        // Drizzle driver exceptions can embed SQL bindings with private chat
+        // contents and attachment bytes. Keep both response and logs generic.
+        request.log.warn({ mode }, 'private archive merge transaction failed');
+        throw new ApiError(ApiErrorCodes.Internal, 'Private archive merge did not complete');
       } finally {
         merging.delete(accountId);
       }
