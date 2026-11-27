@@ -6,6 +6,7 @@
  */
 import { storage } from '../services/storage/StorageService';
 import APIClient from '../services/api/APIClient';
+import { importPortablePreferences } from './portablePreferences';
 import { normalizeBaseUrlForDevProxy } from '../utils/apiUtils';
 
 const CONFIG_KEY = 'api-config';
@@ -612,6 +613,10 @@ export function importData(file) {
         reader.onload = async (e) => {
             try {
                 const data = JSON.parse(e.target.result);
+                if (data?.format === "chat-buddy.preferences") {
+                    resolve(importPortablePreferences(data));
+                    return;
+                }
                 const { localStorageData, indexedDBData } = validateBackupPayload(data);
 
                 let count = 0;

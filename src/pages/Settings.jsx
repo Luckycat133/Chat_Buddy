@@ -19,6 +19,7 @@ import { useOnboarding } from '../hooks/useOnboarding';
 import AccentColorPicker from '../components/AccentColorPicker';
 import MessageSearchPanel from '../features/chat/components/MessageSearchPanel';
 import { clearAllAppData, exportAllData, importData } from '../config/apiConfig';
+import { downloadPortablePreferences } from "../config/portablePreferences";
 import CharacterMemoryPanel from '../components/CharacterMemoryPanel';
 import { INITIAL_PERSONAS } from '../data/personas';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -398,6 +399,13 @@ export default function Settings() {
                                     label={t('export_data_title')}
                                     subLabel={t('export_data_desc')}
                                     onClick={handleExport}
+                                />
+                                <SettingItem
+                                    icon={<Download size={18} />}
+                                    color="bg-[var(--color-icon-gray)]"
+                                    label={language === 'zh' ? '导出跨端偏好' : 'Export portable preferences'}
+                                    subLabel={language === 'zh' ? '仅语言和外观，不含聊天或凭据' : 'Language and appearance only; no chats or credentials'}
+                                    onClick={downloadPortablePreferences}
                                 />
                                 <SettingItem
                                     icon={<Upload size={18} />}

@@ -3,6 +3,7 @@ import React, { createContext, useContext } from 'react';
 const ChatStateContext = createContext();
 
 // Export for use in ChatContext.jsx
+// eslint-disable-next-line react-refresh/only-export-components
 export { ChatStateContext };
 
 // eslint-disable-next-line react-refresh/only-export-components
