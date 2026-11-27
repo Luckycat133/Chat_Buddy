@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CloudSun } from 'lucide-react';
 import { MIRA_WELCOME_MESSAGE_KEY } from '../../../shared/contracts/message';
 import { authedCloudFetch } from '../../api/cloud-adapter';
@@ -21,7 +21,9 @@ export default function CloudChatWindowRoute() {
 
 function CloudChatWindow({ conversationId, firstSequence }) {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const restoredView = firstSequence !== undefined;
+  const label = (zh, en) => language === 'zh' ? zh : en;
   const [weatherSheetOpen, setWeatherSheetOpen] = useState(false);
   const {
     status,
@@ -37,7 +39,7 @@ function CloudChatWindow({ conversationId, firstSequence }) {
   } = useCloudMessages(conversationId, firstSequence);
 
   const postedWelcome = useRef(null);
-  const welcomeId = status === 'ready' ? messages.find((message) =>
+  const welcomeId = !restoredView && status === 'ready' ? messages.find((message) =>
     message.clientIdempotencyKey === MIRA_WELCOME_MESSAGE_KEY &&
     message.senderActorId !== currentActorId &&
     message.status === 'accepted' && !message.deletedAt)?.id : null;
@@ -91,6 +93,21 @@ function CloudChatWindow({ conversationId, firstSequence }) {
         >
           {t('retry')}
         </button>
+      </div>
+    );
+  }
+
+  if (restoredView) {
+    const last = messages.at(-1)?.sequence;
+    return (
+      <div className="flex flex-col h-full bg-[var(--color-bg-chat)] flex-1">
+        <header className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
+          <h1>{label('已恢复消息（只读）', 'Restored messages (read-only)')}</h1>
+          <Link to={`/chats/${conversationId}`}>{label('打开在线会话', 'Open live conversation')}</Link>
+          {messages.length === 100 && last < 2147483647 &&
+            <Link to={`?restoredFrom=${last + 1}`}>{label('下一页', 'Next page')}</Link>}
+        </header>
+        <CloudMessageTimeline messages={messages} actorMap={actorMap} currentActorId={currentActorId} />
       </div>
     );
   }

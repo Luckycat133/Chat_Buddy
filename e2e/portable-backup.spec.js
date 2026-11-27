@@ -89,9 +89,12 @@ test('previews, explicitly commits and idempotently restores a private Mira chat
     document.attachments = [golden.attachments[0]];
     // Existing Mira authors are allowed to remain in the archive but not reinserted.
     const direction = cloud + '/v1/conversations/' + thread.id + '/messages';
-    const ahead = async cursor => (await (await request.get(direction + (cursor ? '?cursor=' + cursor : ''), { headers })).json()).items;
+    const ahead = async cursor => (await (await request.get(direction + '?limit=200' + (cursor ? '&cursor=' + cursor : ''), { headers })).json()).items;
     const before = await ahead();
-    thread.messages.push(newMessage);
+    thread.messages.push(newMessage, ...Array.from({ length: 100 }, (_, index) => ({
+        ...newMessage, id: randomUUID(), sequence: newMessage.sequence + index + 1, attachmentIds: undefined,
+        content: `Synthetic restored page row ${index + 1}`,
+    })));
     const backup = cloud + '/v1/account/backup';
     const archive = JSON.stringify(document);
     expect((await request.put(backup, { headers, data: { document: archive } })).status()).toBe(200);
@@ -110,7 +113,7 @@ test('previews, explicitly commits and idempotently restores a private Mira chat
     const preview = panel.getByRole('button', { name: 'Preview online merge' });
     await preview.click();
     const plan = panel.getByRole('region', { name: 'Merge differences' });
-    await expect(plan).toContainText('Messages: 1 to add');
+    await expect(plan).toContainText('Messages: 101 to add');
     const commit = panel.getByRole('button', { name: 'Confirm merge to live conversations' });
     await expect(commit).toBeDisabled();
     expect(await ahead()).toEqual(before);
@@ -125,19 +128,25 @@ test('previews, explicitly commits and idempotently restores a private Mira chat
     await preview.click();
     await panel.getByRole('checkbox', { name: 'I confirm adding the previewed messages to live conversations.' }).check();
     await commit.click();
-    await expect(panel.getByRole('status')).toContainText('Added 1 messages');
+    await expect(panel.getByRole('status')).toContainText('Added 101 messages');
     const delta = await ahead(knownSequence + 1);
-    expect(delta).toHaveLength(1);
+    expect(delta).toHaveLength(101);
     expect(delta[0]).toMatchObject({ content: newMessage.content, sequence: knownSequence + 1, senderActorId: tokens.actorId });
     expect(createHash('sha256').update(Buffer.from(delta[0].structuredPayload.attachments[0].contentBase64, 'base64')).digest('hex')).toBe(pngSha);
     expect((await ahead()).slice(0, justOnline.length)).toEqual(justOnline);
+    await panel.getByRole('link', { name: /Open restored messages/ }).click();
+    await expect(page.getByRole('heading', { name: 'Restored messages (read-only)' })).toBeVisible();
+    await expect(page.getByTestId('cloud-message-timeline').getByText(newMessage.content)).toBeVisible();
+    const image = page.getByRole('img', { name: golden.attachments[0].name });
+    await expect.poll(() => image.evaluate(node => node.naturalWidth)).toBe(1);
+    await page.getByRole('link', { name: 'Next page' }).click();
+    await expect(page.getByTestId('cloud-message-timeline').getByText('Synthetic restored page row 100')).toBeVisible();
+    await page.goto('/settings');
+    await panel.getByRole('button', { name: 'Open imported backup' }).click();
     await preview.click();
     await expect(plan).toContainText('Messages: 0 to add');
     await expect(commit).toHaveCount(0);
     expect(await ahead(knownSequence + 1)).toEqual(delta);
     expect(await (await request.get(backup, { headers })).text()).toBe(archive);
-    await page.goto('/chats/' + thread.id + '?restoredFrom=' + (knownSequence + 1));
-    await expect(page.getByTestId('cloud-message-timeline').getByText(newMessage.content)).toBeVisible();
-    const image = page.getByRole('img', { name: golden.attachments[0].name });
-    await expect.poll(() => image.evaluate(node => node.naturalWidth)).toBe(1);
+
 });

@@ -231,6 +231,7 @@ it('merges only private self-authored rows and rolls back a failed multi-message
       make('Character archive row must not be inserted', 5, { senderActorId: owner.characterActorId }),
       make('Unsafe structured payload', 6, { structuredPayload: { command: 'synthetic' } }),
       make('Cannot link deleted target', 7, { replyToMessageId: removed.id }),
+      make('x'.repeat(32_001), 8),
     ] },
     { ...prototype, id: sharedId, type: 'direct', messages: [make('Shared chat forbidden', 1)] },
     { ...prototype, id: deletedId, type: 'direct', messages: [make('Conversation deleted after upload', 1)] },
@@ -247,7 +248,7 @@ it('merges only private self-authored rows and rolls back a failed multi-message
   expect(initial.statusCode, initial.body).toBe(200);
   const preview = initial.json();
   expect(preview.counts.conversations).toEqual({ insert: 0, skip: 1, conflict: 2 });
-  expect(preview.counts.messages).toEqual({ insert: 2, skip: 0, conflict: 7 });
+  expect(preview.counts.messages).toEqual({ insert: 2, skip: 0, conflict: 8 });
   expect(preview.counts.attachments).toEqual({ insert: 1, skip: 1, conflict: 0 });
   expect(preview.conflicts.conversations).toEqual([sharedId, deletedId]);
   expect(preview.conflicts.messages).toContain(removed.id);
@@ -283,7 +284,45 @@ it('merges only private self-authored rows and rolls back a failed multi-message
   expect(recovered?.structuredPayload).toEqual(reply?.structuredPayload);
   expect((await write()).statusCode).toBe(409);
   const again = (await post('preview', {})).json();
-  expect(again.counts.messages).toEqual({ insert: 0, skip: 2, conflict: 7 });
+  expect(again.counts.messages).toEqual({ insert: 0, skip: 2, conflict: 8 });
   expect(again.counts.attachments.insert).toBe(0);
   expect((await download(headers.authorization.slice(7))).body).toBe(archive);
+});
+
+it('namespaces repeated source attachment IDs across two exportable private conversations', async () => {
+  const owner = await seedSocialGraph(fixture.db);
+  const access = (await issueTokens(db, owner.accountId)).accessToken;
+  const destinations = [randomUUID(), randomUUID()];
+  await db.insert(conversations).values(destinations.map(id =>
+    ({ id, socialGraphId: owner.graphId, type: 'direct' as const, createdByActorId: owner.humanActorId })));
+  await db.insert(conversationMembers).values(destinations.map(conversationId =>
+    ({ conversationId, actorId: owner.humanActorId, status: 'active' as const })));
+  const post = (step: string, payload: object) => app.inject({
+    method: 'POST', url: endpoint + '/merge/' + step, payload, headers: auth(access),
+  });
+  for (const [index, id] of destinations.entries()) {
+    const draft = structuredClone(fixtureData);
+    const attachment = draft.attachments![0]!;
+    attachment.name = `synthetic-image-${index}.png`;
+    const original = binding.conversations[0]!;
+    draft.cloudAccount = { ...binding, accountId: owner.accountId, actorId: owner.humanActorId, conversations: [{
+      ...original, id, type: 'direct', messages: [{
+        ...original.messages[0]!, id: randomUUID(), senderActorId: owner.humanActorId,
+        structuredPayload: null, attachmentIds: [attachment.id],
+      }],
+    }] };
+    expect((await upload(access, JSON.stringify(draft))).statusCode).toBe(200);
+    const preview = await post('preview', {});
+    expect(preview.statusCode, preview.body).toBe(200);
+    const commit = await post('commit', { previewToken: preview.json().previewToken, confirm: true });
+    expect(commit.statusCode, commit.body).toBe(200);
+    expect(commit.json().counts.messages.insert).toBe(1);
+  }
+  const live = await download(access, '/live');
+  expect(live.statusCode, live.body).toBe(200);
+  const attachments = PortableBackupSchema.parse(live.json()).attachments!;
+  expect(attachments).toHaveLength(2);
+  expect(attachments[0]?.id).not.toBe(attachments[1]?.id);
+  expect(attachments.map(a => a.name).sort()).toEqual(['synthetic-image-0.png', 'synthetic-image-1.png']);
+  expect(attachments.map(a => a.contentBase64)).toEqual(Array(2).fill(fixtureData.attachments![0]!.contentBase64));
 });

@@ -214,8 +214,8 @@ export async function mergePrivateArchive(
         const assetConflict = new Set(refs).size !== refs.length || refs.some(id => unsafeAssets.has(id)) ||
           refs.some((id, i) => (known.has(id) && known.get(id) !== hashes[i]) ||
             (known.has(scopedRefs[i]!) && known.get(scopedRefs[i]!) !== hashes[i]));
-        const imageContent = m.kind !== 'image' || attachments.some(a => a.contentBase64 &&
-          m.content === `data:${a.mimeType};base64,${a.contentBase64}`);
+        const imageContent = m.kind !== 'image' || (attachments.length > 0 && (!m.content.startsWith('data:') ||
+          attachments.some(a => a.contentBase64 && m.content === `data:${a.mimeType};base64,${a.contentBase64}`)));
         const body = m.structuredPayload;
         const safePayload = body === null || Object.keys(body).every(k => k === 'attachments');
         const embedded = m.structuredPayload?.attachments;
