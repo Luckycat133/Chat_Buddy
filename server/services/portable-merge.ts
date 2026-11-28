@@ -202,7 +202,7 @@ export async function mergePrivateArchive(
           const m = archived.get(row.id);
           const projected = portableMessagePayload(row);
           if (!m || !projected || !memberIds.has(row.senderActorId) || m.senderActorId !== row.senderActorId ||
-              row.sequence !== m.sequence || row.createdAt.toISOString() !== m.createdAt ||
+              row.sequence < 1 || row.sequence !== m.sequence || row.createdAt.toISOString() !== m.createdAt ||
               (row.editedAt?.toISOString() ?? null) !== m.editedAt || row.replyToMessageId !== m.replyToMessageId ||
               (row.replyToMessageId !== null && (sequenceById.get(row.replyToMessageId) ?? Number.POSITIVE_INFINITY) >= row.sequence) ||
               m.content !== row.content || m.kind !== row.kind || m.status !== row.status || row.content.length > 32_000 ||

@@ -446,17 +446,35 @@ it('reopens a retained private conversation only for complete authoritative auth
   expect(plan.restoredConversationIds).toEqual([cid]);
   expect(plan.counts.messages.insert).toBe(3);
   expect((await list()).json().items).toEqual([]);
+  await db.update(messages).set({ content: 'changed authoritative source after preview' }).where(eq(messages.id, ids[1]!));
+  expect((await post('commit', { previewToken: plan.previewToken, confirm: true })).statusCode).toBe(409);
+  expect((await getMessages()).statusCode).toBe(403);
+  await db.update(messages).set({ content: 'Trusted original 2' }).where(eq(messages.id, ids[1]!));
+  const refreshed = (await post('preview', {})).json();
   const [q] = await db.insert(accountPortableMergeQuotas).values({
     accountId: owner.accountId, lifetimeRows: 0, lifetimeBytes: 0, windowStartedAt: new Date(),
     windowRows: 0, windowBytes: 0, windowCommits: portableMergeQuota.windowCommits,
   }).returning();
-  expect((await post('commit', { previewToken: plan.previewToken, confirm: true })).statusCode).toBe(429);
+  expect((await post('commit', { previewToken: refreshed.previewToken, confirm: true })).statusCode).toBe(429);
   expect((await getMessages()).statusCode).toBe(403);
   await db.update(accountPortableMergeQuotas).set({ windowCommits: 0 }).where(eq(accountPortableMergeQuotas.accountId, q!.accountId));
-  const ok = await post('commit', { previewToken: plan.previewToken, confirm: true });
+  await fixture.pg.exec(`CREATE FUNCTION reject_verified_reopen() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION 'synthetic restore abort'; END; $$;
+    CREATE TRIGGER reject_verified_reopen AFTER UPDATE ON conversations
+    FOR EACH ROW EXECUTE FUNCTION reject_verified_reopen();`);
+  try {
+    expect((await post('commit', { previewToken: refreshed.previewToken, confirm: true })).statusCode).toBe(502);
+    expect((await getMessages()).statusCode).toBe(403);
+    const [rolledBack] = await db.select().from(accountPortableMergeQuotas).where(eq(accountPortableMergeQuotas.accountId, owner.accountId));
+    expect(rolledBack).toMatchObject({ lifetimeRows: 0, windowCommits: 0 });
+  } finally {
+    await fixture.pg.exec('DROP TRIGGER reject_verified_reopen ON conversations; DROP FUNCTION reject_verified_reopen();');
+  }
+  const ok = await post('commit', { previewToken: refreshed.previewToken, confirm: true });
   expect(ok.statusCode, ok.body).toBe(200);
   expect(ok.json()).toMatchObject({ restoredConversationIds: [cid], affectedConversationIds: [cid], affectedConversationStarts: { [cid]: 1 } });
   const timeline = (await getMessages()).json().items;
+  expect(await db.select().from(messages).where(eq(messages.conversationId, cid))).toHaveLength(4);
   expect(timeline.map((row: typeof messages.$inferSelect) => [row.id, row.senderActorId, row.kind, row.replyToMessageId])).toEqual([
     [ids[0], owner.humanActorId, 'text', null],
     [ids[1], owner.characterActorId, 'text', ids[0]],
