@@ -83,7 +83,7 @@ export function registerSyncRoutes(app: FastifyInstance): void {
         OR NOT EXISTS (
           SELECT 1 FROM conversations hidden_conv
           WHERE hidden_conv.id = ${worldEvents.conversationId}
-            AND hidden_conv.type = 'hidden_ai_direct'
+            AND (hidden_conv.type = 'hidden_ai_direct' OR hidden_conv.status <> 'active')
         )
       )`;
 

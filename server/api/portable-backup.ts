@@ -2,12 +2,13 @@ import { createHash } from 'node:crypto';
 import { and, asc, eq, gt, inArray, isNull, lte, ne, or, sql } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Database } from '../../db/index.js';
-import { accounts, accountPortableBackups, conversations, conversationMembers, messages } from '../../db/schema.js';
+import { accounts, accountPortableBackups, actors, conversations, conversationMembers, messages } from '../../db/schema.js';
 import {
-  MAX_PORTABLE_BACKUP_BYTES, PortableAttachmentSchema, PortableBackupDocumentSchema, PortableBackupSchema,
+  MAX_PORTABLE_BACKUP_BYTES, PortableBackupDocumentSchema, PortableBackupSchema,
   type PortableBackup,
 } from '../../shared/contracts/portable-backup.js';
 import { PortableMergeCommitSchema } from '../../shared/contracts/portable-backup.js';
+import { portableMessagePayload } from '../services/portable-message.js';
 import { mergePrivateArchive } from '../services/portable-merge.js';
 import { requireAuth } from '../auth/middleware.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
@@ -269,15 +270,27 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
             const batch = archive.slice(i, i + 256);
             const ids = batch.map(thread => thread.id);
             if (ids.some(id => !uuid.test(id))) invalid();
-            const owned = await tx.select({ id: conversations.id }).from(conversationMembers)
+            const owned = await tx.select({ id: conversations.id, status: conversations.status }).from(conversationMembers)
               .innerJoin(conversations, eq(conversations.id, conversationMembers.conversationId))
               .where(and(inArray(conversations.id, ids), eq(conversationMembers.actorId, actorId),
                 eq(conversationMembers.status, 'active'),
-                eq(conversations.status, 'active'), ne(conversations.type, 'hidden_ai_direct')));
+                or(eq(conversations.status, 'active'), and(eq(conversations.status, 'deleted'),
+                  eq(conversations.createdByActorId, actorId), eq(conversations.socialGraphId, request.requestContext.socialGraphId ?? '00000000-0000-0000-0000-000000000000'),
+                  eq(conversations.type, 'direct'))), ne(conversations.type, 'hidden_ai_direct')));
             if (owned.length !== batch.length) throw new ApiError(ApiErrorCodes.Forbidden, 'Backup contains an unavailable conversation');
             const memberRows = await tx.select({ conversationId: conversationMembers.conversationId,
-              actorId: conversationMembers.actorId }).from(conversationMembers)
+              actorId: conversationMembers.actorId, accountId: actors.accountId, graphId: actors.socialGraphId,
+              actorStatus: actors.status, memberStatus: conversationMembers.status, type: actors.type }).from(conversationMembers)
+              .innerJoin(actors, eq(conversationMembers.actorId, actors.id))
               .where(inArray(conversationMembers.conversationId, ids));
+            for (const thread of owned.filter(row => row.status === 'deleted')) {
+              const rows = memberRows.filter(row => row.conversationId === thread.id);
+              if (!rows.every(row => row.memberStatus === 'active' && row.actorStatus === 'active'
+                && row.graphId === request.requestContext.socialGraphId &&
+                (row.actorId === actorId ? row.type === 'human' && row.accountId === accountId : row.type === 'character' && !row.accountId))) {
+                throw new ApiError(ApiErrorCodes.Forbidden, 'Backup contains an unavailable conversation');
+              }
+            }
             const membership = new Set(memberRows.map(row => `${row.conversationId}:${row.actorId}`));
             if (batch.some(thread => thread.messages.some(message => !membership.has(`${thread.id}:${message.senderActorId}`)))) {
               throw new ApiError(ApiErrorCodes.Forbidden, 'Backup contains an untrusted message author');
@@ -355,33 +368,17 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
             and(eq(messages.conversationId, messageCursor.conversationId), gt(messages.sequence, messageCursor.sequence)),
           ) : undefined)).orderBy(asc(messages.conversationId), asc(messages.sequence)).limit(256);
         for (const { conversationId, ...row } of rows) {
-          const payload = row.structuredPayload as Record<string, unknown> | null;
+          const projected = portableMessagePayload(row);
+          if (!projected) invalid();
+          const { payload, attachments: items } = projected;
           const message = { ...row, createdAt: row.createdAt.toISOString(), editedAt: row.editedAt?.toISOString() ?? null,
             structuredPayload: payload };
-          const references: string[] = [];
-          const items = payload?.attachments;
-          if (items !== undefined) {
-            if (!Array.isArray(items)) invalid();
-            for (const item of items) {
-              const parsed = PortableAttachmentSchema.safeParse(item);
-              if (!parsed.success) invalid();
-              const known = attachments.get(parsed.data.id);
-              if (known && JSON.stringify(known) !== JSON.stringify(parsed.data)) invalid();
-              if (!known) { countBytes(parsed.data); attachments.set(parsed.data.id, parsed.data); }
-              references.push(parsed.data.id);
-            }
+          for (const item of items) {
+            const known = attachments.get(item.id);
+            if (known && JSON.stringify(known) !== JSON.stringify(item)) invalid();
+            if (!known) { countBytes(item); attachments.set(item.id, item); }
           }
-          if (references.length === 0 && row.kind === 'image') {
-            const id = `image:${row.id}`;
-            const [match, mimeType, contentBase64] = row.content.match(/^data:(image\/(?:png|jpeg));base64,([A-Za-z0-9+/=]+)$/) ?? [];
-            const asset = { id, name: 'Image', mimeType: mimeType || 'application/octet-stream',
-              byteLength: match && contentBase64 ? Buffer.from(contentBase64, 'base64').length : 0,
-              ...(contentBase64 ? { contentBase64 } : {}) };
-            countBytes(asset);
-            attachments.set(id, asset);
-            references.push(id);
-          }
-          const portable = references.length ? { ...message, attachmentIds: references } : message;
+          const portable = items.length ? { ...message, attachmentIds: items.map(item => item.id) } : message;
           countBytes(portable);
           exportById.get(conversationId)?.messages.push(portable);
         }

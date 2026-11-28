@@ -133,3 +133,7 @@ unknown to the client: compare the saved archive SHA before retrying.
 5. Archive limit 4 MiB, merge up to 100 conversations and 2,000 messages and 8 MiB of expanded data. Unavailable archived conversations are reported as conflicts, not re-created.
 
 6. Successful nonempty commits consume persistent quota: up to 12 commits / 5,000 rows / 16 MiB per 24-hour account window and 50,000 rows / 128 MiB cumulative. Preview, no-ops and rolled-back writes consume nothing; replacing an archive does not reset account quotas.
+
+## Reopen verified deleted private conversations (0.5.6)
+
+The server recognizes retained conversations marked `deleted` only when they still have the original owner, private direct membership and complete original rows. Upload is allowed after deletion for this scope. Preview and commit optionally return `restoredConversationIds` and `unsupportedConversationIds`, alongside the existing counts and affected-entry cursors. Explicit confirmation reopens the original ID atomically with quota accounting. All visible original messages, including eligible assistant and system replies and attachments, must match exactly; no archive-supplied identity, metadata, or reply target is applied. Individually deleted messages, cross-account/shared conversations, partial histories and physically deleted/unverifiable rows are not restored. No new deletion or retention policy is introduced. No notification or reply generation is emitted by recovery.

@@ -59,6 +59,7 @@ export function registerConversationRoutes(app: FastifyInstance): void {
         .where(
           and(
             eq(conversationMembers.actorId, actorId),
+            eq(conversations.status, 'active'),
             inArray(conversationMembers.status, [
               ConversationMemberStatus.Active,
               ConversationMemberStatus.Invited,

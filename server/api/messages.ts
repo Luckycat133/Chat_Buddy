@@ -1,8 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { and, asc, eq, gte } from 'drizzle-orm';
+import { and, asc, eq, gte, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database } from '../../db/index.js';
 import {
+  conversations,
   conversationMembers,
   messageBursts,
   messages,
@@ -122,37 +123,23 @@ export function registerMessageRoutes(app: FastifyInstance): void {
         );
       }
 
-      // Authorize: must be an active member.
-      const [member] = await db
-        .select()
-        .from(conversationMembers)
-        .where(
-          and(
-            eq(conversationMembers.conversationId, params.conversationId),
-            eq(conversationMembers.actorId, actorId),
-          ),
-        )
-        .limit(1);
-      if (!member || member.status !== 'active') {
-        throw new ApiError(
-          ApiErrorCodes.Forbidden,
-          'Not a member of this conversation',
-        );
+      // Check conversation visibility and membership in the same statement
+      // as the history read, so deletion cannot race the authorization check.
+      const visibility = and(eq(conversations.id, params.conversationId),
+        eq(conversations.status, 'active'), eq(conversationMembers.actorId, actorId),
+        eq(conversationMembers.status, 'active'));
+      const list = await db.select({ message: messages }).from(conversations)
+        .innerJoin(conversationMembers, eq(conversationMembers.conversationId, conversations.id))
+        .innerJoin(messages, eq(messages.conversationId, conversations.id))
+        .where(and(visibility, isNull(messages.deletedAt), q.cursor === undefined ? undefined : gte(messages.sequence, q.cursor)))
+        .orderBy(asc(messages.sequence)).limit(q.limit);
+      if (!list.length) {
+        const [visible] = await db.select({ id: conversations.id }).from(conversations)
+          .innerJoin(conversationMembers, eq(conversationMembers.conversationId, conversations.id))
+          .where(visibility).limit(1);
+        if (!visible) throw new ApiError(ApiErrorCodes.Forbidden, 'Conversation unavailable');
       }
-
-      const where = q.cursor !== undefined
-        ? and(
-            eq(messages.conversationId, params.conversationId),
-            gte(messages.sequence, q.cursor),
-          )
-        : eq(messages.conversationId, params.conversationId);
-
-      const rows = await db
-        .select()
-        .from(messages)
-        .where(where)
-        .orderBy(asc(messages.sequence))
-        .limit(q.limit);
+      const rows = list.map(row => row.message);
       return { items: rows };
     },
   );

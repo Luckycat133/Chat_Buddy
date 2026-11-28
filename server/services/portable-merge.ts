@@ -1,5 +1,5 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Database } from '../../db/index.js';
 import { accounts, accountPortableBackups, accountPortableMergeQuotas, actors, conversations, conversationMembers, messages } from '../../db/schema.js';
 import { MAX_PORTABLE_BACKUP_BYTES, PortableAttachmentSchema } from '../../shared/contracts/portable-backup.js';
@@ -7,6 +7,7 @@ import type { PortableBackup } from '../../shared/contracts/portable-backup.js';
 import { serverEnv } from '../config.js';
 import { ApiError, ApiErrorCodes } from '../errors.js';
 import type { ConversationWriteTransaction } from './conversation-writes.js';
+import { portableMessagePayload } from './portable-message.js';
 import { conversationAdvisoryKey } from './conversation-writes.js';
 
 const ttl = 5 * 60 * 1000;
@@ -129,6 +130,10 @@ export async function mergePrivateArchive(
     }
     const counts = { conversations: stats(), messages: stats(), attachments: stats() };
     const inserts: Array<typeof messages.$inferInsert> = [];
+    const restored = new Map<string, number>();
+    const unsupportedConversationIds: string[] = [];
+    let restoredRows = 0;
+    let restoredBytes = 0;
     const conflicts = { conversations: [] as string[], messages: [] as string[], attachments: [] as string[] };
     const record = (kind: keyof typeof conflicts, id: string) => {
       if (conflicts[kind].length < 50 && !conflicts[kind].includes(id)) conflicts[kind].push(id);
@@ -141,7 +146,7 @@ export async function mergePrivateArchive(
     };
     const owners = ids.length ? await tx.select({ id: conversations.id }).from(conversations)
       .where(and(inArray(conversations.id, ids), eq(conversations.socialGraphId, socialGraphId),
-        eq(conversations.createdByActorId, actorId), eq(conversations.type, 'direct'), eq(conversations.status, 'active'))) : [];
+        eq(conversations.createdByActorId, actorId), eq(conversations.type, 'direct'), inArray(conversations.status, ['active', 'deleted']))) : [];
     const ownIds = owners.map(row => row.id);
     // Same advisory identity as normal writers, acquired consistently. Then lock
     // parent rows to prevent new members; lock existing member/actor rows below.
@@ -161,18 +166,67 @@ export async function mergePrivateArchive(
       const live = byId.get(thread.id);
       const memberships = members.filter(m => m.conversationId === thread.id);
       const eligible = uuid.test(thread.id) && thread.type === 'direct' && live
-        && (live.socialGraphId === socialGraphId && live.type === 'direct' && live.status === 'active'
+        && (live.socialGraphId === socialGraphId && live.type === 'direct' && ['active', 'deleted'].includes(live.status)
           && live.createdByActorId === actorId && memberships.some(m => m.actorId === actorId)
           && memberships.every(m => m.memberStatus === 'active' && m.actorStatus === 'active' && m.graphId === socialGraphId &&
             (m.actorId === actorId ? m.type === 'human' && m.accountId === accountId : m.type === 'character' && !m.accountId)));
-      // Never reveal metadata, keys or contents of a collision or shared thread.
-      if (!eligible) {
+      const blocked = () => {
         counts.conversations.conflict++;
         record('conversations', thread.id);
+        if (unsupportedConversationIds.length < 50) unsupportedConversationIds.push(thread.id);
         counts.messages.conflict += thread.messages.length;
         for (const m of thread.messages) record('messages', m.id);
         for (const m of thread.messages) for (const id of m.attachmentIds ?? []) markAsset(id, 'conflict');
         fingerprints.push([thread.id, 'blocked']);
+      };
+      // Never reveal metadata, keys or contents of a collision or shared thread.
+      if (!eligible) { blocked(); continue; }
+      if (live.status === 'deleted') {
+        // Reopening changes visibility for the entire thread, not individual
+        // messages. Require exact coverage of every still-visible original row.
+        const where = and(eq(messages.conversationId, thread.id), isNull(messages.deletedAt));
+        const [proofBudget] = await tx.select({
+          rows: sql<number>`count(*)::int`,
+          bytes: sql<number>`coalesce(sum(octet_length(content) + coalesce(octet_length(structured_payload::text), 0)),0)::double precision`,
+        }).from(messages).where(where);
+        if (proofBudget?.rows !== thread.messages.length || (proofBudget?.bytes ?? 0) > MAX_PORTABLE_BACKUP_BYTES) {
+          blocked(); continue;
+        }
+        const original = await tx.select().from(messages).where(where).orderBy(asc(messages.sequence)).for('update');
+        const archived = new Map(thread.messages.map(m => [m.id, m]));
+        const sequenceById = new Map(original.map(row => [row.id, row.sequence]));
+        const memberIds = new Set(memberships.map(member => member.actorId));
+        const restoredAssetIds = new Set<string>();
+        let valid = original.length === archived.size;
+        for (const row of original) {
+          const m = archived.get(row.id);
+          const projected = portableMessagePayload(row);
+          if (!m || !projected || !memberIds.has(row.senderActorId) || m.senderActorId !== row.senderActorId ||
+              row.sequence !== m.sequence || row.createdAt.toISOString() !== m.createdAt ||
+              (row.editedAt?.toISOString() ?? null) !== m.editedAt || row.replyToMessageId !== m.replyToMessageId ||
+              (row.replyToMessageId !== null && (sequenceById.get(row.replyToMessageId) ?? Number.POSITIVE_INFINITY) >= row.sequence) ||
+              m.content !== row.content || m.kind !== row.kind || m.status !== row.status || row.content.length > 32_000 ||
+              (row.kind === 'system' && row.senderActorId === actorId) ||
+              occurrence.get(m.id) !== 1 || digest(canonical(projected.payload)) !== digest(canonical(m.structuredPayload)) ||
+              digest(projected.attachments.map(item => item.id)) !== digest(m.attachmentIds ?? []) ||
+              projected.attachments.some(item => !manifest.has(item.id) || attachmentHash(item) !== manifestHashes.get(item.id))) {
+            valid = false; break;
+          }
+          for (const item of projected.attachments) restoredAssetIds.add(item.id);
+        }
+        if (!valid) { blocked(); continue; }
+        const bytes = Buffer.byteLength(JSON.stringify(original));
+        projectionBytes += bytes;
+        if (projectionBytes > MAX_PORTABLE_BACKUP_BYTES * 2) {
+          throw new ApiError(ApiErrorCodes.ValidationFailed, 'Expanded merge would exceed 8 MiB.');
+        }
+        restored.set(thread.id, original[0]?.sequence || 1);
+        restoredRows += Math.max(1, original.length);
+        restoredBytes += bytes;
+        counts.conversations.insert++;
+        counts.messages.insert += original.length;
+        for (const id of restoredAssetIds) markAsset(id, 'insert');
+        fingerprints.push([thread.id, 'reopen', thread.messages.map(m => m.id), memberships.map(m => m.actorId).sort()]);
         continue;
       }
       const liveIds = new Set(thread.messages.flatMap(m => [m.id, ...(m.replyToMessageId ? [m.replyToMessageId] : [])]).filter(id => uuid.test(id)));
@@ -238,6 +292,17 @@ export async function mergePrivateArchive(
         const id = target(m.id);
         const row = rowsById.get(id);
         const refs = m.attachmentIds ?? [];
+        if (row && row.id === m.id && !row.deletedAt && same(row, m) && !denied.has(m.replyToMessageId ?? '') &&
+            occurrence.get(m.id) === 1) {
+          const exact = portableMessagePayload(row);
+          if (exact && digest(canonical(exact.payload)) === digest(canonical(m.structuredPayload)) &&
+              digest(exact.attachments.map(item => item.id)) === digest(refs) &&
+              exact.attachments.every(item => attachmentHash(item) === manifestHashes.get(item.id))) {
+            counts.messages.skip++;
+            for (const ref of refs) markAsset(ref, 'skip');
+            continue;
+          }
+        }
         const attachments = refs.map(id => manifest.get(id)!);
         projectionBytes += refs.reduce((n, ref) => n + assetBytes.get(ref)!, 0) + Buffer.byteLength(m.content);
         if (projectionBytes > MAX_PORTABLE_BACKUP_BYTES * 2) {
@@ -299,20 +364,23 @@ export async function mergePrivateArchive(
       if (status === 'conflict') record('attachments', id);
     }
     const fingerprint = digest([backup.sha256, counts, inserts, fingerprints, [...assets].sort()]);
-    const receipt = { archiveSha256: backup.sha256, counts, conflicts };
+    const receipt = { archiveSha256: backup.sha256, counts, conflicts,
+      restoredConversationIds: [...restored.keys()], unsupportedConversationIds };
     if (token === undefined) return { ...receipt, previewToken: tokenFor(scope, fingerprint, Date.now() + ttl) };
     verify(token, scope, fingerprint);
     // The existing account lock serializes clients, replicas, and new archive
     // replacements. Charge only actual inserts (including copied attachment bytes).
-    if (inserts.length) {
+    if (inserts.length || restored.size) {
       const bytes = inserts.reduce((n, row) => n + Buffer.byteLength(JSON.stringify(row)) + 64, 0);
-      await chargePortableMerge(tx, accountId, inserts.length, bytes);
+      await chargePortableMerge(tx, accountId, inserts.length + restoredRows, bytes + restoredBytes);
     }
     // Deliberately no message event, notifications, ACL changes to existing chats or AI work.
     for (let i = 0; i < inserts.length; i += 100) await tx.insert(messages).values(
       inserts.slice(i, i + 100).map(row => ({ ...row, clientIdempotencyKey: `private-archive:${randomUUID()}` })),
     );
-    const starts = new Map<string, number>();
+    if (restored.size) await tx.update(conversations).set({ status: 'active' })
+      .where(and(inArray(conversations.id, [...restored.keys()]), eq(conversations.status, 'deleted')));
+    const starts = new Map<string, number>(restored);
     for (const row of inserts) if (!starts.has(row.conversationId)) starts.set(row.conversationId, row.sequence);
     return { ...receipt, affectedConversationIds: [...starts.keys()], affectedConversationStarts: Object.fromEntries(starts) };
   }, { isolationLevel: 'read committed' });

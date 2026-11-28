@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import postgres from 'postgres';
 
 const cloud = process.env.E2E_CLOUD_BASE_URL ?? 'http://localhost:8080';
 const golden = JSON.parse(readFileSync(new URL('../docs/fixtures/web-v2-cloud-backup-golden.json', import.meta.url), 'utf8'));
@@ -149,4 +150,71 @@ test('previews, explicitly commits and idempotently restores a private Mira chat
     expect(await ahead(knownSequence + 1)).toEqual(delta);
     expect(await (await request.get(backup, { headers })).text()).toBe(archive);
 
+});
+
+test('reopens a server-retained private chat after deletion and preserves assistant/system replies', async ({ page, request }) => {
+    const dsn = process.env.DATABASE_URL;
+    test.skip(!dsn, 'requires the disposable PostgreSQL fixture');
+    const dbUrl = new URL(dsn);
+    expect(['127.0.0.1', 'localhost', '[::1]']).toContain(dbUrl.hostname);
+    expect(new URL(cloud).hostname).toBe('127.0.0.1');
+    expect(process.env.NODE_ENV).toBe('test');
+    const sql = postgres(dbUrl.href, { max: 1 });
+    try {
+        const signin = await request.post(cloud + '/v1/auth/dev-signin', {
+            data: { displayName: 'Synthetic Chat Rebuild', email: `rebuild-${randomUUID()}@example.test` },
+        });
+        expect(signin.status()).toBe(200);
+        const tokens = await signin.json();
+        const headers = { authorization: 'Bearer ' + tokens.accessToken };
+        const bootstrap = await request.post(cloud + '/v1/onboarding/bootstrap', { headers });
+        expect(bootstrap.status()).toBe(200);
+        const { conversationId } = await bootstrap.json();
+        const history = cloud + '/v1/conversations/' + conversationId + '/messages';
+        const before = (await (await request.get(history, { headers })).json()).items;
+        const author = before[0].senderActorId;
+        const first = await request.post(history, { headers, data: { content: 'Synthetic human original', clientIdempotencyKey: randomUUID() } });
+        expect(first.status()).toBe(201);
+        const human = await first.json();
+        const assistant = randomUUID(), system = randomUUID();
+        await sql`insert into messages (id, conversation_id, sender_actor_id, sequence, client_idempotency_key, content, kind, reply_to_message_id)
+            values (${assistant}, ${conversationId}, ${author}, ${human.sequence + 1}, ${assistant}, 'Synthetic assistant original', 'text', ${human.id}),
+            (${system}, ${conversationId}, ${author}, ${human.sequence + 2}, ${system}, 'Synthetic system original', 'system', ${assistant})`;
+        const backup = cloud + '/v1/account/backup';
+        const archive = await (await request.get(backup + '/live', { headers })).text();
+        await sql`update conversations set status = 'deleted' where id = ${conversationId} and created_by_actor_id = ${tokens.actorId}`;
+        expect((await request.get(history, { headers })).status()).toBe(403);
+        await page.addInitScript(session => {
+            for (const [key, value] of Object.entries({
+                access_token: session.accessToken, access_expires_at: session.accessExpiresAt,
+                refresh_token: session.refreshToken, refresh_expires_at: session.refreshExpiresAt,
+                account_id: session.accountId, actor_id: session.actorId,
+            })) sessionStorage.setItem('cb.' + key, value);
+            localStorage.setItem('chat-buddy-lang', '"en"');
+        }, tokens);
+        await page.goto('/settings');
+        const panel = page.getByRole('region', { name: 'Portable account backup' });
+        await panel.locator('input[type=file]').setInputFiles({ name: 'rebuild.json', mimeType: 'application/json', buffer: Buffer.from(archive) });
+        await panel.getByRole('button', { name: 'Import and replace saved backup' }).click();
+        await panel.getByRole('button', { name: 'Preview online merge' }).click();
+        const plan = panel.getByRole('region', { name: 'Merge differences' });
+        await expect(plan).toContainText('Conversations: 1 to add');
+        const commit = panel.getByRole('button', { name: 'Confirm merge to live conversations' });
+        await expect(commit).toBeDisabled();
+        expect((await request.get(history, { headers })).status()).toBe(403);
+        await panel.getByRole('checkbox', { name: 'I confirm adding the previewed messages to live conversations.' }).check();
+        await commit.click();
+        await expect(panel.getByText('Restored 1 private conversations.')).toBeVisible();
+        await panel.getByRole('link', { name: /Open restored messages/ }).click();
+        const timeline = page.getByTestId('cloud-message-timeline');
+        await expect(timeline.getByText('Synthetic system original', { exact: true })).toBeVisible();
+        await expect(timeline.getByText('Reply to: Synthetic assistant original')).toBeVisible();
+        const after = (await (await request.get(history, { headers })).json()).items;
+        expect(after.at(-2)).toMatchObject({ id: assistant, senderActorId: author, replyToMessageId: human.id });
+        expect(after.at(-1)).toMatchObject({ id: system, senderActorId: author, kind: 'system', replyToMessageId: assistant });
+        const repeated = await request.post(backup + '/merge/preview', { headers, data: {} });
+        expect((await repeated.json()).counts.conversations.insert).toBe(0);
+    } finally {
+        await sql.end();
+    }
 });
