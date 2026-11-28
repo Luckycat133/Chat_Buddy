@@ -5,8 +5,8 @@ import { formatTimeSeparator, shouldShowTimeSeparator } from '../../../../utils/
 import { PortableAttachmentSchema } from '../../../../../shared/contracts/portable-backup';
 import TTSButton from '../TTSButton';
 
-function CloudMessageBubble({ message, isMe, senderName, onRetry }) {
-  const { t } = useLanguage();
+function CloudMessageBubble({ message, isMe, senderName, onRetry, reply }) {
+  const { t, language } = useLanguage();
   const failed = message.status === 'failed';
 
   if (failed) {
@@ -70,6 +70,10 @@ function CloudMessageBubble({ message, isMe, senderName, onRetry }) {
               pending && 'opacity-70',
             )}
           >
+            {message.replyToMessageId && <blockquote className="mb-1 border-l pl-2 text-xs break-words">
+              {language === 'zh' ? '回复：' : 'Reply to: '}
+              {reply ? reply.content.slice(0, 160) : message.replyToMessageId}
+            </blockquote>}
             {!assets.some(asset => message.kind === 'image' && inlineImage(asset) === message.content) &&
               <p className="whitespace-pre-wrap break-words text-[16px] leading-relaxed">{message.content}</p>}
             {assets.map((asset, index) => {
@@ -99,6 +103,7 @@ export default function CloudMessageTimeline({ messages, actorMap, currentActorI
 
   const items = useMemo(() => {
     const visible = messages.filter(message => !message.deletedAt);
+    const byId = new Map(visible.map(message => [message.id, message]));
     return visible.map((msg, index) => {
       const prev = index > 0 ? visible[index - 1] : null;
       const showTimeSeparator = shouldShowTimeSeparator(
@@ -115,6 +120,7 @@ export default function CloudMessageTimeline({ messages, actorMap, currentActorI
         showTimeSeparator,
         time: msg.createdAt,
         message: msg,
+        reply: byId.get(msg.replyToMessageId),
         isMe,
         senderName: sender?.publicName || t('unknown_chat'),
       };
@@ -144,6 +150,7 @@ export default function CloudMessageTimeline({ messages, actorMap, currentActorI
           )}
           <CloudMessageBubble
             message={item.message}
+            reply={item.reply}
             isMe={item.isMe}
             senderName={item.senderName}
             onRetry={() => onRetry?.(item.message)}

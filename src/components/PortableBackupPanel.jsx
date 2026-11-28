@@ -106,7 +106,7 @@ export function PortableBackupPanel({ chinese }) {
         <button type="button" disabled={busy} onClick={() => void run(async (ensureCurrent) => { resetMerge(); const archive = await readPortableBackup('stored'); ensureCurrent(); setStored(archive); })}>{label('读取已导入备份', 'Open imported backup')}</button>
         {stored && <>
             <button type="button" onClick={() => download(stored.document)}>{label('原样重新导出', 'Re-export original backup')}</button>
-            <p>{label('合并只补入你自己发送的受支持消息。共享、已删除或找不到的会话以及有冲突的内容不会修改。本机数据和权限不变。', 'Merge only adds supported messages you sent in private conversations without another human participant. Shared, deleted or unavailable conversations and conflicts are unchanged. Browser data and permissions are unchanged.')}</p>
+            <p>{label('合并只补入你自己发送的受支持消息。只有在服务端仍有完整可信记录时才恢复已删私有会话；共享、找不到的会话和冲突不修改。本机数据和权限不变。', 'Merge only adds supported messages you sent in private conversations without another human participant. Deleted private conversations require complete trusted server records. Shared or unavailable conversations and conflicts are unchanged. Browser data and permissions are unchanged.')}</p>
             <button type="button" disabled={busy} onClick={() => void run(async (ensureCurrent) => {
                 resetMerge();
                 const preview = await requestPortableMerge();
@@ -116,6 +116,7 @@ export function PortableBackupPanel({ chinese }) {
                 ensureCurrent();
                 setMerge(preview);
             })}>{label('预览在线合并', 'Preview online merge')}</button>
+            {merge?.unsupportedConversationIds?.length > 0 && <p>{label('部分会话缺少完整可信记录，或不符合私有会话条件，不会恢复。', 'Conversations without complete trusted records or that are not private cannot be restored.')}</p>}
             {merge && <section aria-label={label('合并差异', 'Merge differences')}>
                 <ul>{Object.entries(merge.counts).map(([key, row]) => <li key={key}>
                     {{ conversations: label('会话', 'Conversations'), messages: label('消息', 'Messages'), attachments: label('附件', 'Attachments') }[key]}:
@@ -124,7 +125,7 @@ export function PortableBackupPanel({ chinese }) {
                         <ul>{merge.conflicts[key].map(id => <li key={id}><code>{id}</code></li>)}</ul>
                     </details>}
                 </li>)}</ul>
-                {merge.counts.messages.insert > 0 && <>
+                {(merge.counts.messages.insert > 0 || merge.counts.conversations.insert > 0) && <>
                     <label><input type="checkbox" checked={confirmed} disabled={busy} onChange={event => setConfirmed(event.target.checked)} />
                         {label('我确认将预览中的新增消息写入在线会话。', 'I confirm adding the previewed messages to live conversations.')}
                     </label>
@@ -137,6 +138,7 @@ export function PortableBackupPanel({ chinese }) {
             </section>}
             {result && <>
                 <p role="status">{label(`已新增 ${result.counts.messages.insert} 条消息。`, `Added ${result.counts.messages.insert} messages.`)}</p>
+                {result.counts.conversations.insert > 0 && <p>{label(`已恢复 ${result.counts.conversations.insert} 个私有会话。`, `Restored ${result.counts.conversations.insert} private conversations.`)}</p>}
                 <ul>{result.affectedConversationIds.map(id => <li key={id}><Link to={`/chats/${id}?restoredFrom=${result.affectedConversationStarts[id]}`}>
                     {label('查看恢复的在线消息', 'Open restored messages')}: {stored.data.cloudAccount?.conversations.find(thread => thread.id === id)?.publicName || id}
                 </Link></li>)}</ul>

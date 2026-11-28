@@ -73,16 +73,18 @@ export function registerOnboardingRoutes(app: FastifyInstance): void {
       const actorId = request.requestContext.actorId;
       if (!actorId) throw new ApiError(ApiErrorCodes.Forbidden, 'No actor bound to session');
       const convo = await ensureOnboardingConversation(db, actorId);
+      if (convo.status !== 'active') throw new ApiError(ApiErrorCodes.NotFound, 'First contact not found');
       const [welcome] = await db
         .select({ content: messages.content, sequence: messages.sequence,
           lastReadSequence: conversationMembers.lastReadSequence })
         .from(messages)
+        .innerJoin(conversations, eq(conversations.id, messages.conversationId))
         .innerJoin(conversationMembers, and(
           eq(conversationMembers.conversationId, messages.conversationId),
           eq(conversationMembers.actorId, actorId),
         ))
         .where(and(eq(messages.conversationId, convo.id),
-          eq(messages.clientIdempotencyKey, MIRA_WELCOME_MESSAGE_KEY)))
+          eq(messages.clientIdempotencyKey, MIRA_WELCOME_MESSAGE_KEY), eq(conversations.status, 'active'), isNull(messages.deletedAt)))
         .limit(1);
       return {
         conversationId: convo.id,
@@ -157,7 +159,7 @@ export function registerOnboardingRoutes(app: FastifyInstance): void {
       await db
         .update(conversations)
         .set({ publicName: serializeSnapshot(next) })
-        .where(eq(conversations.id, convo.id));
+        .where(and(eq(conversations.id, convo.id), eq(conversations.status, 'active')));
       return next;
     },
   );
@@ -166,6 +168,7 @@ export function registerOnboardingRoutes(app: FastifyInstance): void {
 async function loadOnboardingConversation(
   db: Pick<Database, 'select'>,
   actorId: string,
+  includeUnavailable = false,
 ): Promise<typeof conversations.$inferSelect | null> {
   const rows = await db
     .select({ convo: conversations })
@@ -177,6 +180,7 @@ async function loadOnboardingConversation(
     .where(
       and(
         eq(conversationMembers.actorId, actorId),
+        includeUnavailable ? undefined : eq(conversations.status, 'active'),
         eq(conversations.type, 'direct'),
         eq(conversations.createdByActorId, actorId),
         sql`${conversations.publicName} LIKE 'onboarding:%'`,
@@ -197,7 +201,8 @@ async function ensureOnboardingConversation(
     const [owner] = await tx.select({ graphId: actors.socialGraphId })
       .from(actors).where(eq(actors.id, actorId)).for('update');
     if (!owner) throw new ApiError(ApiErrorCodes.Forbidden, 'No actor bound to session');
-    const existing = await loadOnboardingConversation(tx, actorId);
+    const existing = await loadOnboardingConversation(tx, actorId, true);
+    if (existing && existing.status !== 'active') throw new ApiError(ApiErrorCodes.NotFound, 'First contact not found');
     if (existing) return existing;
 
     const miraTemplate = await loadMiraTemplate(tx);

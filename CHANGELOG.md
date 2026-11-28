@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.6] - 2026-11-28
+
+- Reopen deleted private chats only when the complete original history and ownership are verifiable on the server. Preserve original authors and reply links. Hard-deleted, shared, or unverified chat histories are not recoverable.
+
 ## [0.5.5] - 2026-11-27
 
 - Add preview and explicit confirmation for private cloud archive merges. Append only missing supported messages and attachments authored by you, without replacing online messages, permissions, memberships, shared conversations or the original archive.

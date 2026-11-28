@@ -39,6 +39,8 @@ export function registerWorldEventRoutes(app: FastifyInstance): void {
       const types = q.types?.split(',').filter(Boolean) ?? [];
       const conditions = [] as Array<ReturnType<typeof eq> | ReturnType<typeof sql>>;
       conditions.push(eq(worldEvents.actorId, actorId));
+      conditions.push(sql`NOT EXISTS (SELECT 1 FROM conversations c
+        WHERE c.id = ${worldEvents.conversationId} AND c.status <> 'active')`);
       if (types.length === 1 && types[0]) conditions.push(eq(worldEvents.type, types[0]));
       if (types.length > 1) conditions.push(sql`${worldEvents.type} = ANY(${types})`);
       if (q.before) conditions.push(sql`${worldEvents.occurredAt} < ${q.before}`);

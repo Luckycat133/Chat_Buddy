@@ -390,3 +390,118 @@ it('charges durable per-account merge quotas once and cannot reset them by repla
   expect((await confirm()).statusCode).toBe(200);
   expect((await quota())[0]).toMatchObject({ lifetimeRows: 2, windowRows: 1, windowCommits: 1 });
 });
+
+it('reopens a retained private conversation only for complete authoritative authors and reply chains', async () => {
+  const owner = await seedSocialGraph(fixture.db);
+  const other = await seedSocialGraph(fixture.db);
+  const access = (await issueTokens(db, owner.accountId)).accessToken;
+  const outsider = (await issueTokens(db, other.accountId)).accessToken;
+  const cid = randomUUID();
+  await db.insert(conversations).values({ id: cid, socialGraphId: owner.graphId, type: 'direct',
+    createdByActorId: owner.humanActorId, publicName: 'Synthetic recoverable direct' });
+  await db.insert(conversationMembers).values([owner.humanActorId, owner.characterActorId].map(actorId =>
+    ({ conversationId: cid, actorId, status: 'active' as const })));
+  const ids = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+  await db.insert(messages).values(ids.map((id, i) => ({
+    id, conversationId: cid, senderActorId: i ? owner.characterActorId : owner.humanActorId,
+    sequence: i + 1, kind: i === 2 ? ('system' as const) : ('text' as const), content: `Trusted original ${i + 1}`,
+    structuredPayload: i === 2 ? { source: 'synthetic run' } : null, replyToMessageId: i ? ids[i - 1] : null,
+    deletedAt: i === 3 ? new Date() : null, clientIdempotencyKey: id,
+  })));
+  const original = (await download(access, '/live')).json();
+  await db.update(conversations).set({ status: 'deleted' }).where(eq(conversations.id, cid));
+  const list = (a = access) => app.inject({ method: 'GET', url: '/v1/conversations', headers: auth(a) });
+  const getMessages = (a = access) => app.inject({ method: 'GET', url: `/v1/conversations/${cid}/messages`, headers: auth(a) });
+  expect((await list()).json().items).toEqual([]);
+  expect((await getMessages()).statusCode).toBe(403);
+  expect((await download(access, '/live')).json().cloudAccount.conversations).toEqual([]);
+  const forgedOwner = structuredClone(original);
+  forgedOwner.cloudAccount.accountId = other.accountId;
+  forgedOwner.cloudAccount.actorId = other.humanActorId;
+  expect((await upload(outsider, JSON.stringify(forgedOwner))).statusCode).toBe(403);
+
+  const post = (step: string, payload: object) => app.inject({
+    method: 'POST', url: endpoint + '/merge/' + step + '?rebuild=1', payload, headers: auth(access),
+  });
+  for (const corrupt of [
+    (m: Array<{ content: string; senderActorId: string; replyToMessageId: string | null; kind: string }>) => { m[1]!.content = 'fake assistant reply'; },
+    (m: Array<{ content: string; senderActorId: string; replyToMessageId: string | null; kind: string }>) => { m[1]!.senderActorId = owner.humanActorId; },
+    (m: Array<{ content: string; senderActorId: string; replyToMessageId: string | null; kind: string }>) => { m[2]!.replyToMessageId = null; },
+    (m: Array<{ content: string; senderActorId: string; replyToMessageId: string | null; kind: string }>) => { m[1]!.kind = 'system'; },
+    (m: Array<{ content: string; senderActorId: string; replyToMessageId: string | null; kind: string }>) => { m.pop(); },
+  ]) {
+    const forged = structuredClone(original);
+    corrupt(forged.cloudAccount.conversations[0].messages);
+    expect((await upload(access, JSON.stringify(forged))).statusCode).toBe(200);
+    const would = (await post('preview', {})).json();
+    expect(would.unsupportedConversationIds).toEqual([cid]);
+    const receipt = await post('commit', { previewToken: would.previewToken, confirm: true });
+    expect(receipt.statusCode).toBe(200);
+    expect(receipt.json().restoredConversationIds).toEqual([]);
+    expect((await getMessages()).statusCode).toBe(403);
+  }
+  expect((await upload(access, JSON.stringify(original))).statusCode).toBe(200);
+  const legacy = await app.inject({ method: 'POST', url: endpoint + '/merge/preview', payload: {}, headers: auth(access) });
+  expect(Object.keys(legacy.json()).sort()).toEqual(['archiveSha256', 'conflicts', 'counts', 'previewToken']);
+  expect(legacy.json().counts.conversations).toEqual({ insert: 0, skip: 0, conflict: 1 });
+  const peek = await post('preview', {});
+  const plan = peek.json();
+  const downgraded = await app.inject({ method: 'POST', url: endpoint + '/merge/commit',
+    payload: { previewToken: plan.previewToken, confirm: true }, headers: auth(access) });
+  expect(downgraded.statusCode).toBe(409);
+  expect(plan.restoredConversationIds).toEqual([cid]);
+  expect(plan.counts.messages.insert).toBe(3);
+  expect((await list()).json().items).toEqual([]);
+  await db.update(messages).set({ content: 'changed authoritative source after preview' }).where(eq(messages.id, ids[1]!));
+  expect((await post('commit', { previewToken: plan.previewToken, confirm: true })).statusCode).toBe(409);
+  expect((await getMessages()).statusCode).toBe(403);
+  await db.update(messages).set({ content: 'Trusted original 2' }).where(eq(messages.id, ids[1]!));
+  const refreshed = (await post('preview', {})).json();
+  const [q] = await db.insert(accountPortableMergeQuotas).values({
+    accountId: owner.accountId, lifetimeRows: 0, lifetimeBytes: 0, windowStartedAt: new Date(),
+    windowRows: 0, windowBytes: 0, windowCommits: portableMergeQuota.windowCommits,
+  }).returning();
+  expect((await post('commit', { previewToken: refreshed.previewToken, confirm: true })).statusCode).toBe(429);
+  expect((await getMessages()).statusCode).toBe(403);
+  await db.update(accountPortableMergeQuotas).set({ windowCommits: 0 }).where(eq(accountPortableMergeQuotas.accountId, q!.accountId));
+  await fixture.pg.exec(`CREATE FUNCTION reject_verified_reopen() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION 'synthetic restore abort'; END; $$;
+    CREATE TRIGGER reject_verified_reopen AFTER UPDATE ON conversations
+    FOR EACH ROW EXECUTE FUNCTION reject_verified_reopen();`);
+  try {
+    expect((await post('commit', { previewToken: refreshed.previewToken, confirm: true })).statusCode).toBe(502);
+    expect((await getMessages()).statusCode).toBe(403);
+    const [rolledBack] = await db.select().from(accountPortableMergeQuotas).where(eq(accountPortableMergeQuotas.accountId, owner.accountId));
+    expect(rolledBack).toMatchObject({ lifetimeRows: 0, windowCommits: 0 });
+  } finally {
+    await fixture.pg.exec('DROP TRIGGER reject_verified_reopen ON conversations; DROP FUNCTION reject_verified_reopen();');
+  }
+  const ok = await post('commit', { previewToken: refreshed.previewToken, confirm: true });
+  expect(ok.statusCode, ok.body).toBe(200);
+  expect(ok.json()).toMatchObject({ restoredConversationIds: [cid], affectedConversationIds: [cid], affectedConversationStarts: { [cid]: 1 } });
+  expect(ok.json().restoredAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+  expect(Math.abs(Date.parse(ok.json().restoredAt) - Date.now())).toBeLessThan(30_000);
+  const timeline = (await getMessages()).json().items;
+  expect(await db.select().from(messages).where(eq(messages.conversationId, cid))).toHaveLength(4);
+  expect(timeline.map((row: typeof messages.$inferSelect) => [row.id, row.senderActorId, row.kind, row.replyToMessageId])).toEqual([
+    [ids[0], owner.humanActorId, 'text', null],
+    [ids[1], owner.characterActorId, 'text', ids[0]],
+    [ids[2], owner.characterActorId, 'system', ids[1]],
+  ]);
+  expect((await getMessages(outsider)).statusCode).toBe(403);
+  expect((await list()).json().items[0].id).toBe(cid);
+  expect((await post('commit', { previewToken: plan.previewToken, confirm: true })).statusCode).toBe(409);
+  const next = (await post('preview', {})).json();
+  expect(next.counts.messages).toEqual({ insert: 0, skip: 3, conflict: 0 });
+  expect(next.restoredConversationIds).toEqual([]);
+  const [charged] = await db.select().from(accountPortableMergeQuotas).where(eq(accountPortableMergeQuotas.accountId, owner.accountId));
+  expect(charged).toMatchObject({ lifetimeRows: 3, windowCommits: 1 });
+  const newer = Array.from({ length: 200 }, () => randomUUID());
+  await db.insert(conversations).values(newer.map(id => ({ id, socialGraphId: owner.graphId, type: 'direct' as const,
+    createdByActorId: owner.humanActorId, createdAt: new Date(Date.now() + 1000) })));
+  await db.insert(conversationMembers).values(newer.map(conversationId => ({ conversationId, actorId: owner.humanActorId, status: 'active' as const })));
+  expect((await list()).json().items.some((row: { id: string }) => row.id === cid)).toBe(false);
+  const targeted = (a = access) => app.inject({ method: 'GET', url: `/v1/conversations?ids=${cid}`, headers: auth(a) });
+  expect((await targeted()).json().items.map((row: { id: string }) => row.id)).toEqual([cid]);
+  expect((await targeted(outsider)).json().items).toEqual([]);
+});

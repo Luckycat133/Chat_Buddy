@@ -54,12 +54,15 @@ const mergeStats = z.object({
 export const PortableMergeReceiptSchema = z.object({
   archiveSha256: z.string().regex(/^[0-9a-f]{64}$/),
   counts: z.object({ conversations: mergeStats, messages: mergeStats, attachments: mergeStats }).strict(),
+  restoredConversationIds: z.array(z.string().uuid()).max(100).optional(),
+  unsupportedConversationIds: z.array(id).max(50).optional(),
   conflicts: z.object({ conversations: z.array(id).max(50), messages: z.array(id).max(50), attachments: z.array(id).max(50) }).strict().optional(),
 }).strict();
 export const PortableMergePreviewSchema = PortableMergeReceiptSchema.extend({
   previewToken: z.string().min(1).max(512),
 });
 export const PortableMergeResultSchema = PortableMergeReceiptSchema.extend({
+  restoredAt: z.string().datetime().optional(),
   affectedConversationIds: z.array(z.string().uuid()).max(100),
   affectedConversationStarts: z.record(z.string().uuid(), z.number().int().positive()),
 });
