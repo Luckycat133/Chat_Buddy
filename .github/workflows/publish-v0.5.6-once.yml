@@ -1,0 +1,57 @@
+name: Publish exact source release once
+on:
+  push:
+    branches: ['dots/publish-v0.5.6-once']
+    paths: ['.github/workflows/publish-v0.5.6-once.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    if: github.repository == 'Luckycat133/Chat_Buddy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Verify default branch and green CI, then publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: 'v0.5.6'
+          TARGET: 'bfc2d2e2c4227ecdf18632828ffde62540c8aeb1'
+          DEFAULT_BRANCH: 'remake'
+          CI_RUNS: '46097589874 46097589960'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'Luckycat133/Chat_Buddy'
+          test "$GITHUB_REF" = 'refs/heads/dots/publish-v0.5.6-once'
+          [[ "$TAG" =~ ^v0\.[0-9]+\.[0-9]+$ ]]
+          test "$(gh api "repos/$GITHUB_REPOSITORY" --jq '.default_branch')" = "$DEFAULT_BRANCH"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$DEFAULT_BRANCH" --jq '.object.sha')" = "$TARGET"
+          for run in $CI_RUNS; do
+            test "$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$run" --jq '.head_sha + ":" + .event + ":" + .conclusion')" = "$TARGET:push:success"
+          done
+          if ! ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq '.object.type + ":" + .object.sha' 2>/dev/null)"; then
+            gh api -X POST "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$TAG" -f "sha=$TARGET" >/dev/null
+            ref="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" --jq '.object.type + ":" + .object.sha')"
+          fi
+          test "$ref" = "commit:$TARGET"
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName' >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite'
+            exit 1
+          fi
+          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
+          ## Changes
+
+          Reopens verified deleted private direct conversations after explicit preview and confirmation, retaining original message identities, authors, attachments and reply chains. Quotas and restoration are transactional. Cached v0.5.5 clients retain append-only behavior.
+
+          ## Scope
+
+          Restores eligible same-account private conversations from complete retained server records only. It cannot restore physically deleted or unverifiable chat history. No changes to deletion retention. This GitHub Release provides source only; no production deployment or signed application build.
+
+          ## Verification
+
+          - [Pull request](https://github.com/Luckycat133/Chat_Buddy/pull/58)
+          - [Verified default-branch CI](https://github.com/Luckycat133/Chat_Buddy/actions/runs/46097589874)
+          NOTES
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
+          test "$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json tagName,isDraft,isPrerelease --jq '[.tagName,.isDraft,.isPrerelease] | @tsv')" = "$(printf '%s\tfalse\tfalse' "$TAG")"
