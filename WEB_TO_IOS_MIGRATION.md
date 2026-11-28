@@ -107,7 +107,10 @@ The old red CI for default `remake` head `cfb8441`
 ([45945673784](https://github.com/Luckycat133/Chat_Buddy/actions/runs/45945673784))
 is historical: its ESLint failures were superseded by `e64ded61` and
 [green `remake` CI](https://github.com/Luckycat133/Chat_Buddy/actions/runs/45965320415).
-There is no separate old branch to remove; retain the default branch.
+The maintained Web branch is `remake`; no remote `main` exists at the reviewed baseline.
+The separate `legacy-old-version` branch is the older application, not an alternate
+sync implementation. Preserve it as historical reference; do not merge it into
+`remake` or delete it as part of a protocol refactor.
 
 Browser IndexedDB uses distinct databases: local legacy restore preflights
 every present store before clear, and each individual store write rolls
@@ -137,3 +140,8 @@ unknown to the client: compare the saved archive SHA before retrying.
 ## Reopen verified deleted private conversations (0.5.6)
 
 The server recognizes retained conversations marked `deleted` only when they still have the original owner, private direct membership and complete original rows. Upload is allowed after deletion for this scope. Clients opt in with `?rebuild=1` on both preview and commit; cached clients without the flag keep exactly the old append-only responses. Opted-in responses include `restoredConversationIds` and `unsupportedConversationIds`, alongside the existing counts and affected-entry cursors. Clients can use the same current conversation list with `GET /v1/conversations?ids=<comma-separated UUIDs>` (at most 100) to reconcile restored IDs older than the default list window. Explicit confirmation reopens the original ID atomically with quota accounting. A successful reopen receipt includes a trusted database-clock `restoredAt` cutoff (not a deletion timestamp); a client may treat strictly older replays for only the receipt's restored IDs as stale, preserving equal and newer tombstones. All visible original messages, including eligible assistant and system replies and attachments, must match exactly; no archive-supplied identity, metadata, or reply target is applied. Individually deleted messages, cross-account/shared conversations, partial histories and physically deleted/unverifiable rows are not restored. No new deletion or retention policy is introduced. No notification or reply generation is emitted by recovery.
+
+
+The retained-row proof runs before reopening and remains read-only. The same
+locked preview/commit transaction still owns eligibility, quota and visibility;
+moving proof code does not change v0.5.6 response fields or tombstone cutoffs.

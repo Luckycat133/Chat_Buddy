@@ -423,6 +423,13 @@ it('reopens a retained private conversation only for complete authoritative auth
   const post = (step: string, payload: object) => app.inject({
     method: 'POST', url: endpoint + '/merge/' + step + '?rebuild=1', payload, headers: auth(access),
   });
+  const editedMetadata = structuredClone(original);
+  editedMetadata.cloudAccount.conversations[0].messages[2].structuredPayload.source = 'untrusted archive edit';
+  expect((await upload(access, JSON.stringify(editedMetadata))).statusCode).toBe(200);
+  const rejectedProof = (await post('preview', {})).json();
+  expect(rejectedProof.unsupportedConversationIds).toEqual([cid]);
+  expect(rejectedProof.restoredConversationIds).toEqual([]);
+  expect((await getMessages()).statusCode).toBe(403);
   for (const corrupt of [
     (m: Array<{ content: string; senderActorId: string; replyToMessageId: string | null; kind: string }>) => { m[1]!.content = 'fake assistant reply'; },
     (m: Array<{ content: string; senderActorId: string; replyToMessageId: string | null; kind: string }>) => { m[1]!.senderActorId = owner.humanActorId; },
