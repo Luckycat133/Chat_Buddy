@@ -62,6 +62,7 @@ export const PortableMergePreviewSchema = PortableMergeReceiptSchema.extend({
   previewToken: z.string().min(1).max(512),
 });
 export const PortableMergeResultSchema = PortableMergeReceiptSchema.extend({
+  restoredAt: z.string().datetime().optional(),
   affectedConversationIds: z.array(z.string().uuid()).max(100),
   affectedConversationStarts: z.record(z.string().uuid(), z.number().int().positive()),
 });

@@ -379,10 +379,18 @@ export async function mergePrivateArchive(
     for (let i = 0; i < inserts.length; i += 100) await tx.insert(messages).values(
       inserts.slice(i, i + 100).map(row => ({ ...row, clientIdempotencyKey: `private-archive:${randomUUID()}` })),
     );
-    if (restored.size) await tx.update(conversations).set({ status: 'active' })
-      .where(and(inArray(conversations.id, [...restored.keys()]), eq(conversations.status, 'deleted')));
+    let restoredAt: string | undefined;
+    if (restored.size) {
+      const reopened = await tx.update(conversations).set({ status: 'active' })
+        .where(and(inArray(conversations.id, [...restored.keys()]), eq(conversations.status, 'deleted')))
+        .returning({ at: sql<string>`to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')` });
+      if (reopened.length !== restored.size) stale();
+      // This is the trusted reopen timestamp, not a fabricated deletion time.
+      restoredAt = reopened.map(row => row.at).sort().at(-1);
+    }
     const starts = new Map<string, number>(restored);
     for (const row of inserts) if (!starts.has(row.conversationId)) starts.set(row.conversationId, row.sequence);
-    return { ...receipt, affectedConversationIds: [...starts.keys()], affectedConversationStarts: Object.fromEntries(starts) };
+    return { ...receipt, affectedConversationIds: [...starts.keys()], affectedConversationStarts: Object.fromEntries(starts),
+      ...(restoredAt ? { restoredAt } : {}) };
   }, { isolationLevel: 'read committed' });
 }

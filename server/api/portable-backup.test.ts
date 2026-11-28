@@ -479,6 +479,8 @@ it('reopens a retained private conversation only for complete authoritative auth
   const ok = await post('commit', { previewToken: refreshed.previewToken, confirm: true });
   expect(ok.statusCode, ok.body).toBe(200);
   expect(ok.json()).toMatchObject({ restoredConversationIds: [cid], affectedConversationIds: [cid], affectedConversationStarts: { [cid]: 1 } });
+  expect(ok.json().restoredAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+  expect(Math.abs(Date.parse(ok.json().restoredAt) - Date.now())).toBeLessThan(30_000);
   const timeline = (await getMessages()).json().items;
   expect(await db.select().from(messages).where(eq(messages.conversationId, cid))).toHaveLength(4);
   expect(timeline.map((row: typeof messages.$inferSelect) => [row.id, row.senderActorId, row.kind, row.replyToMessageId])).toEqual([
