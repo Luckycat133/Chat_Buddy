@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { Database } from '../../db/index.js';
 import { accounts, accountPortableBackups, accountPortableMergeQuotas, actors, conversations, conversationMembers, messages } from '../../db/schema.js';
@@ -9,6 +9,7 @@ import { ApiError, ApiErrorCodes } from '../errors.js';
 import type { ConversationWriteTransaction } from './conversation-writes.js';
 import { portableMessagePayload } from './portable-message.js';
 import { conversationAdvisoryKey } from './conversation-writes.js';
+import { attachmentHash, canonical, digest, proveRetainedArchive } from './portable-merge-proof.js';
 
 const ttl = 5 * 60 * 1000;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
@@ -17,19 +18,11 @@ type Scope = { accountId: string; actorId: string; socialGraphId: string };
 type Cloud = NonNullable<PortableBackup['cloudAccount']>;
 type Attachment = NonNullable<PortableBackup['attachments']>[number];
 type StoredMessage = typeof messages.$inferSelect;
-const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value) ?? 'undefined').digest('hex');
 function stale(): never {
   throw new ApiError(ApiErrorCodes.Conflict, 'Merge preview expired or changed. Preview again.');
 }
 function forbidden(): never {
   throw new ApiError(ApiErrorCodes.Forbidden, 'The private archive does not belong to this account actor.');
-}
-function canonical(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonical);
-  if (value && typeof value === 'object') return Object.fromEntries(
-    Object.entries(value).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([k, v]) => [k, canonical(v)]),
-  );
-  return value;
 }
 function tokenFor(scope: Scope, fingerprint: string, deadline: number) {
   const key = createHmac('sha256', serverEnv().SESSION_SIGNING_KEY).update('chat-buddy:private-merge:v1').digest();
@@ -53,9 +46,6 @@ function verify(token: string, scope: Scope, fingerprint: string) {
 function scopedMessageId(scope: Scope, conversationId: string, sourceId: string) {
   const key = digest(['chat-buddy-portable-merge-v1', scope.accountId, scope.actorId, conversationId, sourceId]);
   return `${key.slice(0,8)}-${key.slice(8,12)}-8${key.slice(13,16)}-a${key.slice(17,20)}-${key.slice(20,32)}`;
-}
-function attachmentHash(asset: Attachment) {
-  return digest([asset.name, asset.mimeType, asset.byteLength, asset.contentBase64]);
 }
 function scopedAttachmentId(scope: Scope, conversationId: string, sourceId: string) {
   return `backup:${digest(['chat-buddy-portable-attachment-v1', scope.accountId, scope.actorId, conversationId, sourceId])}`;
@@ -193,28 +183,9 @@ export async function mergePrivateArchive(
           blocked(); continue;
         }
         const original = await tx.select().from(messages).where(where).orderBy(asc(messages.sequence)).for('update');
-        const archived = new Map(thread.messages.map(m => [m.id, m]));
-        const sequenceById = new Map(original.map(row => [row.id, row.sequence]));
-        const memberIds = new Set(memberships.map(member => member.actorId));
-        const restoredAssetIds = new Set<string>();
-        let valid = original.length === archived.size;
-        for (const row of original) {
-          const m = archived.get(row.id);
-          const projected = portableMessagePayload(row);
-          if (!m || !projected || !memberIds.has(row.senderActorId) || m.senderActorId !== row.senderActorId ||
-              row.sequence < 1 || row.sequence !== m.sequence || row.createdAt.toISOString() !== m.createdAt ||
-              (row.editedAt?.toISOString() ?? null) !== m.editedAt || row.replyToMessageId !== m.replyToMessageId ||
-              (row.replyToMessageId !== null && (sequenceById.get(row.replyToMessageId) ?? Number.POSITIVE_INFINITY) >= row.sequence) ||
-              m.content !== row.content || m.kind !== row.kind || m.status !== row.status || row.content.length > 32_000 ||
-              (row.kind === 'system' && row.senderActorId === actorId) ||
-              occurrence.get(m.id) !== 1 || digest(canonical(projected.payload)) !== digest(canonical(m.structuredPayload)) ||
-              digest(projected.attachments.map(item => item.id)) !== digest(m.attachmentIds ?? []) ||
-              projected.attachments.some(item => !manifest.has(item.id) || attachmentHash(item) !== manifestHashes.get(item.id))) {
-            valid = false; break;
-          }
-          for (const item of projected.attachments) restoredAssetIds.add(item.id);
-        }
-        if (!valid) { blocked(); continue; }
+        const retainedAssetIds = proveRetainedArchive(original, thread.messages, actorId,
+          new Set(memberships.map(member => member.actorId)), occurrence, manifest, manifestHashes);
+        if (!retainedAssetIds) { blocked(); continue; }
         const bytes = Buffer.byteLength(JSON.stringify(original));
         projectionBytes += bytes;
         if (projectionBytes > MAX_PORTABLE_BACKUP_BYTES * 2) {
@@ -225,7 +196,7 @@ export async function mergePrivateArchive(
         restoredBytes += bytes;
         counts.conversations.insert++;
         counts.messages.insert += original.length;
-        for (const id of restoredAssetIds) markAsset(id, 'insert');
+        for (const id of retainedAssetIds) markAsset(id, 'insert');
         fingerprints.push([thread.id, 'reopen', thread.messages.map(m => m.id), memberships.map(m => m.actorId).sort()]);
         continue;
       }
