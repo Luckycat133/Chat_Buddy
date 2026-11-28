@@ -421,7 +421,7 @@ it('reopens a retained private conversation only for complete authoritative auth
   expect((await upload(outsider, JSON.stringify(forgedOwner))).statusCode).toBe(403);
 
   const post = (step: string, payload: object) => app.inject({
-    method: 'POST', url: endpoint + '/merge/' + step, payload, headers: auth(access),
+    method: 'POST', url: endpoint + '/merge/' + step + '?rebuild=1', payload, headers: auth(access),
   });
   for (const corrupt of [
     (m: Array<{ content: string; senderActorId: string; replyToMessageId: string | null; kind: string }>) => { m[1]!.content = 'fake assistant reply'; },
@@ -441,8 +441,14 @@ it('reopens a retained private conversation only for complete authoritative auth
     expect((await getMessages()).statusCode).toBe(403);
   }
   expect((await upload(access, JSON.stringify(original))).statusCode).toBe(200);
+  const legacy = await app.inject({ method: 'POST', url: endpoint + '/merge/preview', payload: {}, headers: auth(access) });
+  expect(Object.keys(legacy.json()).sort()).toEqual(['archiveSha256', 'conflicts', 'counts', 'previewToken']);
+  expect(legacy.json().counts.conversations).toEqual({ insert: 0, skip: 0, conflict: 1 });
   const peek = await post('preview', {});
   const plan = peek.json();
+  const downgraded = await app.inject({ method: 'POST', url: endpoint + '/merge/commit',
+    payload: { previewToken: plan.previewToken, confirm: true }, headers: auth(access) });
+  expect(downgraded.statusCode).toBe(409);
   expect(plan.restoredConversationIds).toEqual([cid]);
   expect(plan.counts.messages.insert).toBe(3);
   expect((await list()).json().items).toEqual([]);

@@ -103,7 +103,7 @@ async function chargePortableMerge(tx: ConversationWriteTransaction, accountId: 
 }
 
 export async function mergePrivateArchive(
-  db: Database, scope: Scope, validate: (raw: string) => PortableBackup, token?: string,
+  db: Database, scope: Scope, validate: (raw: string) => PortableBackup, token?: string, rebuild = false,
 ) {
   if (token !== undefined) tokenDeadline(token);
   const { accountId, actorId, socialGraphId } = scope;
@@ -146,7 +146,7 @@ export async function mergePrivateArchive(
     };
     const owners = ids.length ? await tx.select({ id: conversations.id }).from(conversations)
       .where(and(inArray(conversations.id, ids), eq(conversations.socialGraphId, socialGraphId),
-        eq(conversations.createdByActorId, actorId), eq(conversations.type, 'direct'), inArray(conversations.status, ['active', 'deleted']))) : [];
+        eq(conversations.createdByActorId, actorId), eq(conversations.type, 'direct'), inArray(conversations.status, rebuild ? ['active', 'deleted'] : ['active']))) : [];
     const ownIds = owners.map(row => row.id);
     // Same advisory identity as normal writers, acquired consistently. Then lock
     // parent rows to prevent new members; lock existing member/actor rows below.
@@ -166,7 +166,7 @@ export async function mergePrivateArchive(
       const live = byId.get(thread.id);
       const memberships = members.filter(m => m.conversationId === thread.id);
       const eligible = uuid.test(thread.id) && thread.type === 'direct' && live
-        && (live.socialGraphId === socialGraphId && live.type === 'direct' && ['active', 'deleted'].includes(live.status)
+        && (live.socialGraphId === socialGraphId && live.type === 'direct' && (live.status === 'active' || (rebuild && live.status === 'deleted'))
           && live.createdByActorId === actorId && memberships.some(m => m.actorId === actorId)
           && memberships.every(m => m.memberStatus === 'active' && m.actorStatus === 'active' && m.graphId === socialGraphId &&
             (m.actorId === actorId ? m.type === 'human' && m.accountId === accountId : m.type === 'character' && !m.accountId)));
@@ -363,9 +363,10 @@ export async function mergePrivateArchive(
       counts.attachments[status]++;
       if (status === 'conflict') record('attachments', id);
     }
-    const fingerprint = digest([backup.sha256, counts, inserts, fingerprints, [...assets].sort()]);
+    const binding = [backup.sha256, counts, inserts, fingerprints, [...assets].sort()];
+    const fingerprint = digest(rebuild ? [...binding, 'rebuild-v1'] : binding);
     const receipt = { archiveSha256: backup.sha256, counts, conflicts,
-      restoredConversationIds: [...restored.keys()], unsupportedConversationIds };
+      ...(rebuild ? { restoredConversationIds: [...restored.keys()], unsupportedConversationIds } : {}) };
     if (token === undefined) return { ...receipt, previewToken: tokenFor(scope, fingerprint, Date.now() + ttl) };
     verify(token, scope, fingerprint);
     // The existing account lock serializes clients, replicas, and new archive

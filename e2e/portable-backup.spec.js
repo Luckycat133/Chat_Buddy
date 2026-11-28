@@ -219,7 +219,7 @@ test('reopens a server-retained private chat after deletion and preserves assist
         const after = (await (await request.get(history, { headers })).json()).items;
         expect(after.at(-2)).toMatchObject({ id: assistant, senderActorId: author, replyToMessageId: human.id });
         expect(after.at(-1)).toMatchObject({ id: system, senderActorId: author, kind: 'system', replyToMessageId: assistant });
-        const repeated = await request.post(backup + '/merge/preview', { headers, data: {} });
+        const repeated = await request.post(backup + '/merge/preview?rebuild=1', { headers, data: {} });
         expect((await repeated.json()).counts.conversations.insert).toBe(0);
     } finally {
         await sql.end();

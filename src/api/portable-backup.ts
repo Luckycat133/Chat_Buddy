@@ -44,7 +44,7 @@ export class StaleMergePreviewError extends Error {}
 
 export async function requestPortableMerge(previewToken?: string) {
   const before = loadTokens();
-  const response = await boundCloudFetch(endpoint + '/merge/' + (previewToken === undefined ? 'preview' : 'commit'), {
+  const response = await boundCloudFetch(endpoint + '/merge/' + (previewToken === undefined ? 'preview' : 'commit') + '?rebuild=1', {
     method: 'POST', headers: { 'content-type': 'application/json', accept: 'application/json' },
     body: JSON.stringify(previewToken === undefined ? {} : { previewToken, confirm: true }), cache: 'no-store',
   });

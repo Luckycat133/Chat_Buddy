@@ -159,6 +159,8 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
     app.post(`/v1/account/backup/merge/${mode}`, { onRequest: requireAuth, bodyLimit: 1024 }, async (request, reply) => {
       const { accountId, actorId, socialGraphId } = request.requestContext;
       if (!accountId || !actorId || !socialGraphId) throw new ApiError(ApiErrorCodes.Unauthorized, 'No account actor');
+      // Older cached Web clients decode the exact v0.5.5 response shape.
+      const rebuild = (request.query as { rebuild?: unknown } | undefined)?.rebuild === '1';
       const parsed = typeof request.body === 'string' ? parseWithBudget(request.body, { remaining: 12 }, 2) : null;
       let token: string | undefined;
       if (mode === 'commit') {
@@ -172,7 +174,7 @@ export function registerPortableBackupRoutes(app: FastifyInstance): void {
       }
       merging.add(accountId);
       try {
-        return await mergePrivateArchive(request.server.db as Database, { accountId, actorId, socialGraphId }, validate, token);
+        return await mergePrivateArchive(request.server.db as Database, { accountId, actorId, socialGraphId }, validate, token, rebuild);
       } catch (error) {
         if (error instanceof ApiError) throw error;
         // Drizzle driver exceptions can embed SQL bindings with private chat
