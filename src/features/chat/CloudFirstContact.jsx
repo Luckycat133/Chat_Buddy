@@ -9,6 +9,7 @@ export default function CloudFirstContact() {
   const [contact, setContact] = useState(null);
   const [otherChats, setOtherChats] = useState([]);
   const [loadError, setLoadError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -16,15 +17,18 @@ export default function CloudFirstContact() {
     async function load() {
       try {
         const response = await authedCloudFetch('/v1/onboarding/bootstrap', { method: 'POST' });
-        if (!response.ok) throw new Error('First contact unavailable');
-        const next = await response.json();
+        // A deleted first contact is not a chat-list outage. Do not create
+        // or reveal it, but still load all other authorized conversations.
+        if (!response.ok && response.status !== 404) throw new Error('First contact unavailable');
+        const next = response.ok ? await response.json() : null;
         const list = await authedCloudFetch('/v1/conversations');
         if (!list.ok) throw new Error('Chat list unavailable');
         const { items } = await list.json();
         if (active) {
           setContact(next);
+          setLoaded(true);
           setOtherChats(items.filter((item) =>
-            item.id !== next.conversationId && item.memberStatus === 'active'));
+            item.id !== next?.conversationId && item.memberStatus === 'active'));
         }
       } catch {
         if (active) setLoadError(true);
@@ -44,7 +48,7 @@ export default function CloudFirstContact() {
             {t('first_contact_retry')}
           </button>
         </>
-      ) : !contact ? <p role="status">{t('first_contact_loading')}</p> : (
+      ) : !loaded ? <p role="status">{t('first_contact_loading')}</p> : contact ? (
         <button
           type="button"
           data-testid="first-contact-mira"
@@ -55,7 +59,7 @@ export default function CloudFirstContact() {
           {contact.preview && <span>{contact.preview}</span>}
           {contact.unread && <span data-testid="first-contact-unread">{t('first_contact_unread')}</span>}
         </button>
-      )}
+      ) : otherChats.length === 0 ? <p>{t('cloud_chat_empty_hint')}</p> : null}
       {otherChats.map((chat) => (
         <Link key={chat.id} className="block p-4" to={'/chats/' + encodeURIComponent(chat.id)}>
           {chat.publicName && !chat.publicName.startsWith('onboarding:')

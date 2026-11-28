@@ -170,6 +170,10 @@ test('reopens a server-retained private chat after deletion and preserves assist
         const bootstrap = await request.post(cloud + '/v1/onboarding/bootstrap', { headers });
         expect(bootstrap.status()).toBe(200);
         const { conversationId } = await bootstrap.json();
+        const other = await request.post(cloud + '/v1/conversations', {
+            headers, data: { type: 'direct', publicName: 'Other synthetic chat', inviteeActorIds: [tokens.actorId] },
+        });
+        expect(other.status()).toBe(201);
         const history = cloud + '/v1/conversations/' + conversationId + '/messages';
         const before = (await (await request.get(history, { headers })).json()).items;
         const author = before[0].senderActorId;
@@ -192,6 +196,9 @@ test('reopens a server-retained private chat after deletion and preserves assist
             })) sessionStorage.setItem('cb.' + key, value);
             localStorage.setItem('chat-buddy-lang', '"en"');
         }, tokens);
+        await page.goto('/chats');
+        await expect(page.getByRole('link', { name: 'Other synthetic chat' })).toBeVisible();
+        await expect(page.getByTestId('first-contact-mira')).toHaveCount(0);
         await page.goto('/settings');
         const panel = page.getByRole('region', { name: 'Portable account backup' });
         await panel.locator('input[type=file]').setInputFiles({ name: 'rebuild.json', mimeType: 'application/json', buffer: Buffer.from(archive) });

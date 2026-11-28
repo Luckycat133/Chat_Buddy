@@ -488,4 +488,12 @@ it('reopens a retained private conversation only for complete authoritative auth
   expect(next.restoredConversationIds).toEqual([]);
   const [charged] = await db.select().from(accountPortableMergeQuotas).where(eq(accountPortableMergeQuotas.accountId, owner.accountId));
   expect(charged).toMatchObject({ lifetimeRows: 3, windowCommits: 1 });
+  const newer = Array.from({ length: 200 }, () => randomUUID());
+  await db.insert(conversations).values(newer.map(id => ({ id, socialGraphId: owner.graphId, type: 'direct' as const,
+    createdByActorId: owner.humanActorId, createdAt: new Date(Date.now() + 1000) })));
+  await db.insert(conversationMembers).values(newer.map(conversationId => ({ conversationId, actorId: owner.humanActorId, status: 'active' as const })));
+  expect((await list()).json().items.some((row: { id: string }) => row.id === cid)).toBe(false);
+  const targeted = (a = access) => app.inject({ method: 'GET', url: `/v1/conversations?ids=${cid}`, headers: auth(a) });
+  expect((await targeted()).json().items.map((row: { id: string }) => row.id)).toEqual([cid]);
+  expect((await targeted(outsider)).json().items).toEqual([]);
 });

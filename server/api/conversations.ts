@@ -41,6 +41,11 @@ export function registerConversationRoutes(app: FastifyInstance): void {
           'No actor bound to session',
         );
       }
+      // Repair receipts may refer to older conversations excluded from the
+      // default newest-200 list. Narrow, never broaden, the same permissions.
+      const { ids } = z.object({
+        ids: z.string().max(3699).transform(value => value.split(',')).pipe(z.array(z.string().uuid()).min(1).max(100)).optional(),
+      }).parse(request.query);
       const rows = await db
         .select({
           id: conversations.id,
@@ -60,6 +65,7 @@ export function registerConversationRoutes(app: FastifyInstance): void {
           and(
             eq(conversationMembers.actorId, actorId),
             eq(conversations.status, 'active'),
+            ids ? inArray(conversations.id, ids) : undefined,
             inArray(conversationMembers.status, [
               ConversationMemberStatus.Active,
               ConversationMemberStatus.Invited,
